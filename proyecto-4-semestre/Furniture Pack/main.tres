@@ -1,0 +1,8 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://bnwphshq0no4d"]
+
+[ext_resource type="Texture2D" uid="uid://bqhv434joe6n4" path="res://Furniture Pack/Furniture Pack_grandient texture.png" id="1_ce1q8"]
+
+[resource]
+resource_name = "main"
+cull_mode = 2
+albedo_texture = ExtResource("1_ce1q8")
