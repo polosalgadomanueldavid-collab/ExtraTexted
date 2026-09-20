@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="NodoProblematica" format=3 uid="uid://o604smryvld3"]
+
+[ext_resource type="Script" uid="uid://c5e8kiy2f25y6" path="res://Scripts/nodo_problematica.gd" id="1_g8txq"]
+
+[resource]
+script = ExtResource("1_g8txq")
+texto_pantalla = "\"Se rastreo al Stalker y fue detenido\""
+tipo = 4
+metadata/_custom_type_script = "uid://c5e8kiy2f25y6"

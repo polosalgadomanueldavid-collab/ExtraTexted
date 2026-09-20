@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://dydg7plihxu75" path="res://36bf31df51379c823db97b294d26704f.jpg" id="2_nwhbu"]
 [ext_resource type="PackedScene" uid="uid://bfe3yjenbnsvj" path="res://Policia.tscn" id="3_qg7b0"]
 [ext_resource type="PackedScene" uid="uid://b4kirh52d1do4" path="res://computer.tscn" id="4_yf2d8"]
-[ext_resource type="Script" uid="uid://dcpx1o1vvn3vb" path="res://camera_3d.gd" id="5_wg1wp"]
+[ext_resource type="Script" uid="uid://dcpx1o1vvn3vb" path="res://Scripts/camera_3d.gd" id="5_wg1wp"]
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_nvcgb"]
 _surfaces = [{
@@ -467,5 +467,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.38361645, 0.80757535, 3.33
 
 [node name="Camera3D" type="Camera3D" parent="Gameplay" unique_id=1464768205 node_paths=PackedStringArray("objetivo")]
 transform = Transform3D(1, 0, 0, 0, 0.73925513, 0.6734255, 0, -0.6734255, 0.73925513, -1.1142662, 3.0838394, 5.2264423)
+current = true
 script = ExtResource("5_wg1wp")
 objetivo = NodePath("../Node3D")

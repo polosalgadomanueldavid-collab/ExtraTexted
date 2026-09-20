@@ -1,7 +1,7 @@
 [gd_scene format=4 uid="uid://bfe3yjenbnsvj"]
 
 [ext_resource type="Texture2D" uid="uid://o2nnm42t63hv" path="res://godot_plush_model/godot_plush_albedo.png" id="1_a1tn7"]
-[ext_resource type="Script" uid="uid://3tbuqonw4kt7" path="res://character_body_3d.gd" id="1_vcfys"]
+[ext_resource type="Script" uid="uid://3tbuqonw4kt7" path="res://Scripts/character_body_3d.gd" id="1_vcfys"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_n2jeu"]
 radius = 0.1

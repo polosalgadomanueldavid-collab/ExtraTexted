@@ -1,14 +1,152 @@
 [gd_scene format=3 uid="uid://dotsgy2qcedx6"]
 
+[ext_resource type="Script" uid="uid://n44cq8hm3nho" path="res://Scripts/interfaz_pc.gd" id="1_jqa86"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_8lruo"]
+
+[sub_resource type="Animation" id="Animation_u0yay"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("OverlayNegro:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_xfy5o"]
+resource_name = "Apagar"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("OverlayNegro:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_jqa86"]
+resource_name = "Encender"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("OverlayNegro:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_u0yay"]
+_data = {
+&"RESET": SubResource("Animation_u0yay"),
+&"apagar": SubResource("Animation_xfy5o"),
+&"encender": SubResource("Animation_jqa86")
+}
+
 [node name="Control" type="Control" unique_id=2075789570]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
+script = ExtResource("1_jqa86")
 
-[node name="ColorRect" type="ColorRect" parent="." unique_id=325489444]
+[node name="Vista_Sin_problemas" type="Control" parent="." unique_id=1282368957]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PantallaNormal" type="ColorRect" parent="Vista_Sin_problemas" unique_id=485983750]
+custom_minimum_size = Vector2(423, 266)
+layout_mode = 0
+offset_right = 423.0
+offset_bottom = 266.0
+
+[node name="Label" type="Label" parent="Vista_Sin_problemas/PantallaNormal" unique_id=1396477375]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -55.5
+offset_top = -11.5
+offset_right = 55.5
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "Sin problemas"
+
+[node name="Vista_problema" type="Control" parent="." unique_id=1885336011]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ColorRect" type="ColorRect" parent="Vista_problema" unique_id=229933998]
 custom_minimum_size = Vector2(423, 266)
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
+
+[node name="Label2" type="Label" parent="Vista_problema" unique_id=1572910430]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 130.0
+offset_top = 26.0
+offset_right = 241.0
+offset_bottom = 49.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_neighbor_right = NodePath("../Button3")
+text = "
+"
+label_settings = SubResource("LabelSettings_8lruo")
+
+[node name="Button2" type="Button" parent="Vista_problema" unique_id=1531963008]
+layout_mode = 0
+offset_left = 36.0
+offset_top = 149.0
+offset_right = 135.0
+offset_bottom = 184.0
+focus_neighbor_right = NodePath("../Button3")
+text = "Si
+"
+
+[node name="Button3" type="Button" parent="Vista_problema" unique_id=63025550]
+layout_mode = 0
+offset_left = 272.0
+offset_top = 149.0
+offset_right = 371.0
+offset_bottom = 184.0
+focus_neighbor_left = NodePath("../Button2")
+text = "No
+"
+
+[node name="OverlayNegro" type="ColorRect" parent="." unique_id=325489444]
+custom_minimum_size = Vector2(423, 266)
+layout_mode = 0
+offset_right = 423.0
+offset_bottom = 266.0
+rotation = -0.001807932
 color = Color(0, 0, 0, 1)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=465288570]
+libraries/ = SubResource("AnimationLibrary_u0yay")

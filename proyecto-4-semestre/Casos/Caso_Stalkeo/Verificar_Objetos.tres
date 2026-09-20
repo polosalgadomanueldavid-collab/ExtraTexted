@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="NodoProblematica" format=3 uid="uid://cohs3ptrrqi6d"]
+
+[ext_resource type="Script" uid="uid://c5e8kiy2f25y6" path="res://Scripts/nodo_problematica.gd" id="1_aqioy"]
+[ext_resource type="Resource" uid="uid://dtst3osmrhvjf" path="res://Casos/Caso_Stalkeo/Respuesta_No.tres" id="1_k8750"]
+[ext_resource type="Resource" uid="uid://o604smryvld3" path="res://Casos/Caso_Stalkeo/Resultado_Si.tres" id="2_62lmt"]
+
+[resource]
+script = ExtResource("1_aqioy")
+texto_pantalla = "Necesitamos estos objetos"
+tipo = 1
+rama_si = ExtResource("2_62lmt")
+rama_no = ExtResource("1_k8750")
+objetos_requeridos = Array[String](["UsuarioDelStalker", "Direccion"])
+metadata/_custom_type_script = "uid://c5e8kiy2f25y6"
