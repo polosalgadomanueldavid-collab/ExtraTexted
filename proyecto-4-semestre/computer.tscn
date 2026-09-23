@@ -1,7 +1,22 @@
 [gd_scene format=4 uid="uid://b4kirh52d1do4"]
 
+[ext_resource type="Script" uid="uid://b61m0vepi4br3" path="res://Scripts/computer.gd" id="1_gcbbq"]
 [ext_resource type="Material" uid="uid://bnwphshq0no4d" path="res://Furniture Pack/main.tres" id="1_gxl5a"]
+[ext_resource type="Script" uid="uid://c5e8kiy2f25y6" path="res://Scripts/nodo_problematica.gd" id="2_4xfga"]
 [ext_resource type="PackedScene" uid="uid://dotsgy2qcedx6" path="res://Interfaz_PC.tscn" id="2_18hgq"]
+[ext_resource type="Resource" uid="uid://cjm8401ib4ih" path="res://Casos/Caso_Stalkeo/Problema_entrante.tres" id="3_wy26k"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_gcbbq"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_jr5mb"]
+sky_material = SubResource("ProceduralSkyMaterial_gcbbq")
+
+[sub_resource type="Environment" id="Environment_4xfga"]
+background_mode = 2
+sky = SubResource("Sky_jr5mb")
+tonemap_mode = 2
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_rdhw0"]
 _surfaces = [{
@@ -52,6 +67,11 @@ size = Vector2(0.51, 0.275)
 
 [node name="Computer" type="StaticBody3D" unique_id=857472506]
 collision_layer = 4
+script = ExtResource("1_gcbbq")
+lista_problemas = Array[ExtResource("2_4xfga")]([ExtResource("3_wy26k")])
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=247857020]
+environment = SubResource("Environment_4xfga")
 
 [node name="Cube_011" type="MeshInstance3D" parent="." unique_id=425813624]
 transform = Transform3D(0.9999686, 0.007889179, 0.00072452665, -0.007892107, 0.9999603, 0.004130931, -0.00069190125, -0.004136521, 0.9999912, 0, 0, 0)
@@ -70,3 +90,9 @@ mesh = SubResource("QuadMesh_4xfga")
 size = Vector2i(423, 266)
 
 [node name="Control" parent="SubViewport" unique_id=2075789570 instance=ExtResource("2_18hgq")]
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=646146611]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00706324, 0.21170448, 0.13046288)
+projection = 1
+size = 0.34680128
+far = 1.0

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="NodoProblematica" format=3 uid="uid://dtst3osmrhvjf"]
+
+[ext_resource type="Script" uid="uid://c5e8kiy2f25y6" path="res://Scripts/nodo_problematica.gd" id="1_m6ul8"]
+
+[resource]
+script = ExtResource("1_m6ul8")
+texto_pantalla = "Has perdido Inutil"
+tipo = 2
+metadata/_custom_type_script = "uid://c5e8kiy2f25y6"

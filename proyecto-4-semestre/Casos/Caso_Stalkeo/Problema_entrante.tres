@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="NodoProblematica" format=3 uid="uid://cjm8401ib4ih"]
+
+[ext_resource type="Resource" uid="uid://dtst3osmrhvjf" path="res://Casos/Caso_Stalkeo/Respuesta_No.tres" id="1_4d0e3"]
+[ext_resource type="Script" uid="uid://c5e8kiy2f25y6" path="res://Scripts/nodo_problematica.gd" id="1_mtsbs"]
+[ext_resource type="Resource" uid="uid://cohs3ptrrqi6d" path="res://Casos/Caso_Stalkeo/Verificar_Objetos.tres" id="2_dxki1"]
+
+[resource]
+script = ExtResource("1_mtsbs")
+texto_pantalla = "ALERTA! Una persona esta reportando ser acosada por una persona"
+rama_si = ExtResource("2_dxki1")
+rama_no = ExtResource("1_4d0e3")
+metadata/_custom_type_script = "uid://c5e8kiy2f25y6"
