@@ -12,7 +12,7 @@ const CALMA_RECUPERADA_AL_RESOLVER: int = 5
 
 var arbol: ArbolDenunciasAVL = ArbolDenunciasAVL.new()
 var calma_operativa: int = CALMA_MAXIMA
-
+var denuncia_activa_id: String = ""
 # Guarda cuánto tiempo le queda a cada denuncia pendiente.
 var tiempos_restantes: Dictionary = {}
 
@@ -38,6 +38,25 @@ func recibir_denuncia(denuncia: Denuncia) -> bool:
 	return true
 
 
+func iniciar_denuncia_prioritaria() -> Denuncia:
+	var denuncia: Denuncia = arbol.obtener_prioritaria()
+
+	if denuncia == null:
+		return null
+
+	denuncia.estado = Denuncia.Estado.EN_PROCESO
+	denuncia_activa_id = denuncia.id
+
+	_notificar_cambios()
+	return denuncia
+
+
+func obtener_denuncia_activa() -> Denuncia:
+	if denuncia_activa_id.is_empty():
+		return null
+
+	return arbol.buscar_por_id(denuncia_activa_id)
+
 func resolver_denuncia(id: String) -> bool:
 	var denuncia: Denuncia = arbol.buscar_por_id(id)
 
@@ -54,6 +73,10 @@ func resolver_denuncia(id: String) -> bool:
 	)
 
 	denuncia_resuelta.emit(denuncia)
+	
+	if denuncia_activa_id == id:
+		denuncia_activa_id = ""
+	
 	_notificar_cambios()
 	return true
 
@@ -74,6 +97,9 @@ func vencer_denuncia(id: String) -> bool:
 	)
 
 	denuncia_vencida.emit(denuncia)
+	if denuncia_activa_id == id:
+		denuncia_activa_id = ""
+	
 	_notificar_cambios()
 
 	if calma_operativa <= 0:

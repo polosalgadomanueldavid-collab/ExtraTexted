@@ -22,3 +22,4 @@ func _ready() -> void:
 
 	for denuncia: Denuncia in denuncias:
 		sistema_despacho.recibir_denuncia(denuncia)
+	
