@@ -1,6 +1,7 @@
 extends Node3D
 
 @onready var panel_despacho: PanelDespacho = $CanvasLayer/PanelDespacho
+@onready var computador: PCStatic = $Computer
 
 const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
@@ -28,6 +29,10 @@ func _ready() -> void:
 	add_child(sistema_despacho)
 
 	panel_despacho.configurar_sistema(sistema_despacho)
+	# Desactiva el flujo antiguo de preguntas del computador.
+	computador.lista_problemas.clear()
+	# El computador avisa cuando el jugador interactúa con él.
+	computador.computador_despacho_abierto.connect(_on_computador_despacho_abierto)
 
 	temporizador_denuncias = Timer.new()
 	temporizador_denuncias.one_shot = true
@@ -72,3 +77,17 @@ func _programar_siguiente_denuncia() -> void:
 	)
 
 	temporizador_denuncias.start(espera)
+
+func _on_computador_despacho_abierto() -> void:
+	var denuncia: Denuncia = sistema_despacho.iniciar_denuncia_prioritaria()
+
+	if denuncia == null:
+		print("No hay denuncias pendientes para atender.")
+		return
+
+	print(
+		"Denuncia aceptada en despacho: ",
+		denuncia.id,
+		" - ",
+		denuncia.titulo
+	)

@@ -1,5 +1,6 @@
 extends StaticBody3D
 class_name PCStatic
+signal computador_despacho_abierto
 
 var player: Player
 var is_using: bool = false
@@ -79,6 +80,7 @@ func encender_pc() -> void:
 	actualizar_interfaz_segun_estado()
 	if ui_pantalla:
 		ui_pantalla.encender()
+	computador_despacho_abierto.emit()
 
 func apagar_pc() -> void:
 	if ui_pantalla:
