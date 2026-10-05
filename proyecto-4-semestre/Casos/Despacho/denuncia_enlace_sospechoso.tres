@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Denuncia" format=3 uid="uid://ci0rxbcjg6pa"]
+
+[ext_resource type="Script" uid="uid://bkqs5wb7o223s" path="res://Scripts/Estructuras/denuncia.gd" id="1_bgk7g"]
+
+[resource]
+script = ExtResource("1_bgk7g")
+id = "D-002"
+titulo = "Enlace sospechoso"
+nivel_riesgo = 2
+hora_reporte = 1008
+tiempo_limite_segundos = 90.0
+penalidad_calma = 8
+protocolo_estaciones = Array[String](["evidencias", "verificacion", "reporte"])
+metadata/_custom_type_script = "uid://bkqs5wb7o223s"

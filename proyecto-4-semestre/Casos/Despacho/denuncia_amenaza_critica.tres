@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Denuncia" format=3 uid="uid://cen5y78ukwykp"]
+
+[ext_resource type="Script" uid="uid://bkqs5wb7o223s" path="res://Scripts/Estructuras/denuncia.gd" id="1_jk6bi"]
+
+[resource]
+script = ExtResource("1_jk6bi")
+id = "D-005"
+titulo = "Amenaza creíble"
+nivel_riesgo = 5
+hora_reporte = 1009
+tiempo_limite_segundos = 40.0
+penalidad_calma = 30
+protocolo_estaciones = Array[String](["evidencias", "verificacion", "reporte"])
+metadata/_custom_type_script = "uid://bkqs5wb7o223s"

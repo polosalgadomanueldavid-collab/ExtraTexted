@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://ya5o2fprulw7"]
+
+[ext_resource type="Script" uid="uid://b8mtug3k6371n" path="res://Scripts/Pruebas/prueba_avl.gd" id="1_sk6kf"]
+
+[node name="PruebaAvl" type="Node" unique_id=814176275]
+script = ExtResource("1_sk6kf")

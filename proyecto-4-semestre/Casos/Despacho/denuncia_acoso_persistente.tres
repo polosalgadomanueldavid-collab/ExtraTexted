@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Denuncia" format=3 uid="uid://b3byfs4w76jpj"]
+
+[ext_resource type="Script" uid="uid://bkqs5wb7o223s" path="res://Scripts/Estructuras/denuncia.gd" id="1_fc1jy"]
+
+[resource]
+script = ExtResource("1_fc1jy")
+id = "D-004"
+titulo = "Acoso persistente"
+nivel_riesgo = 4
+hora_reporte = 1007
+tiempo_limite_segundos = 55.0
+penalidad_calma = 20
+protocolo_estaciones = Array[String](["evidencias", "privacidad", "reporte"])
+metadata/_custom_type_script = "uid://bkqs5wb7o223s"
