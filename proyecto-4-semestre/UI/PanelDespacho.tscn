@@ -1,0 +1,59 @@
+[gd_scene format=3 uid="uid://gysqqn4wkayp"]
+
+[ext_resource type="Script" uid="uid://bknaafghuvp8l" path="res://UI/panel_despacho.gd" id="1_kyg4a"]
+
+[node name="PanelDespacho" type="Control" unique_id=1634710326]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_kyg4a")
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=285075896]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -360.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer" unique_id=1234290651]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer" unique_id=1930515583]
+layout_mode = 2
+
+[node name="Titulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1420602418]
+layout_mode = 2
+text = "DESPACHO DIGITAL"
+
+[node name="CalmaTexto" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1331256693]
+layout_mode = 2
+text = "Calma operativa: 100 / 100"
+
+[node name="CalmaBar" type="ProgressBar" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=265993331]
+layout_mode = 2
+value = 100.0
+
+[node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1186855777]
+layout_mode = 2
+
+[node name="Subtitulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=723143811]
+layout_mode = 2
+text = "DENUNCIAS PENDIENTES"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1381345759]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ListaDenuncias" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/ScrollContainer" unique_id=441819606]
+layout_mode = 2
+size_flags_horizontal = 3

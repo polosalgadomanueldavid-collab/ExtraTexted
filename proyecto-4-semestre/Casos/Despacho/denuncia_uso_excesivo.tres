@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Denuncia" format=3 uid="uid://dj5um22aooumi"]
+
+[ext_resource type="Script" uid="uid://bkqs5wb7o223s" path="res://Scripts/Estructuras/denuncia.gd" id="1_x1ojx"]
+
+[resource]
+script = ExtResource("1_x1ojx")
+id = "D-001"
+titulo = "Uso excesivo de redes"
+hora_reporte = 1010
+protocolo_estaciones = Array[String](["bienestar", "reporte"])
+metadata/_custom_type_script = "uid://bkqs5wb7o223s"

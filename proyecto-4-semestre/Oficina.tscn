@@ -1,10 +1,12 @@
 [gd_scene format=4 uid="uid://c8s7h5f523ny"]
 
 [ext_resource type="Material" uid="uid://bnwphshq0no4d" path="res://Furniture Pack/main.tres" id="1_bnasg"]
+[ext_resource type="Script" uid="uid://ca140yvw05l41" path="res://Scripts/gestor_partida.gd" id="1_sa8v2"]
 [ext_resource type="Texture2D" uid="uid://dydg7plihxu75" path="res://36bf31df51379c823db97b294d26704f.jpg" id="2_nwhbu"]
 [ext_resource type="PackedScene" uid="uid://bfe3yjenbnsvj" path="res://Policia.tscn" id="3_qg7b0"]
 [ext_resource type="PackedScene" uid="uid://b4kirh52d1do4" path="res://computer.tscn" id="4_yf2d8"]
 [ext_resource type="Script" uid="uid://dcpx1o1vvn3vb" path="res://Scripts/camera_3d.gd" id="5_wg1wp"]
+[ext_resource type="PackedScene" uid="uid://gysqqn4wkayp" path="res://UI/PanelDespacho.tscn" id="7_sa8v2"]
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_nvcgb"]
 _surfaces = [{
@@ -181,6 +183,7 @@ uv1_scale = Vector3(3.5, 3, 1)
 albedo_color = Color(0.34, 0.15028001, 0.023799999, 1)
 
 [node name="Node3D" type="Node3D" unique_id=1045791016]
+script = ExtResource("1_sa8v2")
 
 [node name="Mesas verticales IZQ" type="Node3D" parent="." unique_id=2135345679]
 
@@ -470,3 +473,7 @@ transform = Transform3D(1, 0, 0, 0, 0.73925513, 0.6734255, 0, -0.6734255, 0.7392
 current = true
 script = ExtResource("5_wg1wp")
 objetivo = NodePath("../Node3D")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1523630788]
+
+[node name="PanelDespacho" parent="CanvasLayer" unique_id=1634710326 instance=ExtResource("7_sa8v2")]

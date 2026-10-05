@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://bbtm11k2cyjlh"]
+
+[ext_resource type="Script" uid="uid://b7w52un8nudgl" path="res://Pruebas/prueba_panel_despacho.gd" id="1_1b56m"]
+[ext_resource type="PackedScene" uid="uid://gysqqn4wkayp" path="res://UI/PanelDespacho.tscn" id="2_7t4yn"]
+
+[node name="PruebaPanelDespacho" type="Control" unique_id=279738382]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_1b56m")
+
+[node name="PanelDespacho" parent="." unique_id=1634710326 instance=ExtResource("2_7t4yn")]
+layout_mode = 1

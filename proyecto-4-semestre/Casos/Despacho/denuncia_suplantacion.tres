@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Denuncia" format=3 uid="uid://dpehc1c8oq3d"]
+
+[ext_resource type="Script" uid="uid://bkqs5wb7o223s" path="res://Scripts/Estructuras/denuncia.gd" id="1_e1wah"]
+
+[resource]
+script = ExtResource("1_e1wah")
+id = "D-003"
+titulo = "Suplantación de identidad"
+nivel_riesgo = 3
+hora_reporte = 1005
+tiempo_limite_segundos = 70.0
+penalidad_calma = 14
+protocolo_estaciones = Array[String](["evidencias", "verificacion", "privacidad", "reporte"])
+metadata/_custom_type_script = "uid://bkqs5wb7o223s"
