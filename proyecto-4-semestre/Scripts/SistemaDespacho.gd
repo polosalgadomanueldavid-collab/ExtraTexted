@@ -39,6 +39,9 @@ func recibir_denuncia(denuncia: Denuncia) -> bool:
 
 
 func iniciar_denuncia_prioritaria() -> Denuncia:
+	if not denuncia_activa_id.is_empty():
+		return arbol.buscar_por_id(denuncia_activa_id)
+
 	var denuncia: Denuncia = arbol.obtener_prioritaria()
 
 	if denuncia == null:
