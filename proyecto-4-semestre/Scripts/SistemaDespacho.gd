@@ -6,6 +6,8 @@ signal calma_actualizada(nueva_calma: int)
 signal denuncia_resuelta(denuncia: Denuncia)
 signal denuncia_vencida(denuncia: Denuncia)
 signal partida_terminada
+signal estacion_completada(denuncia: Denuncia, estacion_id: String)
+signal estacion_incorrecta(denuncia: Denuncia, estacion_esperada: String)
 
 const CALMA_MAXIMA: int = 100
 const CALMA_RECUPERADA_AL_RESOLVER: int = 5
@@ -137,3 +139,31 @@ func obtener_denuncias_ordenadas() -> Array[Denuncia]:
 func _notificar_cambios() -> void:
 	denuncias_actualizadas.emit(arbol.recorrido_inorden())
 	calma_actualizada.emit(calma_operativa)
+
+func interactuar_estacion(estacion_id: String) -> bool:
+	var denuncia: Denuncia = obtener_denuncia_activa()
+
+	if denuncia == null:
+		push_warning("No hay una denuncia activa.")
+		return false
+
+	if denuncia.indice_estacion_actual >= denuncia.protocolo_estaciones.size():
+		push_warning("La denuncia ya completó todas sus estaciones.")
+		return false
+
+	var estacion_esperada: String = denuncia.protocolo_estaciones[
+		denuncia.indice_estacion_actual
+	]
+
+	if estacion_id != estacion_esperada:
+		estacion_incorrecta.emit(denuncia, estacion_esperada)
+		return false
+
+	denuncia.indice_estacion_actual += 1
+	estacion_completada.emit(denuncia, estacion_id)
+
+	# La última estación del protocolo cierra la denuncia correctamente.
+	if denuncia.indice_estacion_actual >= denuncia.protocolo_estaciones.size():
+		resolver_denuncia(denuncia.id)
+
+	return true

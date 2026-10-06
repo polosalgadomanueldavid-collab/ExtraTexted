@@ -24,7 +24,7 @@ enum Estado {
 @export var protocolo_estaciones: Array[String] = []
 
 var estado: Estado = Estado.PENDIENTE
-
+var indice_estacion_actual: int = 0
 
 func va_antes_que(otra: Denuncia) -> bool:
 	# 1. Mayor riesgo = más urgente.
