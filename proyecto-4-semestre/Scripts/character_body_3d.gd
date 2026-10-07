@@ -65,6 +65,7 @@ func _input(event: InputEvent) -> void:
 			if collided is PCStatic:
 				input_locked = true
 				collided.toggle_use()
-			
+			elif collided is Estacion:
+				collided.interactuar(self)
 		
 	

@@ -23,6 +23,7 @@ var catalogo_denuncias: Array[Denuncia] = [
 
 
 func _ready() -> void:
+	add_to_group("gestor_partida")
 	generador_aleatorio.randomize()
 
 	sistema_despacho = SistemaDespacho.new()
@@ -91,3 +92,11 @@ func _on_computador_despacho_abierto() -> void:
 		" - ",
 		denuncia.titulo
 	)
+
+func interactuar_estacion(estacion_id: String) -> void:
+	var fue_correcta: bool = sistema_despacho.interactuar_estacion(estacion_id)
+
+	if fue_correcta:
+		print("Estación correcta: ", estacion_id)
+	else:
+		print("Estación incorrecta o no hay denuncia activa: ", estacion_id)
