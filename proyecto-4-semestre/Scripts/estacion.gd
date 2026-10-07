@@ -6,6 +6,7 @@ extends StaticBody3D
 
 
 func interactuar(_jugador: Player) -> void:
+	print("[Estación] Interacción recibida en '", estacion_id, "' (", nombre_visible, ").")
 	var gestor: Node = get_tree().get_first_node_in_group("gestor_partida")
 
 	if gestor == null:

@@ -58,14 +58,34 @@ func _input(event: InputEvent) -> void:
 	if input_locked:
 		return
 		
-	if Input.is_action_just_pressed("Interactuar"):
-		if shape_cast_3d.is_colliding():
-			var collided = shape_cast_3d.get_collision_result()[0]["collider"]
-			
+	if event.is_action_pressed("Interactuar"):
+		# Actualiza la consulta justo al pulsar E para no depender del frame físico anterior.
+		shape_cast_3d.force_shapecast_update()
+		var resultados: Array = shape_cast_3d.get_collision_result()
+		print("[Interacción] E pulsada. Colisiones detectadas: ", resultados.size())
+
+		if resultados.is_empty():
+			print("[Interacción] No hay un objeto interactuable delante del jugador.")
+			return
+
+		# Puede haber más de una colisión (por ejemplo, la mesa y un objeto decorativo).
+		# No se debe asumir que la primera sea la estación.
+		for resultado: Dictionary in resultados:
+			var collided: Node = resultado.get("collider") as Node
+			if collided == null:
+				continue
+
+			print("[Interacción] Collider: ", collided.get_path(), " (", collided.get_class(), ")")
 			if collided is PCStatic:
+				print("[Interacción] Computador encontrado.")
 				input_locked = true
 				collided.toggle_use()
-			elif collided is Estacion:
+				return
+			if collided is Estacion:
+				print("[Interacción] Estación encontrada: ", collided.estacion_id)
 				collided.interactuar(self)
+				return
+
+		print("[Interacción] Se detectaron cuerpos, pero ninguno tiene PCStatic ni Estacion.")
 		
 	

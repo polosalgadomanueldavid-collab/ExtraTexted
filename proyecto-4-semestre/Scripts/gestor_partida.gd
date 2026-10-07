@@ -94,6 +94,7 @@ func _on_computador_despacho_abierto() -> void:
 	)
 
 func interactuar_estacion(estacion_id: String) -> void:
+	print("[Despacho] Se solicitó usar la estación: ", estacion_id)
 	var fue_correcta: bool = sistema_despacho.interactuar_estacion(estacion_id)
 
 	if fue_correcta:
