@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://3tbuqonw4kt7" path="res://Scripts/character_body_3d.gd" id="1_vcfys"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_n2jeu"]
-radius = 0.1
+radius = 0.4
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_n2jeu"]
 albedo_texture = ExtResource("1_a1tn7")
@@ -1408,9 +1408,11 @@ slide_on_ceiling = false
 script = ExtResource("1_vcfys")
 
 [node name="ShapeCast3D" type="ShapeCast3D" parent="." unique_id=1059083041]
-transform = Transform3D(0.40000004, 0, 0, 0, 0.40000004, 0, 0, 0, 0.40000004, 0, 0.36968684, 0)
+# El jugador ya está escalado a 0.4. No se escala de nuevo el ShapeCast:
+# eso reducía el alcance a 0.48 m y lo dejaba por encima de la mesa.
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6, 0)
 shape = SubResource("SphereShape3D_n2jeu")
-target_position = Vector3(0, 0, 3)
+target_position = Vector3(0, 0, 4)
 collision_mask = 4
 
 [node name="godot_plush_model" type="Node3D" parent="." unique_id=1628886880]

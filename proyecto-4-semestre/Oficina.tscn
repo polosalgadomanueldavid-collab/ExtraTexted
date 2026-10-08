@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://ca140yvw05l41" path="res://Scripts/gestor_partida.gd" id="1_sa8v2"]
 [ext_resource type="Texture2D" uid="uid://dydg7plihxu75" path="res://36bf31df51379c823db97b294d26704f.jpg" id="2_nwhbu"]
 [ext_resource type="PackedScene" uid="uid://bfe3yjenbnsvj" path="res://Policia.tscn" id="3_qg7b0"]
+[ext_resource type="Script" uid="uid://dwtwl5d4attg3" path="res://Scripts/estacion.gd" id="3_sa8v2"]
 [ext_resource type="PackedScene" uid="uid://b4kirh52d1do4" path="res://computer.tscn" id="4_yf2d8"]
 [ext_resource type="Script" uid="uid://dcpx1o1vvn3vb" path="res://Scripts/camera_3d.gd" id="5_wg1wp"]
 [ext_resource type="PackedScene" uid="uid://gysqqn4wkayp" path="res://UI/PanelDespacho.tscn" id="7_sa8v2"]
@@ -192,6 +193,10 @@ transform = Transform3D(-4.3711392e-08, 0, 1.0000001, 0, 1, 0, -1.0000001, 0, -4
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales IZQ/Table_017" unique_id=63350191]
+collision_layer = 5
+script = ExtResource("3_sa8v2")
+estacion_id = "bienestar"
+nombre_visible = "Mesa de bienestar"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales IZQ/Table_017/StaticBody3D" unique_id=1852612389]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
@@ -219,6 +224,10 @@ transform = Transform3D(-4.3711392e-08, 0, 1.0000001, 0, 1, 0, -1.0000001, 0, -4
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales IZQ/Table_021" unique_id=1938339092]
+collision_layer = 5
+script = ExtResource("3_sa8v2")
+estacion_id = "verificacion"
+nombre_visible = "Mesa de verificacion"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales IZQ/Table_021/StaticBody3D" unique_id=1211464510]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
@@ -257,6 +266,10 @@ transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.03
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales DER/Table_023" unique_id=1461242729]
+collision_layer = 5
+script = ExtResource("3_sa8v2")
+estacion_id = "evidencias"
+nombre_visible = "Mesa de evidencias"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales DER/Table_023/StaticBody3D" unique_id=1872609466]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
@@ -351,6 +364,10 @@ transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -2.3
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas Horizontales DOWN/Table_025" unique_id=901814599]
+collision_layer = 5
+script = ExtResource("3_sa8v2")
+estacion_id = "privacidad"
+nombre_visible = "Mesa de privacidad"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales DOWN/Table_025/StaticBody3D" unique_id=2057007624]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
@@ -360,6 +377,10 @@ transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.32
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas Horizontales DOWN/Table_027" unique_id=1846127380]
+collision_layer = 5
+script = ExtResource("3_sa8v2")
+estacion_id = "reporte"
+nombre_visible = "Mesa de reporte"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales DOWN/Table_027/StaticBody3D" unique_id=130262206]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
