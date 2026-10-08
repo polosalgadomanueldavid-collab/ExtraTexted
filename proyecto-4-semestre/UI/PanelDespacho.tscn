@@ -46,6 +46,36 @@ value = 100.0
 [node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1186855777]
 layout_mode = 2
 
+[node name="DenunciaActivaTitulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "DENUNCIA ACTIVA"
+
+[node name="DenunciaActivaDetalle" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Titulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/DenunciaActivaDetalle"]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="Tiempo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/DenunciaActivaDetalle"]
+layout_mode = 2
+text = "Tiempo restante: --:--"
+
+[node name="Progreso" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/DenunciaActivaDetalle"]
+layout_mode = 2
+text = "Progreso: --"
+
+[node name="ProximaEstacion" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/DenunciaActivaDetalle"]
+layout_mode = 2
+text = "Próxima estación: --"
+
+[node name="MensajeEstacion" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="HSeparatorActiva" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
 [node name="Subtitulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=723143811]
 layout_mode = 2
 text = "DENUNCIAS PENDIENTES"
