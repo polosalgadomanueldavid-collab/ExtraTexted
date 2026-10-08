@@ -66,6 +66,10 @@ func actualizar_denuncias(denuncias: Array[Denuncia]) -> void:
 	denuncias_visibles.clear()
 
 	for denuncia: Denuncia in denuncias:
+		if denuncia.estado == Denuncia.Estado.EN_PROCESO:
+			continue
+		
+		
 		var tarjeta: Label = Label.new()
 		tarjeta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		tarjeta.size_flags_horizontal = Control.SIZE_EXPAND_FILL

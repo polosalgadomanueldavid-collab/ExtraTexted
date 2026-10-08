@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://b53kynuebo0yh"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_oeq8l"]
+albedo_color = Color(0.27835286, 0.53488725, 0.7282767, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ql73s"]
+material = SubResource("StandardMaterial3D_oeq8l")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ql73s"]
+
+[node name="BloqueoTemporal" type="StaticBody3D" unique_id=1931248298]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1245871101]
+transform = Transform3D(0.46, 0, 0, 0, 0.6, 0, 0, 0, 0.46, 0, 0.3, 0)
+mesh = SubResource("BoxMesh_ql73s")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1371158326]
+transform = Transform3D(0.4, 0, 0, 0, 0.6, 0, 0, 0, 0.4, 0, 0.3, 0)
+shape = SubResource("BoxShape3D_ql73s")

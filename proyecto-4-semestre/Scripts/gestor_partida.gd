@@ -2,10 +2,16 @@ extends Node3D
 
 @onready var panel_despacho: PanelDespacho = $CanvasLayer/PanelDespacho
 @onready var computador: PCStatic = $Computer
+@onready var jugador: Player = $Gameplay/Node3D
 
 const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
 const MAX_DENUNCIAS_PENDIENTES: int = 5
+const DURACION_BLOQUEO_SEGUNDOS: float = 10.0
+const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
+	"res://BloqueoTemporal.tscn"
+)
+
 
 var sistema_despacho: SistemaDespacho
 var temporizador_denuncias: Timer
@@ -21,6 +27,13 @@ var catalogo_denuncias: Array[Denuncia] = [
 	preload("res://Casos/Despacho/denuncia_phishing_repetido.tres") as Denuncia
 ]
 
+var grafo_piso: GrafoPiso
+var ruta_actual: Array[Vector2i] = []
+var temporizador_bloqueos: Timer
+var bloqueos_iniciados: bool = false
+var bloqueo_temporal_actual: Vector2i = Vector2i(-1, -1)
+var bloqueo_visual_actual: Node3D = null
+
 
 func _ready() -> void:
 	add_to_group("gestor_partida")
@@ -28,7 +41,8 @@ func _ready() -> void:
 
 	sistema_despacho = SistemaDespacho.new()
 	add_child(sistema_despacho)
-
+	grafo_piso = GrafoPiso.new()
+	
 	panel_despacho.configurar_sistema(sistema_despacho)
 	# Desactiva el flujo antiguo de preguntas del computador.
 	computador.lista_problemas.clear()
@@ -43,7 +57,11 @@ func _ready() -> void:
 	# La primera llega pronto para confirmar visualmente la integración.
 	temporizador_denuncias.start(3.0)
 
-
+	temporizador_bloqueos = Timer.new()
+	temporizador_bloqueos.wait_time = DURACION_BLOQUEO_SEGUNDOS
+	temporizador_bloqueos.timeout.connect(_on_temporizador_bloqueos_timeout)
+	add_child(temporizador_bloqueos)
+	
 func _recibir_denuncia_aleatoria() -> void:
 	if sistema_despacho.obtener_denuncias_ordenadas().size() < MAX_DENUNCIAS_PENDIENTES:
 		var plantilla: Denuncia = catalogo_denuncias[
@@ -57,8 +75,13 @@ func _recibir_denuncia_aleatoria() -> void:
 		nueva_denuncia.id = "%s-%03d" % [plantilla.id, contador_denuncias]
 		nueva_denuncia.hora_reporte = Time.get_ticks_msec()
 
-		sistema_despacho.recibir_denuncia(nueva_denuncia)
+		var denuncia_recibida: bool = sistema_despacho.recibir_denuncia(nueva_denuncia)
 
+		if denuncia_recibida and not bloqueos_iniciados:
+			bloqueos_iniciados = true
+			_cambiar_bloqueo_temporal()
+			temporizador_bloqueos.start()
+			
 		print(
 			"Nueva denuncia: ",
 			nueva_denuncia.id,
@@ -92,6 +115,7 @@ func _on_computador_despacho_abierto() -> void:
 		" - ",
 		denuncia.titulo
 	)
+	_calcular_ruta_a_proxima_estacion()
 
 func interactuar_estacion(estacion_id: String) -> void:
 	print("[Despacho] Se solicitó usar la estación: ", estacion_id)
@@ -99,5 +123,156 @@ func interactuar_estacion(estacion_id: String) -> void:
 
 	if fue_correcta:
 		print("Estación correcta: ", estacion_id)
+		_calcular_ruta_a_proxima_estacion()
 	else:
 		print("Estación incorrecta o no hay denuncia activa: ", estacion_id)
+
+
+
+
+func _calcular_ruta_a_proxima_estacion() -> void:
+	var denuncia: Denuncia = sistema_despacho.obtener_denuncia_activa()
+
+	if denuncia == null:
+		ruta_actual.clear()
+		return
+
+	var indice: int = denuncia.indice_estacion_actual
+
+	if indice >= denuncia.protocolo_estaciones.size():
+		ruta_actual.clear()
+		return
+
+	var estacion_id: String = denuncia.protocolo_estaciones[indice]
+
+	if not GrafoPiso.DESTINOS.has(estacion_id):
+		push_warning("La estación no existe en el grafo: " + estacion_id)
+		return
+
+	var origen: Vector2i = grafo_piso.posicion_a_celda(jugador.global_position)
+	var destino: Vector2i = GrafoPiso.DESTINOS[estacion_id]
+
+	ruta_actual = grafo_piso.calcular_ruta(origen, destino)
+	#_depurar_ruta(origen, destino, ruta_actual)
+
+	print("Ruta hacia ", estacion_id, ": ", ruta_actual)
+
+
+func _on_temporizador_bloqueos_timeout() -> void:
+	_cambiar_bloqueo_temporal()
+	
+func _cambiar_bloqueo_temporal() -> void:
+	if is_instance_valid(bloqueo_visual_actual):
+		bloqueo_visual_actual.queue_free()
+		bloqueo_visual_actual = null
+	
+	if bloqueo_temporal_actual != Vector2i(-1, -1):
+		grafo_piso.bloqueos_temporales.erase(bloqueo_temporal_actual)
+		bloqueo_temporal_actual = Vector2i(-1, -1)
+
+	var celda_jugador: Vector2i = grafo_piso.posicion_a_celda(
+		jugador.global_position
+	)
+
+	var destino_activo: Vector2i = Vector2i(-1, -1)
+	var denuncia_activa: Denuncia = sistema_despacho.obtener_denuncia_activa()
+
+	if denuncia_activa != null:
+		var indice: int = denuncia_activa.indice_estacion_actual
+
+		if indice < denuncia_activa.protocolo_estaciones.size():
+			var estacion_id: String = denuncia_activa.protocolo_estaciones[indice]
+
+			if GrafoPiso.DESTINOS.has(estacion_id):
+				destino_activo = GrafoPiso.DESTINOS[estacion_id]		
+
+	var candidatos: Array[Vector2i] = []
+
+	for fila: int in range(GrafoPiso.FILAS):
+		for columna: int in range(GrafoPiso.COLUMNAS):
+			var celda: Vector2i = Vector2i(columna, fila)
+
+			if not grafo_piso.es_transitable(celda):
+				continue
+
+			if celda == celda_jugador:
+				continue
+
+			if GrafoPiso.DESTINOS.values().has(celda):
+				continue
+
+			candidatos.append(celda)
+
+	if candidatos.is_empty():
+		push_warning("No hay celdas disponibles para un bloqueo temporal.")
+		return
+
+	while not candidatos.is_empty():
+		var indice: int = generador_aleatorio.randi_range(
+			0,
+			candidatos.size() - 1
+		)
+
+		var candidata: Vector2i = candidatos[indice]
+		candidatos.remove_at(indice)
+
+		grafo_piso.bloqueos_temporales[candidata] = true
+		grafo_piso.construir_adyacencia()
+
+		var hay_ruta: bool = (
+			destino_activo == Vector2i(-1, -1)
+			or not grafo_piso.calcular_ruta(celda_jugador, destino_activo).is_empty()
+		)
+
+		if hay_ruta:
+			bloqueo_temporal_actual = candidata
+			print("Bloqueo temporal en: ", bloqueo_temporal_actual)
+			_mostrar_bloqueo_temporal(candidata)
+			_calcular_ruta_a_proxima_estacion()
+			return
+
+		grafo_piso.bloqueos_temporales.erase(candidata)
+
+	grafo_piso.construir_adyacencia()
+	push_warning("No se encontró un bloqueo que conserve una ruta válida.")
+
+func _depurar_ruta(
+	origen: Vector2i,
+	destino: Vector2i,
+	ruta: Array[Vector2i]
+) -> void:
+	if ruta.is_empty():
+		push_error(
+			"[GRAFO] No existe ruta desde %s hasta %s."
+			% [origen, destino]
+		)
+		return
+
+	if ruta.front() != origen:
+		push_error("[GRAFO] La ruta no inicia en la celda del jugador.")
+		return
+
+	if ruta.back() != destino:
+		push_error("[GRAFO] La ruta no termina en la estación requerida.")
+		return
+
+	for celda: Vector2i in ruta:
+		if not grafo_piso.es_transitable(celda):
+			push_error(
+				"[GRAFO] La ruta atraviesa una celda bloqueada: %s."
+				% celda
+			)
+			return
+
+	print(
+		"[GRAFO] Ruta válida | Origen: %s | Destino: %s | "
+		% [origen, destino]
+		+ "Pasos: %d | Bloqueo: %s"
+		% [ruta.size() - 1, bloqueo_temporal_actual]
+	)
+
+func _mostrar_bloqueo_temporal(celda: Vector2i) -> void:
+	bloqueo_visual_actual = BLOQUEO_TEMPORAL_ESCENA.instantiate() as Node3D
+	add_child(bloqueo_visual_actual)
+
+	bloqueo_visual_actual.global_position = grafo_piso.celda_a_posicion(celda)

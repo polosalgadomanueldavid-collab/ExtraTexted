@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cb7vnseksawlm"]
+
+[ext_resource type="Script" uid="uid://cwmhoaht78liw" path="res://Pruebas/prueba_grafo.gd" id="1_4o44e"]
+
+[node name="PruebaGrafo" type="Node" unique_id=499168442]
+script = ExtResource("1_4o44e")
