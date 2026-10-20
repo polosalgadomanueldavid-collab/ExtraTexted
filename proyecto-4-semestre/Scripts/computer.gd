@@ -129,6 +129,11 @@ func _input(event: InputEvent) -> void:
 		return
 		
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.is_action_pressed("Interactuar"):
+			get_viewport().set_input_as_handled()
+			salir_de_uso()
+			return
+
 		# La pausa conserva el uso de la PC; las escenas aisladas mantienen su salida.
 		if event.is_action_pressed("Cancel"):
 			if MenuGlobal.es_escena_de_juego():
@@ -144,8 +149,8 @@ func _input(event: InputEvent) -> void:
 				ui_pantalla.mover_foco()
 				get_viewport().set_input_as_handled()
 
-		# 3. Confirmar respuesta con Enter, Espacio o Tecla E
-		elif event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_E] or event.is_action_pressed("ui_accept"):
+		# 3. Confirmar respuesta con Enter o Espacio
+		elif event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE] or event.is_action_pressed("ui_accept"):
 			if ui_pantalla:
 				ui_pantalla.confirmar_seleccion()
 				get_viewport().set_input_as_handled()

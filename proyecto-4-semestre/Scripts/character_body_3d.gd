@@ -79,6 +79,7 @@ func _input(event: InputEvent) -> void:
 			if collided is PCStatic:
 				#print("[Interacción] Computador encontrado.")
 				input_locked = true
+				get_viewport().set_input_as_handled()
 				collided.toggle_use()
 				return
 			if collided is Estacion:

@@ -33,7 +33,27 @@ func _probar() -> void:
 	_pulsar_tecla(KEY_TAB, true)
 	await get_tree().process_frame
 	_verificar(MenuGlobal.get_node("%VolverOpciones").has_focus(), "Shift+Tab permanece dentro de las opciones")
+	MenuGlobal.control_brillo.value = 80.0
+	_clic_control(MenuGlobal.control_brillo)
+	await get_tree().process_frame
+	_verificar(absf(MenuGlobal.control_brillo.value - 100.0) < 3.0, "El clic coincide con el deslizador de brillo escalado")
+	var brillo_con_raton := MenuGlobal.control_brillo.value
+	_pulsar_tecla(KEY_RIGHT)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.control_brillo.value > brillo_con_raton, "El brillo también responde al teclado")
 	MenuGlobal.selector_filtro.grab_focus()
+	_pulsar_tecla(KEY_SPACE)
+	await get_tree().process_frame
+	var lista := MenuGlobal.selector_filtro.get_popup()
+	_verificar(lista.visible, "El selector abre la lista de filtros")
+	if lista.visible:
+		if DisplayServer.get_name() != "headless" and "--capturas" in OS.get_cmdline_user_args():
+			await RenderingServer.frame_post_draw
+			lista.get_texture().get_image().save_png("res://.godot/lista_filtros_qa.png")
+		_pulsar_tecla(KEY_DOWN, false, lista.get_window_id())
+		_pulsar_tecla(KEY_ENTER, false, lista.get_window_id())
+		await get_tree().process_frame
+		_verificar(not lista.visible and MenuGlobal.selector_filtro.selected == 1, "Se puede elegir un filtro con el teclado")
 	MenuGlobal.control_brillo.value = 113.0
 	MenuGlobal.selector_filtro.select(2)
 	MenuGlobal.selector_filtro.item_selected.emit(2)
@@ -87,7 +107,13 @@ func _probar() -> void:
 	_verificar(is_equal_approx(tiempo_bloqueo, oficina.temporizador_bloqueos.time_left), "No avanza el temporizador de bloqueos")
 	_verificar(jugador.global_position.is_equal_approx(posicion) and sistema.calma_operativa == calma, "Se conservan posicion y calma")
 	_verificar(oficina.bloqueo_temporal_actual == celda_bloqueo and cajon.position.is_equal_approx(posicion_cajon), "El bloqueo y su animacion quedan congelados")
-	MenuGlobal.abrir_opciones()
+	MenuGlobal.reanudar.grab_focus()
+	_pulsar_tecla(KEY_TAB)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.get_node("%OpcionesPausa").has_focus(), "Tab selecciona Opciones en la pausa")
+	_clic_control(MenuGlobal.get_node("%OpcionesPausa"))
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_opciones.visible and get_tree().paused, "El clic coincide con el botón escalado de la pausa")
 	await _capturar("03_opciones_pausa")
 	_verificar(is_equal_approx(MenuGlobal.control_brillo.value, 113.0) and MenuGlobal.selector_filtro.selected == 2, "La pausa comparte los ajustes del menu")
 	MenuGlobal.control_brillo.value = 92.0
@@ -100,22 +126,47 @@ func _probar() -> void:
 	await get_tree().create_timer(0.2).timeout
 	_verificar(sistema.obtener_tiempo_restante(denuncia.id) < tiempo_denuncia, "Los tiempos continuan despues de reanudar")
 	pc.computador_despacho_abierto.connect(func() -> void: _aperturas_pc += 1)
-	jugador.input_locked = true
-	pc.toggle_use()
+	var consulta := jugador.shape_cast_3d
+	var transformacion_consulta := consulta.global_transform
+	var destino_consulta := consulta.target_position
+	# La consulta permanece sobre la PC para detectar una reapertura con el mismo evento.
+	consulta.global_position = pc.get_node("CollisionShape3D").global_position
+	consulta.target_position = Vector3.ZERO
+	await get_tree().physics_frame
+	await get_tree().process_frame
+	_pulsar_tecla(KEY_E)
+	await get_tree().process_frame
+	_verificar(pc.is_using and jugador.input_locked and _aperturas_pc == 1, "E abre la PC una sola vez sin cerrarla con el mismo evento")
 	var denuncia_activa := sistema.obtener_denuncia_activa()
 	_verificar(denuncia_activa != null, "La PC inicia la denuncia")
 	_pulsar_escape()
 	await get_tree().process_frame
-	_verificar(get_tree().paused and pc.is_using and MenuGlobal.salir_computador.visible, "ESC pausa sin salir de la PC")
+	_verificar(get_tree().paused and pc.is_using, "ESC pausa sin salir de la PC")
+	_verificar(not MenuGlobal.has_node("%SalirComputador"), "La pausa no incluye Salir del computador")
 	_verificar(pc.camera_3d.current and jugador.input_locked and not jugador.can_process(), "Se conserva la camara y el bloqueo del jugador")
 	await _capturar("04_pausa_computador")
 	MenuGlobal.reanudar_juego()
 	_verificar(pc.is_using and jugador.input_locked and _aperturas_pc == 1 and sistema.obtener_denuncia_activa() == denuncia_activa, "Reanudar no vuelve a abrir ni aceptar una denuncia")
-	_pulsar_escape()
+	_pulsar_tecla(KEY_E)
 	await get_tree().process_frame
-	MenuGlobal.salir_computador.pressed.emit()
-	_verificar(not pc.is_using and not get_tree().paused and not jugador.input_locked and jugador.is_physics_processing(), "Salir de la PC devuelve el control")
+	_verificar(not pc.is_using and not get_tree().paused and not jugador.input_locked and jugador.is_physics_processing() and _aperturas_pc == 1, "E sale de la PC sin reabrirla y devuelve el control")
 	_verificar(oficina.get_node("Gameplay/Camera3D").current, "Se recupera la camara de la oficina")
+	_pulsar_tecla(KEY_E)
+	await get_tree().process_frame
+	_verificar(pc.is_using and jugador.input_locked and _aperturas_pc == 2, "Una nueva pulsacion de E vuelve a abrir la PC")
+	var mantener_interaccion := InputEventKey.new()
+	mantener_interaccion.physical_keycode = KEY_E
+	mantener_interaccion.keycode = KEY_E
+	mantener_interaccion.pressed = true
+	mantener_interaccion.echo = true
+	Input.parse_input_event(mantener_interaccion)
+	await get_tree().process_frame
+	_verificar(pc.is_using and _aperturas_pc == 2, "Mantener E no alterna el uso del computador")
+	_pulsar_tecla(KEY_E)
+	await get_tree().process_frame
+	_verificar(not pc.is_using and not jugador.input_locked and jugador.is_processing_input() and jugador.is_physics_processing() and _aperturas_pc == 2, "E tambien sale correctamente en usos consecutivos")
+	consulta.global_transform = transformacion_consulta
+	consulta.target_position = destino_consulta
 	_pulsar_escape()
 	await get_tree().process_frame
 	MenuGlobal.get_node("%MenuPrincipal").pressed.emit()
@@ -155,12 +206,28 @@ func _probar() -> void:
 		get_tree().quit(1)
 
 
+func _clic_control(control: Control) -> void:
+	var centro := control.get_global_rect().get_center()
+	var movimiento := InputEventMouseMotion.new()
+	movimiento.position = centro
+	movimiento.global_position = centro
+	Input.parse_input_event(movimiento)
+	for pulsado: bool in [true, false]:
+		var clic := InputEventMouseButton.new()
+		clic.position = centro
+		clic.global_position = centro
+		clic.button_index = MOUSE_BUTTON_LEFT
+		clic.pressed = pulsado
+		Input.parse_input_event(clic)
+
+
 func _pulsar_escape() -> void:
 	_pulsar_tecla(KEY_ESCAPE)
 
 
-func _pulsar_tecla(tecla: Key, shift: bool = false) -> void:
+func _pulsar_tecla(tecla: Key, shift: bool = false, ventana: int = 0) -> void:
 	var evento := InputEventKey.new()
+	evento.window_id = ventana
 	evento.physical_keycode = tecla
 	evento.keycode = tecla
 	evento.shift_pressed = shift

@@ -2,19 +2,21 @@ extends Node
 
 const ESCENA_JUEGO := "res://Oficina.tscn"
 const ESCENA_MENU := "res://MainMenu.tscn"
+const TAMANO_DISENO := Vector2(1920, 1080)
+const ESCALA_PAUSA := 0.8
 
 @onready var capa: Control = %CapaModal
 @onready var panel_pausa: PanelContainer = %PanelPausa
 @onready var panel_opciones: PanelContainer = %PanelOpciones
 @onready var panel_confirmacion: PanelContainer = %PanelConfirmacion
 @onready var reanudar: Button = %Reanudar
-@onready var salir_computador: Button = %SalirComputador
 @onready var selector_filtro: OptionButton = %SelectorFiltro
 @onready var control_intensidad: HSlider = %Intensidad
 @onready var control_brillo: HSlider = %Brillo
 @onready var valor_intensidad: Label = %ValorIntensidad
 @onready var valor_brillo: Label = %ValorBrillo
 @onready var filtro_pantalla: ColorRect = %FiltroPantalla
+@onready var margen: MarginContainer = $Interfaz/CapaModal/Margen
 
 var _opciones_desde_pausa: bool = false
 var _foco_anterior: Control
@@ -26,7 +28,6 @@ func _ready() -> void:
 	%Reanudar.pressed.connect(reanudar_juego)
 	%OpcionesPausa.pressed.connect(abrir_opciones)
 	%MenuPrincipal.pressed.connect(_pedir_volver_al_menu)
-	salir_computador.pressed.connect(_salir_del_computador)
 	%VolverOpciones.pressed.connect(cerrar_opciones)
 	%Restablecer.pressed.connect(AjustesAccesibilidad.restablecer)
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
@@ -36,7 +37,21 @@ func _ready() -> void:
 	control_brillo.value_changed.connect(_cambiar_brillo)
 	AjustesAccesibilidad.ajustes_cambiados.connect(_sincronizar_ajustes)
 	get_tree().scene_changed.connect(_al_cambiar_escena)
+	capa.resized.connect(_ajustar_presentacion)
+	panel_pausa.visibility_changed.connect(_ajustar_presentacion)
+	panel_opciones.visibility_changed.connect(_ajustar_presentacion)
+	panel_confirmacion.visibility_changed.connect(_ajustar_presentacion)
 	_sincronizar_ajustes()
+	_ajustar_presentacion()
+
+
+func _ajustar_presentacion() -> void:
+	var escala_panel := ESCALA_PAUSA if panel_pausa.visible or panel_confirmacion.visible else 1.0
+	var factor := minf(capa.size.x / TAMANO_DISENO.x, capa.size.y / TAMANO_DISENO.y)
+	margen.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	margen.size = TAMANO_DISENO / escala_panel
+	margen.scale = Vector2.ONE * factor * escala_panel
+	margen.position = (capa.size - margen.size * margen.scale) * 0.5
 
 
 func es_escena_de_juego() -> bool:
@@ -122,13 +137,7 @@ func _mostrar_pausa() -> void:
 	panel_opciones.hide()
 	panel_confirmacion.hide()
 	panel_pausa.show()
-	var computador := _computador()
-	salir_computador.visible = is_instance_valid(computador) and computador.is_using
-	var controles: Array[Control] = [reanudar, %OpcionesPausa]
-	if salir_computador.visible:
-		controles.append(salir_computador)
-	controles.append(%MenuPrincipal)
-	_confinar_foco(controles)
+	_confinar_foco([reanudar, %OpcionesPausa, %MenuPrincipal])
 	reanudar.grab_focus()
 
 
@@ -143,14 +152,6 @@ func _computador() -> PCStatic:
 	if not es_escena_de_juego():
 		return null
 	return get_tree().current_scene.get_node_or_null("Computer") as PCStatic
-
-
-func _salir_del_computador() -> void:
-	var computador := _computador()
-	if is_instance_valid(computador) and computador.is_using:
-		computador.salir_de_uso()
-	_foco_anterior = null
-	reanudar_juego()
 
 
 func _guardar_entrada() -> void:
