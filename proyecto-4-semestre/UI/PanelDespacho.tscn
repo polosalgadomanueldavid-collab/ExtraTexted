@@ -1,89 +1,247 @@
 [gd_scene format=3 uid="uid://gysqqn4wkayp"]
 
-[ext_resource type="Script" uid="uid://bknaafghuvp8l" path="res://UI/panel_despacho.gd" id="1_kyg4a"]
+[ext_resource type="Script" path="res://UI/panel_despacho.gd" id="1_panel"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf" id="2_fuente"]
+[ext_resource type="Script" path="res://UI/Despacho/icono_despacho.gd" id="3_icono"]
+[ext_resource type="Script" path="res://UI/Despacho/protocolo_denuncia.gd" id="4_protocolo"]
 
-[node name="PanelDespacho" type="Control" unique_id=1634710326]
+[sub_resource type="FontVariation" id="FuenteHUD"]
+base_font = ExtResource("2_fuente")
+baseline_offset = 0.14
+
+[sub_resource type="Theme" id="TemaHUD"]
+default_font = SubResource("FuenteHUD")
+default_font_size = 22
+Label/colors/font_color = Color(0.09, 0.231, 0.314, 1)
+
+[sub_resource type="StyleBoxFlat" id="CalmaFondo"]
+bg_color = Color(0.09, 0.231, 0.314, 0.9)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_left = 14
+corner_radius_bottom_right = 14
+
+[sub_resource type="StyleBoxFlat" id="CalmaRelleno"]
+bg_color = Color(1, 0.945, 0.847, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_left = 14
+corner_radius_bottom_right = 14
+
+[sub_resource type="StyleBoxFlat" id="TarjetaActiva"]
+content_margin_left = 24.0
+content_margin_right = 16.0
+content_margin_top = 12.0
+content_margin_bottom = 12.0
+bg_color = Color(1, 0.945, 0.847, 0.94)
+border_width_left = 8
+border_color = Color(1, 0.47, 0.373, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_left = 16
+corner_radius_bottom_right = 16
+
+[node name="PanelDespacho" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_kyg4a")
+mouse_filter = 2
+theme = SubResource("TemaHUD")
+script = ExtResource("1_panel")
 
-[node name="PanelContainer" type="PanelContainer" parent="." unique_id=285075896]
-layout_mode = 1
-anchors_preset = 11
-anchor_left = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -360.0
-grow_horizontal = 0
-grow_vertical = 2
+[node name="Contenido" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 408.0
+offset_bottom = 1024.0
+mouse_filter = 2
+theme_override_constants/separation = 12
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer" unique_id=1234290651]
+[node name="Calma" type="VBoxContainer" parent="Contenido"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+mouse_filter = 2
+theme_override_constants/separation = 8
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer" unique_id=1930515583]
+[node name="Cabecera" type="HBoxContainer" parent="Contenido/Calma"]
 layout_mode = 2
+mouse_filter = 2
 
-[node name="Titulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1420602418]
-layout_mode = 2
-text = "DESPACHO DIGITAL"
-
-[node name="CalmaTexto" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1331256693]
-layout_mode = 2
-text = "Calma operativa: 100 / 100"
-
-[node name="CalmaBar" type="ProgressBar" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=265993331]
-layout_mode = 2
-value = 100.0
-
-[node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1186855777]
-layout_mode = 2
-
-[node name="DenunciaActivaTitulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "DENUNCIA ACTIVA"
-
-[node name="DenunciaActivaDetalle" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Titulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/DenunciaActivaDetalle"]
-layout_mode = 2
-autowrap_mode = 2
-
-[node name="Tiempo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/DenunciaActivaDetalle"]
-layout_mode = 2
-text = "Tiempo restante: --:--"
-
-[node name="Progreso" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/DenunciaActivaDetalle"]
-layout_mode = 2
-text = "Progreso: --"
-
-[node name="ProximaEstacion" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/DenunciaActivaDetalle"]
-layout_mode = 2
-text = "Próxima estación: --"
-
-[node name="MensajeEstacion" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-autowrap_mode = 2
-
-[node name="HSeparatorActiva" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Subtitulo" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=723143811]
-layout_mode = 2
-text = "DENUNCIAS PENDIENTES"
-
-[node name="ScrollContainer" type="ScrollContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1381345759]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="ListaDenuncias" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/ScrollContainer" unique_id=441819606]
+[node name="Titulo" type="Label" parent="Contenido/Calma/Cabecera"]
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
+text = "CALMA OPERATIVA"
+theme_override_font_sizes/font_size = 26
+
+[node name="ValorCalma" type="Label" parent="Contenido/Calma/Cabecera"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+text = "100 / 100"
+theme_override_font_sizes/font_size = 26
+
+[node name="CalmaBar" type="ProgressBar" parent="Contenido/Calma"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("CalmaFondo")
+theme_override_styles/fill = SubResource("CalmaRelleno")
+value = 100.0
+show_percentage = false
+
+[node name="EspacioCalma" type="Control" parent="Contenido"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TituloActiva" type="Label" parent="Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+text = "CASO EN CURSO"
+theme_override_font_sizes/font_size = 28
+
+[node name="TarjetaActiva" type="PanelContainer" parent="Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("TarjetaActiva")
+
+[node name="Detalle" type="VBoxContainer" parent="Contenido/TarjetaActiva"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Riesgo" type="HBoxContainer" parent="Contenido/TarjetaActiva/Detalle"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 7
+
+[node name="IconoRiesgo" type="Control" parent="Contenido/TarjetaActiva/Detalle/Riesgo"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3_icono")
+tipo = 1
+circular = true
+
+[node name="EtiquetaRiesgo" type="Label" parent="Contenido/TarjetaActiva/Detalle/Riesgo"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+text = "CRÍTICA · NIVEL 5"
+theme_override_font_sizes/font_size = 18
+
+[node name="TituloCaso" type="Label" parent="Contenido/TarjetaActiva/Detalle"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 32
+text = "Amenaza creíble"
+autowrap_mode = 2
+
+[node name="Tiempo" type="HBoxContainer" parent="Contenido/TarjetaActiva/Detalle"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="RelojActivo" type="Control" parent="Contenido/TarjetaActiva/Detalle/Tiempo"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(38, 48)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3_icono")
+
+[node name="TiempoActivo" type="Label" parent="Contenido/TarjetaActiva/Detalle/Tiempo"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.47, 0.373, 1)
+theme_override_font_sizes/font_size = 46
+text = "00:00"
+
+[node name="Estaciones" type="HBoxContainer" parent="Contenido/TarjetaActiva/Detalle"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="IconoActividad" type="Control" parent="Contenido/TarjetaActiva/Detalle/Estaciones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(34, 52)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3_icono")
+tipo = 3
+
+[node name="Protocolo" type="Control" parent="Contenido/TarjetaActiva/Detalle/Estaciones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 66)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+script = ExtResource("4_protocolo")
+
+[node name="SinCasoActivo" type="Label" parent="Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+text = "SIN CASO ACTIVO"
+theme_override_font_sizes/font_size = 18
+
+[node name="MensajeEstacion" type="Label" parent="Contenido"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 2
+
+[node name="EspacioEspera" type="Control" parent="Contenido"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="CabeceraEspera" type="HBoxContainer" parent="Contenido"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Titulo" type="Label" parent="Contenido/CabeceraEspera"]
+layout_mode = 2
+mouse_filter = 2
+text = "EN ESPERA"
+theme_override_font_sizes/font_size = 28
+
+[node name="CantidadEspera" type="Label" parent="Contenido/CabeceraEspera"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+text = "0"
+theme_override_font_sizes/font_size = 24
+
+[node name="SinPendientes" type="Label" parent="Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+text = "SIN DENUNCIAS PENDIENTES"
+theme_override_font_sizes/font_size = 18
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 1
+horizontal_scroll_mode = 0
+
+[node name="ListaDenuncias" type="VBoxContainer" parent="Contenido/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 10
