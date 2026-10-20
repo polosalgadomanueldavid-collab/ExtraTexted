@@ -42,8 +42,8 @@ shape = SubResource("BoxShape3D_ql73s")
 [node name="Polvo" type="GPUParticles3D" parent="." unique_id=1039709545]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.24407673, 0)
 emitting = false
-amount = 37
-lifetime = 0.7
+amount = 60
+lifetime = 0.4
 one_shot = true
 explosiveness = 1.0
 process_material = SubResource("ParticleProcessMaterial_yjj0d")
