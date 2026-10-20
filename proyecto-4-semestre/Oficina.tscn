@@ -462,19 +462,3 @@ objetivo = NodePath("../Node3D")
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1523630788]
 
 [node name="PanelDespacho" parent="CanvasLayer" unique_id=1634710326 instance=ExtResource("7_sa8v2")]
-
-[node name="SpotLight3D" type="SpotLight3D" parent="." unique_id=1582402041]
-transform = Transform3D(1, 0, 0, 0, -0.062496126, 0.9980452, 0, -0.9980452, -0.062496126, -0.9099035, 6.023159, 2.4007168)
-light_energy = 1.138
-spot_range = 7.688
-spot_attenuation = -0.21
-spot_angle = 24.83
-spot_angle_attenuation = 1.741102
-
-[node name="SpotLight3D2" type="SpotLight3D" parent="." unique_id=799277553]
-transform = Transform3D(1, 0, 0, 0, -0.062496126, 0.9980452, 0, -0.9980452, -0.062496126, -0.9099035, 6.023159, 9.016388)
-light_energy = 1.138
-spot_range = 7.156
-spot_attenuation = -0.21
-spot_angle = 31.04
-spot_angle_attenuation = 1.5157173
