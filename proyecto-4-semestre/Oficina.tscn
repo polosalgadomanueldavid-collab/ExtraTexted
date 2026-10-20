@@ -197,7 +197,7 @@ script = ExtResource("1_sa8v2")
 transform = Transform3D(-4.3711392e-08, 0, 1.0000001, 0, 1, 0, -1.0000001, 0, -4.3711392e-08, -4.0763245, 0.244, 1.1865406)
 
 [node name="Diseno_Bienestar" parent="Mesas verticales IZQ/Table_017" unique_id=570853907 instance=ExtResource("10_estacion_bienestar")]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0.44983172, 0)
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0.44983172, -0.006593704)
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales IZQ/Table_017" unique_id=63350191]
 collision_layer = 5
@@ -447,6 +447,12 @@ material = SubResource("StandardMaterial3D_nwhbu")
 [node name="Techo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1880558723]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0865555, 6.201772, 6.162117)
 size = Vector3(6.8593597, 0.038208008, 12.481461)
+
+[node name="OmniLight3D" type="OmniLight3D" parent="Pared, suelo, techo" unique_id=186002390]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8075865, 3.4079452, 3.284585)
+
+[node name="OmniLight3D2" type="OmniLight3D" parent="Pared, suelo, techo" unique_id=1371520944]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9837456, 3.4079452, 8.611934)
 
 [node name="Gameplay" type="Node3D" parent="." unique_id=535684012]
 

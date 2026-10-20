@@ -20,6 +20,7 @@ func _ready() -> void:
 		altura_final,
 		duracion_caida
 	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	animacion.tween_callback(_activar_polvo)
 	animacion.tween_property(
 		diseño_cajon,
 		"position:y",
@@ -27,7 +28,7 @@ func _ready() -> void:
 		0.08
 		
 	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	animacion.tween_callback(_activar_polvo)
+	
 	animacion.tween_property(
 		diseño_cajon,
 		"position:y",
