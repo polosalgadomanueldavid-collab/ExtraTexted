@@ -11,8 +11,14 @@ config_version=5
 [application]
 
 config/name="Proyecto_4_Semestre"
+run/main_scene="uid://ccitwqm0mfqgf"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[autoload]
+
+AjustesAccesibilidad="*res://UI/Menus/ajustes_accesibilidad.gd"
+MenuGlobal="*res://UI/Menus/MenuGlobal.tscn"
 
 [display]
 

@@ -114,19 +114,33 @@ func finalizar_caso_actual() -> void:
 			
 	iniciar_temporizador_aleatorio()
 
+func salir_de_uso() -> void:
+	if not is_using:
+		return
+	toggle_use()
+	if not is_instance_valid(player):
+		player = get_tree().get_first_node_in_group("player")
+	if player:
+		player.input_locked = false
+
+
 func _input(event: InputEvent) -> void:
 	if !is_using:
 		return
 		
 	if event is InputEventKey and event.pressed and not event.echo:
-		# 1. Salir de la PC con la tecla Cancel
-		if Input.is_action_just_pressed("Cancel"):
-			toggle_use()
-			if not is_instance_valid(player):
-				player = get_tree().get_first_node_in_group("player")
-			
-			if player:
-				player.input_locked = false
+		if event.is_action_pressed("Interactuar"):
+			get_viewport().set_input_as_handled()
+			salir_de_uso()
+			return
+
+		# La pausa conserva el uso de la PC; las escenas aisladas mantienen su salida.
+		if event.is_action_pressed("Cancel"):
+			if MenuGlobal.es_escena_de_juego():
+				MenuGlobal.abrir_pausa()
+			else:
+				salir_de_uso()
+			get_viewport().set_input_as_handled()
 			return
 
 		# 2. Navegación entre Botón SÍ / NO con A, D, Izquierda o Derecha
@@ -135,8 +149,8 @@ func _input(event: InputEvent) -> void:
 				ui_pantalla.mover_foco()
 				get_viewport().set_input_as_handled()
 
-		# 3. Confirmar respuesta con Enter, Espacio o Tecla E
-		elif event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_E] or event.is_action_pressed("ui_accept"):
+		# 3. Confirmar respuesta con Enter o Espacio
+		elif event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE] or event.is_action_pressed("ui_accept"):
 			if ui_pantalla:
 				ui_pantalla.confirmar_seleccion()
 				get_viewport().set_input_as_handled()
