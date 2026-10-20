@@ -1,0 +1,329 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://UI/Menus/menu_global.gd" id="1_script"]
+[ext_resource type="Shader" path="res://UI/Menus/filtro_accesibilidad.gdshader" id="2_shader"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
+content_margin_left = 32.0
+content_margin_top = 28.0
+content_margin_right = 32.0
+content_margin_bottom = 28.0
+bg_color = Color(0.055, 0.064, 0.075, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.36, 0.48, 0.53, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_button"]
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+bg_color = Color(0.13, 0.19, 0.22, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.36, 0.48, 0.53, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_hover"]
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+bg_color = Color(0.19, 0.28, 0.31, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 0.79, 0.8, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_pressed"]
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+bg_color = Color(0.09, 0.14, 0.16, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_focus"]
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.86, 0.48, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="Theme" id="Theme_menu"]
+default_font_size = 22
+Button/styles/normal = SubResource("StyleBox_button")
+Button/styles/hover = SubResource("StyleBox_hover")
+Button/styles/pressed = SubResource("StyleBox_pressed")
+Button/styles/focus = SubResource("StyleBox_focus")
+OptionButton/styles/normal = SubResource("StyleBox_button")
+OptionButton/styles/hover = SubResource("StyleBox_hover")
+OptionButton/styles/pressed = SubResource("StyleBox_pressed")
+OptionButton/styles/focus = SubResource("StyleBox_focus")
+PanelContainer/styles/panel = SubResource("StyleBox_panel")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_filtro"]
+shader = ExtResource("2_shader")
+
+[node name="MenuGlobal" type="Node"]
+process_mode = 3
+script = ExtResource("1_script")
+
+[node name="Interfaz" type="CanvasLayer" parent="."]
+layer = 80
+
+[node name="CapaModal" type="Control" parent="Interfaz"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme_menu")
+
+[node name="Fondo" type="ColorRect" parent="Interfaz/CapaModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Margen" type="MarginContainer" parent="Interfaz/CapaModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Scroll" type="ScrollContainer" parent="Interfaz/CapaModal/Margen"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+follow_focus = true
+
+[node name="Centro" type="CenterContainer" parent="Interfaz/CapaModal/Margen/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+
+[node name="PanelPausa" type="PanelContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+
+[node name="Contenido" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Titulo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Pausa"
+horizontal_alignment = 1
+
+[node name="Reanudar" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Reanudar"
+
+[node name="OpcionesPausa" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Opciones"
+
+[node name="SalirComputador" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Salir del computador"
+
+[node name="MenuPrincipal" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Menu principal"
+
+[node name="PanelOpciones" type="PanelContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+
+[node name="Contenido" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Titulo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Accesibilidad"
+horizontal_alignment = 1
+
+[node name="EtiquetaFiltro" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+layout_mode = 2
+text = "Filtro de daltonismo"
+
+[node name="SelectorFiltro" type="OptionButton" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+item_count = 4
+selected = 0
+popup/item_0/text = "Desactivado"
+popup/item_0/id = 0
+popup/item_1/text = "Deuteranopia"
+popup/item_1/id = 1
+popup/item_2/text = "Protanopia"
+popup/item_2/id = 2
+popup/item_3/text = "Tritanopia"
+popup/item_3/id = 3
+
+[node name="FilaIntensidad" type="HBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+layout_mode = 2
+
+[node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaIntensidad"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Intensidad"
+
+[node name="ValorIntensidad" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaIntensidad"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "100 %"
+horizontal_alignment = 2
+
+[node name="Intensidad" type="HSlider" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+focus_mode = 2
+max_value = 100.0
+value = 100.0
+editable = false
+
+[node name="FilaBrillo" type="HBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+layout_mode = 2
+
+[node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaBrillo"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Brillo"
+
+[node name="ValorBrillo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaBrillo"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "100 %"
+horizontal_alignment = 2
+
+[node name="Brillo" type="HSlider" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+focus_mode = 2
+min_value = 80.0
+max_value = 120.0
+value = 100.0
+
+[node name="Restablecer" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Restablecer valores"
+
+[node name="VolverOpciones" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Volver"
+
+[node name="PanelConfirmacion" type="PanelContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+
+[node name="Contenido" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelConfirmacion"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Titulo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelConfirmacion/Contenido"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Volver al menu principal"
+horizontal_alignment = 1
+
+[node name="Aviso" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelConfirmacion/Contenido"]
+layout_mode = 2
+text = "Se perdera el progreso de esta sesion."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="CancelarSalida" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelConfirmacion/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Cancelar"
+
+[node name="ConfirmarSalida" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelConfirmacion/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Volver al menu"
+
+[node name="EfectoAccesibilidad" type="CanvasLayer" parent="."]
+layer = 100
+
+[node name="FiltroPantalla" type="ColorRect" parent="EfectoAccesibilidad"]
+unique_name_in_owner = true
+visible = false
+material = SubResource("ShaderMaterial_filtro")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

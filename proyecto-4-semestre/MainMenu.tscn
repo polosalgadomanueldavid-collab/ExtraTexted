@@ -98,7 +98,6 @@ text = "Jugar"
 [node name="OptionsButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons" unique_id=1682493337]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-tooltip_text = "Pendiente de implementar al final del proyecto."
 focus_neighbor_top = NodePath("../PlayButton")
 focus_neighbor_bottom = NodePath("../QuitButton")
 theme_override_font_sizes/font_size = 24
@@ -113,4 +112,5 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 text = "Salir"
 
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/PlayButton" to="." method="_on_play_button_pressed"]
+[connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/OptionsButton" to="." method="_on_options_button_pressed"]
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/QuitButton" to="." method="_on_quit_button_pressed"]
