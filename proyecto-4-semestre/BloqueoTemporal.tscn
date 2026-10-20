@@ -5,6 +5,30 @@
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ql73s"]
 
+[sub_resource type="Curve" id="Curve_eoccv"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.9569893, 0.017857194), -3.210717, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_qc34d"]
+curve = SubResource("Curve_eoccv")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_yjj0d"]
+direction = Vector3(0, 1, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 1.8
+gravity = Vector3(0, -3.31, 0)
+alpha_curve = SubResource("CurveTexture_qc34d")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x2utp"]
+transparency = 1
+blend_mode = 1
+vertex_color_use_as_albedo = true
+
+[sub_resource type="SphereMesh" id="SphereMesh_7sbap"]
+material = SubResource("StandardMaterial3D_x2utp")
+radius = 0.1
+height = 0.1
+
 [node name="BloqueoTemporal" type="StaticBody3D" unique_id=1931248298]
 script = ExtResource("2_script")
 
@@ -14,3 +38,13 @@ transform = Transform3D(0.253, 0, 0, 0, 0.352, 0, 0, 0, 0.242, 0, 0.60562265, 0)
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1371158326]
 transform = Transform3D(0.4, 0, 0, 0, 0.6, 0, 0, 0, 0.4, 0, 0.3, 0)
 shape = SubResource("BoxShape3D_ql73s")
+
+[node name="Polvo" type="GPUParticles3D" parent="." unique_id=1039709545]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.24407673, 0)
+emitting = false
+amount = 37
+lifetime = 0.7
+one_shot = true
+explosiveness = 1.0
+process_material = SubResource("ParticleProcessMaterial_yjj0d")
+draw_pass_1 = SubResource("SphereMesh_7sbap")
