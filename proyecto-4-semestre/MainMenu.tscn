@@ -1,17 +1,14 @@
 [gd_scene format=3 uid="uid://ccitwqm0mfqgf"]
 
-[ext_resource type="Script" uid="uid://2bp8nqtevvx8" path="res://MainMenu.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/extra_texted_logo.png" id="2_logo"]
+[ext_resource type="Script" uid="uid://2bp8nqtevvx8" path="res://Scripts/MainMenu.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dgai3sla0rjbf" path="res://UI/Menus/ArtePiloto/extra_texted_logo.png" id="2_logo"]
 [ext_resource type="Script" uid="uid://o06w8ljyvwwd" path="res://UI/Menus/boton_piloto.gd" id="5_boton"]
 [ext_resource type="Texture2D" uid="uid://gucbragsn4wx" path="res://UI/Menus/ArtePiloto/jugar.svg" id="6_jugar"]
 [ext_resource type="Texture2D" uid="uid://bd23resump745" path="res://UI/Menus/ArtePiloto/opciones.svg" id="7_opciones"]
 [ext_resource type="Texture2D" uid="uid://d7too7hdm52i" path="res://UI/Menus/ArtePiloto/salir.svg" id="8_salir"]
+[ext_resource type="Theme" uid="uid://da4tnwqev10l7" path="res://UI/Menus/tema_piloto.tres" id="9_tema"]
 
-
-
-[ext_resource type="Theme" path="res://UI/Menus/tema_piloto.tres" id="9_tema"]
-
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=1510664291]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,7 +17,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="ColorRect" parent="." unique_id=901468422]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -30,22 +27,22 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.09, 0.231, 0.314, 1)
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=996122418]
 layout_mode = 0
 offset_right = 1920.0
 offset_bottom = 1080.0
 mouse_filter = 2
 
-[node name="MenuPanel" type="PanelContainer" parent="CenterContainer"]
+[node name="MenuPanel" type="PanelContainer" parent="CenterContainer" unique_id=864304900]
 custom_minimum_size = Vector2(840, 0)
 layout_mode = 2
 theme = ExtResource("9_tema")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/MenuPanel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/MenuPanel" unique_id=1721025572]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="Title" type="TextureRect" parent="CenterContainer/MenuPanel/VBoxContainer"]
+[node name="Title" type="TextureRect" parent="CenterContainer/MenuPanel/VBoxContainer" unique_id=1437799866]
 custom_minimum_size = Vector2(712, 350)
 layout_mode = 2
 mouse_filter = 2
@@ -53,52 +50,50 @@ texture = ExtResource("2_logo")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="MenuButtons" type="VBoxContainer" parent="CenterContainer/MenuPanel/VBoxContainer"]
+[node name="MenuButtons" type="VBoxContainer" parent="CenterContainer/MenuPanel/VBoxContainer" unique_id=871256772]
 custom_minimum_size = Vector2(514.42, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 22
 
-[node name="PlayButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons"]
+[node name="PlayButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons" unique_id=1773732843]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2
-mouse_default_cursor_shape = 2
 focus_neighbor_top = NodePath("../QuitButton")
 focus_neighbor_bottom = NodePath("../OptionsButton")
 focus_next = NodePath("../OptionsButton")
 focus_previous = NodePath("../QuitButton")
+mouse_default_cursor_shape = 2
 text = "JUGAR"
 script = ExtResource("5_boton")
 principal = true
 simbolo = ExtResource("6_jugar")
 
-[node name="OptionsButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons"]
+[node name="OptionsButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons" unique_id=1138447425]
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2
-mouse_default_cursor_shape = 2
 focus_neighbor_top = NodePath("../PlayButton")
 focus_neighbor_bottom = NodePath("../QuitButton")
 focus_next = NodePath("../QuitButton")
 focus_previous = NodePath("../PlayButton")
+mouse_default_cursor_shape = 2
 text = "OPCIONES"
 script = ExtResource("5_boton")
 simbolo = ExtResource("7_opciones")
 
-[node name="QuitButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons"]
+[node name="QuitButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons" unique_id=221994583]
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2
-mouse_default_cursor_shape = 2
 focus_neighbor_top = NodePath("../OptionsButton")
 focus_neighbor_bottom = NodePath("../PlayButton")
 focus_next = NodePath("../PlayButton")
 focus_previous = NodePath("../OptionsButton")
+mouse_default_cursor_shape = 2
 text = "SALIR"
 script = ExtResource("5_boton")
 simbolo = ExtResource("8_salir")
 
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/PlayButton" to="." method="_on_play_button_pressed"]
-
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/OptionsButton" to="." method="_on_options_button_pressed"]
-
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/QuitButton" to="." method="_on_quit_button_pressed"]
