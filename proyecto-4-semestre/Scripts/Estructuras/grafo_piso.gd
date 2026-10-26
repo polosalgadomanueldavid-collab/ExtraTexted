@@ -8,12 +8,14 @@ const ORIGEN_X: float = -4.5
 const ORIGEN_Z: float = -0.1
 
 const DESTINOS: Dictionary = {
-	"computador": Vector2i(7, 0),
-	"evidencias": Vector2i(13, 7),
-	"verificacion": Vector2i(1, 7),
-	"privacidad": Vector2i(4, 12),
-	"reporte": Vector2i(9, 12),
-	"bienestar": Vector2i(1, 3)
+	# Casillas de aproximación: la mesa física se bloquea, pero el jugador debe
+	# poder llegar a una celda contigua para interactuar con cada estación.
+	"computador": Vector2i(7, 2),
+	"evidencias": Vector2i(11, 7),
+	"verificacion": Vector2i(2, 7),
+	"privacidad": Vector2i(4, 10),
+	"reporte": Vector2i(9, 10),
+	"bienestar": Vector2i(2, 3)
 }
 
 const CELDAS_BLOQUEADAS_FIJAS: Array[Vector2i] = [
@@ -39,6 +41,9 @@ const DIRECCIONES: Array[Vector2i] = [
 
 var adyacencia: Dictionary = {}
 var bloqueos_fijos: Dictionary = {}
+# Casillas obtenidas de las colisiones reales de las mesas al cargar la escena.
+# Se mantienen separadas de la lista manual para poder diagnosticarlas y recalcularlas.
+var bloqueos_mesas: Dictionary = {}
 var bloqueos_temporales: Dictionary = {}
 
 func _init() -> void:
@@ -59,8 +64,16 @@ func es_transitable(celda: Vector2i) -> bool:
 	return (
 		es_celda_valida(celda)
 		and not bloqueos_fijos.has(celda)
+		and not bloqueos_mesas.has(celda)
 		and not bloqueos_temporales.has(celda)
 	)
+
+
+func establecer_bloqueos_de_mesas(celdas: Array[Vector2i]) -> void:
+	bloqueos_mesas.clear()
+	for celda: Vector2i in celdas:
+		bloqueos_mesas[celda] = true
+	construir_adyacencia()
 
 func posicion_a_celda(posicion: Vector3) -> Vector2i:
 	var columna: int = floori((posicion.x - ORIGEN_X) / TAMANO_CELDA)

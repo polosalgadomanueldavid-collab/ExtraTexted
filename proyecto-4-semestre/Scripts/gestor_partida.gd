@@ -33,6 +33,7 @@ var temporizador_bloqueos: Timer
 var bloqueos_iniciados: bool = false
 var bloqueo_temporal_actual: Vector2i = Vector2i(-1, -1)
 var bloqueo_visual_actual: Node3D = null
+var depurador_grafo: GrafoDebugVisual
 
 
 func _ready() -> void:
@@ -42,6 +43,12 @@ func _ready() -> void:
 	sistema_despacho = SistemaDespacho.new()
 	add_child(sistema_despacho)
 	grafo_piso = GrafoPiso.new()
+	depurador_grafo = GrafoDebugVisual.new()
+	depurador_grafo.name = "DepuradorGrafo"
+	add_child(depurador_grafo)
+	# Espera a que las colisiones de las mesas entren al espacio físico.
+	await get_tree().physics_frame
+	depurador_grafo.configurar(grafo_piso, jugador)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
 	# Desactiva el flujo antiguo de preguntas del computador.
@@ -153,7 +160,8 @@ func _calcular_ruta_a_proxima_estacion() -> void:
 	var destino: Vector2i = GrafoPiso.DESTINOS[estacion_id]
 
 	ruta_actual = grafo_piso.calcular_ruta(origen, destino)
-	#_depurar_ruta(origen, destino, ruta_actual)
+	depurador_grafo.actualizar_ruta(ruta_actual)
+	_depurar_ruta(origen, destino, ruta_actual)
 
 	print("Ruta hacia ", estacion_id, ": ", ruta_actual)
 
@@ -228,6 +236,7 @@ func _cambiar_bloqueo_temporal() -> void:
 			bloqueo_temporal_actual = candidata
 			print("Bloqueo temporal en: ", bloqueo_temporal_actual)
 			_mostrar_bloqueo_temporal(candidata)
+			depurador_grafo.actualizar_mapa()
 			_calcular_ruta_a_proxima_estacion()
 			return
 
