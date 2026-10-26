@@ -8,6 +8,7 @@ const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
 const MAX_DENUNCIAS_PENDIENTES: int = 5
 const DURACION_BLOQUEO_SEGUNDOS: float = 10.0
+const BLOQUEOS_SIMULTANEOS: int = 30
 const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
 	"res://BloqueoTemporal.tscn"
 )
@@ -31,8 +32,7 @@ var grafo_piso: GrafoPiso
 var ruta_actual: Array[Vector2i] = []
 var temporizador_bloqueos: Timer
 var bloqueos_iniciados: bool = false
-var bloqueo_temporal_actual: Vector2i = Vector2i(-1, -1)
-var bloqueo_visual_actual: Node3D = null
+var bloqueos_visuales: Dictionary = {}
 var depurador_grafo: GrafoDebugVisual
 
 
@@ -170,13 +170,7 @@ func _on_temporizador_bloqueos_timeout() -> void:
 	_cambiar_bloqueo_temporal()
 	
 func _cambiar_bloqueo_temporal() -> void:
-	if is_instance_valid(bloqueo_visual_actual):
-		bloqueo_visual_actual.queue_free()
-		bloqueo_visual_actual = null
-	
-	if bloqueo_temporal_actual != Vector2i(-1, -1):
-		grafo_piso.bloqueos_temporales.erase(bloqueo_temporal_actual)
-		bloqueo_temporal_actual = Vector2i(-1, -1)
+	_limpiar_bloqueos_temporales()
 
 	var celda_jugador: Vector2i = grafo_piso.posicion_a_celda(
 		jugador.global_position
@@ -206,6 +200,9 @@ func _cambiar_bloqueo_temporal() -> void:
 			if celda == celda_jugador:
 				continue
 
+			if grafo_piso.es_zona_segura(celda):
+				continue
+
 			if GrafoPiso.DESTINOS.values().has(celda):
 				continue
 
@@ -215,7 +212,8 @@ func _cambiar_bloqueo_temporal() -> void:
 		push_warning("No hay celdas disponibles para un bloqueo temporal.")
 		return
 
-	while not candidatos.is_empty():
+	var bloqueos_colocados: int = 0
+	while not candidatos.is_empty() and bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
 		var indice: int = generador_aleatorio.randi_range(
 			0,
 			candidatos.size() - 1
@@ -233,17 +231,23 @@ func _cambiar_bloqueo_temporal() -> void:
 		)
 
 		if hay_ruta:
-			bloqueo_temporal_actual = candidata
-			print("Bloqueo temporal en: ", bloqueo_temporal_actual)
 			_mostrar_bloqueo_temporal(candidata)
-			depurador_grafo.actualizar_mapa()
-			_calcular_ruta_a_proxima_estacion()
-			return
+			bloqueos_colocados += 1
+			continue
 
 		grafo_piso.bloqueos_temporales.erase(candidata)
 
 	grafo_piso.construir_adyacencia()
-	push_warning("No se encontró un bloqueo que conserve una ruta válida.")
+	depurador_grafo.actualizar_mapa()
+	_calcular_ruta_a_proxima_estacion()
+
+	if bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
+		push_warning(
+			"Solo se colocaron %d de %d bloqueos sin cerrar la ruta."
+			% [bloqueos_colocados, BLOQUEOS_SIMULTANEOS]
+		)
+	else:
+		print("Bloqueos temporales activos: ", bloqueos_colocados)
 
 func _depurar_ruta(
 	origen: Vector2i,
@@ -276,12 +280,22 @@ func _depurar_ruta(
 	print(
 		"[GRAFO] Ruta válida | Origen: %s | Destino: %s | "
 		% [origen, destino]
-		+ "Pasos: %d | Bloqueo: %s"
-		% [ruta.size() - 1, bloqueo_temporal_actual]
+		+ "Pasos: %d | Bloqueos activos: %d"
+		% [ruta.size() - 1, grafo_piso.bloqueos_temporales.size()]
 	)
 
 func _mostrar_bloqueo_temporal(celda: Vector2i) -> void:
-	bloqueo_visual_actual = BLOQUEO_TEMPORAL_ESCENA.instantiate() as Node3D
-	add_child(bloqueo_visual_actual)
+	var bloqueo_visual := BLOQUEO_TEMPORAL_ESCENA.instantiate() as Node3D
+	add_child(bloqueo_visual)
+	bloqueos_visuales[celda] = bloqueo_visual
+	bloqueo_visual.global_position = grafo_piso.celda_a_posicion(celda)
 
-	bloqueo_visual_actual.global_position = grafo_piso.celda_a_posicion(celda)
+
+func _limpiar_bloqueos_temporales() -> void:
+	for bloqueo_visual: Node3D in bloqueos_visuales.values():
+		if is_instance_valid(bloqueo_visual):
+			bloqueo_visual.queue_free()
+
+	bloqueos_visuales.clear()
+	grafo_piso.bloqueos_temporales.clear()
+	grafo_piso.construir_adyacencia()

@@ -18,6 +18,7 @@ const COLOR_JUGADOR := Color("ffffff", 0.92)
 const COLOR_BLOQUEO_FIJO := Color("e74c3c", 0.72)
 const COLOR_BLOQUEO_TEMPORAL := Color("ff8c00", 0.85)
 const COLOR_BLOQUEO_SIN_COLISION := Color("ff3eb5", 0.88)
+const COLOR_ZONA_SEGURA := Color("2563eb", 0.42)
 
 var grafo: GrafoPiso
 var jugador: Node3D
@@ -84,7 +85,7 @@ func _reconstruir() -> void:
 			if grafo.bloqueos_fijos.has(celda) and not _hay_mesa_fisica(celda):
 				_agregar_etiqueta(celda, "SIN MESA\n%s" % celda)
 
-	print("[GRAFO DEBUG] Leyenda: verde=libre, cian=ruta, amarillo=destino, rojo=bloqueo fijo/de mesa, naranja=bloqueo temporal, rosa=bloqueo lógico sin mesa, blanco=jugador.")
+	print("[GRAFO DEBUG] Leyenda: verde=libre, azul=zona segura, cian=ruta, amarillo=destino, rojo=bloqueo fijo/de mesa, naranja=bloqueo temporal, rosa=bloqueo lógico sin mesa, blanco=jugador.")
 
 
 func _color_de_celda(celda: Vector2i, ruta_como_diccionario: Dictionary) -> Color:
@@ -96,6 +97,8 @@ func _color_de_celda(celda: Vector2i, ruta_como_diccionario: Dictionary) -> Colo
 		return COLOR_DESTINO
 	if ruta_como_diccionario.has(celda):
 		return COLOR_RUTA
+	if grafo.es_zona_segura(celda):
+		return COLOR_ZONA_SEGURA
 	return COLOR_LIBRE
 
 

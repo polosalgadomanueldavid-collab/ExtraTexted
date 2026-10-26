@@ -6,6 +6,10 @@ const FILAS: int = 25
 const TAMANO_CELDA: float = 0.5
 const ORIGEN_X: float = -4.5
 const ORIGEN_Z: float = -0.1
+# Zona de descanso: tramo central inferior más los extremos laterales de las
+# últimas filas. Se mantiene transitable, pero se excluye de bloqueos temporales.
+const ZONA_SEGURA_CENTRAL := Rect2i(1, 14, 12, 11)
+const ZONA_SEGURA_EXTREMOS := Rect2i(0, 7, COLUMNAS, 18)
 
 const DESTINOS: Dictionary = {
 	# Casillas de aproximación: la mesa física se bloquea, pero el jugador debe
@@ -57,6 +61,16 @@ func es_celda_valida(celda: Vector2i) -> bool:
 		and celda.x < COLUMNAS
 		and celda.y >= 0
 		and celda.y < FILAS
+	)
+
+
+func es_zona_segura(celda: Vector2i) -> bool:
+	return (
+		ZONA_SEGURA_CENTRAL.has_point(celda)
+		or (
+			ZONA_SEGURA_EXTREMOS.has_point(celda)
+			and (celda.x == 0 or celda.x == COLUMNAS - 1)
+		)
 	)
 
 
