@@ -1,5 +1,4 @@
 extends CharacterBody3D
-class_name Player
 @export var SPEED: float = 2.0
 @export var ACCELERATION: float = 10.0
 @export var FRICTION: float = 12.0

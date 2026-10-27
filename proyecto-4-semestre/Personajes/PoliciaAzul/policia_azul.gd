@@ -1,4 +1,5 @@
 extends CharacterBody3D
+class_name Player
 ## Controlador independiente para la escena de pruebas del policía azul.
 ## El modelo mira hacia +Z y sus pies están en el origen de la escena.
 
@@ -22,6 +23,8 @@ const WAVE := &"policia_prueba_saludar"
 @export var jump_velocity: float = 5.2
 @export var camera_path: NodePath
 @export var input_locked: bool = false
+@export var interaction_action: StringName = &"Interactuar"
+@export_range(0.1, 2.0, 0.05) var character_scale: float = 0.3
 @export_category("Animación")
 @export var blend_time: float = 0.15
 
@@ -34,9 +37,17 @@ var _animation_names: Dictionary = {}
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 
 @onready var visual: Node3D = $Visual
+@onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
+
+
+func _enter_tree() -> void:
+	add_to_group("player")
 
 
 func _ready() -> void:
+	# La escena de Oficina instancia este personaje y puede conservar el scale
+	# de la instancia. Aplicarlo aquí garantiza el tamaño también durante el juego.
+	scale = Vector3.ONE * character_scale
 	_spawn_transform = global_transform
 	_spawn_visual_rotation = visual.rotation
 	_register_inputs()
@@ -52,6 +63,8 @@ func _ready() -> void:
 					_animation_names[clip] = imported_name
 					break
 	_play_animation(&"idle")
+	if not is_in_group("player"):
+		add_to_group("player")
 
 
 func _physics_process(delta: float) -> void:
@@ -139,6 +152,31 @@ func play_wave() -> void:
 	_play_animation(&"wave")
 
 
+func _input(event: InputEvent) -> void:
+	if input_locked or not event.is_action_pressed(interaction_action):
+		return
+	if event is InputEventKey and event.echo:
+		return
+	if not is_instance_valid(shape_cast_3d):
+		return
+
+	shape_cast_3d.force_shapecast_update()
+	for indice: int in range(shape_cast_3d.get_collision_count()):
+		var collider := shape_cast_3d.get_collider(indice) as Node
+		var actual := collider
+		while actual != null:
+			if actual is PCStatic:
+				input_locked = true
+				get_viewport().set_input_as_handled()
+				(actual as PCStatic).toggle_use()
+				return
+			if actual is Estacion:
+				get_viewport().set_input_as_handled()
+				(actual as Estacion).interactuar(self)
+				return
+			actual = actual.get_parent()
+
+
 func reset_to_spawn() -> void:
 	global_transform = _spawn_transform
 	visual.rotation = _spawn_visual_rotation
@@ -155,7 +193,9 @@ func _register_inputs() -> void:
 	_add_keys(BACK, [KEY_S, KEY_DOWN])
 	_add_keys(RUN, [KEY_SHIFT])
 	_add_keys(JUMP, [KEY_SPACE])
-	_add_keys(WAVE, [KEY_E])
+	if InputMap.has_action(WAVE):
+		InputMap.action_erase_events(WAVE)
+	_add_keys(WAVE, [KEY_G])
 
 
 func _add_keys(action: StringName, keys: Array) -> void:
