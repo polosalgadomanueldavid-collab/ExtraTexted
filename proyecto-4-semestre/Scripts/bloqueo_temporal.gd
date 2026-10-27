@@ -10,6 +10,8 @@ extends StaticBody3D
 func _ready() -> void:
 	var altura_final: float = diseño_cajon.position.y
 	diseño_cajon.position.y = altura_final + altura_caida
+	
+
 
 	var animacion := create_tween()
 	animacion.tween_property(
@@ -18,15 +20,24 @@ func _ready() -> void:
 		altura_final,
 		duracion_caida
 	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	animacion.tween_callback(_activar_polvo)
 	animacion.tween_property(
 		diseño_cajon,
 		"position:y",
 		altura_final + altura_rebote,
 		0.08
+		
 	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	
 	animacion.tween_property(
 		diseño_cajon,
 		"position:y",
 		altura_final,
 		0.312
 	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	
+
+
+func _activar_polvo() -> void:
+	$Polvo.emitting = true
+	$Polvo.restart()
