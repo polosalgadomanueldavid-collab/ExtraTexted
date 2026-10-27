@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Pruebas/prueba_indicadores_estaciones.gd" id="1"]
+
+[node name="PruebaIndicadoresEstaciones" type="Node"]
+script = ExtResource("1")

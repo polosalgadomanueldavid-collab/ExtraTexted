@@ -12,6 +12,10 @@ const BLOQUEOS_SIMULTANEOS: int = 30
 const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
 	"res://BloqueoTemporal.tscn"
 )
+const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
+	"res://Scripts/indicador_proxima_estacion.gd"
+)
+const ALTURA_INDICADOR_ESTACION: float = 1.65
 
 
 var sistema_despacho: SistemaDespacho
@@ -34,6 +38,7 @@ var temporizador_bloqueos: Timer
 var bloqueos_iniciados: bool = false
 var bloqueos_visuales: Dictionary = {}
 var depurador_grafo: GrafoDebugVisual
+var indicadores_estaciones: Dictionary = {}
 
 
 func _ready() -> void:
@@ -49,6 +54,7 @@ func _ready() -> void:
 	# Espera a que las colisiones de las mesas entren al espacio físico.
 	await get_tree().physics_frame
 	depurador_grafo.configurar(grafo_piso, jugador)
+	_crear_indicadores_estaciones()
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
 	# Desactiva el flujo antiguo de preguntas del computador.
@@ -142,18 +148,21 @@ func _calcular_ruta_a_proxima_estacion() -> void:
 
 	if denuncia == null:
 		ruta_actual.clear()
+		_actualizar_indicador_estacion("")
 		return
 
 	var indice: int = denuncia.indice_estacion_actual
 
 	if indice >= denuncia.protocolo_estaciones.size():
 		ruta_actual.clear()
+		_actualizar_indicador_estacion("")
 		return
 
 	var estacion_id: String = denuncia.protocolo_estaciones[indice]
 
 	if not GrafoPiso.DESTINOS.has(estacion_id):
 		push_warning("La estación no existe en el grafo: " + estacion_id)
+		_actualizar_indicador_estacion("")
 		return
 
 	var origen: Vector2i = grafo_piso.posicion_a_celda(jugador.global_position)
@@ -161,9 +170,36 @@ func _calcular_ruta_a_proxima_estacion() -> void:
 
 	ruta_actual = grafo_piso.calcular_ruta(origen, destino)
 	depurador_grafo.actualizar_ruta(ruta_actual)
+	_actualizar_indicador_estacion(estacion_id)
 	_depurar_ruta(origen, destino, ruta_actual)
 
 	print("Ruta hacia ", estacion_id, ": ", ruta_actual)
+
+
+func _crear_indicadores_estaciones() -> void:
+	for nodo: Node in find_children("*", "Estacion", true, false):
+		var estacion := nodo as Estacion
+		if estacion.estacion_id.is_empty():
+			continue
+
+		var indicador := INDICADOR_PROXIMA_ESTACION_SCRIPT.new() as IndicadorProximaEstacion
+		indicador.configurar(estacion.estacion_id, estacion.nombre_visible)
+		indicador.visible = false
+		add_child(indicador)
+		indicador.global_position = estacion.global_position + Vector3.UP * ALTURA_INDICADOR_ESTACION
+		indicadores_estaciones[estacion.estacion_id] = indicador
+
+	print("[Orientación] Indicadores creados: ", indicadores_estaciones.size())
+
+
+func _actualizar_indicador_estacion(estacion_objetivo: String) -> void:
+	for estacion_id: String in indicadores_estaciones:
+		var indicador := indicadores_estaciones[estacion_id] as Node3D
+		if is_instance_valid(indicador):
+			indicador.visible = estacion_id == estacion_objetivo
+
+	if not estacion_objetivo.is_empty() and not indicadores_estaciones.has(estacion_objetivo):
+		push_warning("No hay indicador visual para la estación: " + estacion_objetivo)
 
 
 func _on_temporizador_bloqueos_timeout() -> void:
