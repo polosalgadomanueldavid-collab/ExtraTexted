@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Pruebas/Puntuacion/prueba_interfaz_puntuacion.gd" id="1"]
+
+[node name="PruebaInterfazPuntuacion" type="Node"]
+script = ExtResource("1")

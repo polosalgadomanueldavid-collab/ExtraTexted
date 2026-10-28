@@ -17,6 +17,9 @@ const ICONOS_ESTACION := {
 }
 
 @onready var contenido: VBoxContainer = $Contenido
+@onready var puntos_valor: Label = %ValorPuntos
+@onready var puntos_ganancia: Label = %GananciaPuntos
+@onready var recompensa_caso: Label = %RecompensaCaso
 @onready var calma_texto: Label = $Contenido/Calma/Cabecera/Titulo
 @onready var calma_valor: Label = %ValorCalma
 @onready var calma_barra: ProgressBar = %CalmaBar
@@ -33,17 +36,21 @@ var sistema_despacho: SistemaDespacho = null
 var tarjetas: Dictionary = {}
 var denuncias_visibles: Dictionary = {}
 var segundos_mensaje: float = 0.0
+var segundos_recompensa: float = 0.0
+var _puntos_mostrados: int = 0
 var _id_activo: String = ""
 var _indice_activo: int = -1
 
 
 func _ready() -> void:
 	resized.connect(_ajustar_presentacion)
+	puntos_valor.resized.connect(_ajustar_tamano_puntos)
 	for etiqueta: Label in [calma_texto, calma_valor, %TituloActiva, $Contenido/CabeceraEspera/Titulo, %SinCasoActivo, %SinPendientes, mensaje_estacion]:
 		_estilo_sobre_escenario(etiqueta)
 	%CantidadEspera.add_theme_stylebox_override("normal", _pastilla(CORAL))
 	%CantidadEspera.add_theme_color_override("font_color", CREMA)
 	_ajustar_presentacion()
+	actualizar_puntos(0)
 	actualizar_calma(100)
 	actualizar_denuncias([])
 
@@ -55,6 +62,10 @@ func _process(delta: float) -> void:
 		_actualizar_tarjeta(denuncias_visibles[id])
 	_actualizar_denuncia_activa()
 	_actualizar_mensaje(delta)
+	if segundos_recompensa > 0.0:
+		segundos_recompensa -= delta
+		if segundos_recompensa <= 0.0:
+			puntos_ganancia.text = ""
 
 
 func _ajustar_presentacion() -> void:
@@ -71,16 +82,28 @@ func configurar_sistema(nuevo_sistema: SistemaDespacho) -> void:
 	if is_instance_valid(sistema_despacho):
 		_cambiar_conexiones(false)
 	sistema_despacho = nuevo_sistema
+	# Un HUD reutilizado no arrastra avisos ni datos del caso anterior.
+	segundos_mensaje = 0.0
+	mensaje_estacion.hide()
+	segundos_recompensa = 0.0
+	puntos_ganancia.text = ""
+	_id_activo = ""
+	_indice_activo = -1
 	if not is_instance_valid(sistema_despacho):
+		actualizar_puntos(0)
+		actualizar_calma(100)
 		actualizar_denuncias([])
 		return
 	_cambiar_conexiones(true)
+	_puntos_mostrados = sistema_despacho.puntuacion.puntos
+	actualizar_puntos(_puntos_mostrados)
 	actualizar_calma(sistema_despacho.calma_operativa)
 	actualizar_denuncias(sistema_despacho.obtener_denuncias_ordenadas())
 
 
 func _cambiar_conexiones(conectar: bool) -> void:
 	var conexiones := [
+		[sistema_despacho.puntuacion.puntos_actualizados, actualizar_puntos],
 		[sistema_despacho.denuncias_actualizadas, actualizar_denuncias],
 		[sistema_despacho.calma_actualizada, actualizar_calma],
 		[sistema_despacho.estacion_completada, _on_estacion_completada],
@@ -95,6 +118,36 @@ func _cambiar_conexiones(conectar: bool) -> void:
 			senal.connect(destino)
 		elif not conectar and senal.is_connected(destino):
 			senal.disconnect(destino)
+
+
+func actualizar_puntos(total: int) -> void:
+	var ganancia := total - _puntos_mostrados
+	_puntos_mostrados = total
+	puntos_valor.text = _formatear_puntos(total)
+	_ajustar_tamano_puntos()
+	if ganancia > 0:
+		puntos_ganancia.text = "+%s PTS" % _formatear_puntos(ganancia)
+		segundos_recompensa = 3.0
+
+
+func _ajustar_tamano_puntos() -> void:
+	# Conserva el saldo completo incluso con cifras largas, sin ensanchar el HUD.
+	var fuente := puntos_valor.get_theme_font("font")
+	var ancho := puntos_valor.size.x if puntos_valor.size.x > 0.0 else ANCHO_DISENO - 38.0
+	var tamano := 42
+	while tamano > 14 and fuente.get_string_size(puntos_valor.text, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano).x > ancho:
+		tamano -= 1
+	puntos_valor.add_theme_font_size_override("font_size", tamano)
+
+
+func _formatear_puntos(valor: int) -> String:
+	var cifras := str(valor)
+	var grupos: PackedStringArray = []
+	while cifras.length() > 3:
+		grupos.insert(0, cifras.right(3))
+		cifras = cifras.left(cifras.length() - 3)
+	grupos.insert(0, cifras)
+	return ".".join(grupos)
 
 
 func actualizar_calma(nueva_calma: int) -> void:
@@ -225,6 +278,7 @@ func _actualizar_denuncia_activa() -> void:
 		%EtiquetaRiesgo.add_theme_color_override("font_color", CREMA)
 		%IconoRiesgo.acento = color.darkened(0.32)
 		%IconoRiesgo.queue_redraw()
+	recompensa_caso.text = "AL RESOLVER\n+%s PTS" % _formatear_puntos(denuncia.obtener_puntaje_recompensa())
 	var tiempo := sistema_despacho.obtener_tiempo_restante(denuncia.id)
 	denuncia_activa_tiempo.text = _formatear_tiempo(tiempo)
 	reloj_activo.sincronizar_tiempo(tiempo, denuncia.tiempo_limite_segundos, true)

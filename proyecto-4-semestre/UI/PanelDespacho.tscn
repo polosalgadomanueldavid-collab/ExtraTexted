@@ -28,6 +28,22 @@ corner_radius_top_right = 14
 corner_radius_bottom_left = 14
 corner_radius_bottom_right = 14
 
+[sub_resource type="StyleBoxFlat" id="TarjetaPuntos"]
+content_margin_left = 20.0
+content_margin_right = 18.0
+content_margin_top = 12.0
+content_margin_bottom = 10.0
+bg_color = Color(1, 0.945, 0.847, 0.96)
+border_width_left = 7
+border_color = Color(1, 0.47, 0.373, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_left = 16
+corner_radius_bottom_right = 16
+shadow_color = Color(0.012, 0.098, 0.137, 0.28)
+shadow_size = 4
+shadow_offset = Vector2(0, 3)
+
 [sub_resource type="StyleBoxFlat" id="TarjetaActiva"]
 content_margin_left = 24.0
 content_margin_right = 16.0
@@ -58,6 +74,47 @@ offset_right = 408.0
 offset_bottom = 1024.0
 mouse_filter = 2
 theme_override_constants/separation = 12
+
+[node name="Puntuacion" type="PanelContainer" parent="Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("TarjetaPuntos")
+
+[node name="Detalle" type="VBoxContainer" parent="Contenido/Puntuacion"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Cabecera" type="HBoxContainer" parent="Contenido/Puntuacion/Detalle"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Titulo" type="Label" parent="Contenido/Puntuacion/Detalle/Cabecera"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 20
+text = "PUNTOS"
+
+[node name="GananciaPuntos" type="Label" parent="Contenido/Puntuacion/Detalle/Cabecera"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.72, 0.22, 0.15, 1)
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 2
+clip_text = true
+
+[node name="ValorPuntos" type="Label" parent="Contenido/Puntuacion/Detalle"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 42
+text = "0"
+clip_text = true
 
 [node name="Calma" type="VBoxContainer" parent="Contenido"]
 layout_mode = 2
@@ -164,6 +221,17 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.47, 0.373, 1)
 theme_override_font_sizes/font_size = 46
 text = "00:00"
+
+[node name="RecompensaCaso" type="Label" parent="Contenido/TarjetaActiva/Detalle/Tiempo"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_font_sizes/font_size = 17
+text = "AL RESOLVER\n+500 PTS"
+horizontal_alignment = 2
+clip_text = true
 
 [node name="Estaciones" type="HBoxContainer" parent="Contenido/TarjetaActiva/Detalle"]
 layout_mode = 2

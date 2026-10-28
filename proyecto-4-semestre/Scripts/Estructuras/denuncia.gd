@@ -1,6 +1,8 @@
 class_name Denuncia
 extends Resource
 
+const PUNTOS_POR_NIVEL: int = 100
+
 enum Estado {
 	PENDIENTE,
 	EN_PROCESO,
@@ -20,11 +22,19 @@ enum Estado {
 @export_group("Partida")
 @export var tiempo_limite_segundos: float = 110.0
 @export var penalidad_calma: int = 4
-@export var puntaje_recompensa: int = 20
+## Cero calcula la recompensa por nivel de riesgo; un valor positivo la personaliza.
+@export_range(0, 10000, 1, "or_greater") var puntaje_recompensa: int = 0
 @export var protocolo_estaciones: Array[String] = []
 
 var estado: Estado = Estado.PENDIENTE
 var indice_estacion_actual: int = 0
+
+
+func obtener_puntaje_recompensa() -> int:
+	if puntaje_recompensa > 0:
+		return puntaje_recompensa
+	return clampi(nivel_riesgo, 1, 5) * PUNTOS_POR_NIVEL
+
 
 func va_antes_que(otra: Denuncia) -> bool:
 	# 1. Mayor riesgo = más urgente.

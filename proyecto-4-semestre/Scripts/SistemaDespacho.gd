@@ -13,6 +13,7 @@ const CALMA_MAXIMA: int = 100
 const CALMA_RECUPERADA_AL_RESOLVER: int = 5
 
 var arbol: ArbolDenunciasAVL = ArbolDenunciasAVL.new()
+var puntuacion: SistemaPuntuacion = SistemaPuntuacion.new()
 var calma_operativa: int = CALMA_MAXIMA
 var denuncia_activa_id: String = ""
 # Guarda cuánto tiempo le queda a cada denuncia pendiente.
@@ -77,6 +78,8 @@ func resolver_denuncia(id: String) -> bool:
 		calma_operativa + CALMA_RECUPERADA_AL_RESOLVER
 	)
 
+	# El saldo ya está actualizado cuando el HUD recibe la resolución.
+	puntuacion.registrar_resolucion(denuncia)
 	denuncia_resuelta.emit(denuncia)
 	
 	if denuncia_activa_id == id:
