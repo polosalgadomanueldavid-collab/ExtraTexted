@@ -153,28 +153,38 @@ func play_wave() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if input_locked or not event.is_action_pressed(interaction_action):
+	if not event.is_action_pressed(interaction_action):
 		return
 	if event is InputEventKey and event.echo:
 		return
+	var objetivo := obtener_objetivo_interaccion()
+	if objetivo is PCStatic:
+		input_locked = true
+		get_viewport().set_input_as_handled()
+		(objetivo as PCStatic).toggle_use()
+	elif objetivo is Estacion:
+		get_viewport().set_input_as_handled()
+		(objetivo as Estacion).interactuar(self)
+
+
+func obtener_objetivo_interaccion() -> Node3D:
+	# La consulta visual y la tecla E comparten alcance, orden y disponibilidad.
+	if not is_inside_tree() or input_locked or not is_processing_input():
+		return null
+	if get_tree().paused:
+		return null
 	if not is_instance_valid(shape_cast_3d):
-		return
+		return null
 
 	shape_cast_3d.force_shapecast_update()
 	for indice: int in range(shape_cast_3d.get_collision_count()):
 		var collider := shape_cast_3d.get_collider(indice) as Node
 		var actual := collider
 		while actual != null:
-			if actual is PCStatic:
-				input_locked = true
-				get_viewport().set_input_as_handled()
-				(actual as PCStatic).toggle_use()
-				return
-			if actual is Estacion:
-				get_viewport().set_input_as_handled()
-				(actual as Estacion).interactuar(self)
-				return
+			if actual is PCStatic or actual is Estacion:
+				return actual as Node3D
 			actual = actual.get_parent()
+	return null
 
 
 func reset_to_spawn() -> void:

@@ -15,7 +15,7 @@ const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
 const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 	"res://Scripts/indicador_proxima_estacion.gd"
 )
-const ALTURA_INDICADOR_ESTACION: float = 1.65
+const ALTURA_INDICADOR_ESTACION: float = 1.90
 
 
 var sistema_despacho: SistemaDespacho
@@ -55,6 +55,8 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	depurador_grafo.configurar(grafo_piso, jugador)
 	_crear_indicadores_estaciones()
+	sistema_despacho.denuncias_actualizadas.connect(_on_denuncias_actualizadas)
+	sistema_despacho.estacion_completada.connect(_on_estacion_completada)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
 	# Desactiva el flujo antiguo de preguntas del computador.
@@ -74,7 +76,20 @@ func _ready() -> void:
 	temporizador_bloqueos.wait_time = DURACION_BLOQUEO_SEGUNDOS
 	temporizador_bloqueos.timeout.connect(_on_temporizador_bloqueos_timeout)
 	add_child(temporizador_bloqueos)
-	
+
+
+func _process(_delta: float) -> void:
+	# La misma consulta que procesa E determina si el icono ofrece interacción.
+	var objetivo: Node3D = null
+	if is_instance_valid(jugador) and not computador.is_using:
+		objetivo = jugador.obtener_objetivo_interaccion()
+	for estacion_id: String in indicadores_estaciones:
+		var indicador := indicadores_estaciones[estacion_id] as IndicadorProximaEstacion
+		if is_instance_valid(indicador):
+			var disponible := indicador.visible and objetivo is Estacion and (objetivo as Estacion).estacion_id == estacion_id
+			indicador.establecer_interactuable(disponible)
+
+
 func _recibir_denuncia_aleatoria() -> void:
 	if sistema_despacho.obtener_denuncias_ordenadas().size() < MAX_DENUNCIAS_PENDIENTES:
 		var plantilla: Denuncia = catalogo_denuncias[
@@ -184,7 +199,7 @@ func _crear_indicadores_estaciones() -> void:
 
 		var indicador := INDICADOR_PROXIMA_ESTACION_SCRIPT.new() as IndicadorProximaEstacion
 		indicador.configurar(estacion.estacion_id, estacion.nombre_visible)
-		indicador.visible = false
+		indicador.establecer_activo(false)
 		add_child(indicador)
 		indicador.global_position = estacion.global_position + Vector3.UP * ALTURA_INDICADOR_ESTACION
 		indicadores_estaciones[estacion.estacion_id] = indicador
@@ -194,12 +209,37 @@ func _crear_indicadores_estaciones() -> void:
 
 func _actualizar_indicador_estacion(estacion_objetivo: String) -> void:
 	for estacion_id: String in indicadores_estaciones:
-		var indicador := indicadores_estaciones[estacion_id] as Node3D
+		var indicador := indicadores_estaciones[estacion_id] as IndicadorProximaEstacion
 		if is_instance_valid(indicador):
-			indicador.visible = estacion_id == estacion_objetivo
+			var activo := estacion_id == estacion_objetivo
+			if indicador.visible != activo or indicador.is_processing() != activo:
+				indicador.establecer_activo(activo)
 
 	if not estacion_objetivo.is_empty() and not indicadores_estaciones.has(estacion_objetivo):
 		push_warning("No hay indicador visual para la estación: " + estacion_objetivo)
+
+
+func _on_denuncias_actualizadas(_denuncias: Array[Denuncia]) -> void:
+	# Esta señal llega después de limpiar el caso activo al resolver o vencer.
+	# Sincronizar solo el marcador evita recalcular rutas al cambiar la cola.
+	_sincronizar_indicador_con_despacho()
+
+
+func _on_estacion_completada(_denuncia: Denuncia, _estacion_id: String) -> void:
+	_sincronizar_indicador_con_despacho()
+
+
+func _sincronizar_indicador_con_despacho() -> void:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	var estacion_objetivo: String = ""
+	if denuncia != null and denuncia.indice_estacion_actual < denuncia.protocolo_estaciones.size():
+		var siguiente: String = denuncia.protocolo_estaciones[denuncia.indice_estacion_actual]
+		if GrafoPiso.DESTINOS.has(siguiente):
+			estacion_objetivo = siguiente
+	_actualizar_indicador_estacion(estacion_objetivo)
+	if estacion_objetivo.is_empty() and not ruta_actual.is_empty():
+		ruta_actual.clear()
+		depurador_grafo.actualizar_ruta(ruta_actual)
 
 
 func _on_temporizador_bloqueos_timeout() -> void:

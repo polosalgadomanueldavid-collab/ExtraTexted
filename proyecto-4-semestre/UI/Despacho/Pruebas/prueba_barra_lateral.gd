@@ -114,8 +114,9 @@ func _probar() -> void:
 		var ultima: Control = panel.lista_denuncias.get_child(panel.lista_denuncias.get_child_count() - 1)
 		_verificar(pantalla.encloses(ultima.get_global_rect()), "El desplazamiento permite ver la última denuncia")
 		scroll.scroll_vertical = 0
+	var conexiones_antes := sistema.denuncias_actualizadas.get_connections().size()
 	panel.configurar_sistema(sistema)
-	_verificar(sistema.denuncias_actualizadas.get_connections().size() == 1, "Configurar de nuevo no duplica conexiones")
+	_verificar(sistema.denuncias_actualizadas.get_connections().size() == conexiones_antes, "Configurar de nuevo no duplica conexiones")
 	print("PRUEBA BARRA LATERAL: %d errores" % errores)
 	get_tree().quit(0 if errores == 0 else 1)
 
