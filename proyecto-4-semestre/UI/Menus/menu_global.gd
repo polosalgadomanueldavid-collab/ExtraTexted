@@ -4,11 +4,15 @@ const ESCENA_JUEGO := "res://Oficina.tscn"
 const ESCENA_MENU := "res://MainMenu.tscn"
 const TAMANO_DISENO := Vector2(1920, 1080)
 const ESCALA_PAUSA := 0.8
+const PanelAyuda = preload("res://UI/Menus/panel_ayuda.gd")
+
+enum OrigenAyuda { MENU, PAUSA, INICIO }
 
 @onready var capa: Control = %CapaModal
 @onready var panel_pausa: PanelContainer = %PanelPausa
 @onready var panel_opciones: PanelContainer = %PanelOpciones
 @onready var panel_confirmacion: PanelContainer = %PanelConfirmacion
+@onready var panel_ayuda: PanelAyuda = %PanelAyuda
 @onready var reanudar: Button = %Reanudar
 @onready var selector_filtro: OptionButton = %SelectorFiltro
 @onready var control_intensidad: HSlider = %Intensidad
@@ -22,16 +26,22 @@ var _opciones_desde_pausa: bool = false
 var _foco_anterior: Control
 var _raton_anterior: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _cambiando_escena: bool = false
+var _origen_ayuda := OrigenAyuda.MENU
+var _partida_con_tutorial: int = 0
 
 
 func _ready() -> void:
 	%Reanudar.pressed.connect(reanudar_juego)
 	%OpcionesPausa.pressed.connect(abrir_opciones)
+	%TutorialPausa.pressed.connect(abrir_tutorial)
+	%LeyendaPausa.pressed.connect(abrir_leyenda)
 	%MenuPrincipal.pressed.connect(_pedir_volver_al_menu)
 	%VolverOpciones.pressed.connect(cerrar_opciones)
 	%Restablecer.pressed.connect(AjustesAccesibilidad.restablecer)
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
+	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
+	_confinar_foco([panel_ayuda.boton_cerrar])
 	selector_filtro.item_selected.connect(AjustesAccesibilidad.establecer_modo)
 	control_intensidad.value_changed.connect(_cambiar_intensidad)
 	control_brillo.value_changed.connect(_cambiar_brillo)
@@ -43,6 +53,7 @@ func _ready() -> void:
 	panel_confirmacion.visibility_changed.connect(_ajustar_presentacion)
 	_sincronizar_ajustes()
 	_ajustar_presentacion()
+	_abrir_tutorial_inicial.call_deferred()
 
 
 func _ajustar_presentacion() -> void:
@@ -78,7 +89,7 @@ func reanudar_juego() -> void:
 
 
 func abrir_opciones() -> void:
-	if panel_opciones.visible or _cambiando_escena:
+	if (capa.visible and not panel_pausa.visible) or _cambiando_escena:
 		return
 	_opciones_desde_pausa = es_escena_de_juego() and get_tree().paused
 	if not _opciones_desde_pausa:
@@ -103,6 +114,60 @@ func cerrar_opciones() -> void:
 		_restaurar_entrada()
 
 
+func abrir_tutorial() -> void:
+	_abrir_ayuda(false)
+
+
+func abrir_leyenda() -> void:
+	_abrir_ayuda(true)
+
+
+func _abrir_ayuda(es_leyenda: bool) -> void:
+	if _cambiando_escena:
+		return
+	if panel_pausa.is_visible_in_tree():
+		_mostrar_ayuda(es_leyenda, OrigenAyuda.PAUSA)
+	elif not capa.visible and not es_escena_de_juego():
+		_guardar_entrada()
+		_mostrar_ayuda(es_leyenda, OrigenAyuda.MENU)
+
+
+func _abrir_tutorial_inicial() -> void:
+	if capa.visible or _cambiando_escena or not es_escena_de_juego():
+		return
+	var id_partida := get_tree().current_scene.get_instance_id()
+	if id_partida == _partida_con_tutorial:
+		return
+	_partida_con_tutorial = id_partida
+	_guardar_entrada()
+	get_tree().paused = true
+	_mostrar_ayuda(false, OrigenAyuda.INICIO)
+
+
+func _mostrar_ayuda(es_leyenda: bool, origen: OrigenAyuda) -> void:
+	_origen_ayuda = origen
+	panel_pausa.hide()
+	panel_ayuda.presentar(es_leyenda, origen == OrigenAyuda.INICIO)
+	capa.show()
+	panel_ayuda.show()
+	panel_ayuda.boton_cerrar.grab_focus()
+
+
+func cerrar_ayuda() -> void:
+	if not panel_ayuda.visible:
+		return
+	panel_ayuda.hide()
+	if _origen_ayuda == OrigenAyuda.PAUSA:
+		_mostrar_pausa()
+		var boton: Button = %LeyendaPausa if panel_ayuda.leyenda.visible else %TutorialPausa
+		boton.grab_focus()
+	else:
+		capa.hide()
+		if _origen_ayuda == OrigenAyuda.INICIO:
+			get_tree().paused = false
+		_restaurar_entrada()
+
+
 func volver_al_menu() -> void:
 	if _cambiando_escena:
 		return
@@ -120,7 +185,9 @@ func volver_al_menu() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("Cancel") or event.is_echo() or _cambiando_escena:
 		return
-	if panel_opciones.visible:
+	if panel_ayuda.visible:
+		cerrar_ayuda()
+	elif panel_opciones.visible:
 		cerrar_opciones()
 	elif panel_confirmacion.visible:
 		_mostrar_pausa()
@@ -137,7 +204,7 @@ func _mostrar_pausa() -> void:
 	panel_opciones.hide()
 	panel_confirmacion.hide()
 	panel_pausa.show()
-	_confinar_foco([reanudar, %OpcionesPausa, %MenuPrincipal])
+	_confinar_foco([reanudar, %OpcionesPausa, %TutorialPausa, %LeyendaPausa, %MenuPrincipal])
 	reanudar.grab_focus()
 
 
@@ -177,10 +244,12 @@ func _al_cambiar_escena() -> void:
 	panel_pausa.hide()
 	panel_opciones.hide()
 	panel_confirmacion.hide()
+	panel_ayuda.hide()
 	_foco_anterior = null
 	_opciones_desde_pausa = false
 	_cambiando_escena = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_abrir_tutorial_inicial()
 
 
 func _cambiar_intensidad(valor: float) -> void:

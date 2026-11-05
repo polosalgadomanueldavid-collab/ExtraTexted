@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=30 format=3]
 
 [ext_resource type="Script" path="res://UI/Menus/menu_global.gd" id="1_script"]
 [ext_resource type="Shader" path="res://UI/Menus/filtro_accesibilidad.gdshader" id="2_shader"]
@@ -18,6 +18,9 @@
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/control_slider_inactivo.svg" id="16_control_inactivo"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/flecha_abajo.svg" id="17_flecha"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/restablecer.svg" id="18_restablecer"]
+[ext_resource type="PackedScene" path="res://UI/Menus/PanelAyuda.tscn" id="19_ayuda"]
+[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/tutorial.svg" id="20_tutorial"]
+[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/teclado.svg" id="21_leyenda"]
 
 [sub_resource type="FontVariation" id="Font_aviso"]
 base_font = ExtResource("11_texto")
@@ -232,6 +235,24 @@ text = "OPCIONES"
 script = ExtResource("4_boton")
 simbolo = ExtResource("7_opciones")
 
+[node name="TutorialPausa" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 95.37)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "TUTORIAL"
+script = ExtResource("4_boton")
+simbolo = ExtResource("20_tutorial")
+
+[node name="LeyendaPausa" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 95.37)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "LEYENDA DE TECLAS"
+script = ExtResource("4_boton")
+simbolo = ExtResource("21_leyenda")
+
 [node name="MenuPrincipal" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido/Botones"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
@@ -415,6 +436,11 @@ mouse_default_cursor_shape = 2
 text = "VOLVER AL MENÚ"
 script = ExtResource("4_boton")
 simbolo = ExtResource("9_inicio")
+
+[node name="PanelAyuda" parent="Interfaz/CapaModal/Margen/Scroll/Centro" instance=ExtResource("19_ayuda")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
 
 [node name="EfectoAccesibilidad" type="CanvasLayer" parent="."]
 layer = 100

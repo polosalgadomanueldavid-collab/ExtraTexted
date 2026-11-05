@@ -63,8 +63,11 @@ func toggle_use() -> void:
 	is_using = !is_using
 	camera_3d.current = is_using
 	
+	if not is_instance_valid(player):
+		player = get_tree().get_first_node_in_group("player")
 	if player:
 		# Congela o libera el movimiento del jugador según use la PC o no
+		player.input_locked = is_using
 		player.set_process_input(!is_using)
 		player.set_physics_process(!is_using)
 
@@ -115,13 +118,8 @@ func finalizar_caso_actual() -> void:
 	iniciar_temporizador_aleatorio()
 
 func salir_de_uso() -> void:
-	if not is_using:
-		return
-	toggle_use()
-	if not is_instance_valid(player):
-		player = get_tree().get_first_node_in_group("player")
-	if player:
-		player.input_locked = false
+	if is_using:
+		toggle_use()
 
 
 func _input(event: InputEvent) -> void:

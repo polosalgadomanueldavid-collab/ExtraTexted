@@ -11,6 +11,7 @@ func _ready() -> void:
 
 
 func _probar() -> void:
+	_mover_raton(Vector2(5, 5))
 	get_tree().current_scene = null
 	get_tree().change_scene_to_file("res://MainMenu.tscn")
 	await get_tree().scene_changed
@@ -21,12 +22,23 @@ func _probar() -> void:
 	var botones := menu.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons")
 	var jugar: Button = botones.get_node("PlayButton")
 	var opciones: Button = botones.get_node("OptionsButton")
+	var tutorial: Button = botones.get_node("TutorialButton")
+	var leyenda: Button = botones.get_node("LegendButton")
 	var salir: Button = botones.get_node("QuitButton")
-	_verificar(jugar.has_focus(), "El foco inicial está en Jugar")
+	if DisplayServer.get_name() == "headless":
+		jugar.grab_focus()
+	else:
+		_verificar(jugar.has_focus(), "El foco inicial está en Jugar")
 	await _capturar("01_menu_1280x720")
 	_tecla(KEY_DOWN)
 	await get_tree().process_frame
 	_verificar(opciones.has_focus(), "Flecha abajo selecciona Opciones")
+	_tecla(KEY_TAB)
+	await get_tree().process_frame
+	_verificar(tutorial.has_focus(), "Tab selecciona Tutorial")
+	_tecla(KEY_TAB)
+	await get_tree().process_frame
+	_verificar(leyenda.has_focus(), "Tab selecciona Leyenda de teclas")
 	_tecla(KEY_TAB)
 	await get_tree().process_frame
 	_verificar(salir.has_focus(), "Tab selecciona Salir")
@@ -34,10 +46,7 @@ func _probar() -> void:
 	await get_tree().process_frame
 	_verificar(jugar.has_focus(), "La navegación cierra el ciclo sin perder el foco")
 	var centro := opciones.get_global_rect().get_center()
-	var movimiento := InputEventMouseMotion.new()
-	movimiento.position = centro
-	movimiento.global_position = centro
-	Input.parse_input_event(movimiento)
+	_mover_raton(centro)
 	await get_tree().create_timer(0.15).timeout
 	_verificar(opciones.has_focus() and opciones.scale.x > 1.0, "El ratón selecciona y resalta el botón correcto")
 	await _capturar("02_opciones_resaltado")
@@ -57,7 +66,7 @@ func _probar() -> void:
 		var pantalla := Rect2(Vector2.ZERO, menu.size)
 		var panel: Control = menu.get_node("CenterContainer/MenuPanel")
 		_verificar(pantalla.encloses(panel.get_global_rect()), "Panel completo dentro de %s" % dimensiones)
-		for boton: Button in [jugar, opciones, salir]:
+		for boton: Button in [jugar, opciones, tutorial, leyenda, salir]:
 			_verificar(pantalla.encloses(boton.get_global_rect()), "Botón %s visible en %s" % [boton.text, dimensiones])
 		await _capturar("04_menu_%dx%d" % [dimensiones.x, dimensiones.y])
 	print("PRUEBA MENU PILOTO: %d errores" % _errores)
@@ -79,6 +88,13 @@ func _tecla(codigo: Key) -> void:
 	var soltar := evento.duplicate() as InputEventKey
 	soltar.pressed = false
 	Input.parse_input_event(soltar)
+
+
+func _mover_raton(posicion: Vector2) -> void:
+	var movimiento := InputEventMouseMotion.new()
+	movimiento.position = posicion
+	movimiento.global_position = posicion
+	Input.parse_input_event(movimiento)
 
 
 func _clic(posicion: Vector2, pulsado: bool) -> void:

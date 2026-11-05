@@ -23,6 +23,25 @@ func _probar() -> void:
 	await get_tree().scene_changed
 	await get_tree().process_frame
 	var menu := get_tree().current_scene
+	var tutorial_menu := menu.get_node("%TutorialButton") as Button
+	var leyenda_menu := menu.get_node("%LegendButton") as Button
+	tutorial_menu.grab_focus()
+	tutorial_menu.pressed.emit()
+	_verificar(MenuGlobal.panel_ayuda.tutorial.is_visible_in_tree() and not get_tree().paused, "Tutorial disponible desde el menú principal")
+	await _capturar("00_tutorial_menu")
+	_pulsar_escape()
+	await get_tree().process_frame
+	_verificar(not MenuGlobal.capa.visible and tutorial_menu.has_focus(), "ESC cierra el tutorial y devuelve el foco al menú")
+	leyenda_menu.grab_focus()
+	leyenda_menu.pressed.emit()
+	_verificar(MenuGlobal.panel_ayuda.leyenda.is_visible_in_tree() and not get_tree().paused, "Leyenda de teclas disponible antes de jugar")
+	_pulsar_tecla(KEY_TAB)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_ayuda.boton_cerrar.has_focus(), "Tab mantiene el foco dentro de la leyenda")
+	await _capturar("00_leyenda_menu")
+	_pulsar_tecla(KEY_ENTER)
+	await get_tree().process_frame
+	_verificar(not MenuGlobal.capa.visible and leyenda_menu.has_focus(), "Enter cierra la leyenda y devuelve el foco al menú")
 	menu.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons/OptionsButton").pressed.emit()
 	await _capturar("01_opciones_menu")
 	_verificar(MenuGlobal.panel_opciones.visible and not get_tree().paused, "Opciones desde el menu principal")
@@ -76,6 +95,15 @@ func _probar() -> void:
 	var jugador := oficina.get_node("Gameplay/Node3D") as Player
 	var pc := oficina.get_node("Computer") as PCStatic
 	var sistema: SistemaDespacho = oficina.sistema_despacho
+	var boton_inicio := MenuGlobal.panel_ayuda.boton_cerrar
+	_verificar(MenuGlobal.panel_ayuda.tutorial.is_visible_in_tree() and get_tree().paused and boton_inicio.text == "EMPEZAR TURNO", "Cada partida se abre con el tutorial en pausa")
+	var llegada_en_tutorial: float = oficina.temporizador_denuncias.time_left
+	await get_tree().create_timer(0.15).timeout
+	_verificar(is_equal_approx(llegada_en_tutorial, oficina.temporizador_denuncias.time_left), "El primer caso espera mientras se lee el tutorial")
+	await _capturar("01_tutorial_partida")
+	_clic_control(boton_inicio)
+	await get_tree().process_frame
+	_verificar(not get_tree().paused and not MenuGlobal.capa.visible, "Empezar turno cierra el tutorial y reanuda el juego")
 	var denuncia := (load("res://Casos/Despacho/denuncia_uso_excesivo.tres") as Denuncia).duplicate(true) as Denuncia
 	denuncia.id = "prueba-pausa"
 	sistema.recibir_denuncia(denuncia)
@@ -98,15 +126,23 @@ func _probar() -> void:
 	var tiempo_bloqueo: float = oficina.temporizador_bloqueos.time_left
 	var posicion := jugador.global_position
 	var calma := sistema.calma_operativa
-	var celda_bloqueo: Vector2i = oficina.bloqueo_temporal_actual
-	var cajon: Node3D = oficina.bloqueo_visual_actual.get_node("Diseño_Cajon")
-	var posicion_cajon := cajon.position
+	var bloqueos: Dictionary = oficina.bloqueos_visuales.duplicate()
+	var cajon: Node3D = null
+	if not bloqueos.is_empty():
+		cajon = bloqueos.values().front().get_node("Diseño_Cajon")
+	var posicion_cajon := cajon.position if cajon != null else Vector3.ZERO
 	await get_tree().create_timer(0.3).timeout
 	_verificar(is_equal_approx(tiempo_denuncia, sistema.obtener_tiempo_restante(denuncia.id)), "No vence la denuncia durante la pausa")
 	_verificar(is_equal_approx(tiempo_llegada, oficina.temporizador_denuncias.time_left), "No avanza la llegada de denuncias")
 	_verificar(is_equal_approx(tiempo_bloqueo, oficina.temporizador_bloqueos.time_left), "No avanza el temporizador de bloqueos")
 	_verificar(jugador.global_position.is_equal_approx(posicion) and sistema.calma_operativa == calma, "Se conservan posicion y calma")
-	_verificar(oficina.bloqueo_temporal_actual == celda_bloqueo and cajon.position.is_equal_approx(posicion_cajon), "El bloqueo y su animacion quedan congelados")
+	_verificar(oficina.bloqueos_visuales == bloqueos and cajon != null and cajon.position.is_equal_approx(posicion_cajon), "Los bloqueos y su animación quedan congelados")
+	for ayuda: Button in [MenuGlobal.get_node("%TutorialPausa"), MenuGlobal.get_node("%LeyendaPausa")]:
+		ayuda.pressed.emit()
+		_verificar(MenuGlobal.panel_ayuda.is_visible_in_tree() and get_tree().paused, "La pausa permite consultar " + ayuda.text)
+		_pulsar_escape()
+		await get_tree().process_frame
+		_verificar(MenuGlobal.panel_pausa.is_visible_in_tree() and get_tree().paused and ayuda.has_focus(), "ESC devuelve el foco a la opción de ayuda de la pausa")
 	MenuGlobal.reanudar.grab_focus()
 	_pulsar_tecla(KEY_TAB)
 	await get_tree().process_frame
@@ -125,6 +161,10 @@ func _probar() -> void:
 	_verificar(not get_tree().paused and not MenuGlobal.capa.visible, "ESC reanuda el juego")
 	await get_tree().create_timer(0.2).timeout
 	_verificar(sistema.obtener_tiempo_restante(denuncia.id) < tiempo_denuncia, "Los tiempos continuan despues de reanudar")
+	# Aísla la prueba del computador de los bloqueos y las llegadas aleatorias.
+	oficina.temporizador_denuncias.stop()
+	oficina.temporizador_bloqueos.stop()
+	oficina._limpiar_bloqueos_temporales()
 	pc.computador_despacho_abierto.connect(func() -> void: _aperturas_pc += 1)
 	var consulta := jugador.shape_cast_3d
 	var transformacion_consulta := consulta.global_transform
@@ -194,7 +234,10 @@ func _probar() -> void:
 	get_tree().current_scene.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons/PlayButton").pressed.emit()
 	await get_tree().scene_changed
 	await get_tree().process_frame
-	_verificar(not get_tree().paused and get_tree().current_scene.sistema_despacho.obtener_denuncia_activa() == null, "Jugar de nuevo inicia una partida sin pausa ni denuncia anterior")
+	_verificar(get_tree().paused and MenuGlobal.panel_ayuda.tutorial.is_visible_in_tree(), "Jugar de nuevo vuelve a mostrar el tutorial")
+	_pulsar_escape()
+	await get_tree().process_frame
+	_verificar(not get_tree().paused and not MenuGlobal.capa.visible and get_tree().current_scene.sistema_despacho.obtener_denuncia_activa() == null, "Cerrar el tutorial deja la nueva partida lista y sin denuncia anterior")
 	await _probar_pixeles()
 	get_tree().change_scene_to_file(MenuGlobal.ESCENA_MENU)
 	await get_tree().scene_changed
@@ -264,7 +307,7 @@ func _capturar(nombre: String) -> void:
 	DirAccess.make_dir_recursive_absolute(directorio)
 	get_viewport().get_texture().get_image().save_png(directorio.path_join(nombre + ".png"))
 	var panel: Control
-	for candidato: Control in [MenuGlobal.panel_pausa, MenuGlobal.panel_opciones, MenuGlobal.panel_confirmacion]:
+	for candidato: Control in [MenuGlobal.panel_pausa, MenuGlobal.panel_opciones, MenuGlobal.panel_confirmacion, MenuGlobal.panel_ayuda]:
 		if candidato.is_visible_in_tree():
 			panel = candidato
 	if panel != null:

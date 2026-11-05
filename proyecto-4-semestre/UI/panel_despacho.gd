@@ -8,13 +8,6 @@ const MARGEN := 28.0
 const PETROLEO := Color("173b50")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
-const ICONOS_ESTACION := {
-	"evidencias": IconoDespacho.Tipo.EVIDENCIAS,
-	"verificacion": IconoDespacho.Tipo.VERIFICACION,
-	"privacidad": IconoDespacho.Tipo.PRIVACIDAD,
-	"reporte": IconoDespacho.Tipo.REPORTE,
-	"bienestar": IconoDespacho.Tipo.BIENESTAR
-}
 
 @onready var contenido: VBoxContainer = $Contenido
 @onready var puntos_valor: Label = %ValorPuntos
@@ -197,12 +190,17 @@ func _crear_tarjeta(denuncia: Denuncia, siguiente: bool) -> PanelContainer:
 	fila.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fila.add_theme_constant_override("separation", 10)
 	tarjeta.add_child(fila)
-	var alerta := IconoDespacho.new()
-	alerta.tipo = IconoDespacho.Tipo.ALERTA
-	alerta.acento = color
-	alerta.informativo = denuncia.nivel_riesgo <= 2
-	alerta.custom_minimum_size = Vector2(30, 40)
-	fila.add_child(alerta)
+	var icono := IconoDespacho.new()
+	icono.name = "IconoPrimeraEstacion"
+	var primera_estacion := denuncia.protocolo_estaciones[0] if not denuncia.protocolo_estaciones.is_empty() else ""
+	if IconoDespacho.TIPOS_ESTACION.has(primera_estacion):
+		icono.tipo = IconoDespacho.tipo_estacion(primera_estacion)
+	else:
+		icono.tipo = IconoDespacho.Tipo.ALERTA
+		icono.acento = color
+		icono.informativo = denuncia.nivel_riesgo <= 2
+	icono.custom_minimum_size = Vector2(30, 40)
+	fila.add_child(icono)
 	var texto := VBoxContainer.new()
 	texto.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texto.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -288,7 +286,7 @@ func _actualizar_denuncia_activa() -> void:
 		var tiene_estacion := _indice_activo < denuncia.protocolo_estaciones.size()
 		icono_actividad.visible = tiene_estacion
 		if tiene_estacion:
-			icono_actividad.tipo = ICONOS_ESTACION.get(denuncia.protocolo_estaciones[_indice_activo], IconoDespacho.Tipo.REPORTE)
+			icono_actividad.tipo = IconoDespacho.tipo_estacion(denuncia.protocolo_estaciones[_indice_activo])
 			icono_actividad.queue_redraw()
 
 
@@ -325,11 +323,11 @@ func _estilo_sobre_escenario(etiqueta: Label) -> void:
 
 
 func _on_estacion_completada(_denuncia: Denuncia, estacion_id: String) -> void:
-	_mostrar_mensaje("Correcto: %s completada." % _nombre_estacion(estacion_id), Color("86efac"))
+	_mostrar_mensaje("Correcto: %s completada." % IconoDespacho.nombre_estacion(estacion_id), Color("86efac"))
 
 
 func _on_estacion_incorrecta(_denuncia: Denuncia, estacion_esperada: String) -> void:
-	_mostrar_mensaje("Estación incorrecta. Ve a %s." % _nombre_estacion(estacion_esperada), CORAL)
+	_mostrar_mensaje("Estación incorrecta. Ve a %s." % IconoDespacho.nombre_estacion(estacion_esperada), CORAL)
 
 
 func _on_denuncia_resuelta(_denuncia: Denuncia) -> void:
@@ -338,10 +336,6 @@ func _on_denuncia_resuelta(_denuncia: Denuncia) -> void:
 
 func _on_denuncia_vencida(denuncia: Denuncia) -> void:
 	_mostrar_mensaje("La denuncia '%s' venció." % denuncia.titulo, CORAL)
-
-
-func _nombre_estacion(id: String) -> String:
-	return "Verificación" if id == "verificacion" else id.capitalize()
 
 
 func _mostrar_mensaje(texto: String, color: Color) -> void:

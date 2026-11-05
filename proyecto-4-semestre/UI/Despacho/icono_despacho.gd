@@ -3,6 +3,14 @@ extends Control
 
 enum Tipo { ARENA, ALERTA, EVIDENCIAS, VERIFICACION, PRIVACIDAD, REPORTE, BIENESTAR }
 
+const TIPOS_ESTACION := {
+	"evidencias": Tipo.EVIDENCIAS,
+	"verificacion": Tipo.VERIFICACION,
+	"privacidad": Tipo.PRIVACIDAD,
+	"reporte": Tipo.REPORTE,
+	"bienestar": Tipo.BIENESTAR
+}
+
 @export var tipo: Tipo = Tipo.ARENA
 @export var tinta: Color = Color("173b50")
 @export var acento: Color = Color("ff785f")
@@ -36,33 +44,55 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+static func tipo_estacion(id: String) -> Tipo:
+	return TIPOS_ESTACION.get(id, Tipo.REPORTE)
+
+
+static func nombre_estacion(id: String) -> String:
+	return "Verificación" if id == "verificacion" else id.capitalize()
+
+
+static func dibujar_estacion(lienzo: CanvasItem, tipo_icono: Tipo, centro: Vector2, lado: float, color: Color) -> void:
+	lienzo.draw_set_transform(centro - Vector2.ONE * lado * 0.5, 0.0, Vector2.ONE * (lado / 40.0))
+	match tipo_icono:
+		Tipo.VERIFICACION:
+			lienzo.draw_arc(Vector2(16, 16), 12, 0, TAU, 40, color, 3.8, true)
+			lienzo.draw_line(Vector2(25, 25), Vector2(36, 37), color, 4.5, true)
+		Tipo.EVIDENCIAS:
+			lienzo.draw_polyline(PackedVector2Array([
+				Vector2(3, 8), Vector2(3, 33), Vector2(37, 33), Vector2(37, 13),
+				Vector2(19, 13), Vector2(15, 8), Vector2(3, 8)
+			]), color, 3, true)
+		Tipo.PRIVACIDAD:
+			lienzo.draw_arc(Vector2(20, 16), 10, PI, TAU, 24, color, 3.5, true)
+			lienzo.draw_style_box(_caja_cerradura(color), Rect2(6, 16, 28, 21))
+			lienzo.draw_circle(Vector2(20, 25), 3, Color("fff1d8"))
+			lienzo.draw_line(Vector2(20, 25), Vector2(20, 31), Color("fff1d8"), 2.5, true)
+		Tipo.REPORTE:
+			lienzo.draw_polyline(PackedVector2Array([
+				Vector2(8, 3), Vector2(27, 3), Vector2(34, 10), Vector2(34, 37), Vector2(8, 37), Vector2(8, 3)
+			]), color, 3, true)
+			for y: int in [15, 23, 31]:
+				lienzo.draw_line(Vector2(14, y), Vector2(28, y), color, 2.5, true)
+		Tipo.BIENESTAR:
+			lienzo.draw_polyline(PackedVector2Array([
+				Vector2(20, 35), Vector2(5, 21), Vector2(4, 13), Vector2(9, 7), Vector2(16, 7), Vector2(20, 12),
+				Vector2(24, 7), Vector2(31, 7), Vector2(36, 13), Vector2(35, 21), Vector2(20, 35)
+			]), color, 3, true)
+	lienzo.draw_set_transform(Vector2.ZERO)
+
+
 func _draw() -> void:
 	var base := Vector2(40, 56) if tipo == Tipo.ARENA else Vector2(40, 40)
 	var factor := minf(size.x / base.x, size.y / base.y)
-	draw_set_transform((size - base * factor) * 0.5, 0.0, Vector2.ONE * factor)
-	if tipo == Tipo.ARENA:
-		_dibujar_arena()
-		return
-	draw_set_transform((size - Vector2(40, 40) * factor) * 0.5, 0.0, Vector2.ONE * factor)
-	match tipo:
-		Tipo.ALERTA:
+	if tipo == Tipo.ARENA or tipo == Tipo.ALERTA:
+		draw_set_transform((size - base * factor) * 0.5, 0.0, Vector2.ONE * factor)
+		if tipo == Tipo.ARENA:
+			_dibujar_arena()
+		else:
 			_dibujar_alerta()
-		Tipo.VERIFICACION:
-			draw_arc(Vector2(16, 16), 12, 0, TAU, 40, tinta, 3.8, true)
-			draw_line(Vector2(25, 25), Vector2(36, 37), tinta, 4.5, true)
-		Tipo.EVIDENCIAS:
-			_linea([Vector2(3, 11), Vector2(3, 33), Vector2(37, 33), Vector2(37, 13), Vector2(19, 13), Vector2(15, 8), Vector2(3, 8), Vector2(3, 11)], tinta, 3)
-		Tipo.PRIVACIDAD:
-			draw_arc(Vector2(20, 16), 10, PI, TAU, 24, tinta, 3.5, true)
-			draw_style_box(_caja_cerradura(), Rect2(6, 16, 28, 21))
-			draw_circle(Vector2(20, 25), 3, Color("fff1d8"))
-			draw_line(Vector2(20, 25), Vector2(20, 31), Color("fff1d8"), 2.5, true)
-		Tipo.REPORTE:
-			_linea([Vector2(8, 3), Vector2(27, 3), Vector2(34, 10), Vector2(34, 37), Vector2(8, 37), Vector2(8, 3)], tinta, 3)
-			for y: int in [15, 23, 31]:
-				draw_line(Vector2(14, y), Vector2(28, y), tinta, 2.5, true)
-		Tipo.BIENESTAR:
-			_linea([Vector2(20, 35), Vector2(5, 21), Vector2(4, 13), Vector2(9, 7), Vector2(16, 7), Vector2(20, 12), Vector2(24, 7), Vector2(31, 7), Vector2(36, 13), Vector2(35, 21), Vector2(20, 35)], tinta, 3)
+	else:
+		dibujar_estacion(self, tipo, size * 0.5, 40.0 * factor, tinta)
 
 
 func _dibujar_arena() -> void:
@@ -102,8 +132,8 @@ func _linea(puntos: Array[Vector2], color: Color, ancho: float) -> void:
 	draw_polyline(PackedVector2Array(puntos), color, ancho, true)
 
 
-func _caja_cerradura() -> StyleBoxFlat:
+static func _caja_cerradura(color: Color) -> StyleBoxFlat:
 	var caja := StyleBoxFlat.new()
-	caja.bg_color = tinta
+	caja.bg_color = color
 	caja.set_corner_radius_all(3)
 	return caja

@@ -42,6 +42,7 @@ func _probar() -> void:
 	await _probar_reconfiguracion_y_fallback()
 	await _probar_protocolos(oficina, indicadores)
 	_probar_cierres_directos(sistema, indicadores)
+	await _probar_guia_pantalla(oficina, sistema, indicadores)
 	await _probar_pausa(oficina, sistema, indicadores)
 	get_tree().paused = false
 	oficina.queue_free()
@@ -223,6 +224,53 @@ func _probar_pausa(oficina: Node, sistema: SistemaDespacho, indicadores: Diction
 	_verificar(float(indicador.get("_tiempo")) > fase_pausada, "Reanudar continúa la animación")
 	sistema.resolver_denuncia(caso.id)
 	_validar_objetivo(indicadores, "", "al terminar la prueba de pausa")
+
+
+func _probar_guia_pantalla(oficina: Node, sistema: SistemaDespacho, indicadores: Dictionary) -> void:
+	var guia: Control = oficina.guia_estacion
+	var hud := oficina.get("panel_despacho") as PanelDespacho
+	var camara := oficina.get_node("Gameplay/Camera3D") as Camera3D
+	var transformacion := camara.global_transform
+	var procesaba := camara.is_physics_processing()
+	camara.set_physics_process(false)
+	_verificar(not guia.visible, "La guía está oculta sin caso activo")
+	var caso := CASOS[0].duplicate(true) as Denuncia
+	caso.id = "GUIA-PANTALLA"
+	sistema.recibir_denuncia(caso)
+	sistema.iniciar_denuncia_prioritaria()
+	var indicador := indicadores["bienestar"] as IndicadorProximaEstacion
+	camara.look_at(indicador.global_position)
+	await _cuadros(2)
+	_verificar(guia.visible and guia.objetivo == indicador and not guia.fuera_de_vista, "La guía se proyecta sobre la estación activa")
+	_verificar(guia.icono.tipo == PanelDespacho.IconoDespacho.Tipo.BIENESTAR and guia.rotulo.text == "Bienestar", "La guía identifica la estación con un icono y un nombre")
+	var centro_guia: Vector2 = guia.tarjeta.get_global_rect().get_center()
+	var punto_proyectado := camara.unproject_position(indicador.global_position)
+	_verificar(centro_guia.y < punto_proyectado.y and guia.direccion.y > 0.9, "La tarjeta apunta desde encima del modelo 3D")
+
+	# Proyecta el objetivo detrás de la barra de denuncias sin modificar su anclaje.
+	var centro_hud := hud.contenido.get_global_rect().get_center()
+	camara.global_position += indicador.global_position - camara.project_position(centro_hud, 5.0)
+	await _cuadros(2)
+	var rectangulo: Rect2 = guia.tarjeta.get_global_rect()
+	_verificar(guia.visible and guia.fuera_de_vista and guia.direccion.x > 0.9, "Un objetivo detrás del HUD aparece a la derecha de la zona de juego")
+	_verificar(get_viewport().get_visible_rect().encloses(rectangulo) and not hud.contenido.get_global_rect().intersects(rectangulo), "La guía del borde queda dentro de pantalla y fuera del HUD")
+
+	camara.global_transform = transformacion
+	camara.look_at(camara.global_position * 2.0 - indicador.global_position)
+	await _cuadros(2)
+	_verificar(guia.visible and guia.fuera_de_vista and guia.direccion.y > 0.9, "La estación detrás de cámara señala hacia el borde inferior")
+	oficina.computador.is_using = true
+	await _cuadros(2)
+	_verificar(not guia.visible, "La guía se oculta mientras se usa la computadora")
+	oficina.computador.is_using = false
+	await _cuadros(2)
+	_verificar(guia.visible, "La guía vuelve al cerrar la computadora")
+	sistema.interactuar_estacion("bienestar")
+	_verificar(guia.objetivo == indicadores["reporte"] and guia.icono.tipo == PanelDespacho.IconoDespacho.Tipo.REPORTE, "Completar un paso actualiza el pictograma de la guía")
+	sistema.resolver_denuncia(caso.id)
+	_verificar(not guia.visible and guia.objetivo == null, "Resolver retira la guía inmediatamente")
+	camara.global_transform = transformacion
+	camara.set_physics_process(procesaba)
 
 
 func _validar_objetivo(indicadores: Dictionary, esperado: String, momento: String) -> void:

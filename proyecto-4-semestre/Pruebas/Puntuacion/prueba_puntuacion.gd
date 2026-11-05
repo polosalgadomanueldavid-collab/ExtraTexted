@@ -186,6 +186,7 @@ func _jugar_desde_menu() -> bool:
 	boton.pressed.emit()
 	if not await _esperar_escena(MenuGlobal.ESCENA_JUEGO):
 		return false
+	MenuGlobal.cerrar_ayuda()
 	# El gestor termina de configurar la oficina después de un cuadro físico.
 	await get_tree().physics_frame
 	for cuadro: int in range(3):

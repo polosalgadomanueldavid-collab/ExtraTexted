@@ -5,6 +5,9 @@ class_name Player
 
 signal animation_state_changed(animation: StringName)
 signal reset_performed
+# El futuro panel puede abrirse al mantener G y elegir el emote al soltarla.
+signal emote_menu_requested
+signal emote_menu_finished(cancelled: bool)
 
 const LEFT := &"policia_prueba_izquierda"
 const RIGHT := &"policia_prueba_derecha"
@@ -12,7 +15,8 @@ const FORWARD := &"policia_prueba_adelante"
 const BACK := &"policia_prueba_atras"
 const RUN := &"policia_prueba_correr"
 const JUMP := &"policia_prueba_saltar"
-const WAVE := &"policia_prueba_saludar"
+const EMOTE_MENU := &"policia_menu_emotes"
+const EMOTE_HOLD_SECONDS := 0.3
 
 @export_category("Movimiento")
 @export var walk_speed: float = 2.0
@@ -22,7 +26,11 @@ const WAVE := &"policia_prueba_saludar"
 @export var turn_speed: float = 12.0
 @export var jump_velocity: float = 5.2
 @export var camera_path: NodePath
-@export var input_locked: bool = false
+@export var input_locked: bool = false:
+	set(value):
+		input_locked = value
+		if value:
+			_finish_emote_menu(true)
 @export var interaction_action: StringName = &"Interactuar"
 @export_range(0.1, 2.0, 0.05) var character_scale: float = 0.3
 @export_category("Animación")
@@ -33,6 +41,8 @@ var current_animation: StringName = &""
 var _spawn_transform: Transform3D
 var _spawn_visual_rotation: Vector3
 var _wave_remaining: float = 0.0
+var _emote_hold_remaining: float = 0.0
+var _emote_menu_active: bool = false
 var _animation_names: Dictionary = {}
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 
@@ -68,6 +78,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_emote_hold(delta)
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	elif velocity.y < 0.0:
@@ -83,8 +94,6 @@ func _physics_process(delta: float) -> void:
 	if not input_locked and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
-	elif not input_locked and Input.is_action_just_pressed(WAVE) and is_on_floor():
-		play_wave()
 	if moving or input_locked or not is_on_floor():
 		_wave_remaining = 0.0
 	else:
@@ -153,18 +162,45 @@ func play_wave() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event.is_action(EMOTE_MENU):
+		if event.is_action_released(EMOTE_MENU):
+			_finish_emote_menu(false)
+		elif event.is_action_pressed(EMOTE_MENU) and not input_locked and not _emote_menu_active:
+			_emote_hold_remaining = EMOTE_HOLD_SECONDS
+		return
 	if not event.is_action_pressed(interaction_action):
 		return
 	if event is InputEventKey and event.echo:
 		return
 	var objetivo := obtener_objetivo_interaccion()
 	if objetivo is PCStatic:
-		input_locked = true
 		get_viewport().set_input_as_handled()
 		(objetivo as PCStatic).toggle_use()
 	elif objetivo is Estacion:
 		get_viewport().set_input_as_handled()
 		(objetivo as Estacion).interactuar(self)
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_EXIT_TREE]:
+		_finish_emote_menu(true)
+
+
+func _update_emote_hold(delta: float) -> void:
+	if _emote_hold_remaining <= 0.0:
+		return
+	_emote_hold_remaining = maxf(0.0, _emote_hold_remaining - delta)
+	if is_zero_approx(_emote_hold_remaining):
+		_emote_hold_remaining = 0.0
+		_emote_menu_active = true
+		emote_menu_requested.emit()
+
+
+func _finish_emote_menu(cancelled: bool) -> void:
+	_emote_hold_remaining = 0.0
+	if _emote_menu_active:
+		_emote_menu_active = false
+		emote_menu_finished.emit(cancelled)
 
 
 func obtener_objetivo_interaccion() -> Node3D:
@@ -188,6 +224,7 @@ func obtener_objetivo_interaccion() -> Node3D:
 
 
 func reset_to_spawn() -> void:
+	_finish_emote_menu(true)
 	global_transform = _spawn_transform
 	visual.rotation = _spawn_visual_rotation
 	velocity = Vector3.ZERO
@@ -203,9 +240,7 @@ func _register_inputs() -> void:
 	_add_keys(BACK, [KEY_S, KEY_DOWN])
 	_add_keys(RUN, [KEY_SHIFT])
 	_add_keys(JUMP, [KEY_SPACE])
-	if InputMap.has_action(WAVE):
-		InputMap.action_erase_events(WAVE)
-	_add_keys(WAVE, [KEY_G])
+	_add_keys(EMOTE_MENU, [KEY_G])
 
 
 func _add_keys(action: StringName, keys: Array) -> void:

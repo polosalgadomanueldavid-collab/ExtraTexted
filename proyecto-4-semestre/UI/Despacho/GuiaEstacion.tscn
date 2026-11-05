@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://UI/Despacho/guia_estacion.gd" id="1_guia"]
+[ext_resource type="Script" path="res://UI/Despacho/icono_despacho.gd" id="2_icono"]
+
+[sub_resource type="StyleBoxFlat" id="Tarjeta"]
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+bg_color = Color(1, 0.945, 0.847, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.09, 0.231, 0.314, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+shadow_color = Color(0.012, 0.098, 0.137, 0.32)
+shadow_size = 4
+shadow_offset = Vector2(0, 2)
+
+[node name="GuiaEstacion" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_guia")
+
+[node name="TarjetaDestino" type="PanelContainer" parent="."]
+layout_mode = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Tarjeta")
+
+[node name="Contenido" type="HBoxContainer" parent="TarjetaDestino"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="IconoEstacion" type="Control" parent="TarjetaDestino/Contenido"]
+custom_minimum_size = Vector2(25, 25)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("2_icono")
+tipo = 5
+
+[node name="NombreEstacion" type="Label" parent="TarjetaDestino/Contenido"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
+theme_override_font_sizes/font_size = 20
+vertical_alignment = 1
+

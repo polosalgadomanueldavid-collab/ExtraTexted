@@ -44,6 +44,8 @@ func _probar() -> void:
 	_verificar(panel.reloj_activo.animado and panel.reloj_activo.is_processing(), "Solo el reloj activo procesa animación")
 	_verificar(panel.protocolo.indice_actual == 1 and panel.protocolo.estaciones.size() == 3, "Las etapas reflejan el avance real")
 	_verificar(panel.icono_actividad.tipo == panel.IconoDespacho.Tipo.VERIFICACION, "La lupa corresponde a la estación actual")
+	var icono_espera: Control = panel.tarjetas["D-004"].find_child("IconoPrimeraEstacion", true, false)
+	_verificar(icono_espera != null and icono_espera.tipo == panel.IconoDespacho.Tipo.EVIDENCIAS, "La denuncia en espera muestra la carpeta de su primera estación")
 	for tarjeta: PanelContainer in panel.tarjetas.values():
 		var reloj: Control = tarjeta.get_meta("reloj")
 		_verificar(not reloj.animado and not reloj.is_processing(), "Reloj en espera inmóvil: " + tarjeta.name)

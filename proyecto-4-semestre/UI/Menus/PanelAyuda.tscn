@@ -1,0 +1,94 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://UI/Menus/panel_ayuda.gd" id="1_script"]
+[ext_resource type="Theme" path="res://UI/Menus/tema_piloto.tres" id="2_tema"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="3_texto"]
+[ext_resource type="Script" path="res://UI/Menus/boton_piloto.gd" id="4_boton"]
+
+[sub_resource type="FontVariation" id="Font_enfasis"]
+base_font = ExtResource("3_texto")
+variation_opentype = {
+2003265652: 800.0
+}
+
+[sub_resource type="StyleBoxFlat" id="Style_fila"]
+content_margin_left = 18.0
+content_margin_top = 14.0
+content_margin_right = 18.0
+content_margin_bottom = 14.0
+bg_color = Color(0.075, 0.225, 0.3, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_left = 18
+corner_radius_bottom_right = 18
+
+[sub_resource type="StyleBoxFlat" id="Style_numero"]
+bg_color = Color(1, 0.47, 0.37, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_left = 15
+corner_radius_bottom_right = 15
+
+[sub_resource type="StyleBoxFlat" id="Style_tecla"]
+content_margin_top = 2.0
+content_margin_bottom = 7.0
+bg_color = Color(1, 0.945, 0.847, 1)
+border_width_bottom = 4
+border_color = Color(0.84, 0.72, 0.55, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+
+[node name="PanelAyuda" type="PanelContainer"]
+custom_minimum_size = Vector2(1040, 0)
+theme = ExtResource("2_tema")
+script = ExtResource("1_script")
+fuente_texto = ExtResource("3_texto")
+fuente_enfasis = SubResource("Font_enfasis")
+estilo_fila = SubResource("Style_fila")
+estilo_numero = SubResource("Style_numero")
+estilo_tecla = SubResource("Style_tecla")
+
+[node name="Contenido" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="Encabezado" type="VBoxContainer" parent="Contenido"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Seccion" type="Label" parent="Contenido/Encabezado"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.62, 0.54, 1)
+theme_override_fonts/font = SubResource("Font_enfasis")
+theme_override_font_sizes/font_size = 22
+text = "GUÍA DE DESPACHO"
+
+[node name="Titulo" type="Label" parent="Contenido/Encabezado"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 60
+text = "TUTORIAL"
+
+[node name="Tutorial" type="VBoxContainer" parent="Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Leyenda" type="VBoxContainer" parent="Contenido"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="CerrarAyuda" type="Button" parent="Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(514.42, 92)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 40
+text = "VOLVER"
+script = ExtResource("4_boton")
+principal = true

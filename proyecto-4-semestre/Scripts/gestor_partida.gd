@@ -15,6 +15,7 @@ const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
 const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 	"res://Scripts/indicador_proxima_estacion.gd"
 )
+const GUIA_ESTACION_ESCENA := preload("res://UI/Despacho/GuiaEstacion.tscn")
 const ALTURA_INDICADOR_ESTACION: float = 1.82
 
 
@@ -39,6 +40,7 @@ var bloqueos_iniciados: bool = false
 var bloqueos_visuales: Dictionary = {}
 var depurador_grafo: GrafoDebugVisual
 var indicadores_estaciones: Dictionary = {}
+var guia_estacion: Control
 
 
 func _ready() -> void:
@@ -55,6 +57,8 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	depurador_grafo.configurar(grafo_piso, jugador)
 	_crear_indicadores_estaciones()
+	guia_estacion = GUIA_ESTACION_ESCENA.instantiate()
+	panel_despacho.add_child(guia_estacion)
 	sistema_despacho.denuncias_actualizadas.connect(_on_denuncias_actualizadas)
 	sistema_despacho.estacion_completada.connect(_on_estacion_completada)
 	
@@ -88,6 +92,8 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(indicador):
 			var disponible := indicador.visible and objetivo is Estacion and (objetivo as Estacion).estacion_id == estacion_id
 			indicador.establecer_interactuable(disponible)
+	if is_instance_valid(guia_estacion):
+		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using)
 
 
 func _recibir_denuncia_aleatoria() -> void:
@@ -214,6 +220,7 @@ func _actualizar_indicador_estacion(estacion_objetivo: String) -> void:
 			var activo := estacion_id == estacion_objetivo
 			if indicador.visible != activo or indicador.is_processing() != activo:
 				indicador.establecer_activo(activo)
+	guia_estacion.establecer_objetivo(indicadores_estaciones.get(estacion_objetivo) as IndicadorProximaEstacion)
 
 	if not estacion_objetivo.is_empty() and not indicadores_estaciones.has(estacion_objetivo):
 		push_warning("No hay indicador visual para la estación: " + estacion_objetivo)

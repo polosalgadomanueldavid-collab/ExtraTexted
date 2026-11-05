@@ -30,6 +30,14 @@ func _on_options_button_pressed() -> void:
 	MenuGlobal.abrir_opciones()
 
 
+func _on_tutorial_button_pressed() -> void:
+	MenuGlobal.abrir_tutorial()
+
+
+func _on_legend_button_pressed() -> void:
+	MenuGlobal.abrir_leyenda()
+
+
 func _on_quit_button_pressed() -> void:
 	AjustesAccesibilidad.guardar()
 	get_tree().quit()
