@@ -9,6 +9,7 @@ const AMPLITUD_FLOTACION: float = 0.045
 const VELOCIDAD_FLOTACION: float = 2.2
 const GIRO_BASE := Vector3(0.0, -0.24, -0.045)
 const ALTURA_VISUAL: float = 0.88
+const ESCALA_MARCADOR: float = 0.85
 
 ## Evita que la perspectiva agrande el objeto sobre el personaje al acercarse.
 @export_range(0.08, 0.5, 0.01) var alto_maximo_pantalla: float = 0.18
@@ -147,7 +148,8 @@ func _actualizar_orientacion() -> void:
 			if pixeles_por_unidad > 0.001:
 				factor = minf(1.0, alto_permitido / (pixeles_por_unidad * ALTURA_VISUAL))
 		# Las mallas tienen frente +Z; esta base mantiene su cara hacia el jugador.
-		_orientacion.global_basis = camara.global_basis.orthonormalized().scaled(Vector3.ONE * factor)
+		# Se aplica después del límite de perspectiva para reducir también los cercanos.
+		_orientacion.global_basis = camara.global_basis.orthonormalized().scaled(Vector3.ONE * factor * ESCALA_MARCADOR)
 
 
 func _actualizar_procesamiento() -> void:

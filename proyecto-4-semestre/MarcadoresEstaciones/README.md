@@ -43,11 +43,13 @@ un balanceo limitados, sin girar la cara del icono de espaldas. Solo el objetivo
 activo procesa animación; la pausa congela su fase y los marcadores ocultos
 no procesan cuadros.
 
-El gestor ancla cada marcador 1,90 unidades sobre su estación. La altura se
+El gestor ancla cada marcador 1,82 unidades sobre su estación. La altura se
 ajusta en `ALTURA_INDICADOR_ESTACION` de `Scripts/gestor_partida.gd`; el balanceo
 y la separación del puntero se ajustan en el script del indicador. Su propiedad
 `alto_maximo_pantalla` limita el tamaño al 18 % del alto del viewport al acercarse,
-sin agrandar los objetos lejanos. Así se mantiene visible el personaje al usar
+sin agrandar los objetos lejanos. `ESCALA_MARCADOR = 0.85` reduce un 15 % el
+conjunto completo (objeto y puntero) después de ese límite, también al acercarse.
+Así se mantiene visible el personaje al usar
 las mesas inferiores. La API `establecer_activo(bool)` controla visibilidad y
 animación juntas.
 

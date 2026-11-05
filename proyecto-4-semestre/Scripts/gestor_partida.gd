@@ -15,7 +15,7 @@ const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
 const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 	"res://Scripts/indicador_proxima_estacion.gd"
 )
-const ALTURA_INDICADOR_ESTACION: float = 1.90
+const ALTURA_INDICADOR_ESTACION: float = 1.82
 
 
 var sistema_despacho: SistemaDespacho
