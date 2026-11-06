@@ -271,13 +271,64 @@ theme_override_font_sizes/font_size = 64
 text = "OPCIONES"
 horizontal_alignment = 1
 
-[node name="EtiquetaFiltro" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+[node name="Botones" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+custom_minimum_size = Vector2(514.42, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 22
+
+[node name="AccesibilidadOpciones" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 95.37)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "ACCESIBILIDAD"
+script = ExtResource("4_boton")
+simbolo = ExtResource("7_opciones")
+
+[node name="ControlesOpciones" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 95.37)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "CONTROLES"
+script = ExtResource("4_boton")
+simbolo = ExtResource("21_leyenda")
+
+[node name="VolverOpciones" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 95.37)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "VOLVER"
+script = ExtResource("4_boton")
+principal = true
+simbolo = ExtResource("10_volver")
+
+[node name="PanelAccesibilidad" type="PanelContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(920, 0)
+layout_mode = 2
+theme = ExtResource("3_tema")
+
+[node name="Contenido" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Titulo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "ACCESIBILIDAD"
+horizontal_alignment = 1
+
+[node name="EtiquetaFiltro" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("Font_aviso")
 theme_override_font_sizes/font_size = 34
 text = "Filtro de daltonismo"
 
-[node name="SelectorFiltro" type="OptionButton" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+[node name="SelectorFiltro" type="OptionButton" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2
@@ -294,17 +345,17 @@ popup/item_2/id = 2
 popup/item_3/text = "Tritanopia"
 popup/item_3/id = 3
 
-[node name="FilaIntensidad" type="HBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+[node name="FilaIntensidad" type="HBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 layout_mode = 2
 
-[node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaIntensidad"]
+[node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido/FilaIntensidad"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("Font_aviso")
 theme_override_font_sizes/font_size = 34
 size_flags_horizontal = 3
 text = "Intensidad"
 
-[node name="ValorIntensidad" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaIntensidad"]
+[node name="ValorIntensidad" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido/FilaIntensidad"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
@@ -313,7 +364,7 @@ theme_override_font_sizes/font_size = 34
 text = "100 %"
 horizontal_alignment = 2
 
-[node name="Intensidad" type="HSlider" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+[node name="Intensidad" type="HSlider" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
@@ -324,17 +375,17 @@ max_value = 100.0
 value = 100.0
 editable = false
 
-[node name="FilaBrillo" type="HBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+[node name="FilaBrillo" type="HBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 layout_mode = 2
 
-[node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaBrillo"]
+[node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido/FilaBrillo"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("Font_aviso")
 theme_override_font_sizes/font_size = 34
 size_flags_horizontal = 3
 text = "Brillo"
 
-[node name="ValorBrillo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaBrillo"]
+[node name="ValorBrillo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido/FilaBrillo"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
@@ -343,7 +394,7 @@ theme_override_font_sizes/font_size = 34
 text = "100 %"
 horizontal_alignment = 2
 
-[node name="Brillo" type="HSlider" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+[node name="Brillo" type="HSlider" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
@@ -354,13 +405,13 @@ min_value = 80.0
 max_value = 120.0
 value = 100.0
 
-[node name="Botones" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+[node name="Botones" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 custom_minimum_size = Vector2(514.42, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 22
 
-[node name="Restablecer" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/Botones"]
+[node name="Restablecer" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido/Botones"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2
@@ -369,16 +420,7 @@ text = "RESTABLECER"
 script = ExtResource("4_boton")
 simbolo = ExtResource("18_restablecer")
 
-[node name="ControlesOpciones" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/Botones"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 95.37)
-layout_mode = 2
-mouse_default_cursor_shape = 2
-text = "CONTROLES"
-script = ExtResource("4_boton")
-simbolo = ExtResource("21_leyenda")
-
-[node name="VolverOpciones" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/Botones"]
+[node name="VolverAccesibilidad" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido/Botones"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2

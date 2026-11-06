@@ -13,6 +13,7 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
 @onready var capa: Control = %CapaModal
 @onready var panel_pausa: PanelContainer = %PanelPausa
 @onready var panel_opciones: PanelContainer = %PanelOpciones
+@onready var panel_accesibilidad: PanelContainer = %PanelAccesibilidad
 @onready var panel_confirmacion: PanelContainer = %PanelConfirmacion
 @onready var panel_ayuda: PanelAyuda = %PanelAyuda
 @onready var panel_clasificacion: PanelClasificacion = %PanelClasificacion
@@ -40,9 +41,12 @@ func _ready() -> void:
 	%Reanudar.pressed.connect(reanudar_juego)
 	%OpcionesPausa.pressed.connect(abrir_opciones)
 	%TutorialPausa.pressed.connect(abrir_tutorial)
+	%AccesibilidadOpciones.pressed.connect(abrir_accesibilidad)
 	%ControlesOpciones.pressed.connect(abrir_controles)
 	%MenuPrincipal.pressed.connect(_pedir_volver_al_menu)
 	%VolverOpciones.pressed.connect(cerrar_opciones)
+	%VolverAccesibilidad.pressed.connect(cerrar_accesibilidad)
+	_confinar_foco([%AccesibilidadOpciones, %ControlesOpciones, %VolverOpciones])
 	%Restablecer.pressed.connect(AjustesAccesibilidad.restablecer)
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
@@ -58,6 +62,7 @@ func _ready() -> void:
 	capa.resized.connect(_ajustar_presentacion)
 	panel_pausa.visibility_changed.connect(_ajustar_presentacion)
 	panel_opciones.visibility_changed.connect(_ajustar_presentacion)
+	panel_accesibilidad.visibility_changed.connect(_ajustar_presentacion)
 	panel_confirmacion.visibility_changed.connect(_ajustar_presentacion)
 	_sincronizar_ajustes()
 	_ajustar_presentacion()
@@ -106,20 +111,38 @@ func abrir_opciones() -> void:
 		_guardar_entrada()
 	panel_pausa.hide()
 	panel_confirmacion.hide()
-	_sincronizar_ajustes()
 	capa.show()
 	panel_opciones.show()
-	selector_filtro.grab_focus()
+	%AccesibilidadOpciones.grab_focus()
 
 
 func cerrar_opciones() -> void:
-	AjustesAccesibilidad.guardar()
+	if not panel_opciones.is_visible_in_tree():
+		return
 	panel_opciones.hide()
 	if _opciones_desde_pausa:
 		_mostrar_pausa()
 	else:
 		capa.hide()
 		_restaurar_entrada()
+
+
+func abrir_accesibilidad() -> void:
+	if not panel_opciones.is_visible_in_tree() or _cambiando_escena:
+		return
+	panel_opciones.hide()
+	_sincronizar_ajustes()
+	panel_accesibilidad.show()
+	selector_filtro.grab_focus()
+
+
+func cerrar_accesibilidad() -> void:
+	if not panel_accesibilidad.is_visible_in_tree():
+		return
+	AjustesAccesibilidad.guardar()
+	panel_accesibilidad.hide()
+	panel_opciones.show()
+	%AccesibilidadOpciones.grab_focus()
 
 
 func abrir_tutorial() -> void:
@@ -273,6 +296,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		cerrar_ayuda()
 	elif panel_clasificacion.visible:
 		_cerrar_clasificacion()
+	elif panel_accesibilidad.visible:
+		cerrar_accesibilidad()
 	elif panel_opciones.visible:
 		cerrar_opciones()
 	elif panel_confirmacion.visible:
@@ -329,6 +354,7 @@ func _al_cambiar_escena() -> void:
 	capa.hide()
 	panel_pausa.hide()
 	panel_opciones.hide()
+	panel_accesibilidad.hide()
 	panel_confirmacion.hide()
 	panel_ayuda.hide()
 	panel_clasificacion.hide()
@@ -358,7 +384,7 @@ func _sincronizar_ajustes() -> void:
 	var controles: Array[Control] = [selector_filtro]
 	if control_intensidad.editable:
 		controles.append(control_intensidad)
-	controles.append_array([control_brillo, %Restablecer, %ControlesOpciones, %VolverOpciones])
+	controles.append_array([control_brillo, %Restablecer, %VolverAccesibilidad])
 	_confinar_foco(controles)
 	valor_intensidad.text = "%d %%" % roundi(control_intensidad.value)
 	valor_brillo.text = "%d %%" % roundi(control_brillo.value)

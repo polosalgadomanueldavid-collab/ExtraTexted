@@ -34,7 +34,13 @@ func _probar() -> void:
 	menu.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons/OptionsButton").pressed.emit()
 	await _capturar("01_opciones_menu")
 	_verificar(MenuGlobal.panel_opciones.visible and not get_tree().paused, "Opciones desde el menú principal")
+	var accesibilidad_opciones := MenuGlobal.get_node("%AccesibilidadOpciones") as Button
 	var controles_opciones := MenuGlobal.get_node("%ControlesOpciones") as Button
+	_verificar(accesibilidad_opciones.has_focus() and controles_opciones.is_visible_in_tree() and not MenuGlobal.selector_filtro.is_visible_in_tree(), "Opciones muestra las dos categorías y deja los ajustes dentro de Accesibilidad")
+	MenuGlobal.get_node("%VolverOpciones").grab_focus()
+	_pulsar_tecla(KEY_TAB)
+	await get_tree().process_frame
+	_verificar(accesibilidad_opciones.has_focus(), "Tab mantiene el foco entre las categorías y Volver")
 	controles_opciones.grab_focus()
 	_pulsar_tecla(KEY_ENTER)
 	await get_tree().process_frame
@@ -46,13 +52,18 @@ func _probar() -> void:
 	_pulsar_tecla(KEY_ENTER)
 	await get_tree().process_frame
 	_verificar(MenuGlobal.panel_opciones.is_visible_in_tree() and not MenuGlobal.panel_ayuda.visible and controles_opciones.has_focus() and not get_tree().paused, "Enter vuelve a Opciones y restaura el foco en Controles")
-	MenuGlobal.get_node("%VolverOpciones").grab_focus()
+	_clic_control(accesibilidad_opciones)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_accesibilidad.is_visible_in_tree() and not MenuGlobal.panel_opciones.visible and MenuGlobal.selector_filtro.has_focus(), "Accesibilidad abre sus ajustes desde el menú principal")
+	await _capturar("01_accesibilidad_menu")
+	var volver_accesibilidad := MenuGlobal.get_node("%VolverAccesibilidad") as Button
+	volver_accesibilidad.grab_focus()
 	_pulsar_tecla(KEY_TAB)
 	await get_tree().process_frame
-	_verificar(MenuGlobal.selector_filtro.has_focus(), "Tab permanece dentro de las opciones")
+	_verificar(MenuGlobal.selector_filtro.has_focus(), "Tab permanece dentro de Accesibilidad")
 	_pulsar_tecla(KEY_TAB, true)
 	await get_tree().process_frame
-	_verificar(MenuGlobal.get_node("%VolverOpciones").has_focus(), "Shift+Tab permanece dentro de las opciones")
+	_verificar(volver_accesibilidad.has_focus(), "Shift+Tab permanece dentro de Accesibilidad")
 	MenuGlobal.control_brillo.value = 80.0
 	_clic_control(MenuGlobal.control_brillo)
 	await get_tree().process_frame
@@ -80,7 +91,12 @@ func _probar() -> void:
 	MenuGlobal.control_intensidad.value = 65.0
 	_verificar(is_equal_approx(AjustesAccesibilidad.brillo, 1.13), "El control de brillo actualiza el estado compartido")
 	_verificar(AjustesAccesibilidad.modo == 2 and MenuGlobal.filtro_pantalla.visible, "El filtro queda activado")
-	MenuGlobal.cerrar_opciones()
+	_clic_control(volver_accesibilidad)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_opciones.is_visible_in_tree() and accesibilidad_opciones.has_focus() and not MenuGlobal.panel_accesibilidad.visible, "Volver desde Accesibilidad restaura su foco en Opciones")
+	_pulsar_escape()
+	await get_tree().process_frame
+	_verificar(not MenuGlobal.capa.visible and not get_tree().paused, "ESC cierra Opciones y regresa al menú principal")
 	var config := ConfigFile.new()
 	_verificar(config.load(AjustesAccesibilidad.ARCHIVO) == OK, "Se guardan los ajustes")
 	_verificar(config.get_value("accesibilidad", "modo", -1) == 2, "Se conserva el modo elegido")
@@ -160,8 +176,15 @@ func _probar() -> void:
 	await get_tree().process_frame
 	_verificar(MenuGlobal.panel_opciones.visible and get_tree().paused, "El clic coincide con el botón escalado de la pausa")
 	await _capturar("03_opciones_pausa")
+	_pulsar_tecla(KEY_ENTER)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_accesibilidad.is_visible_in_tree() and get_tree().paused, "Enter abre Accesibilidad desde Opciones en pausa")
+	await _capturar("03_accesibilidad_pausa")
 	_verificar(is_equal_approx(MenuGlobal.control_brillo.value, 113.0) and MenuGlobal.selector_filtro.selected == 2, "La pausa comparte los ajustes del menu")
 	MenuGlobal.control_brillo.value = 92.0
+	_pulsar_escape()
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_opciones.is_visible_in_tree() and accesibilidad_opciones.has_focus() and get_tree().paused, "ESC vuelve de Accesibilidad a Opciones sin reanudar")
 	_clic_control(controles_opciones)
 	await get_tree().process_frame
 	_verificar(MenuGlobal.panel_ayuda.leyenda.is_visible_in_tree() and not MenuGlobal.panel_opciones.visible and get_tree().paused, "Controles se puede abrir con el ratón desde Opciones en pausa")
@@ -238,8 +261,11 @@ func _probar() -> void:
 	_verificar(get_tree().current_scene.scene_file_path == MenuGlobal.ESCENA_MENU and not get_tree().paused and not MenuGlobal.capa.visible, "Regreso limpio al menu principal")
 	await _capturar("06_menu_principal")
 	MenuGlobal.abrir_opciones()
+	MenuGlobal.abrir_accesibilidad()
+	await get_tree().process_frame
 	_verificar(is_equal_approx(MenuGlobal.control_brillo.value, 92.0), "El menu recibe los cambios hechos en la pausa")
-	AjustesAccesibilidad.restablecer()
+	_clic_control(MenuGlobal.get_node("%Restablecer"))
+	await get_tree().process_frame
 	_verificar(not MenuGlobal.filtro_pantalla.visible and is_equal_approx(MenuGlobal.control_brillo.value, 100.0), "Restablecer deja la imagen neutra")
 	for modo: int in range(1, 4):
 		AjustesAccesibilidad.establecer_modo(modo)
@@ -247,6 +273,7 @@ func _probar() -> void:
 		await _capturar("07_filtro_%d" % modo)
 	AjustesAccesibilidad.establecer_intensidad(0.0)
 	_verificar(not MenuGlobal.filtro_pantalla.visible, "Intensidad cero no altera la imagen")
+	MenuGlobal.cerrar_accesibilidad()
 	MenuGlobal.cerrar_opciones()
 	get_tree().current_scene.get_node("%PlayButton").pressed.emit()
 	_verificar(panel_nombre.nombre_jugador.text == "Prueba de menús", "Una nueva partida permite reutilizar el nombre anterior")
@@ -326,7 +353,7 @@ func _capturar(nombre: String) -> void:
 	DirAccess.make_dir_recursive_absolute(directorio)
 	get_viewport().get_texture().get_image().save_png(directorio.path_join(nombre + ".png"))
 	var panel: Control
-	for candidato: Control in [MenuGlobal.panel_pausa, MenuGlobal.panel_opciones, MenuGlobal.panel_confirmacion, MenuGlobal.panel_ayuda]:
+	for candidato: Control in [MenuGlobal.panel_pausa, MenuGlobal.panel_opciones, MenuGlobal.panel_accesibilidad, MenuGlobal.panel_confirmacion, MenuGlobal.panel_ayuda]:
 		if candidato.is_visible_in_tree():
 			panel = candidato
 	if panel != null:
