@@ -1,6 +1,5 @@
 extends Control
 
-const OFFICE_SCENE := "res://Oficina.tscn"
 const TAMANO_DISENO := Vector2(1920, 1080)
 
 @onready var play_button: Button = %PlayButton
@@ -21,9 +20,7 @@ func _ajustar_escala() -> void:
 
 
 func _on_play_button_pressed() -> void:
-	var error := get_tree().change_scene_to_file(OFFICE_SCENE)
-	if error != OK:
-		push_error("No se pudo abrir la oficina: %s" % error)
+	MenuGlobal.pedir_nombre_partida()
 
 
 func _on_options_button_pressed() -> void:
@@ -34,8 +31,8 @@ func _on_tutorial_button_pressed() -> void:
 	MenuGlobal.abrir_tutorial()
 
 
-func _on_legend_button_pressed() -> void:
-	MenuGlobal.abrir_leyenda()
+func _on_ranking_button_pressed() -> void:
+	MenuGlobal.abrir_clasificacion()
 
 
 func _on_quit_button_pressed() -> void:

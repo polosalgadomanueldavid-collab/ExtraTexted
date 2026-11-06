@@ -5,14 +5,17 @@ const ESCENA_MENU := "res://MainMenu.tscn"
 const TAMANO_DISENO := Vector2(1920, 1080)
 const ESCALA_PAUSA := 0.8
 const PanelAyuda = preload("res://UI/Menus/panel_ayuda.gd")
+const PanelClasificacion := preload("res://UI/Menus/panel_clasificacion.gd")
+const ClasificacionLocalScript := preload("res://Scripts/ClasificacionLocal.gd")
 
-enum OrigenAyuda { MENU, PAUSA, INICIO }
+enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
 
 @onready var capa: Control = %CapaModal
 @onready var panel_pausa: PanelContainer = %PanelPausa
 @onready var panel_opciones: PanelContainer = %PanelOpciones
 @onready var panel_confirmacion: PanelContainer = %PanelConfirmacion
 @onready var panel_ayuda: PanelAyuda = %PanelAyuda
+@onready var panel_clasificacion: PanelClasificacion = %PanelClasificacion
 @onready var reanudar: Button = %Reanudar
 @onready var selector_filtro: OptionButton = %SelectorFiltro
 @onready var control_intensidad: HSlider = %Intensidad
@@ -22,6 +25,9 @@ enum OrigenAyuda { MENU, PAUSA, INICIO }
 @onready var filtro_pantalla: ColorRect = %FiltroPantalla
 @onready var margen: MarginContainer = $Interfaz/CapaModal/Margen
 
+var nombre_partida: String = ""
+var _ultimo_nombre: String = ""
+var _clasificacion := ClasificacionLocalScript.new()
 var _opciones_desde_pausa: bool = false
 var _foco_anterior: Control
 var _raton_anterior: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
@@ -34,7 +40,7 @@ func _ready() -> void:
 	%Reanudar.pressed.connect(reanudar_juego)
 	%OpcionesPausa.pressed.connect(abrir_opciones)
 	%TutorialPausa.pressed.connect(abrir_tutorial)
-	%LeyendaPausa.pressed.connect(abrir_leyenda)
+	%ControlesOpciones.pressed.connect(abrir_controles)
 	%MenuPrincipal.pressed.connect(_pedir_volver_al_menu)
 	%VolverOpciones.pressed.connect(cerrar_opciones)
 	%Restablecer.pressed.connect(AjustesAccesibilidad.restablecer)
@@ -42,6 +48,8 @@ func _ready() -> void:
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
 	_confinar_foco([panel_ayuda.boton_cerrar])
+	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
+	panel_clasificacion.nombre_confirmado.connect(_iniciar_partida)
 	selector_filtro.item_selected.connect(AjustesAccesibilidad.establecer_modo)
 	control_intensidad.value_changed.connect(_cambiar_intensidad)
 	control_brillo.value_changed.connect(_cambiar_brillo)
@@ -115,21 +123,20 @@ func cerrar_opciones() -> void:
 
 
 func abrir_tutorial() -> void:
-	_abrir_ayuda(false)
-
-
-func abrir_leyenda() -> void:
-	_abrir_ayuda(true)
-
-
-func _abrir_ayuda(es_leyenda: bool) -> void:
 	if _cambiando_escena:
 		return
 	if panel_pausa.is_visible_in_tree():
-		_mostrar_ayuda(es_leyenda, OrigenAyuda.PAUSA)
+		_mostrar_ayuda(false, OrigenAyuda.PAUSA)
 	elif not capa.visible and not es_escena_de_juego():
 		_guardar_entrada()
-		_mostrar_ayuda(es_leyenda, OrigenAyuda.MENU)
+		_mostrar_ayuda(false, OrigenAyuda.MENU)
+
+
+func abrir_controles() -> void:
+	if not panel_opciones.is_visible_in_tree() or _cambiando_escena:
+		return
+	panel_opciones.hide()
+	_mostrar_ayuda(true, OrigenAyuda.OPCIONES)
 
 
 func _abrir_tutorial_inicial() -> void:
@@ -157,15 +164,83 @@ func cerrar_ayuda() -> void:
 	if not panel_ayuda.visible:
 		return
 	panel_ayuda.hide()
-	if _origen_ayuda == OrigenAyuda.PAUSA:
+	if _origen_ayuda == OrigenAyuda.OPCIONES:
+		panel_opciones.show()
+		%ControlesOpciones.grab_focus()
+	elif _origen_ayuda == OrigenAyuda.PAUSA:
 		_mostrar_pausa()
-		var boton: Button = %LeyendaPausa if panel_ayuda.leyenda.visible else %TutorialPausa
-		boton.grab_focus()
+		%TutorialPausa.grab_focus()
 	else:
 		capa.hide()
 		if _origen_ayuda == OrigenAyuda.INICIO:
 			get_tree().paused = false
 		_restaurar_entrada()
+
+
+func pedir_nombre_partida() -> void:
+	if not _abrir_panel_clasificacion():
+		return
+	panel_clasificacion.presentar_nombre(_ultimo_nombre)
+	_confinar_foco([
+		panel_clasificacion.nombre_jugador,
+		panel_clasificacion.boton_continuar,
+		panel_clasificacion.boton_volver,
+	])
+	panel_clasificacion.nombre_jugador.grab_focus()
+
+
+func abrir_clasificacion() -> void:
+	if not _abrir_panel_clasificacion():
+		return
+	var clasificacion := consultar_clasificacion()
+	panel_clasificacion.presentar_tabla(clasificacion.entradas, clasificacion.error)
+	var controles: Array[Control] = [panel_clasificacion.boton_volver]
+	if panel_clasificacion.tabla.visible:
+		controles.append(panel_clasificacion.lista)
+	_confinar_foco(controles)
+	panel_clasificacion.boton_volver.grab_focus()
+
+
+func consultar_clasificacion() -> Dictionary:
+	var error := _clasificacion.cargar()
+	return {"entradas": _clasificacion.obtener_clasificacion(), "error": error}
+
+
+func registrar_puntaje(total: int, nombre: String) -> void:
+	if total <= 0:
+		return
+	var error := _clasificacion.registrar_puntuacion(nombre, total)
+	if error != OK:
+		push_warning("No se pudo guardar el puntaje local: %s" % error_string(error))
+
+
+func _abrir_panel_clasificacion() -> bool:
+	if capa.visible or _cambiando_escena or es_escena_de_juego():
+		return false
+	_guardar_entrada()
+	capa.show()
+	panel_clasificacion.show()
+	return true
+
+
+func _cerrar_clasificacion() -> void:
+	panel_clasificacion.hide()
+	capa.hide()
+	_restaurar_entrada()
+
+
+func _iniciar_partida(nombre: String) -> void:
+	if not panel_clasificacion.formulario.is_visible_in_tree() or _cambiando_escena:
+		return
+	_cambiando_escena = true
+	var error := get_tree().change_scene_to_file(ESCENA_JUEGO)
+	if error != OK:
+		_cambiando_escena = false
+		panel_clasificacion.mostrar_error_inicio()
+		push_error("No se pudo abrir la oficina: %s" % error_string(error))
+		return
+	nombre_partida = nombre
+	_ultimo_nombre = nombre
 
 
 func volver_al_menu() -> void:
@@ -182,11 +257,22 @@ func volver_al_menu() -> void:
 		push_error("No se pudo abrir el menu principal: %s" % error)
 
 
+func _input(event: InputEvent) -> void:
+	# LineEdit consume Escape mientras edita; permite cerrar el formulario con esa tecla.
+	if _cambiando_escena or not panel_clasificacion.formulario.is_visible_in_tree():
+		return
+	if event.is_action_pressed("Cancel") and not panel_clasificacion.nombre_jugador.has_ime_text():
+		_cerrar_clasificacion()
+		get_viewport().set_input_as_handled()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("Cancel") or event.is_echo() or _cambiando_escena:
 		return
 	if panel_ayuda.visible:
 		cerrar_ayuda()
+	elif panel_clasificacion.visible:
+		_cerrar_clasificacion()
 	elif panel_opciones.visible:
 		cerrar_opciones()
 	elif panel_confirmacion.visible:
@@ -204,7 +290,7 @@ func _mostrar_pausa() -> void:
 	panel_opciones.hide()
 	panel_confirmacion.hide()
 	panel_pausa.show()
-	_confinar_foco([reanudar, %OpcionesPausa, %TutorialPausa, %LeyendaPausa, %MenuPrincipal])
+	_confinar_foco([reanudar, %OpcionesPausa, %TutorialPausa, %MenuPrincipal])
 	reanudar.grab_focus()
 
 
@@ -245,9 +331,12 @@ func _al_cambiar_escena() -> void:
 	panel_opciones.hide()
 	panel_confirmacion.hide()
 	panel_ayuda.hide()
+	panel_clasificacion.hide()
 	_foco_anterior = null
 	_opciones_desde_pausa = false
 	_cambiando_escena = false
+	if not es_escena_de_juego():
+		nombre_partida = ""
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_abrir_tutorial_inicial()
 
@@ -269,7 +358,7 @@ func _sincronizar_ajustes() -> void:
 	var controles: Array[Control] = [selector_filtro]
 	if control_intensidad.editable:
 		controles.append(control_intensidad)
-	controles.append_array([control_brillo, %Restablecer, %VolverOpciones])
+	controles.append_array([control_brillo, %Restablecer, %ControlesOpciones, %VolverOpciones])
 	_confinar_foco(controles)
 	valor_intensidad.text = "%d %%" % roundi(control_intensidad.value)
 	valor_brillo.text = "%d %%" % roundi(control_brillo.value)

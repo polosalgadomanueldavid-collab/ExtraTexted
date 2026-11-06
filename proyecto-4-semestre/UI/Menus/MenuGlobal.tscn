@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=31 format=3]
 
 [ext_resource type="Script" path="res://UI/Menus/menu_global.gd" id="1_script"]
 [ext_resource type="Shader" path="res://UI/Menus/filtro_accesibilidad.gdshader" id="2_shader"]
@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" path="res://UI/Menus/PanelAyuda.tscn" id="19_ayuda"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/tutorial.svg" id="20_tutorial"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/teclado.svg" id="21_leyenda"]
+[ext_resource type="PackedScene" path="res://UI/Menus/PanelClasificacion.tscn" id="22_clasificacion"]
 
 [sub_resource type="FontVariation" id="Font_aviso"]
 base_font = ExtResource("11_texto")
@@ -244,15 +245,6 @@ text = "TUTORIAL"
 script = ExtResource("4_boton")
 simbolo = ExtResource("20_tutorial")
 
-[node name="LeyendaPausa" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido/Botones"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 95.37)
-layout_mode = 2
-mouse_default_cursor_shape = 2
-text = "LEYENDA DE TECLAS"
-script = ExtResource("4_boton")
-simbolo = ExtResource("21_leyenda")
-
 [node name="MenuPrincipal" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelPausa/Contenido/Botones"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
@@ -377,6 +369,15 @@ text = "RESTABLECER"
 script = ExtResource("4_boton")
 simbolo = ExtResource("18_restablecer")
 
+[node name="ControlesOpciones" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 95.37)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "CONTROLES"
+script = ExtResource("4_boton")
+simbolo = ExtResource("21_leyenda")
+
 [node name="VolverOpciones" type="Button" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/Botones"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
@@ -438,6 +439,11 @@ script = ExtResource("4_boton")
 simbolo = ExtResource("9_inicio")
 
 [node name="PanelAyuda" parent="Interfaz/CapaModal/Margen/Scroll/Centro" instance=ExtResource("19_ayuda")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="PanelClasificacion" parent="Interfaz/CapaModal/Margen/Scroll/Centro" instance=ExtResource("22_clasificacion")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2

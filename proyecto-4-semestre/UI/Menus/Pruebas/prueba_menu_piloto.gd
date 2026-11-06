@@ -23,7 +23,7 @@ func _probar() -> void:
 	var jugar: Button = botones.get_node("PlayButton")
 	var opciones: Button = botones.get_node("OptionsButton")
 	var tutorial: Button = botones.get_node("TutorialButton")
-	var leyenda: Button = botones.get_node("LegendButton")
+	var clasificacion: Button = botones.get_node("RankingButton")
 	var salir: Button = botones.get_node("QuitButton")
 	if DisplayServer.get_name() == "headless":
 		jugar.grab_focus()
@@ -38,7 +38,7 @@ func _probar() -> void:
 	_verificar(tutorial.has_focus(), "Tab selecciona Tutorial")
 	_tecla(KEY_TAB)
 	await get_tree().process_frame
-	_verificar(leyenda.has_focus(), "Tab selecciona Leyenda de teclas")
+	_verificar(clasificacion.has_focus(), "Tab selecciona Clasificación")
 	_tecla(KEY_TAB)
 	await get_tree().process_frame
 	_verificar(salir.has_focus(), "Tab selecciona Salir")
@@ -66,7 +66,7 @@ func _probar() -> void:
 		var pantalla := Rect2(Vector2.ZERO, menu.size)
 		var panel: Control = menu.get_node("CenterContainer/MenuPanel")
 		_verificar(pantalla.encloses(panel.get_global_rect()), "Panel completo dentro de %s" % dimensiones)
-		for boton: Button in [jugar, opciones, tutorial, leyenda, salir]:
+		for boton: Button in [jugar, opciones, tutorial, clasificacion, salir]:
 			_verificar(pantalla.encloses(boton.get_global_rect()), "Botón %s visible en %s" % [boton.text, dimensiones])
 		await _capturar("04_menu_%dx%d" % [dimensiones.x, dimensiones.y])
 	print("PRUEBA MENU PILOTO: %d errores" % _errores)

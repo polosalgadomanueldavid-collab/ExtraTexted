@@ -3,16 +3,30 @@ extends PanelContainer
 const CREMA := Color("fff1d8")
 const PETROLEO := Color("173b50")
 const TEXTO_SUAVE := Color("d2e5e6")
+const TAMANO_CAPTURA := Vector2(368, 207)
 const PASOS := [
-	["Recibe una denuncia", "Cuando llegue un caso a la barra de denuncias, acércate al computador y pulsa E para aceptar el más urgente."],
-	["Ve a la estación indicada", "Pulsa E para salir del computador. Sigue el icono de la próxima estación. Si queda fuera de vista, la flecha indica la dirección."],
-	["Completa el protocolo", "Ponte frente a la estación y pulsa E. Completa todos los pasos antes de que se agote el tiempo para ganar puntos."],
+	[
+		"Recibe una denuncia",
+		"Cuando llegue un caso a la barra de denuncias, acércate al computador y pulsa E para aceptar el más urgente.",
+		preload("res://UI/Menus/ArtePiloto/tutorial_denuncia.webp"),
+	],
+	[
+		"Ve a la estación indicada",
+		"Pulsa E para salir del computador. Sigue el icono de la próxima estación. Si queda fuera de vista, la flecha indica la dirección.",
+		preload("res://UI/Menus/ArtePiloto/tutorial_estacion.webp"),
+	],
+	[
+		"Completa el protocolo",
+		"Ponte frente a la estación y pulsa E. Completa todos los pasos antes de que se agote el tiempo para ganar puntos.",
+		preload("res://UI/Menus/ArtePiloto/tutorial_protocolo.webp"),
+	],
 ]
 const CONTROLES := [
 	["W A S D  /  ↑ ← ↓ →", "Moverse por la oficina"],
 	["Mayús", "Correr mientras te mueves"],
 	["Espacio", "Saltar"],
 	["E", "Usar una estación o entrar y salir del computador"],
+	["Mantener Tab", "Ver la clasificación durante la partida"],
 	["Esc", "Pausar o volver a la pantalla anterior"],
 	["Tab  /  Mayús + Tab", "Recorrer las opciones del menú"],
 	["Enter  /  Espacio", "Confirmar una opción del menú"],
@@ -41,14 +55,28 @@ func _ready() -> void:
 		var fila := HBoxContainer.new()
 		fila.add_theme_constant_override("separation", 18)
 		tarjeta.add_child(fila)
-		fila.add_child(_crear_distintivo(str(indice + 1), estilo_numero, Vector2(48, 48)))
+
+		var detalle := HBoxContainer.new()
+		detalle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		detalle.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		detalle.add_theme_constant_override("separation", 18)
+		fila.add_child(detalle)
+		detalle.add_child(_crear_distintivo(str(indice + 1), estilo_numero, Vector2(48, 48)))
 
 		var contenido := VBoxContainer.new()
 		contenido.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		contenido.add_theme_constant_override("separation", 3)
-		fila.add_child(contenido)
+		detalle.add_child(contenido)
 		contenido.add_child(_crear_texto(paso[0], fuente_enfasis, 30, CREMA))
 		contenido.add_child(_crear_texto(paso[1], fuente_texto, 27, TEXTO_SUAVE))
+
+		var captura := TextureRect.new()
+		captura.custom_minimum_size = TAMANO_CAPTURA
+		captura.texture = paso[2]
+		captura.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		captura.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		captura.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fila.add_child(captura)
 
 	for control: Array in CONTROLES:
 		var fila := HBoxContainer.new()
@@ -62,7 +90,8 @@ func _ready() -> void:
 
 
 func presentar(es_leyenda: bool, es_inicio: bool) -> void:
-	titulo.text = "LEYENDA DE TECLAS" if es_leyenda else "TUTORIAL"
+	custom_minimum_size.x = 1040.0 if es_leyenda else 1200.0
+	titulo.text = "CONTROLES" if es_leyenda else "TUTORIAL"
 	tutorial.visible = not es_leyenda
 	leyenda.visible = es_leyenda
 	boton_cerrar.text = "EMPEZAR TURNO" if es_inicio else "VOLVER"

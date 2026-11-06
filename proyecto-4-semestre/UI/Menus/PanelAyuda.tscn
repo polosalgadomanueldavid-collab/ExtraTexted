@@ -13,9 +13,9 @@ variation_opentype = {
 
 [sub_resource type="StyleBoxFlat" id="Style_fila"]
 content_margin_left = 18.0
-content_margin_top = 14.0
+content_margin_top = 12.0
 content_margin_right = 18.0
-content_margin_bottom = 14.0
+content_margin_bottom = 12.0
 bg_color = Color(0.075, 0.225, 0.3, 1)
 corner_radius_top_left = 18
 corner_radius_top_right = 18
@@ -41,7 +41,7 @@ corner_radius_bottom_left = 10
 corner_radius_bottom_right = 10
 
 [node name="PanelAyuda" type="PanelContainer"]
-custom_minimum_size = Vector2(1040, 0)
+custom_minimum_size = Vector2(1200, 0)
 theme = ExtResource("2_tema")
 script = ExtResource("1_script")
 fuente_texto = ExtResource("3_texto")

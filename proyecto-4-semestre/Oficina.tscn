@@ -197,7 +197,7 @@ script = ExtResource("1_sa8v2")
 transform = Transform3D(-4.3711392e-08, 0, 1.0000001, 0, 1, 0, -1.0000001, 0, -4.3711392e-08, -4.0763245, 0.244, 1.1865406)
 
 [node name="Diseno_Bienestar" parent="Mesas verticales IZQ/Table_017" unique_id=570853907 instance=ExtResource("10_estacion_bienestar")]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0.44983172, -0.006593704)
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0.004117608, 0.448277, -0.020492077)
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales IZQ/Table_017" unique_id=63350191]
 collision_layer = 5
@@ -209,7 +209,7 @@ nombre_visible = "Mesa de bienestar"
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Table_018" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=1166800068]
-transform = Transform3D(0.00076796487, 0, 0.9999999, 0, 1, 0, -0.9999999, 0, 0.00076796487, -4.0759425, 0.244, 2.5267215)
+transform = Transform3D(0.00076796487, 0, 0.9999999, 0, 1, 0, -0.9999999, 0, 0.00076796487, -4.08377, 0.24400298, 2.5233717)
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales IZQ/Table_018" unique_id=511215594]
@@ -244,7 +244,7 @@ shape = SubResource("ConcavePolygonShape3D_11o5b")
 [node name="Mesas verticales DER" type="Node3D" parent="." unique_id=163803121]
 
 [node name="Table_016" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=1648485470]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.0320005, 0.244, 1.1858191)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.0526068, 0.244, 1.2132361)
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales DER/Table_016" unique_id=1620801267]
@@ -253,7 +253,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Table_019" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=530999587]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.033165, 0.244, 2.5283022)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.072803, 0.2488944, 2.5638404)
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales DER/Table_019" unique_id=1299509995]
@@ -262,7 +262,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Table_022" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=151028562]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.0349512, 0.244, 5.222937)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.074593, 0.24185519, 5.232287)
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales DER/Table_022" unique_id=16916405]
@@ -274,7 +274,7 @@ shape = SubResource("ConcavePolygonShape3D_11o5b")
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.0343943, 0.244, 3.8741162)
 
 [node name="Diseno_Evidencias_Carpetas" parent="Mesas verticales DER/Table_023" unique_id=1990260373 instance=ExtResource("9_estacion_carpetas")]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0.44149148, 0)
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0.025167465, 0.44146168, -0.050952673)
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas verticales DER/Table_023" unique_id=1461242729]
 collision_layer = 5
@@ -283,6 +283,7 @@ estacion_id = "evidencias"
 nombre_visible = "Mesa de evidencias"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales DER/Table_023/StaticBody3D" unique_id=1872609466]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.014585733, 0.006250873, -0.0033304691)
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Mesas Horizontales UP" type="Node3D" parent="." unique_id=168140342]
@@ -324,7 +325,7 @@ mesh = SubResource("ArrayMesh_edh1j")
 shape = SubResource("ConcavePolygonShape3D_2jrvt")
 
 [node name="Table_011" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=1115402852]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3233133, 0.244, 0.243)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3156399, 0.244, 0.24562952)
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas Horizontales UP/Table_011" unique_id=2013316601]
@@ -333,7 +334,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Table_014" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=183828636]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6720328, 0.244, 0.243)
+transform = Transform3D(1.2, 0, 0, 0, 1, 0, 0, 0, 1, 1.7947761, 0.24519761, 0.2473183)
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas Horizontales UP/Table_014" unique_id=1671210361]
@@ -374,7 +375,7 @@ shape = SubResource("ConcavePolygonShape3D_11o5b")
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -2.3803768, 0.244, 6.155522)
 
 [node name="Diseno_Seguridad_Privacidad" parent="Mesas Horizontales DOWN/Table_025" unique_id=2139551146 instance=ExtResource("11_estacion_seguridad")]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0.45, -0.013124466)
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0.0030510426, 0.44646627, -0.0021195412)
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas Horizontales DOWN/Table_025" unique_id=901814599]
 collision_layer = 5
@@ -389,7 +390,7 @@ shape = SubResource("ConcavePolygonShape3D_11o5b")
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.325778, 0.244, 6.155522)
 
 [node name="Diseno_Reportes" parent="Mesas Horizontales DOWN/Table_027" unique_id=776399735 instance=ExtResource("12_estacion_reportes")]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0.4540661, -0.01436615)
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -0.04929596, 0.44649285, -0.03388405)
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas Horizontales DOWN/Table_027" unique_id=1846127380]
 collision_layer = 5
@@ -398,10 +399,11 @@ estacion_id = "reporte"
 nombre_visible = "Mesa de reporte"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales DOWN/Table_027/StaticBody3D" unique_id=130262206]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06397742, 0.0055775642, -0.01768303)
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Table_028" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1612726864]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 1.6778604, 0.244, 6.155522)
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 1.7090293, 0.24399976, 6.1781178)
 mesh = SubResource("ArrayMesh_qtenm")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Mesas Horizontales DOWN/Table_028" unique_id=1070332638]
@@ -415,7 +417,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9576885, 0.7667312, 0.1403
 [node name="Pared, suelo, techo" type="Node3D" parent="." unique_id=131233200]
 
 [node name="Pared" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=875184743]
-transform = Transform3D(15, 0, 0, 0, 0.2, 0, 0, 0, 15, -1.0834912, 3.317305, -0.15278268)
+transform = Transform3D(15, 0, 0, 0, 0.2, 0, 0, 0, 15, -1.0834912, 3.317305, -0.15014583)
 use_collision = true
 size = Vector3(0.45762634, 29.045013, 0.010009766)
 material = SubResource("StandardMaterial3D_qg7b0")
@@ -427,13 +429,13 @@ size = Vector3(0.45762634, 29.045013, 0.010009766)
 material = SubResource("StandardMaterial3D_wg1wp")
 
 [node name="Pared2" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1882154787]
-transform = Transform3D(-6.556708e-07, 0, 15, 0, 0.2, 0, -15, 0, -6.556708e-07, -4.591942, 3.3173056, 6.1573277)
+transform = Transform3D(-6.556708e-07, 0, 15, 0, 0.2, 0, -15, 0, -6.556708e-07, -4.4629936, 3.28401, 6.11098)
 use_collision = true
 size = Vector3(0.85137177, 29.045013, 0.010009766)
 material = SubResource("StandardMaterial3D_ord3n")
 
 [node name="Pared3" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=186197531]
-transform = Transform3D(-6.556708e-07, 0, 15, 0, 0.2, 0, -15, 0, -6.556708e-07, 2.415019, 3.3173056, 6.1609898)
+transform = Transform3D(-6.556708e-07, 0, 15, 0, 0.2, 0, -15, 0, -6.556708e-07, 2.4407005, 3.3138618, 6.164758)
 use_collision = true
 size = Vector3(0.85186005, 29.045013, 0.010009766)
 material = SubResource("StandardMaterial3D_yf2d8")
@@ -445,8 +447,8 @@ size = Vector3(6.3124695, 4.9339905, 7.6137085)
 material = SubResource("StandardMaterial3D_nwhbu")
 
 [node name="Techo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1880558723]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0865555, 6.201772, 6.162117)
-size = Vector3(6.8593597, 0.038208008, 12.481461)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0452919, 6.201772, 6.162117)
+size = Vector3(6.941887, 0.038208008, 12.481461)
 
 [node name="OmniLight3D" type="OmniLight3D" parent="Pared, suelo, techo" unique_id=186002390]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8075865, 3.4079452, 3.284585)
@@ -460,7 +462,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9837456, 3.4079452, 8.6119
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.38361645, 0.80757535, 3.3316162)
 
 [node name="Camera3D" type="Camera3D" parent="Gameplay" unique_id=1464768205 node_paths=PackedStringArray("objetivo")]
-transform = Transform3D(1, 0, 0, 0, 0.73925513, 0.6734255, 0, -0.6734255, 0.73925513, -1.1142662, 3.0838394, 5.2264423)
+transform = Transform3D(1, 0, 0, 0, 0.73925513, 0.6734255, 0, -0.6734255, 0.73925513, -1.1127048, 3.0837698, 5.2279215)
 current = true
 script = ExtResource("5_wg1wp")
 objetivo = NodePath("../Node3D")

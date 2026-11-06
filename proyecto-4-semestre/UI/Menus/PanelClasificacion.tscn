@@ -1,0 +1,185 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://UI/Menus/panel_clasificacion.gd" id="1_panel"]
+[ext_resource type="Theme" path="res://UI/Menus/tema_piloto.tres" id="2_tema"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="3_texto"]
+[ext_resource type="Script" path="res://UI/Menus/boton_piloto.gd" id="4_boton"]
+
+[sub_resource type="FontVariation" id="Font_tabla"]
+base_font = ExtResource("3_texto")
+variation_opentype = {2003265652: 750.0}
+
+[sub_resource type="StyleBoxFlat" id="Style_fila"]
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 6.0
+bg_color = Color(0.075, 0.225, 0.3, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+
+[sub_resource type="StyleBoxFlat" id="Style_entrada"]
+content_margin_left = 22.0
+content_margin_top = 14.0
+content_margin_right = 22.0
+content_margin_bottom = 14.0
+bg_color = Color(1, 0.945, 0.847, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_left = 16
+corner_radius_bottom_right = 16
+
+[sub_resource type="StyleBoxFlat" id="Style_foco"]
+draw_center = false
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0.47, 0.37, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_left = 16
+corner_radius_bottom_right = 16
+
+[node name="PanelClasificacion" type="PanelContainer"]
+custom_minimum_size = Vector2(1040, 0)
+theme = ExtResource("2_tema")
+script = ExtResource("1_panel")
+fuente_tabla = SubResource("Font_tabla")
+estilo_fila = SubResource("Style_fila")
+
+[node name="Contenido" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Encabezado" type="VBoxContainer" parent="Contenido"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Seccion" type="Label" parent="Contenido/Encabezado"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.62, 0.54, 1)
+theme_override_fonts/font = SubResource("Font_tabla")
+theme_override_font_sizes/font_size = 22
+text = "RÉCORDS LOCALES"
+
+[node name="Titulo" type="Label" parent="Contenido/Encabezado"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 60
+text = "CLASIFICACIÓN"
+
+[node name="Formulario" type="VBoxContainer" parent="Contenido"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Instrucciones" type="Label" parent="Contenido/Formulario"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_texto")
+theme_override_font_sizes/font_size = 30
+text = "Usa el mismo nombre para mejorar tu récord."
+
+[node name="NombreJugador" type="LineEdit" parent="Contenido/Formulario"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
+theme_override_colors/font_placeholder_color = Color(0.31, 0.41, 0.47, 1)
+theme_override_colors/caret_color = Color(0.09, 0.231, 0.314, 1)
+theme_override_fonts/font = SubResource("Font_tabla")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("Style_entrada")
+theme_override_styles/focus = SubResource("Style_foco")
+placeholder_text = "Escribe tu nombre o alias"
+caret_blink = true
+select_all_on_focus = true
+
+[node name="ErrorInicio" type="Label" parent="Contenido/Formulario"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.62, 0.54, 1)
+theme_override_fonts/font = ExtResource("3_texto")
+theme_override_font_sizes/font_size = 25
+text = "No se pudo abrir la partida. Inténtalo de nuevo."
+
+[node name="Tabla" type="VBoxContainer" parent="Contenido"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Cabecera" type="HBoxContainer" parent="Contenido/Tabla"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Posicion" type="Label" parent="Contenido/Tabla/Cabecera"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_fonts/font = SubResource("Font_tabla")
+theme_override_font_sizes/font_size = 23
+text = "PUESTO"
+horizontal_alignment = 1
+
+[node name="Jugador" type="Label" parent="Contenido/Tabla/Cabecera"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = SubResource("Font_tabla")
+theme_override_font_sizes/font_size = 23
+text = "JUGADOR"
+
+[node name="Puntaje" type="Label" parent="Contenido/Tabla/Cabecera"]
+custom_minimum_size = Vector2(310, 0)
+layout_mode = 2
+theme_override_fonts/font = SubResource("Font_tabla")
+theme_override_font_sizes/font_size = 23
+text = "MEJOR PUNTAJE  "
+horizontal_alignment = 2
+
+[node name="Lista" type="ScrollContainer" parent="Contenido/Tabla"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 306)
+layout_mode = 2
+focus_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Filas" type="VBoxContainer" parent="Contenido/Tabla/Lista"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 7
+
+[node name="Estado" type="Label" parent="Contenido"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_texto")
+theme_override_font_sizes/font_size = 30
+autowrap_mode = 3
+
+[node name="Botones" type="HBoxContainer" parent="Contenido"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="Volver" type="Button" parent="Contenido/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(350, 88)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 36
+text = "VOLVER"
+script = ExtResource("4_boton")
+
+[node name="Continuar" type="Button" parent="Contenido/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(350, 88)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 36
+text = "CONTINUAR"
+script = ExtResource("4_boton")
+principal = true

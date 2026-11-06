@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://d7too7hdm52i" path="res://UI/Menus/ArtePiloto/salir.svg" id="8_salir"]
 [ext_resource type="Theme" uid="uid://da4tnwqev10l7" path="res://UI/Menus/tema_piloto.tres" id="9_tema"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/tutorial.svg" id="10_tutorial"]
-[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/teclado.svg" id="11_leyenda"]
+[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/clasificacion.svg" id="12_clasificacion"]
 
 [node name="MainMenu" type="Control" unique_id=1510664291]
 layout_mode = 3
@@ -45,7 +45,7 @@ layout_mode = 2
 theme_override_constants/separation = 20
 
 [node name="Title" type="TextureRect" parent="CenterContainer/MenuPanel/VBoxContainer" unique_id=1437799866]
-custom_minimum_size = Vector2(712, 310)
+custom_minimum_size = Vector2(712, 260)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("2_logo")
@@ -56,7 +56,7 @@ stretch_mode = 5
 custom_minimum_size = Vector2(514.42, 0)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_constants/separation = 16
+theme_override_constants/separation = 14
 
 [node name="PlayButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons" unique_id=1773732843]
 unique_name_in_owner = true
@@ -89,15 +89,15 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2
 focus_neighbor_top = NodePath("../OptionsButton")
-focus_neighbor_bottom = NodePath("../LegendButton")
-focus_next = NodePath("../LegendButton")
+focus_neighbor_bottom = NodePath("../RankingButton")
+focus_next = NodePath("../RankingButton")
 focus_previous = NodePath("../OptionsButton")
 mouse_default_cursor_shape = 2
 text = "TUTORIAL"
 script = ExtResource("5_boton")
 simbolo = ExtResource("10_tutorial")
 
-[node name="LegendButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons"]
+[node name="RankingButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2
@@ -106,17 +106,17 @@ focus_neighbor_bottom = NodePath("../QuitButton")
 focus_next = NodePath("../QuitButton")
 focus_previous = NodePath("../TutorialButton")
 mouse_default_cursor_shape = 2
-text = "LEYENDA DE TECLAS"
+text = "CLASIFICACIÓN"
 script = ExtResource("5_boton")
-simbolo = ExtResource("11_leyenda")
+simbolo = ExtResource("12_clasificacion")
 
 [node name="QuitButton" type="Button" parent="CenterContainer/MenuPanel/VBoxContainer/MenuButtons" unique_id=221994583]
 custom_minimum_size = Vector2(0, 95.37)
 layout_mode = 2
-focus_neighbor_top = NodePath("../LegendButton")
+focus_neighbor_top = NodePath("../RankingButton")
 focus_neighbor_bottom = NodePath("../PlayButton")
 focus_next = NodePath("../PlayButton")
-focus_previous = NodePath("../LegendButton")
+focus_previous = NodePath("../RankingButton")
 mouse_default_cursor_shape = 2
 text = "SALIR"
 script = ExtResource("5_boton")
@@ -125,5 +125,5 @@ simbolo = ExtResource("8_salir")
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/PlayButton" to="." method="_on_play_button_pressed"]
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/OptionsButton" to="." method="_on_options_button_pressed"]
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/TutorialButton" to="." method="_on_tutorial_button_pressed"]
-[connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/LegendButton" to="." method="_on_legend_button_pressed"]
+[connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/RankingButton" to="." method="_on_ranking_button_pressed"]
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/QuitButton" to="." method="_on_quit_button_pressed"]

@@ -1,13 +1,15 @@
-"""Modelo original basado en las referencias del proyecto.
+"""Policía trazado sobre las vistas ortográficas de referencia.
 
 Ejecutar: blender --background --python herramientas/generar_policia_azul.py
 Genera un GLB con skin y seis clips; Blender solo es necesario para editarlo.
 Coordenadas de autoría: Z arriba, -Y delante. En Godot: Y arriba, +Z delante.
+Las cotas trasladan 650 px de altura a 2,66 unidades de malla.
 """
 import math
 from pathlib import Path
 
 import bpy
+import bmesh
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,13 +37,13 @@ def material(name, color, roughness=.4, metallic=0):
     return mat
 
 
-BLUE = material("Uniforme · azul cobalto", (.055, .37, .84), .42)
-PANTS = material("Pantalón · azul", (.045, .31, .73), .46)
-COLLAR = material("Cuello y puños · azul vivo", (.075, .43, .92), .41)
-NAVY = material("Gorra · banda y visera", (.035, .105, .35), .38)
-GOLD = material("Insignias y botones · oro", (1, .79, .035), .32, .25)
-BLACK = material("Cinturón · cuero grafito", (.115, .13, .16), .55)
-FLAP = material("Bolsillos · solapas", (.16, .175, .20), .49)
+BLUE = material("Uniforme · azul cobalto", (.075, .40, .83), .46)
+PANTS = material("Pantalón · azul", (.065, .37, .81), .47)
+COLLAR = material("Cuello · azul vivo", (.105, .46, .87), .45)
+NAVY = material("Gorra · banda y visera", (.045, .115, .31), .40)
+GOLD = material("Insignias y botones · oro", (1, .80, .055), .34, .18)
+BLACK = material("Cinturón · cuero grafito", (.132, .135, .147), .54)
+FLAP = material("Bolsillos · solapas", (.168, .17, .182), .48)
 parts = []
 
 
@@ -58,6 +60,15 @@ def finish(obj, name, mat, bind):
 def apply(obj, modifier):
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.modifier_apply(modifier=modifier.name)
+
+
+def outward_normals(mesh):
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
 
 
 def sphere(name, center, radii, mat, bind, segments=40, rings=24):
@@ -82,7 +93,7 @@ def rounded_box(name, center, size, bevel, mat, bind):
     return finish(obj, name, mat, bind)
 
 
-def ring_mesh(name, rings, mat, bind, segments=64, subdiv=2):
+def ring_mesh(name, rings, mat, bind, segments=48, subdiv=2):
     # Rings: center Z, radius X, radius Y, center Y. Closed smoothly at poles.
     verts = []
     for z, rx, ry, cy in rings:
@@ -109,55 +120,77 @@ def ring_mesh(name, rings, mat, bind, segments=64, subdiv=2):
     return finish(obj, name, mat, bind)
 
 
-def shield(name, center, width, height, depth, mat, bind):
-    # Original shield contour, softened bevel: crown notch, shoulders and point.
-    contour = [(-.48, .43), (-.23, .40), (0, .52), (.23, .40), (.48, .43),
-               (.43, .13), (.46, -.16), (.34, -.33), (0, -.54),
-               (-.34, -.33), (-.46, -.16), (-.43, .13)]
-    verts = [(x * width, y, z * height) for y in (-depth / 2, depth / 2)
-             for x, z in contour]
+def fitted_panel(name, outline, center, depth, mat, bind, slope_x=0, slope_z=0):
+    """Loft a rounded panel across its depth, following the host surface."""
+    contour = []
+    for i in range(len(outline)):
+        a, b, c, d = (Vector(outline[j % len(outline)]) for j in range(i - 1, i + 3))
+        for j in range(4):
+            t = j / 4
+            contour.append(.5 * (2 * b + (c - a) * t
+                                 + (2 * a - 5 * b + 4 * c - d) * t ** 2
+                                 + (d - a + 3 * b - 3 * c) * t ** 3))
+    profiles = [(.06, -.66), (.72, -.62), (.94, -.44), (1, -.08),
+                (.96, .32), (.75, .48), (.06, .50)]
+    verts = [(x * scale, depth * offset + scale * (slope_x * x + slope_z * z), z * scale)
+             for scale, offset in profiles for x, z in contour]
     n = len(contour)
-    faces = [tuple(reversed(range(n))), tuple(range(n, 2 * n))]
-    for i in range(n):
-        j = (i + 1) % n
-        faces.append((i, j, j + n, i + n))
+    faces = [tuple(reversed(range(n)))]
+    for i in range(len(profiles) - 1):
+        for j in range(n):
+            a, b = i * n + j, i * n + (j + 1) % n
+            faces.append((a, b, b + n, a + n))
+    faces.append(tuple(range(len(verts) - n, len(verts))))
     mesh = bpy.data.meshes.new(name)
     mesh.from_pydata(verts, [], faces)
-    mesh.update()
+    outward_normals(mesh)
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
     obj.location = center
-    mod = obj.modifiers.new("Relieve redondeado", "BEVEL")
-    mod.width = min(width, height) * .065
-    mod.segments = 4
-    apply(obj, mod)
-    mod = obj.modifiers.new("Normales", "WEIGHTED_NORMAL")
+    mod = obj.modifiers.new("Relieve redondeado", "SUBSURF")
+    mod.levels = 1
     apply(obj, mod)
     return finish(obj, name, mat, bind)
 
 
+def shield(name, center, width, height, depth, bind, slope_x=0, slope_z=0):
+    contour = [(-.49, .38), (-.24, .36), (0, .51), (.24, .36), (.49, .38),
+               (.43, .10), (.46, -.16), (.34, -.33), (0, -.53),
+               (-.34, -.33), (-.46, -.16), (-.43, .10)]
+    return fitted_panel(name, [(x * width, z * height) for x, z in contour],
+                        center, depth, GOLD, bind, slope_x, slope_z)
+
+
 def lapel(name, side):
-    verts = [(side * .018, -.205, 1.625), (side * .29, -.195, 1.60),
-             (side * .20, -.295, 1.45), (side * .075, -.28, 1.49)]
-    verts += [(x, y + .045, z + .008) for x, y, z in verts]
-    mesh = bpy.data.meshes.new(name)
-    mesh.from_pydata(verts, [], [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1),
-                                (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)])
-    obj = bpy.data.objects.new(name, mesh)
-    bpy.context.collection.objects.link(obj)
-    mod = obj.modifiers.new("Cuello redondeado", "BEVEL")
-    mod.width, mod.segments = .028, 4
-    apply(obj, mod)
-    mod = obj.modifiers.new("Normales", "WEIGHTED_NORMAL")
-    apply(obj, mod)
-    return finish(obj, name, COLLAR, "chest")
+    x_center, z_center = side * .172, 1.611
+    outline = [(side * x - x_center, z - z_center) for x, z in
+               [(.016, 1.635), (.142, 1.676), (.324, 1.714), (.354, 1.682),
+                (.296, 1.604), (.184, 1.52), (.126, 1.502), (.078, 1.546)]]
+    lapel_mesh = fitted_panel(name, outline, (x_center, -.310, z_center), .049,
+                              COLLAR, "chest", slope_z=.24)
+    for v in lapel_mesh.data.vertices:
+        x, z = x_center + v.co.x, z_center + v.co.z
+        # Follow the curved neckline from the front notch to the outer tip.
+        v.co.y += 1.55 * x ** 2 + .70 * max(z - 1.64, 0) + .24 * (z_center - 1.60)
+    return lapel_mesh
 
 
 # Lower body is one continuous organic surface, including the crotch arch.
-lower = [sphere("Pelvis temporal", (0, 0, .63), (.445, .285, .29), PANTS, "lower")]
+lower = [ring_mesh("Pelvis temporal", [(.350, .050, .115, -.007),
+    (.377, .23, .245, -.010), (.438, .390, .328, -.008),
+    (.530, .469, .390, -.003), (.655, .480, .425, -.012),
+    (.784, .483, .443, -.024), (.865, .462, .425, -.023),
+    (.918, .36, .33, -.02)], PANTS, "lower", segments=40, subdiv=1)]
 for side in (-1, 1):
-    lower.append(sphere("Pierna temporal", (side * .235, -.005, .32),
-                        (.196, .225, .32), PANTS, "lower"))
+    leg = ring_mesh("Pierna temporal", [(.001, .020, .031, .015),
+        (.022, .090, .096, .021), (.074, .127, .134, .025),
+        (.161, .149, .153, .029), (.283, .166, .173, .033),
+        (.396, .182, .209, .029), (.525, .207, .262, .023),
+        (.645, .203, .295, .012), (.737, .167, .235, .002)],
+        PANTS, "lower", segments=32, subdiv=1)
+    for v in leg.data.vertices:
+        v.co.x += side * (.303 - .071 * min(v.co.z / .70, 1))
+    lower.append(leg)
 bpy.ops.object.select_all(action="DESELECT")
 for obj in lower:
     obj.select_set(True)
@@ -167,85 +200,109 @@ pelvis = bpy.context.object
 parts[:] = [(o, b) for o, b in parts if o not in lower]
 mod = pelvis.modifiers.new("Unión orgánica", "REMESH")
 mod.mode = "VOXEL"
-mod.voxel_size = .017
+mod.voxel_size = .013
 mod.use_smooth_shade = True
 apply(pelvis, mod)
 mod = pelvis.modifiers.new("Suavizado", "SMOOTH")
-mod.factor, mod.iterations = 1.15, 5
-apply(pelvis, mod)
-mod = pelvis.modifiers.new("Malla de juego", "DECIMATE")
-mod.ratio = .40
+mod.factor, mod.iterations = .8, 7
 apply(pelvis, mod)
 mod = pelvis.modifiers.new("Acabado orgánico", "SUBSURF")
 mod.levels = 1
 apply(pelvis, mod)
+triangles = sum(len(face.vertices) - 2 for face in pelvis.data.polygons)
+mod = pelvis.modifiers.new("Malla de juego", "DECIMATE")
+mod.ratio = min(1.0, 26000 / triangles)
+apply(pelvis, mod)
 finish(pelvis, "Pantalón continuo", PANTS, "lower")
 
-ring_mesh("Chaqueta", [(.70, .29, .20, 0), (.73, .39, .26, 0),
-    (.80, .445, .285, 0), (1.02, .448, .29, 0), (1.27, .423, .275, 0),
-    (1.43, .37, .25, 0), (1.54, .29, .205, 0),
-    (1.61, .19, .155, 0), (1.63, .12, .10, 0)], BLUE, "torso")
-sphere("Cabeza sin rostro", (0, -.012, 1.965), (.425, .355, .405), BLUE, "head")
+ring_mesh("Chaqueta", [(.73, .404, .375, -.015), (.80, .475, .441, -.020),
+    (.90, .482, .449, -.023), (1.10, .460, .436, -.013), (1.29, .437, .408, -.003),
+    (1.46, .424, .354, .023), (1.56, .382, .303, .037),
+    (1.63, .324, .254, .041), (1.69, .229, .233, .020),
+    (1.72, .135, .156, .015)], BLUE, "torso")
+sphere("Cabeza sin rostro", (0, -.012, 1.982), (.433, .416, .391), BLUE, "head",
+       segments=64, rings=40)
 # Collar behind the two front lapels.
-ring_mesh("Cuello trasero", [(1.565, .20, .16, 0), (1.59, .255, .198, 0),
-    (1.635, .24, .19, 0), (1.66, .18, .145, 0)], COLLAR, "chest", subdiv=1)
+collar_band = ring_mesh("Cuello trasero", [(1.642, .290, .282, .011), (1.652, .341, .325, .012),
+    (1.702, .358, .335, .016), (1.731, .332, .299, .018),
+    (1.737, .285, .268, .018)], COLLAR, "chest", subdiv=1)
+for v in collar_band.data.vertices:
+    v.co.z += .075 * (v.co.y - .08)
 lapel("Cuello izquierdo", 1)
 lapel("Cuello derecho", -1)
 
 for side, suffix in ((1, "L"), (-1, "R")):
-    # A continuous sleeve with elbow weighting; flattened cuffs and mitten hands.
-    sleeve = ring_mesh("Manga " + suffix, [(.765, .124, .125, -.005),
-        (.78, .15, .15, -.005), (.88, .151, .153, 0),
-        (1.10, .155, .158, 0), (1.32, .17, .163, 0),
-        (1.45, .145, .14, 0), (1.48, .09, .09, 0)], BLUE, "arm." + suffix,
+    sleeve = ring_mesh("Manga " + suffix, [(.816, .146, .154, .038),
+        (.831, .171, .177, .038), (.885, .170, .181, .038),
+        (1.078, .158, .184, .038), (1.25, .156, .193, .038),
+        (1.415, .163, .203, .038), (1.535, .146, .185, .038),
+        (1.606, .090, .113, .038), (1.63, .028, .043, .038)], BLUE, "arm." + suffix,
         segments=40, subdiv=2)
-    # The ring centres sweep outward towards the wrist.
     for v in sleeve.data.vertices:
         z = v.co.z
-        v.co.x += side * (.70 - (z - .78) * .44)
-    sphere("Mano " + suffix, (side * .719, -.012, .663), (.13, .14, .169), BLUE,
-           "hand." + suffix)
-    cuff = sphere("Puño " + suffix, (side * .70, -.004, .795), (.151, .153, .045),
-                  COLLAR, "forearm." + suffix)
-    cuff.rotation_euler.y = side * -.25
+        shoulder = max(0, min(1, (z - 1.36) / .26))
+        shoulder = shoulder * shoulder * (3 - 2 * shoulder)
+        v.co.z += v.co.x * .28 * max(0, min(1, (1.04 - z) / .21))
+        v.co.z += .025 * shoulder
+        v.co.x = side * (v.co.x + .695 - (z - .836) * .395 - .041 * shoulder)
+    outward_normals(sleeve.data)
+    hand = sphere("Mano " + suffix, (side * .744, .042, .724), (.120, .170, .147),
+                  BLUE, "hand." + suffix, segments=48, rings=28)
+    hand.rotation_euler.y = -side * .30
 
-# Cap band and a broad, softly peaked crown with a rising front profile.
-ring_mesh("Banda de la gorra", [(2.22, .39, .325, -.005),
-    (2.235, .433, .36, -.005), (2.32, .437, .363, -.005),
-    (2.35, .42, .345, -.005)], NAVY, "head", subdiv=1)
-crown = ring_mesh("Gorra de plato", [(2.315, .416, .35, 0),
-    (2.34, .51, .415, .005), (2.39, .568, .455, .008),
-    (2.45, .565, .45, .01), (2.54, .43, .36, .012),
-    (2.64, .20, .21, .005), (2.66, .015, .02, 0)], BLUE, "head", subdiv=2)
+# The crown is lofted front to back from the profile outline. Each section
+# controls both the depth silhouette and the flared outline seen from front.
+band = ring_mesh("Banda de la gorra", [(2.104, .381, .387, .014),
+    (2.120, .424, .424, .012), (2.195, .436, .433, .015),
+    (2.237, .423, .418, .019), (2.250, .381, .374, .021)], NAVY, "head")
+for v in band.data.vertices:
+    v.co.z -= .263 * v.co.y
+sections = [(-.422, .026, 2.496, 2.662), (-.401, .195, 2.304, 2.671),
+    (-.344, .315, 2.261, 2.662), (-.239, .461, 2.224, 2.637),
+    (-.095, .545, 2.187, 2.594), (.045, .582, 2.173, 2.552),
+    (.185, .551, 2.154, 2.494), (.319, .459, 2.130, 2.415),
+    (.425, .321, 2.126, 2.338), (.509, .164, 2.141, 2.268),
+    (.545, .022, 2.167, 2.225)]
+crown = ring_mesh("Gorra de plato", [(y, rx, (hi - lo) / 2, (hi + lo) / 2)
+                  for y, rx, lo, hi in sections], BLUE, "head")
 for v in crown.data.vertices:
-    # Front of the crown sits higher, as in the reference side view.
-    v.co.z += -v.co.y * .12
-sphere("Visera", (0, -.346, 2.242), (.449, .278, .041), NAVY, "head")
-sphere("Ribete de visera", (0, -.358, 2.262), (.425, .25, .017), BLUE, "head")
-shield("Placa de la gorra", (0, -.423, 2.476), .18, .205, .048, GOLD, "head")
+    v.co.y, v.co.z = v.co.z, v.co.y
+outward_normals(crown.data)
+visor = sphere("Visera", (0, -.391, 2.171), (.407, .248, .044), NAVY, "head",
+               segments=64, rings=32)
+for v in visor.data.vertices:
+    v.co.z += .035 * v.co.y + .09 * max(v.co.y, 0) - .09 * v.co.x ** 2
+shield("Placa de la gorra", (0, -.412, 2.432), .213, .229, .046, "head", slope_z=-.16)
 for side in (-1, 1):
-    sphere("Botón lateral de gorra", (side * .425, -.14, 2.29), (.027, .030, .036),
+    sphere("Botón lateral de gorra", (side * .428, -.081, 2.194), (.028, .038, .039),
            GOLD, "head", segments=24, rings=12)
 
-for i, z in enumerate((1.375, 1.19, 1.005)):
-    sphere("Botón dorado %s" % (i + 1), (0, -.286, z), (.049, .025, .049),
+for i, (z, y) in enumerate(((1.387, -.394), (1.195, -.435), (.999, -.461))):
+    sphere("Botón dorado %s" % (i + 1), (0, y, z), (.053, .029, .053),
            GOLD, "torso", segments=24, rings=12)
-shield("Placa del pecho", (-.225, -.257, 1.312), .19, .235, .052, GOLD, "chest")
+shield("Placa del pecho", (.236, -.349, 1.321), .217, .254, .056,
+       "chest", slope_x=.57, slope_z=.24)
 
 # Belt is a closed rounded elliptical band (not a cylinder across the torso).
-ring_mesh("Cinturón", [(.715, .444, .293, 0), (.735, .474, .322, 0),
-    (.845, .474, .322, 0), (.865, .444, .293, 0)], BLACK, "pelvis", subdiv=1)
-rounded_box("Hebilla", (0, -.340, .79), (.24, .085, .155), .035, FLAP, "pelvis")
+ring_mesh("Cinturón", [(.694, .474, .447, -.018), (.708, .501, .478, -.018),
+    (.850, .502, .479, -.018), (.864, .499, .477, -.018),
+    (.876, .488, .464, -.018)], BLACK, "pelvis", subdiv=1)
+rounded_box("Hebilla", (0, -.496, .771), (.267, .085, .174), .033, FLAP, "pelvis")
 for side, suffix in ((-1, "R"), (1, "L")):
-    pouch = rounded_box("Cartuchera " + suffix, (side * .329, -.286, .755),
-                        (.225, .16, .29), .065, BLACK, "pelvis")
-    pouch.rotation_euler.z = side * -.10
-    flap = rounded_box("Solapa " + suffix, (side * .329, -.383, .823),
-                       (.208, .048, .157), .052, FLAP, "pelvis")
-    sphere("Broche " + suffix, (side * .329, -.415, .798), (.042, .019, .043),
+    pouch = rounded_box("Cartuchera " + suffix, (side * .329, -.378, .757),
+                        (.252, .224, .335), .077, BLACK, "pelvis")
+    pouch.rotation_euler.z = side * .30
+    flap_outline = [(-.115, .055), (-.091, .085), (.083, .085), (.113, .056),
+                    (.095, -.030), (.054, -.084), (0, -.103),
+                    (-.055, -.084), (-.095, -.029)]
+    fitted_panel("Solapa " + suffix, flap_outline, (side * .335, -.488, .842),
+                 .071, FLAP, "pelvis", slope_x=side * .31)
+    sphere("Broche " + suffix, (side * .340, -.533, .793), (.044, .018, .044),
            BLACK, "pelvis", segments=24, rings=12)
-    rounded_box("Funda lateral " + suffix, (side * .464, -.018, .718),
-                (.14, .225, .34), .060, BLACK, "pelvis")
+    # The left edge of the front image carries the taller utility case.
+    case_z, case_height = (.702, .411) if side < 0 else (.748, .319)
+    rounded_box("Funda lateral " + suffix, (side * .539, .009, case_z),
+                (.158, .289, case_height), .071, BLACK, "pelvis")
 
 # A genuine skin: the whole model is deformed by this armature on import.
 armature = bpy.data.armatures.new("EsqueletoPoliciaAzul")
@@ -272,12 +329,18 @@ bone("spine", (0, 0, .90), (0, 0, 1.30), "pelvis")
 bone("chest", (0, 0, 1.30), (0, 0, 1.62), "spine")
 bone("head", (0, 0, 1.62), (0, 0, 2.20), "chest")
 for side, suffix in ((1, "L"), (-1, "R")):
-    bone("upper_arm." + suffix, (side * .39, 0, 1.45), (side * .55, 0, 1.12), "chest")
-    bone("forearm." + suffix, (side * .55, 0, 1.12), (side * .70, 0, .79), "upper_arm." + suffix)
-    bone("hand." + suffix, (side * .70, 0, .79), (side * .73, 0, .60), "forearm." + suffix)
-    bone("thigh." + suffix, (side * .235, 0, .63), (side * .235, 0, .34), "pelvis")
-    bone("shin." + suffix, (side * .235, 0, .34), (side * .235, 0, .12), "thigh." + suffix)
-    bone("foot." + suffix, (side * .235, 0, .12), (side * .235, -.17, .09), "shin." + suffix)
+    shoulder = (side * .424, .038, 1.535)
+    elbow = (side * .558, .038, 1.192)
+    wrist = (side * .695, .041, .837)
+    hip = (side * .242, .020, .647)
+    knee = (side * .268, .023, .352)
+    ankle = (side * .292, .021, .122)
+    bone("upper_arm." + suffix, shoulder, elbow, "chest")
+    bone("forearm." + suffix, elbow, wrist, "upper_arm." + suffix)
+    bone("hand." + suffix, wrist, (side * .755, .042, .633), "forearm." + suffix)
+    bone("thigh." + suffix, hip, knee, "pelvis")
+    bone("shin." + suffix, knee, ankle, "thigh." + suffix)
+    bone("foot." + suffix, ankle, (side * .297, -.145, .090), "shin." + suffix)
 bpy.ops.object.mode_set(mode="OBJECT")
 
 
@@ -292,6 +355,11 @@ def blend_height(z, stops):
     return {stops[-1][1]: 1.0}
 
 
+def smoothstep(value, low, high):
+    t = max(0, min(1, (value - low) / (high - low)))
+    return t * t * (3 - 2 * t)
+
+
 for obj, binding in parts:
     obj.parent = rig
     groups = {}
@@ -300,12 +368,17 @@ for obj, binding in parts:
         if binding == "lower":
             suffix = "L" if p.x >= 0 else "R"
             weights = blend_height(p.z, [(.11, "foot." + suffix), (.22, "shin." + suffix),
-                (.39, "thigh." + suffix), (.69, "pelvis")])
+                (.40, "thigh." + suffix), (.72, "pelvis")])
+            # The centre of the crotch moves with the pelvis so the weld
+            # never snaps directly from one leg to the other as they swing.
+            centre = (1 - smoothstep(abs(p.x), .052, .166)) * smoothstep(p.z, .266, .338)
+            weights = {name: weight * (1 - centre) for name, weight in weights.items()}
+            weights["pelvis"] = weights.get("pelvis", 0) + centre
         elif binding == "torso":
             weights = blend_height(p.z, [(.80, "pelvis"), (1.13, "spine"), (1.47, "chest")])
         elif binding.startswith("arm."):
             suffix = binding[-1]
-            weights = blend_height(p.z, [(.90, "forearm." + suffix), (1.29, "upper_arm." + suffix)])
+            weights = blend_height(p.z, [(.98, "forearm." + suffix), (1.37, "upper_arm." + suffix)])
         else:
             weights = {binding: 1}
         for name, weight in weights.items():

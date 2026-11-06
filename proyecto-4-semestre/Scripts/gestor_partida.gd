@@ -16,6 +16,9 @@ const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 	"res://Scripts/indicador_proxima_estacion.gd"
 )
 const GUIA_ESTACION_ESCENA := preload("res://UI/Despacho/GuiaEstacion.tscn")
+const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
+const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
+const VER_CLASIFICACION := &"VerClasificacion"
 const ALTURA_INDICADOR_ESTACION: float = 1.82
 
 
@@ -41,6 +44,8 @@ var bloqueos_visuales: Dictionary = {}
 var depurador_grafo: GrafoDebugVisual
 var indicadores_estaciones: Dictionary = {}
 var guia_estacion: Control
+var clasificacion_partida: ClasificacionPartida
+var _nombre_partida: String = ""
 
 
 func _ready() -> void:
@@ -49,6 +54,10 @@ func _ready() -> void:
 
 	sistema_despacho = SistemaDespacho.new()
 	add_child(sistema_despacho)
+	_nombre_partida = MenuGlobal.nombre_partida
+	clasificacion_partida = CLASIFICACION_PARTIDA_ESCENA.instantiate()
+	panel_despacho.add_child(clasificacion_partida)
+	sistema_despacho.puntuacion.puntos_actualizados.connect(_al_actualizar_puntaje)
 	grafo_piso = GrafoPiso.new()
 	depurador_grafo = GrafoDebugVisual.new()
 	depurador_grafo.name = "DepuradorGrafo"
@@ -94,6 +103,35 @@ func _process(_delta: float) -> void:
 			indicador.establecer_interactuable(disponible)
 	if is_instance_valid(guia_estacion):
 		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using)
+
+
+func _input(evento: InputEvent) -> void:
+	if evento.is_action_pressed(VER_CLASIFICACION, true, true):
+		if not evento.is_echo() and not clasificacion_partida.visible:
+			_presentar_clasificacion()
+			clasificacion_partida.show()
+		get_viewport().set_input_as_handled()
+	elif evento.is_action_released(VER_CLASIFICACION) and clasificacion_partida.visible:
+		clasificacion_partida.hide()
+		get_viewport().set_input_as_handled()
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT]:
+		if is_instance_valid(clasificacion_partida):
+			clasificacion_partida.hide()
+
+
+func _al_actualizar_puntaje(total: int) -> void:
+	if not _nombre_partida.is_empty():
+		MenuGlobal.registrar_puntaje(total, _nombre_partida)
+	if clasificacion_partida.visible:
+		_presentar_clasificacion()
+
+
+func _presentar_clasificacion() -> void:
+	var consulta: Dictionary = MenuGlobal.consultar_clasificacion()
+	clasificacion_partida.presentar(consulta.entradas, _nombre_partida, sistema_despacho.puntuacion.puntos, consulta.error)
 
 
 func _recibir_denuncia_aleatoria() -> void:

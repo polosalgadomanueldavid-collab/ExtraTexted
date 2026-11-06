@@ -24,7 +24,6 @@ func _probar() -> void:
 	await get_tree().process_frame
 	var menu := get_tree().current_scene
 	var tutorial_menu := menu.get_node("%TutorialButton") as Button
-	var leyenda_menu := menu.get_node("%LegendButton") as Button
 	tutorial_menu.grab_focus()
 	tutorial_menu.pressed.emit()
 	_verificar(MenuGlobal.panel_ayuda.tutorial.is_visible_in_tree() and not get_tree().paused, "Tutorial disponible desde el menú principal")
@@ -32,19 +31,21 @@ func _probar() -> void:
 	_pulsar_escape()
 	await get_tree().process_frame
 	_verificar(not MenuGlobal.capa.visible and tutorial_menu.has_focus(), "ESC cierra el tutorial y devuelve el foco al menú")
-	leyenda_menu.grab_focus()
-	leyenda_menu.pressed.emit()
-	_verificar(MenuGlobal.panel_ayuda.leyenda.is_visible_in_tree() and not get_tree().paused, "Leyenda de teclas disponible antes de jugar")
+	menu.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons/OptionsButton").pressed.emit()
+	await _capturar("01_opciones_menu")
+	_verificar(MenuGlobal.panel_opciones.visible and not get_tree().paused, "Opciones desde el menú principal")
+	var controles_opciones := MenuGlobal.get_node("%ControlesOpciones") as Button
+	controles_opciones.grab_focus()
+	_pulsar_tecla(KEY_ENTER)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_ayuda.leyenda.is_visible_in_tree() and not MenuGlobal.panel_opciones.visible and not get_tree().paused, "Controles abre la leyenda desde Opciones antes de jugar")
 	_pulsar_tecla(KEY_TAB)
 	await get_tree().process_frame
 	_verificar(MenuGlobal.panel_ayuda.boton_cerrar.has_focus(), "Tab mantiene el foco dentro de la leyenda")
 	await _capturar("00_leyenda_menu")
 	_pulsar_tecla(KEY_ENTER)
 	await get_tree().process_frame
-	_verificar(not MenuGlobal.capa.visible and leyenda_menu.has_focus(), "Enter cierra la leyenda y devuelve el foco al menú")
-	menu.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons/OptionsButton").pressed.emit()
-	await _capturar("01_opciones_menu")
-	_verificar(MenuGlobal.panel_opciones.visible and not get_tree().paused, "Opciones desde el menu principal")
+	_verificar(MenuGlobal.panel_opciones.is_visible_in_tree() and not MenuGlobal.panel_ayuda.visible and controles_opciones.has_focus() and not get_tree().paused, "Enter vuelve a Opciones y restaura el foco en Controles")
 	MenuGlobal.get_node("%VolverOpciones").grab_focus()
 	_pulsar_tecla(KEY_TAB)
 	await get_tree().process_frame
@@ -87,7 +88,15 @@ func _probar() -> void:
 	AjustesAccesibilidad.brillo = 1.0
 	AjustesAccesibilidad.cargar()
 	_verificar(AjustesAccesibilidad.modo == 2 and is_equal_approx(AjustesAccesibilidad.brillo, 1.13), "Se recuperan los ajustes del disco")
-	menu.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons/PlayButton").pressed.emit()
+	menu.get_node("%PlayButton").pressed.emit()
+	var panel_nombre := MenuGlobal.panel_clasificacion
+	_verificar(panel_nombre.nombre_jugador.has_focus() and panel_nombre.boton_continuar.disabled, "Jugar pide el nombre y espera un valor válido")
+	_pulsar_escape()
+	await get_tree().process_frame
+	_verificar(not panel_nombre.visible, "ESC cierra el formulario de nombre mientras se edita")
+	menu.get_node("%PlayButton").pressed.emit()
+	panel_nombre.nombre_jugador.text = "Prueba de menús"
+	panel_nombre.nombre_jugador.text_submitted.emit(panel_nombre.nombre_jugador.text)
 	await get_tree().scene_changed
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -137,12 +146,12 @@ func _probar() -> void:
 	_verificar(is_equal_approx(tiempo_bloqueo, oficina.temporizador_bloqueos.time_left), "No avanza el temporizador de bloqueos")
 	_verificar(jugador.global_position.is_equal_approx(posicion) and sistema.calma_operativa == calma, "Se conservan posicion y calma")
 	_verificar(oficina.bloqueos_visuales == bloqueos and cajon != null and cajon.position.is_equal_approx(posicion_cajon), "Los bloqueos y su animación quedan congelados")
-	for ayuda: Button in [MenuGlobal.get_node("%TutorialPausa"), MenuGlobal.get_node("%LeyendaPausa")]:
-		ayuda.pressed.emit()
-		_verificar(MenuGlobal.panel_ayuda.is_visible_in_tree() and get_tree().paused, "La pausa permite consultar " + ayuda.text)
-		_pulsar_escape()
-		await get_tree().process_frame
-		_verificar(MenuGlobal.panel_pausa.is_visible_in_tree() and get_tree().paused and ayuda.has_focus(), "ESC devuelve el foco a la opción de ayuda de la pausa")
+	var tutorial_pausa := MenuGlobal.get_node("%TutorialPausa") as Button
+	tutorial_pausa.pressed.emit()
+	_verificar(MenuGlobal.panel_ayuda.tutorial.is_visible_in_tree() and get_tree().paused, "La pausa permite consultar el tutorial")
+	_pulsar_escape()
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_pausa.is_visible_in_tree() and get_tree().paused and tutorial_pausa.has_focus(), "ESC devuelve el foco a Tutorial en la pausa")
 	MenuGlobal.reanudar.grab_focus()
 	_pulsar_tecla(KEY_TAB)
 	await get_tree().process_frame
@@ -153,6 +162,14 @@ func _probar() -> void:
 	await _capturar("03_opciones_pausa")
 	_verificar(is_equal_approx(MenuGlobal.control_brillo.value, 113.0) and MenuGlobal.selector_filtro.selected == 2, "La pausa comparte los ajustes del menu")
 	MenuGlobal.control_brillo.value = 92.0
+	_clic_control(controles_opciones)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_ayuda.leyenda.is_visible_in_tree() and not MenuGlobal.panel_opciones.visible and get_tree().paused, "Controles se puede abrir con el ratón desde Opciones en pausa")
+	await _capturar("03_controles_pausa")
+	_pulsar_escape()
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_opciones.is_visible_in_tree() and controles_opciones.has_focus() and get_tree().paused, "ESC vuelve a Controles en Opciones y conserva la pausa")
+	_verificar(is_equal_approx(MenuGlobal.control_brillo.value, 92.0), "Consultar los controles conserva los ajustes de Opciones")
 	_pulsar_escape()
 	await get_tree().process_frame
 	_verificar(MenuGlobal.panel_pausa.visible and get_tree().paused, "ESC en opciones vuelve a la pausa")
@@ -231,7 +248,9 @@ func _probar() -> void:
 	AjustesAccesibilidad.establecer_intensidad(0.0)
 	_verificar(not MenuGlobal.filtro_pantalla.visible, "Intensidad cero no altera la imagen")
 	MenuGlobal.cerrar_opciones()
-	get_tree().current_scene.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons/PlayButton").pressed.emit()
+	get_tree().current_scene.get_node("%PlayButton").pressed.emit()
+	_verificar(panel_nombre.nombre_jugador.text == "Prueba de menús", "Una nueva partida permite reutilizar el nombre anterior")
+	panel_nombre.boton_continuar.pressed.emit()
 	await get_tree().scene_changed
 	await get_tree().process_frame
 	_verificar(get_tree().paused and MenuGlobal.panel_ayuda.tutorial.is_visible_in_tree(), "Jugar de nuevo vuelve a mostrar el tutorial")

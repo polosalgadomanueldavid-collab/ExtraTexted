@@ -18,7 +18,13 @@ func _probar() -> void:
 	_probar_integracion_despacho()
 	_probar_instancias_independientes()
 	if not "--solo-core" in OS.get_cmdline_user_args():
-		await _probar_pausa_y_nueva_partida()
+		var clasificacion_real := MenuGlobal._clasificacion
+		var ruta := "user://prueba_clasificacion_%d.json" % OS.get_process_id()
+		MenuGlobal._clasificacion = ClasificacionLocal.new(ruta)
+		await _probar_pausa_y_nueva_partida(ruta)
+		MenuGlobal._clasificacion = clasificacion_real
+		if FileAccess.file_exists(ruta):
+			DirAccess.remove_absolute(ruta)
 	get_tree().paused = false
 	print("PRUEBAS DE PUNTUACION: %d comprobaciones, %d errores" % [_comprobaciones, _errores.size()])
 	get_tree().quit(0 if _errores.is_empty() else 1)
@@ -129,12 +135,12 @@ func _probar_instancias_independientes() -> void:
 	segunda.free()
 
 
-func _probar_pausa_y_nueva_partida() -> void:
+func _probar_pausa_y_nueva_partida(ruta_clasificacion: String) -> void:
 	# El ejecutor permanece en la raíz mientras el menú reemplaza la escena actual.
 	get_tree().current_scene = null
 	if not await _cargar_escena(MenuGlobal.ESCENA_MENU):
 		return
-	if not await _jugar_desde_menu():
+	if not await _jugar_desde_menu("Lina"):
 		return
 	var oficina := get_tree().current_scene
 	var sistema := oficina.get("sistema_despacho") as SistemaDespacho
@@ -149,8 +155,23 @@ func _probar_pausa_y_nueva_partida() -> void:
 	_verificar(sistema.puntuacion.puntos == 200, "Resolver dentro de la oficina actualiza el saldo de la sesión")
 	var pendiente := _crear_denuncia("pausa-puntuacion", 1)
 	sistema.recibir_denuncia(pendiente)
+	var tabla_partida: Control = oficina.clasificacion_partida
+	_enviar_tab(true)
+	await get_tree().process_frame
+	_verificar(tabla_partida.visible and not get_tree().paused, "Mantener Tab muestra la clasificación sin pausar")
+	_verificar(tabla_partida.tus_puntos.text == "200" and tabla_partida.filas.get_child_count() == 1, "La tabla muestra el puntaje actual y el récord guardado")
+	var tiempo_con_tabla := sistema.obtener_tiempo_restante(pendiente.id)
+	for cuadro: int in range(3):
+		await get_tree().process_frame
+	_verificar(sistema.obtener_tiempo_restante(pendiente.id) < tiempo_con_tabla, "La denuncia sigue avanzando mientras se consulta la tabla")
+	_enviar_tab(false)
+	await get_tree().process_frame
+	_verificar(not tabla_partida.visible, "Soltar Tab oculta la clasificación")
+	_enviar_tab(true)
+	await get_tree().process_frame
 	MenuGlobal.abrir_pausa()
 	_verificar(get_tree().paused and MenuGlobal.panel_pausa.visible, "La pausa real se abre en la oficina")
+	_verificar(not tabla_partida.visible, "La pausa oculta la clasificación de la partida")
 	var tiempo_antes := sistema.obtener_tiempo_restante(pendiente.id)
 	for cuadro: int in range(5):
 		await get_tree().process_frame
@@ -158,12 +179,16 @@ func _probar_pausa_y_nueva_partida() -> void:
 	_verificar(is_equal_approx(sistema.obtener_tiempo_restante(pendiente.id), tiempo_antes), "La pausa congela también el tiempo del caso pendiente")
 	MenuGlobal.reanudar_juego()
 	_verificar(not get_tree().paused and sistema.puntuacion.puntos == 200, "Reanudar conserva el saldo")
+	_enviar_tab(true, true)
+	await get_tree().process_frame
+	_verificar(not tabla_partida.visible, "Reanudar con Tab sostenido requiere una nueva pulsación")
+	_enviar_tab(false)
 	MenuGlobal.abrir_pausa()
 	MenuGlobal.volver_al_menu()
 	if not await _esperar_escena(MenuGlobal.ESCENA_MENU):
 		return
 	_verificar(not get_tree().paused, "Volver al menú termina la pausa de la partida anterior")
-	if not await _jugar_desde_menu():
+	if not await _jugar_desde_menu("Álex"):
 		return
 	var nuevo_sistema := get_tree().current_scene.get("sistema_despacho") as SistemaDespacho
 	_verificar(nuevo_sistema != null, "Jugar de nuevo crea otro despacho")
@@ -175,17 +200,39 @@ func _probar_pausa_y_nueva_partida() -> void:
 	nuevo_sistema.recibir_denuncia(repetido)
 	nuevo_sistema.resolver_denuncia(repetido.id)
 	_verificar(nuevo_sistema.puntuacion.puntos == 200, "El mismo ID puede ganar puntos en la nueva sesión")
-	await _cargar_escena(MenuGlobal.ESCENA_MENU)
+	var extra := _crear_denuncia("segundo-caso", 1)
+	_enviar_tab(true)
+	await get_tree().process_frame
+	nuevo_sistema.recibir_denuncia(extra)
+	nuevo_sistema.resolver_denuncia(extra.id)
+	var tabla_nueva_partida: Control = get_tree().current_scene.clasificacion_partida
+	_verificar(tabla_nueva_partida.tus_puntos.text == "300" and tabla_nueva_partida.tu_puesto.text.ends_with("#1"), "La clasificación abierta actualiza el puntaje y la posición")
+	_enviar_tab(false)
+	var clasificacion_recargada := ClasificacionLocal.new(ruta_clasificacion)
+	_verificar(clasificacion_recargada.cargar() == OK, "Los récords se guardan antes de salir de la partida")
+	_verificar(clasificacion_recargada.obtener_clasificacion() == [
+		{"nombre": "Álex", "puntos": 300}, {"nombre": "Lina", "puntos": 200},
+	], "El archivo conserva los mejores puntajes de ambos jugadores en orden")
+	if await _cargar_escena(MenuGlobal.ESCENA_MENU):
+		get_tree().current_scene.get_node("%RankingButton").pressed.emit()
+		var panel := MenuGlobal.panel_clasificacion
+		_verificar(panel.tabla.is_visible_in_tree() and panel.filas.get_child_count() == 2, "La clasificación del menú muestra ambos récords")
+		panel.boton_volver.pressed.emit()
 
 
-func _jugar_desde_menu() -> bool:
+func _jugar_desde_menu(nombre: String) -> bool:
 	var boton := get_tree().current_scene.get_node_or_null("%PlayButton") as Button
 	_verificar(boton != null, "El menú dispone de su botón Jugar")
 	if boton == null:
 		return false
 	boton.pressed.emit()
+	var campo := MenuGlobal.panel_clasificacion.nombre_jugador
+	_verificar(campo.is_visible_in_tree(), "Jugar permite identificar al jugador")
+	campo.text = nombre
+	campo.text_submitted.emit(nombre)
 	if not await _esperar_escena(MenuGlobal.ESCENA_JUEGO):
 		return false
+	_verificar(MenuGlobal.nombre_partida == nombre, "La oficina recibe el nombre confirmado")
 	MenuGlobal.cerrar_ayuda()
 	# El gestor termina de configurar la oficina después de un cuadro físico.
 	await get_tree().physics_frame
@@ -200,6 +247,15 @@ func _jugar_desde_menu() -> bool:
 	temporizador_denuncias.stop()
 	temporizador_bloqueos.stop()
 	return true
+
+
+func _enviar_tab(pulsada: bool, repetida: bool = false) -> void:
+	var evento := InputEventKey.new()
+	evento.keycode = KEY_TAB
+	evento.physical_keycode = KEY_TAB
+	evento.pressed = pulsada
+	evento.echo = repetida
+	Input.parse_input_event(evento)
 
 
 func _cargar_escena(ruta: String) -> bool:
