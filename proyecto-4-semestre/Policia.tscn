@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dkumt5d6kqdb" path="res://Personajes/PoliciaAzul/policia_azul.gd" id="1_vcfys"]
 [ext_resource type="PackedScene" uid="uid://bergxnx112j2t" path="res://Personajes/PoliciaAzul/policia_azul.glb" id="2_n2jeu"]
+[ext_resource type="AudioStream" uid="uid://dpbgecapxsgb" path="res://Audios/Pasos wubblys.mp3" id="3_n2jeu"]
 
 [sub_resource type="CapsuleShape3D" id="CapsulaCuerpo"]
 radius = 0.42
@@ -33,3 +34,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.3)
 shape = SubResource("FormaInteraccion")
 target_position = Vector3(0, 0, 0.8)
 collision_mask = 5
+
+[node name="SonidosPasos" type="AudioStreamPlayer3D" parent="." unique_id=543803698]
+stream = ExtResource("3_n2jeu")
+volume_db = -9.0
