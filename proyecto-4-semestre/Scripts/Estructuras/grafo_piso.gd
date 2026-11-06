@@ -115,6 +115,23 @@ func construir_adyacencia() -> void:
 
 			adyacencia[celda] = vecinos
 
+
+func celdas_alcanzables(origen: Vector2i) -> Dictionary:
+	# Lee la ocupación actual, incluso antes de reconstruir la adyacencia.
+	if not es_transitable(origen):
+		return {}
+	var visitadas: Dictionary = {origen: true}
+	var pendientes: Array[Vector2i] = [origen]
+	while not pendientes.is_empty():
+		var actual: Vector2i = pendientes.pop_back()
+		for direccion: Vector2i in DIRECCIONES:
+			var vecina := actual + direccion
+			if not visitadas.has(vecina) and es_transitable(vecina):
+				visitadas[vecina] = true
+				pendientes.append(vecina)
+	return visitadas
+
+
 func calcular_ruta(origen: Vector2i, destino: Vector2i) -> Array[Vector2i]:
 	if not adyacencia.has(origen) or not adyacencia.has(destino):
 		return []

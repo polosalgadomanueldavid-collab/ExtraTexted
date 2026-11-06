@@ -297,17 +297,19 @@ func _cambiar_bloqueo_temporal() -> void:
 		jugador.global_position
 	)
 
-	var destino_activo: Vector2i = Vector2i(-1, -1)
-	var denuncia_activa: Denuncia = sistema_despacho.obtener_denuncia_activa()
+	var destinos_protegidos: Array[Vector2i] = []
+	var libres_al_inicio := grafo_piso.celdas_alcanzables(celda_jugador)
+	for destino: Vector2i in GrafoPiso.DESTINOS.values():
+		if libres_al_inicio.has(destino):
+			destinos_protegidos.append(destino)
 
-	if denuncia_activa != null:
-		var indice: int = denuncia_activa.indice_estacion_actual
-
-		if indice < denuncia_activa.protocolo_estaciones.size():
-			var estacion_id: String = denuncia_activa.protocolo_estaciones[indice]
-
-			if GrafoPiso.DESTINOS.has(estacion_id):
-				destino_activo = GrafoPiso.DESTINOS[estacion_id]		
+	var colision := jugador.get_node("Colision") as CollisionShape3D
+	var limites := colision.global_transform * colision.shape.get_debug_mesh().get_aabb()
+	var huella_jugador := Rect2(
+		Vector2(limites.position.x, limites.position.z),
+		Vector2(limites.size.x, limites.size.z)
+	).grow(jugador.safe_margin)
+	var tamano_celda := Vector2.ONE * GrafoPiso.TAMANO_CELDA
 
 	var candidatos: Array[Vector2i] = []
 
@@ -325,6 +327,12 @@ func _cambiar_bloqueo_temporal() -> void:
 				continue
 
 			if GrafoPiso.DESTINOS.values().has(celda):
+				continue
+			# El cajón ocupa toda su celda. El jugador puede estar apoyado
+			# sobre el borde de la celda vecina al cambiar la distribución.
+			var centro := grafo_piso.celda_a_posicion(celda)
+			var huella_cajon := Rect2(Vector2(centro.x, centro.z) - tamano_celda * 0.5, tamano_celda)
+			if huella_cajon.intersects(huella_jugador):
 				continue
 
 			candidatos.append(celda)
@@ -344,12 +352,12 @@ func _cambiar_bloqueo_temporal() -> void:
 		candidatos.remove_at(indice)
 
 		grafo_piso.bloqueos_temporales[candidata] = true
-		grafo_piso.construir_adyacencia()
-
-		var hay_ruta: bool = (
-			destino_activo == Vector2i(-1, -1)
-			or not grafo_piso.calcular_ruta(celda_jugador, destino_activo).is_empty()
-		)
+		var libres := grafo_piso.celdas_alcanzables(celda_jugador)
+		var hay_ruta := libres.size() > 1
+		for destino: Vector2i in destinos_protegidos:
+			if not libres.has(destino):
+				hay_ruta = false
+				break
 
 		if hay_ruta:
 			_mostrar_bloqueo_temporal(candidata)
