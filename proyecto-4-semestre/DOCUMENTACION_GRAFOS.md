@@ -2,9 +2,9 @@
 
 ## 1. Propósito
 
-El proyecto usa un **grafo no dirigido y no ponderado** para representar las zonas transitables del piso de la comisaría. Su función es calcular una ruta válida desde la posición actual del jugador hasta la estación requerida por la denuncia activa.
+El proyecto usa un **grafo no dirigido y no ponderado** para representar las zonas transitables del piso de la comisaría. Su función es sugerir una ruta desde la posición del jugador hasta la estación pendiente que requiere menos recorrido. El jugador puede completar las estaciones de su denuncia en cualquier orden.
 
-La ruta se actualiza cuando se inicia una denuncia, se completa una estación del protocolo o cambia un bloqueo temporal. Así, la navegación respeta tanto los obstáculos permanentes del mapa como los obstáculos dinámicos de la partida.
+La ruta se actualiza cuando se inicia una denuncia, se completa una estación, el jugador cambia de celda o cambia un bloqueo temporal. Así, la navegación respeta tanto los obstáculos permanentes del mapa como los obstáculos dinámicos de la partida.
 
 ## 2. Modelado del grafo
 
@@ -62,7 +62,7 @@ Una celda es transitable si está dentro de los límites y no figura ni en `bloq
 
 ## 5. Cálculo de la ruta mínima
 
-El método `calcular_ruta(origen, destino)` implementa **Dijkstra**. Todas las aristas tienen costo `1`, porque desplazarse entre dos celdas vecinas representa un paso equivalente.
+El método `calcular_ruta(origen, destino)` utiliza **Dijkstra**. Todas las aristas tienen costo `1`, porque desplazarse entre dos celdas vecinas representa un paso equivalente. `calcular_ruta_a_mas_cercana(origen, destinos)` realiza una sola búsqueda y termina al alcanzar la primera estación pendiente con distancia mínima; el método de un único destino delega en esta búsqueda.
 
 1. Asigna distancia infinita a cada vértice y `0` al origen.
 2. Selecciona el vértice no visitado con menor distancia.
@@ -103,17 +103,17 @@ La prueba `Pruebas/Bloqueos/prueba_generacion_bloqueos.gd` reproduce posiciones 
 ```text
 Denuncia prioritaria activada
         ↓
-Se lee la siguiente estación del protocolo
+Se obtienen todas las estaciones pendientes
         ↓
-Posición 3D del jugador → celda de origen
-Estación solicitada      → celda de destino
+Posición 3D del jugador → celda transitable de acceso
+Estaciones pendientes  → celdas de destino
         ↓
-GrafoPiso.calcular_ruta(origen, destino)
+GrafoPiso.calcular_ruta_a_mas_cercana(origen, destinos)
         ↓
-ruta_actual: secuencia ordenada de celdas
+ruta_actual: recorrido sugerido a la estación alcanzable más cercana
 ```
 
-La conversión se realiza con `posicion_a_celda()` y `celda_a_posicion()`, usando el origen espacial del piso y un tamaño de celda de `0.5` unidades. Esto conecta el modelo lógico en 2D con las posiciones reales de la escena 3D.
+La conversión se realiza con `posicion_a_celda()` y `celda_a_posicion()`, usando el origen espacial del piso y un tamaño de celda de `0.5` unidades. `celda_de_acceso()` resuelve los bordes libres de casillas ocupadas. Todos los marcadores pendientes permanecen visibles, aunque la guía señale solo una sugerencia; las casillas del depurador actualizan sus colores sin recrear sus mallas al caminar.
 
 ## 8. Archivos principales
 

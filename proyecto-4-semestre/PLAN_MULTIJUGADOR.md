@@ -1,7 +1,7 @@
 # Plan de desarrollo del multijugador de ExtraTexted
 
 Fecha: 7 de noviembre de 2026.
-Estado: diseño guardado para implementar después de las correcciones de bugs.
+Estado: fase 1 implementada el 7 de noviembre de 2026; las fases de multijugador siguen pendientes.
 
 ## Objetivo y decisiones de diseño
 
@@ -37,12 +37,12 @@ La entrega final del documento está prevista para la semana del 16 al 20 de nov
 
 ## Punto de partida del código
 
-- `Scripts/Estructuras/denuncia.gd`: almacena `protocolo_estaciones` y `indice_estacion_actual`; actualmente representa una secuencia.
-- `Scripts/SistemaDespacho.gd`: mantiene una sola `denuncia_activa_id`, actualiza tiempos y valida únicamente la próxima estación.
+- `Scripts/Estructuras/denuncia.gd`: almacena `protocolo_estaciones` y `estaciones_completadas`; ya permite cualquier orden.
+- `Scripts/SistemaDespacho.gd`: mantiene una sola `denuncia_activa_id`, actualiza tiempos y cierra automáticamente al completar todas las estaciones.
 - `Scripts/gestor_partida.gd`: referencia un jugador, genera denuncias y bloqueos, conecta el computador y calcula la ruta a una estación.
 - `Scripts/estacion.gd`: comunica la estación usada, sin identificar una denuncia concreta para varios casos simultáneos.
 - `Scripts/computer.gd`: obtiene el primer jugador del grupo y controla su entrada y cámara al abrir la PC.
-- `UI/panel_despacho.gd` y los indicadores: muestran una denuncia activa y el avance secuencial.
+- `UI/panel_despacho.gd` y los indicadores: muestran una denuncia activa, sus estaciones completadas y todas las pendientes. La guía sugiere la más cercana.
 - `UI/Menus/menu_global.gd`: usa la pausa del árbol de escenas; debe adaptarse para que un menú individual no detenga o desincronice la sesión.
 - `Eventos/Apagon/evento_apagon.gd`: el apagón y su reparación también necesitarán un estado compartido, con controles y efectos visuales locales por jugador.
 
@@ -53,7 +53,7 @@ Revisar estos puntos al comenzar: las correcciones de bugs pueden modificar el c
 ### Denuncias y estaciones
 
 - Cada denuncia conserva su ID, tipo, prioridad, estado, tiempo y conjunto de estaciones requeridas.
-- Sustituir el índice secuencial por un conjunto de estaciones completadas. Puede representarse mediante un diccionario de IDs para evitar duplicados.
+- El progreso ya se guarda como una lista de IDs completados, con validación que evita duplicados.
 - Las estaciones pendientes se obtienen restando las completadas a las requeridas.
 - Mantener los recursos de casos como plantillas y crear estado independiente para cada denuncia de la partida.
 - Validar las plantillas: IDs de estación existentes, sin repeticiones y con al menos una estación requerida.
@@ -86,10 +86,10 @@ Revisar estos puntos al comenzar: las correcciones de bugs pueden modificar el c
 
 ### Fase 1. Estaciones en cualquier orden
 
-- [ ] Cambiar el estado de progreso de `Denuncia` y la validación en `SistemaDespacho`.
-- [ ] Adaptar panel, protocolo visual, indicadores y rutas a varias estaciones pendientes.
-- [ ] Conservar cierre automático, tiempo límite, calma y puntuación.
-- [ ] Actualizar las pruebas que todavía esperan un índice secuencial.
+- [x] Cambiar el estado de progreso de `Denuncia` y la validación en `SistemaDespacho`.
+- [x] Adaptar panel, protocolo visual, indicadores y rutas a varias estaciones pendientes.
+- [x] Conservar cierre automático, tiempo límite, calma y puntuación.
+- [x] Actualizar las pruebas que todavía esperan un índice secuencial.
 
 Criterio de salida: un mismo caso puede completarse en órdenes distintos; repetir una estación o usar otra ajena al caso no produce progreso extra.
 

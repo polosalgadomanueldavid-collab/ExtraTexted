@@ -158,8 +158,14 @@ func celdas_alcanzables(origen: Vector2i) -> Dictionary:
 
 
 func calcular_ruta(origen: Vector2i, destino: Vector2i) -> Array[Vector2i]:
-	if not adyacencia.has(origen) or not adyacencia.has(destino):
+	return calcular_ruta_a_mas_cercana(origen, [destino])
+
+
+func calcular_ruta_a_mas_cercana(origen: Vector2i, destinos: Array[Vector2i]) -> Array[Vector2i]:
+	# Un solo Dijkstra: termina al alcanzar el primer destino pendiente.
+	if not adyacencia.has(origen) or destinos.is_empty():
 		return []
+	var destino := Vector2i(-1, -1)
 
 	var infinito: float = INF
 	var distancias: Dictionary = {}
@@ -184,7 +190,8 @@ func calcular_ruta(origen: Vector2i, destino: Vector2i) -> Array[Vector2i]:
 		if actual == Vector2i(-1, -1):
 			break
 
-		if actual == destino:
+		if destinos.has(actual):
+			destino = actual
 			break
 
 		sin_visitar.erase(actual)
@@ -196,7 +203,7 @@ func calcular_ruta(origen: Vector2i, destino: Vector2i) -> Array[Vector2i]:
 				distancias[vecina] = distancia_nueva
 				anterior[vecina] = actual
 
-	if origen != destino and not anterior.has(destino):
+	if destino == Vector2i(-1, -1):
 		return []
 
 	var ruta: Array[Vector2i] = [destino]

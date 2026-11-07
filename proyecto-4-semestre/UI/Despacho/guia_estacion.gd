@@ -40,7 +40,7 @@ func establecer_objetivo(nuevo_objetivo: IndicadorProximaEstacion) -> void:
 		return
 	icono.tipo = ICONO.tipo_estacion(objetivo.estacion_id)
 	icono.queue_redraw()
-	rotulo.text = ICONO.nombre_estacion(objetivo.estacion_id)
+	rotulo.text = "Sugerida: " + ICONO.nombre_estacion(objetivo.estacion_id)
 
 
 func actualizar(barra_despacho: Control, usando_computador: bool) -> void:

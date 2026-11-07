@@ -21,7 +21,7 @@ const CORAL := Color("ff785f")
 @onready var denuncia_activa_tiempo: Label = %TiempoActivo
 @onready var reloj_activo: Control = %RelojActivo
 @onready var protocolo: Control = %Protocolo
-@onready var icono_actividad: Control = %IconoActividad
+@onready var progreso_estaciones: Label = %ProgresoEstaciones
 @onready var mensaje_estacion: Label = %MensajeEstacion
 @onready var lista_denuncias: VBoxContainer = %ListaDenuncias
 
@@ -32,7 +32,6 @@ var segundos_mensaje: float = 0.0
 var segundos_recompensa: float = 0.0
 var _puntos_mostrados: int = 0
 var _id_activo: String = ""
-var _indice_activo: int = -1
 
 
 func _ready() -> void:
@@ -81,7 +80,6 @@ func configurar_sistema(nuevo_sistema: SistemaDespacho) -> void:
 	segundos_recompensa = 0.0
 	puntos_ganancia.text = ""
 	_id_activo = ""
-	_indice_activo = -1
 	if not is_instance_valid(sistema_despacho):
 		actualizar_puntos(0)
 		actualizar_calma(100)
@@ -191,14 +189,10 @@ func _crear_tarjeta(denuncia: Denuncia, siguiente: bool) -> PanelContainer:
 	fila.add_theme_constant_override("separation", 10)
 	tarjeta.add_child(fila)
 	var icono := IconoDespacho.new()
-	icono.name = "IconoPrimeraEstacion"
-	var primera_estacion := denuncia.protocolo_estaciones[0] if not denuncia.protocolo_estaciones.is_empty() else ""
-	if IconoDespacho.TIPOS_ESTACION.has(primera_estacion):
-		icono.tipo = IconoDespacho.tipo_estacion(primera_estacion)
-	else:
-		icono.tipo = IconoDespacho.Tipo.ALERTA
-		icono.acento = color
-		icono.informativo = denuncia.nivel_riesgo <= 2
+	icono.name = "IconoCaso"
+	icono.tipo = IconoDespacho.Tipo.ALERTA
+	icono.acento = color
+	icono.informativo = denuncia.nivel_riesgo <= 2
 	icono.custom_minimum_size = Vector2(30, 40)
 	fila.add_child(icono)
 	var texto := VBoxContainer.new()
@@ -261,11 +255,12 @@ func _actualizar_denuncia_activa() -> void:
 	if denuncia == null:
 		reloj_activo.sincronizar_tiempo(0.0, 1.0, false)
 		_id_activo = ""
-		_indice_activo = -1
+		var vacias: Array[String] = []
+		protocolo.configurar(vacias, vacias)
+		progreso_estaciones.text = ""
 		return
 	if _id_activo != denuncia.id:
 		_id_activo = denuncia.id
-		_indice_activo = -1
 		denuncia_activa_titulo.text = denuncia.titulo
 		var color := _color_riesgo(denuncia.nivel_riesgo)
 		var estilo := denuncia_activa_detalle.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
@@ -280,14 +275,9 @@ func _actualizar_denuncia_activa() -> void:
 	var tiempo := sistema_despacho.obtener_tiempo_restante(denuncia.id)
 	denuncia_activa_tiempo.text = _formatear_tiempo(tiempo)
 	reloj_activo.sincronizar_tiempo(tiempo, denuncia.tiempo_limite_segundos, true)
-	if _indice_activo != denuncia.indice_estacion_actual:
-		_indice_activo = denuncia.indice_estacion_actual
-		protocolo.configurar(denuncia.protocolo_estaciones, _indice_activo)
-		var tiene_estacion := _indice_activo < denuncia.protocolo_estaciones.size()
-		icono_actividad.visible = tiene_estacion
-		if tiene_estacion:
-			icono_actividad.tipo = IconoDespacho.tipo_estacion(denuncia.protocolo_estaciones[_indice_activo])
-			icono_actividad.queue_redraw()
+	var requeridas := denuncia.obtener_estaciones_requeridas()
+	protocolo.configurar(requeridas, denuncia.estaciones_completadas)
+	progreso_estaciones.text = "%d/%d COMPLETADAS · ORDEN LIBRE" % [denuncia.estaciones_completadas.size(), requeridas.size()]
 
 
 func _formatear_tiempo(tiempo: float) -> String:
@@ -323,11 +313,15 @@ func _estilo_sobre_escenario(etiqueta: Label) -> void:
 
 
 func _on_estacion_completada(_denuncia: Denuncia, estacion_id: String) -> void:
+	_actualizar_denuncia_activa()
 	_mostrar_mensaje("Correcto: %s completada." % IconoDespacho.nombre_estacion(estacion_id), Color("86efac"))
 
 
-func _on_estacion_incorrecta(_denuncia: Denuncia, estacion_esperada: String) -> void:
-	_mostrar_mensaje("Estación incorrecta. Ve a %s." % IconoDespacho.nombre_estacion(estacion_esperada), CORAL)
+func _on_estacion_incorrecta(denuncia: Denuncia, estacion_usada: String) -> void:
+	if denuncia.estaciones_completadas.has(estacion_usada):
+		_mostrar_mensaje("Ya completaste %s. Elige otra pendiente." % IconoDespacho.nombre_estacion(estacion_usada), CORAL)
+	else:
+		_mostrar_mensaje("Esta estación no corresponde al caso. Elige una marcada.", CORAL)
 
 
 func _on_denuncia_resuelta(_denuncia: Denuncia) -> void:

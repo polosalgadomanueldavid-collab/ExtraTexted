@@ -18,8 +18,11 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   El flujo de granos se anima mientras el caso está activo y se congela con la pausa.
 - Los iconos de los casos en espera son estáticos; sus números siguen mostrando
   el tiempo real. Al aceptar el siguiente caso se usa su tiempo restante actual.
-- El protocolo admite la cantidad real de estaciones y cambia el icono de actividad
-  (carpeta, lupa, candado, documento o corazón) según la estación actual.
+- El protocolo muestra las estaciones como tareas independientes, con marca de
+  completada por ID y contador `N/T COMPLETADAS · ORDEN LIBRE`. Todas las pendientes
+  tienen la misma importancia visual; no hay una etapa obligatoria siguiente.
+- Repetir una estación muestra un aviso y conserva el progreso. Al completar todas,
+  el caso se cierra automáticamente y el panel retira la tarjeta activa.
 - El HUD escala desde 1920×1080 sin alterar el mundo; la cola permite desplazamiento
   cuando no cabe y no captura el foco del teclado.
 

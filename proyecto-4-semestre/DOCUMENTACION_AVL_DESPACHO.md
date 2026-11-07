@@ -33,9 +33,9 @@ Cada denuncia es un recurso `Denuncia` y contiene:
 | `tiempo_limite_segundos` | Tiempo disponible antes de vencer. |
 | `penalidad_calma` | Calma operativa perdida si vence. |
 | `puntaje_recompensa` | Recompensa prevista al resolverla. |
-| `protocolo_estaciones` | Secuencia de estaciones que debe completar el equipo. |
+| `protocolo_estaciones` | Estaciones requeridas; el orden solo organiza su presentación. |
 | `estado` | Pendiente, en proceso, resuelta o vencida. |
-| `indice_estacion_actual` | Paso actual dentro del protocolo. |
+| `estaciones_completadas` | IDs de las estaciones ya visitadas, sin duplicados. |
 
 ### Nodo AVL
 
@@ -114,15 +114,20 @@ Cada denuncia inicia su temporizador al entrar al despacho. El temporizador sigu
 
 ## 7. Protocolo de estaciones
 
-Los casos no se resuelven contestando preguntas. Cada denuncia tiene una secuencia de identificadores de estación, por ejemplo:
+Cada denuncia requiere un conjunto de estaciones que se puede completar en cualquier orden, por ejemplo:
 
 ```text
-evidencias → verificacion → privacidad → reporte
+Requeridas: evidencias, verificacion, privacidad, reporte
+Un recorrido válido: reporte → privacidad → evidencias → verificacion
 ```
 
-`SistemaDespacho.interactuar_estacion(estacion_id)` compara la estación usada con el paso esperado. Si coincide, avanza `indice_estacion_actual`; si era el último paso, resuelve el caso. Si no coincide, emite una señal de estación incorrecta.
+`SistemaDespacho.interactuar_estacion(estacion_id)` acepta cualquier estación requerida que todavía esté pendiente y agrega su ID a `estaciones_completadas`. Al completar la última pendiente, resuelve automáticamente el caso, concede su recompensa y recupera 5 de calma. No es necesario regresar al computador.
 
-La lógica de validación ya está implementada. La siguiente integración pendiente es crear y ubicar en el escenario los objetos físicos que representen `evidencias`, `verificacion`, `privacidad`, `reporte` y `bienestar`.
+Repetir una estación o usar otra ajena al caso no cambia el progreso, los puntos ni la calma. La señal `estacion_incorrecta` comunica la estación usada para que el panel distinga ambos motivos. El vencimiento sigue dependiendo del tiempo restante, incluso con el protocolo parcialmente completado.
+
+El panel muestra una lista con marcas individuales y el contador de completadas. Todos los marcadores pendientes están activos; la flecha sugiere el de menor recorrido transitable. Las cinco estaciones físicas están integradas en la oficina.
+
+La prueba `Pruebas/prueba_protocolo_libre.gd` recorre los 50 órdenes posibles de las seis plantillas, comprueba duplicados, vencimiento y cierre único. La prueba de interacción de marcadores completa un caso en orden inverso mediante la tecla E en las estaciones reales.
 
 ## 8. Archivos principales
 

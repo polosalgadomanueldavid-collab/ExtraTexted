@@ -11,13 +11,13 @@ const PASOS := [
 		preload("res://UI/Menus/ArtePiloto/tutorial_denuncia.webp"),
 	],
 	[
-		"Ve a la estación indicada",
-		"Pulsa E para salir del computador. Sigue el icono de la próxima estación. Si queda fuera de vista, la flecha indica la dirección.",
+		"Elige una estación pendiente",
+		"Pulsa E para salir del computador. Visita las estaciones marcadas en cualquier orden. La flecha sugiere la más cercana.",
 		preload("res://UI/Menus/ArtePiloto/tutorial_estacion.webp"),
 	],
 	[
 		"Completa el protocolo",
-		"Ponte frente a la estación y pulsa E. Completa todos los pasos antes de que se agote el tiempo para ganar puntos.",
+		"Ponte frente a cada estación y pulsa E una vez. Al completar todas, el caso se cierra automáticamente y ganas puntos. Repetir una estación no suma.",
 		preload("res://UI/Menus/ArtePiloto/tutorial_protocolo.webp"),
 	],
 ]

@@ -28,6 +28,7 @@ var _contenedor: Node3D
 var _materiales: Dictionary = {}
 var _marcador_jugador: MeshInstance3D
 var _mesas_fisicas: Array[Dictionary] = []
+var _casillas: Dictionary = {}
 
 func configurar(nuevo_grafo: GrafoPiso, nuevo_jugador: Node3D) -> void:
 	grafo = nuevo_grafo
@@ -39,7 +40,12 @@ func configurar(nuevo_grafo: GrafoPiso, nuevo_jugador: Node3D) -> void:
 
 func actualizar_ruta(nueva_ruta: Array[Vector2i]) -> void:
 	ruta = nueva_ruta.duplicate()
-	_reconstruir()
+	# Cambiar de estación sugerida al caminar no necesita recrear las 350 mallas.
+	var celdas_ruta: Dictionary = {}
+	for celda: Vector2i in ruta:
+		celdas_ruta[celda] = true
+	for celda: Vector2i in _casillas:
+		(_casillas[celda] as MeshInstance3D).material_override = _obtener_material(_color_de_celda(celda, celdas_ruta))
 
 
 func actualizar_mapa() -> void:
@@ -69,6 +75,7 @@ func _reconstruir() -> void:
 		_contenedor.queue_free()
 
 	_contenedor = Node3D.new()
+	_casillas.clear()
 	_contenedor.name = "CasillasDiagnostico"
 	add_child(_contenedor)
 
@@ -166,6 +173,7 @@ func _agregar_casilla(celda: Vector2i, color: Color) -> void:
 	plano.material_override = _obtener_material(color)
 	plano.position = grafo.celda_a_posicion(celda) + Vector3(0.0, ALTURA, 0.0)
 	_contenedor.add_child(plano)
+	_casillas[celda] = plano
 
 
 func _agregar_etiqueta(celda: Vector2i, texto: String) -> void:

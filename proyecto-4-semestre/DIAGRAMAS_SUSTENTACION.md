@@ -98,9 +98,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A["AVL\nSelecciona la denuncia prioritaria"] --> B["Protocolo\nIndica la siguiente estación"]
-    B --> C["Grafo + Dijkstra\nCalcula la ruta más corta"]
+    A["AVL\nSelecciona la denuncia prioritaria"] --> B["Protocolo libre\nLista las estaciones pendientes"]
+    B --> C["Grafo + Dijkstra\nSugiere la estación de menor recorrido"]
     C --> D["Jugador\nSe desplaza por el escenario"]
 ```
 
-> El AVL decide **qué caso atender primero**; el grafo decide **cómo llegar a la estación necesaria para resolverlo**.
+> El AVL decide **qué caso atender primero**; el grafo sugiere **cómo llegar a la estación pendiente más cercana**. El jugador puede visitar las estaciones en cualquier orden y el caso se cierra al completar todas.

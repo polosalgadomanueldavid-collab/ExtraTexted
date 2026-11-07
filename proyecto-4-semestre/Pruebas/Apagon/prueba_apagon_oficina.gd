@@ -58,7 +58,7 @@ func _probar() -> void:
 		await _probar_circuito(tipo)
 	_verificar(_restauraciones == 4, "Los cuatro circuitos restauran la oficina exactamente una vez")
 	_verificar(float(_despacho.tiempos_restantes[_caso_activo.id]) < 300.0, "El tiempo de la denuncia sigue avanzando durante las reparaciones")
-	_verificar(_caso_activo.indice_estacion_actual == 0, "Reparar la luz conserva el protocolo de la denuncia")
+	_verificar(_caso_activo.estaciones_completadas.is_empty(), "Reparar la luz conserva el protocolo de la denuncia")
 	await _probar_salida_durante_apagon()
 	_finalizar()
 

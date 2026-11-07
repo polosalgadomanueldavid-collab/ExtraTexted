@@ -67,6 +67,7 @@ func _probar() -> void:
 		_sistema.resolver_denuncia(caso.id)
 	modelo_reserva.free()
 	await _probar_vencimiento()
+	await _probar_orden_libre_con_tecla()
 	await _probar_reconfiguracion()
 	get_tree().paused = false
 	_oficina.queue_free()
@@ -164,7 +165,7 @@ func _probar_protocolo_con_tecla(caso: Denuncia, postura: Dictionary) -> void:
 	await _esperar_efecto()
 	_pulsar_interaccion()
 	await get_tree().process_frame
-	_verificar(caso.indice_estacion_actual == 1, "La misma tecla E completa la estación iluminada")
+	_verificar(caso.estaciones_completadas == ["bienestar"], "La misma tecla E completa la estación iluminada")
 	_verificar(caso.estado == Denuncia.Estado.RESUELTA, "E en bienestar resuelve su protocolo completo")
 	_validar_interactuables("", "al resolver el primer protocolo")
 	for indicador: IndicadorProximaEstacion in _indicadores.values():
@@ -185,6 +186,39 @@ func _probar_protocolo_con_tecla(caso: Denuncia, postura: Dictionary) -> void:
 	_validar_interactuables("", "al resolver el caso completo")
 	for indicador: IndicadorProximaEstacion in _indicadores.values():
 		_verificar(not indicador.visible and is_zero_approx(float(indicador.get("_intensidad_interaccion"))), "Resolver oculta y reinicia el efecto de " + indicador.estacion_id)
+
+
+func _probar_orden_libre_con_tecla() -> void:
+	var caso := _recibir_caso("ORDEN-LIBRE-CON-TECLA", ["evidencias", "verificacion", "privacidad", "reporte"])
+	var panel := _oficina.panel_despacho as PanelDespacho
+	var saldo := _sistema.puntuacion.puntos
+	var orden: Array[String] = ["reporte", "privacidad", "verificacion", "evidencias"]
+	await _capturar("04_todas_pendientes")
+	for estacion_id: String in orden:
+		var postura := _buscar_postura(_estaciones[estacion_id] as Estacion)
+		_verificar(not postura.is_empty(), "La estación %s es accesible para completarla fuera de orden" % estacion_id)
+		if postura.is_empty():
+			return
+		_colocar(postura["cerca"], float(postura["giro"]))
+		await _esperar_efecto()
+		_validar_interactuables(estacion_id, "al elegir libremente " + estacion_id)
+		_pulsar_interaccion()
+		await get_tree().process_frame
+		_verificar(caso.estaciones_completadas.has(estacion_id), "E completa %s sin exigir otra estación primero" % estacion_id)
+		for id: String in _indicadores:
+			_verificar((_indicadores[id] as Node3D).visible == caso.obtener_estaciones_pendientes().has(id), "Solo permanecen visibles las estaciones pendientes")
+		if caso.estado == Denuncia.Estado.EN_PROCESO:
+			_verificar(panel.protocolo.completadas == caso.estaciones_completadas, "El panel marca la estación realmente visitada")
+			_verificar(_sistema.puntuacion.puntos == saldo, "Un caso incompleto no da puntos")
+			_pulsar_interaccion()
+			await get_tree().process_frame
+			_verificar(panel.mensaje_estacion.text.begins_with("Ya completaste"), "Repetir una estación muestra un aviso específico")
+			_verificar(caso.estaciones_completadas.size() == orden.find(estacion_id) + 1, "Repetir E conserva el avance")
+			if estacion_id == "reporte":
+				await _capturar("05_reporte_primero")
+	_verificar(caso.estado == Denuncia.Estado.RESUELTA and _sistema.obtener_denuncia_activa() == null, "La última estación pendiente cierra el caso sin volver al computador")
+	_verificar(_sistema.puntuacion.puntos == saldo + caso.obtener_puntaje_recompensa(), "El cierre libre concede una sola recompensa")
+	_verificar(not panel.denuncia_activa_detalle.visible and not _oficina.guia_estacion.visible and _oficina.ruta_actual.is_empty(), "Cerrar retira tarjeta, guía y ruta")
 
 
 func _probar_vencimiento() -> void:

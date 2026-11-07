@@ -39,8 +39,8 @@ el mobiliario.
 
 `Scripts/indicador_proxima_estacion.gd` coloca el modelo y el puntero bajo
 `OrientacionCamara`. Los orienta a la cámara activa y aplica una flotación y
-un balanceo limitados, sin girar la cara del icono de espaldas. Solo el objetivo
-activo procesa animación; la pausa congela su fase y los marcadores ocultos
+un balanceo limitados, sin girar la cara del icono de espaldas. Todos los objetivos
+pendientes procesan animación; la pausa congela su fase y los marcadores ocultos
 no procesan cuadros.
 
 El gestor ancla cada marcador 1,82 unidades sobre su estación. La altura se
@@ -53,9 +53,10 @@ Así se mantiene visible el personaje al usar
 las mesas inferiores. La API `establecer_activo(bool)` controla visibilidad y
 animación juntas.
 
-Los cambios de protocolo, la resolución y el vencimiento sincronizan el
-marcador inmediatamente con el despacho. No se añaden colisiones ni rótulos
-al mundo; el HUD conserva el nombre y los pasos del caso.
+Completar una estación oculta únicamente su marcador. La resolución y el vencimiento
+ocultan todos los marcadores del caso inmediatamente. El HUD conserva la lista de
+estaciones y marca las completadas; la flecha identifica como sugerencia la pendiente
+más cercana por camino transitable y se actualiza al cambiar de celda.
 
 ## Disponibilidad de interacción
 

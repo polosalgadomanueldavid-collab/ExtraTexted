@@ -40,6 +40,10 @@ var catalogo_denuncias: Array[Denuncia] = [
 
 var grafo_piso: GrafoPiso
 var ruta_actual: Array[Vector2i] = []
+var estacion_sugerida: String = ""
+var _estaciones_pendientes: Array[String] = []
+var _denuncia_orientada_id: String = ""
+var _celda_ruta := Vector2i(-1, -1)
 var temporizador_bloqueos: Timer
 var bloqueos_iniciados: bool = false
 var bloqueos_visuales: Dictionary = {}
@@ -97,6 +101,9 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
+	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
+		_calcular_ruta_a_proxima_estacion()
 	# La misma consulta que procesa E determina si el icono ofrece interacción.
 	var objetivo: Node3D = null
 	if is_instance_valid(jugador) and not computador.is_using:
@@ -255,7 +262,6 @@ func _on_computador_despacho_abierto() -> void:
 		" - ",
 		denuncia.titulo
 	)
-	_calcular_ruta_a_proxima_estacion()
 
 func interactuar_estacion(estacion_id: String) -> void:
 	print("[Despacho] Se solicitó usar la estación: ", estacion_id)
@@ -263,7 +269,6 @@ func interactuar_estacion(estacion_id: String) -> void:
 
 	if fue_correcta:
 		print("Estación correcta: ", estacion_id)
-		_calcular_ruta_a_proxima_estacion()
 	else:
 		print("Estación incorrecta o no hay denuncia activa: ", estacion_id)
 
@@ -272,35 +277,25 @@ func interactuar_estacion(estacion_id: String) -> void:
 
 func _calcular_ruta_a_proxima_estacion() -> void:
 	var denuncia: Denuncia = sistema_despacho.obtener_denuncia_activa()
-
-	if denuncia == null:
-		ruta_actual.clear()
-		_actualizar_indicador_estacion("")
-		return
-
-	var indice: int = denuncia.indice_estacion_actual
-
-	if indice >= denuncia.protocolo_estaciones.size():
-		ruta_actual.clear()
-		_actualizar_indicador_estacion("")
-		return
-
-	var estacion_id: String = denuncia.protocolo_estaciones[indice]
-
-	if not GrafoPiso.DESTINOS.has(estacion_id):
-		push_warning("La estación no existe en el grafo: " + estacion_id)
-		_actualizar_indicador_estacion("")
-		return
-
+	_denuncia_orientada_id = denuncia.id if denuncia != null else ""
+	_estaciones_pendientes.clear()
+	if denuncia != null:
+		_estaciones_pendientes = denuncia.obtener_estaciones_pendientes()
+	_celda_ruta = grafo_piso.posicion_a_celda(jugador.global_position)
+	var destinos: Array[Vector2i] = []
+	for estacion_id: String in _estaciones_pendientes:
+		if GrafoPiso.DESTINOS.has(estacion_id):
+			destinos.append(GrafoPiso.DESTINOS[estacion_id])
 	var origen: Vector2i = grafo_piso.celda_de_acceso(jugador.global_position)
-	var destino: Vector2i = GrafoPiso.DESTINOS[estacion_id]
-
-	ruta_actual = grafo_piso.calcular_ruta(origen, destino)
+	ruta_actual = grafo_piso.calcular_ruta_a_mas_cercana(origen, destinos)
+	estacion_sugerida = ""
+	if not ruta_actual.is_empty():
+		for estacion_id: String in _estaciones_pendientes:
+			if GrafoPiso.DESTINOS.get(estacion_id) == ruta_actual.back():
+				estacion_sugerida = estacion_id
+				break
 	depurador_grafo.actualizar_ruta(ruta_actual)
-	_actualizar_indicador_estacion(estacion_id)
-	_depurar_ruta(origen, destino, ruta_actual)
-
-	print("Ruta hacia ", estacion_id, ": ", ruta_actual)
+	_actualizar_indicadores_estaciones()
 
 
 func _crear_indicadores_estaciones() -> void:
@@ -319,22 +314,19 @@ func _crear_indicadores_estaciones() -> void:
 	print("[Orientación] Indicadores creados: ", indicadores_estaciones.size())
 
 
-func _actualizar_indicador_estacion(estacion_objetivo: String) -> void:
+func _actualizar_indicadores_estaciones() -> void:
 	for estacion_id: String in indicadores_estaciones:
 		var indicador := indicadores_estaciones[estacion_id] as IndicadorProximaEstacion
 		if is_instance_valid(indicador):
-			var activo := estacion_id == estacion_objetivo
+			var activo := _estaciones_pendientes.has(estacion_id)
 			if indicador.visible != activo or indicador.is_processing() != activo:
 				indicador.establecer_activo(activo)
-	guia_estacion.establecer_objetivo(indicadores_estaciones.get(estacion_objetivo) as IndicadorProximaEstacion)
-
-	if not estacion_objetivo.is_empty() and not indicadores_estaciones.has(estacion_objetivo):
-		push_warning("No hay indicador visual para la estación: " + estacion_objetivo)
+	guia_estacion.establecer_objetivo(indicadores_estaciones.get(estacion_sugerida) as IndicadorProximaEstacion)
 
 
 func _on_denuncias_actualizadas(_denuncias: Array[Denuncia]) -> void:
 	# Esta señal llega después de limpiar el caso activo al resolver o vencer.
-	# Sincronizar solo el marcador evita recalcular rutas al cambiar la cola.
+	# Los cambios en otros casos de la cola no alteran la orientación del activo.
 	_sincronizar_indicador_con_despacho()
 
 
@@ -344,15 +336,12 @@ func _on_estacion_completada(_denuncia: Denuncia, _estacion_id: String) -> void:
 
 func _sincronizar_indicador_con_despacho() -> void:
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
-	var estacion_objetivo: String = ""
-	if denuncia != null and denuncia.indice_estacion_actual < denuncia.protocolo_estaciones.size():
-		var siguiente: String = denuncia.protocolo_estaciones[denuncia.indice_estacion_actual]
-		if GrafoPiso.DESTINOS.has(siguiente):
-			estacion_objetivo = siguiente
-	_actualizar_indicador_estacion(estacion_objetivo)
-	if estacion_objetivo.is_empty() and not ruta_actual.is_empty():
-		ruta_actual.clear()
-		depurador_grafo.actualizar_ruta(ruta_actual)
+	var id := denuncia.id if denuncia != null else ""
+	var pendientes: Array[String] = []
+	if denuncia != null:
+		pendientes = denuncia.obtener_estaciones_pendientes()
+	if id != _denuncia_orientada_id or pendientes != _estaciones_pendientes:
+		_calcular_ruta_a_proxima_estacion()
 
 
 func _on_temporizador_bloqueos_timeout() -> void:

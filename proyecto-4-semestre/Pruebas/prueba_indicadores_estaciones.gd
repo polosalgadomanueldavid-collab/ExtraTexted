@@ -57,7 +57,7 @@ func _validar_estaciones_y_modelos(oficina: Node, indicadores: Dictionary) -> vo
 		var estacion := nodo as Estacion
 		estaciones[estacion.estacion_id] = estacion
 	_verificar(estaciones.size() == 5 and indicadores.size() == 5, "La oficina crea las cinco estaciones y sus cinco marcadores")
-	_validar_objetivo(indicadores, "", "al iniciar sin caso activo")
+	_validar_objetivo(indicadores, [], "al iniciar sin caso activo")
 	for caso: Denuncia in CASOS:
 		for estacion_id: String in caso.protocolo_estaciones:
 			_verificar(estaciones.has(estacion_id), "%s tiene estación física %s" % [caso.id, estacion_id])
@@ -154,22 +154,23 @@ func _probar_protocolos(oficina: Node, indicadores: Dictionary) -> void:
 		caso.id = "PROTOCOLO-" + plantilla.id
 		_verificar(sistema.recibir_denuncia(caso), "Se recibe el protocolo " + caso.id)
 		oficina.call("_on_computador_despacho_abierto")
-		for paso: int in range(caso.protocolo_estaciones.size()):
-			var objetivo: String = caso.protocolo_estaciones[paso]
-			_validar_objetivo(indicadores, objetivo, "%s paso %d" % [caso.id, paso])
+		var orden := caso.obtener_estaciones_requeridas()
+		orden.reverse()
+		for paso: int in range(orden.size()):
+			var objetivo: String = orden[paso]
+			_validar_objetivo(indicadores, caso.obtener_estaciones_pendientes(), "%s visita %d" % [caso.id, paso])
 			if not _capturadas.has(objetivo):
 				await _capturar_estacion(oficina, indicadores[objetivo] as Node3D, objetivo)
 				_capturadas[objetivo] = true
-			var incorrecta: String = "bienestar" if objetivo != "bienestar" else "evidencias"
+			var incorrecta: String = "estacion-ajena-al-caso"
 			oficina.call("interactuar_estacion", incorrecta)
-			_verificar(caso.indice_estacion_actual == paso, "Una estación incorrecta no avanza " + caso.id)
-			_validar_objetivo(indicadores, objetivo, "tras estación incorrecta")
+			_verificar(caso.estaciones_completadas.size() == paso, "Una estación incorrecta no avanza " + caso.id)
+			_validar_objetivo(indicadores, caso.obtener_estaciones_pendientes(), "tras estación incorrecta")
 			if paso % 2 == 0:
 				oficina.call("interactuar_estacion", objetivo)
 			else:
 				_verificar(sistema.interactuar_estacion(objetivo), "La llamada directa al despacho acepta la estación correcta")
-			var siguiente: String = caso.protocolo_estaciones[paso + 1] if paso + 1 < caso.protocolo_estaciones.size() else ""
-			_validar_objetivo(indicadores, siguiente, "tras avanzar " + caso.id)
+			_validar_objetivo(indicadores, caso.obtener_estaciones_pendientes(), "tras avanzar " + caso.id)
 		_verificar(caso.estado == Denuncia.Estado.RESUELTA, "La estación final resuelve " + caso.id)
 
 
@@ -179,13 +180,13 @@ func _probar_cierres_directos(sistema: SistemaDespacho, indicadores: Dictionary)
 		caso.id = "CIERRE-DIRECTO-%s" % vencer
 		sistema.recibir_denuncia(caso)
 		sistema.iniciar_denuncia_prioritaria()
-		_validar_objetivo(indicadores, "bienestar", "al aceptar directamente en el despacho")
+		_validar_objetivo(indicadores, caso.obtener_estaciones_pendientes(), "al aceptar directamente en el despacho")
 		if vencer:
 			sistema.tiempos_restantes[caso.id] = 0.1
 			sistema.actualizar_tiempos(0.2)
 		else:
 			sistema.resolver_denuncia(caso.id)
-		_validar_objetivo(indicadores, "", "inmediatamente tras cierre directo, sin esperar bloqueos")
+		_validar_objetivo(indicadores, [], "inmediatamente tras cierre directo, sin esperar bloqueos")
 	var activo := CASOS[0].duplicate(true) as Denuncia
 	activo.id = "ACTIVO-CONSERVADO"
 	sistema.recibir_denuncia(activo)
@@ -194,7 +195,7 @@ func _probar_cierres_directos(sistema: SistemaDespacho, indicadores: Dictionary)
 	pendiente.id = "PENDIENTE-QUE-VENCE"
 	sistema.recibir_denuncia(pendiente)
 	sistema.vencer_denuncia(pendiente.id)
-	_validar_objetivo(indicadores, "bienestar", "vencer otro caso pendiente conserva el objetivo activo")
+	_validar_objetivo(indicadores, activo.obtener_estaciones_pendientes(), "vencer otro caso pendiente conserva los objetivos activos")
 	sistema.resolver_denuncia(activo.id)
 
 
@@ -223,7 +224,7 @@ func _probar_pausa(oficina: Node, sistema: SistemaDespacho, indicadores: Diction
 	await get_tree().create_timer(0.12).timeout
 	_verificar(float(indicador.get("_tiempo")) > fase_pausada, "Reanudar continúa la animación")
 	sistema.resolver_denuncia(caso.id)
-	_validar_objetivo(indicadores, "", "al terminar la prueba de pausa")
+	_validar_objetivo(indicadores, [], "al terminar la prueba de pausa")
 
 
 func _probar_guia_pantalla(oficina: Node, sistema: SistemaDespacho, indicadores: Dictionary) -> void:
@@ -236,13 +237,18 @@ func _probar_guia_pantalla(oficina: Node, sistema: SistemaDespacho, indicadores:
 	_verificar(not guia.visible, "La guía está oculta sin caso activo")
 	var caso := CASOS[0].duplicate(true) as Denuncia
 	caso.id = "GUIA-PANTALLA"
+	var jugador := oficina.get("jugador") as Player
+	var postura_jugador := jugador.global_transform
+	var procesaba_jugador := jugador.is_physics_processing()
+	jugador.set_physics_process(false)
+	jugador.global_position = (oficina.get("grafo_piso") as GrafoPiso).celda_a_posicion(GrafoPiso.DESTINOS["bienestar"])
 	sistema.recibir_denuncia(caso)
 	sistema.iniciar_denuncia_prioritaria()
 	var indicador := indicadores["bienestar"] as IndicadorProximaEstacion
 	camara.look_at(indicador.global_position)
 	await _cuadros(2)
 	_verificar(guia.visible and guia.objetivo == indicador and not guia.fuera_de_vista, "La guía se proyecta sobre la estación activa")
-	_verificar(guia.icono.tipo == PanelDespacho.IconoDespacho.Tipo.BIENESTAR and guia.rotulo.text == "Bienestar", "La guía identifica la estación con un icono y un nombre")
+	_verificar(guia.icono.tipo == PanelDespacho.IconoDespacho.Tipo.BIENESTAR and guia.rotulo.text == "Sugerida: Bienestar", "La guía presenta la estación como sugerencia")
 	var centro_guia: Vector2 = guia.tarjeta.get_global_rect().get_center()
 	var punto_proyectado := camara.unproject_position(indicador.global_position)
 	_verificar(centro_guia.y < punto_proyectado.y and guia.direccion.y > 0.9, "La tarjeta apunta desde encima del modelo 3D")
@@ -271,17 +277,19 @@ func _probar_guia_pantalla(oficina: Node, sistema: SistemaDespacho, indicadores:
 	_verificar(not guia.visible and guia.objetivo == null, "Resolver retira la guía inmediatamente")
 	camara.global_transform = transformacion
 	camara.set_physics_process(procesaba)
+	jugador.global_transform = postura_jugador
+	jugador.set_physics_process(procesaba_jugador)
 
 
-func _validar_objetivo(indicadores: Dictionary, esperado: String, momento: String) -> void:
+func _validar_objetivo(indicadores: Dictionary, esperadas: Array[String], momento: String) -> void:
 	var visibles: int = 0
 	for estacion_id: String in indicadores:
 		var indicador := indicadores[estacion_id] as IndicadorProximaEstacion
-		var activo := estacion_id == esperado
+		var activo := esperadas.has(estacion_id)
 		if indicador.visible:
 			visibles += 1
 		_verificar(indicador.visible == activo and indicador.is_processing() == activo, "Visibilidad y proceso de %s %s" % [estacion_id, momento])
-	_verificar(visibles == (0 if esperado.is_empty() else 1), "Solo el objetivo actual está visible " + momento)
+	_verificar(visibles == esperadas.size(), "Todas las estaciones pendientes están visibles " + momento)
 
 
 func _capturar_estacion(oficina: Node, indicador: Node3D, estacion_id: String) -> void:
@@ -301,6 +309,7 @@ func _capturar_estacion(oficina: Node, indicador: Node3D, estacion_id: String) -
 	jugador.global_position = grafo.celda_a_posicion(GrafoPiso.DESTINOS[estacion_id]) + Vector3.UP * 0.075
 	camara.global_position = jugador.global_position + camara.offset
 	await _cuadros(3)
+	_verificar(oficina.get("estacion_sugerida") == estacion_id and (oficina.get("ruta_actual") as Array).size() == 1, "Moverse hasta %s actualiza la sugerencia sin completar otra estación" % estacion_id)
 	_validar_proyeccion(oficina, indicador, camara, estacion_id)
 	await _guardar_captura(estacion_id + "_jugando")
 	jugador.global_transform = transformacion_jugador
