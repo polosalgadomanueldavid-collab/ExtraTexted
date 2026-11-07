@@ -292,7 +292,7 @@ func _calcular_ruta_a_proxima_estacion() -> void:
 		_actualizar_indicador_estacion("")
 		return
 
-	var origen: Vector2i = grafo_piso.posicion_a_celda(jugador.global_position)
+	var origen: Vector2i = grafo_piso.celda_de_acceso(jugador.global_position)
 	var destino: Vector2i = GrafoPiso.DESTINOS[estacion_id]
 
 	ruta_actual = grafo_piso.calcular_ruta(origen, destino)
@@ -361,12 +361,13 @@ func _on_temporizador_bloqueos_timeout() -> void:
 func _cambiar_bloqueo_temporal() -> void:
 	_limpiar_bloqueos_temporales()
 
-	var celda_jugador: Vector2i = grafo_piso.posicion_a_celda(
+	var celda_jugador: Vector2i = grafo_piso.celda_de_acceso(
 		jugador.global_position
 	)
 
 	var destinos_protegidos: Array[Vector2i] = []
 	var libres_al_inicio := grafo_piso.celdas_alcanzables(celda_jugador)
+	var minimo_libres := mini(2, libres_al_inicio.size())
 	for destino: Vector2i in GrafoPiso.DESTINOS.values():
 		if libres_al_inicio.has(destino):
 			destinos_protegidos.append(destino)
@@ -405,10 +406,6 @@ func _cambiar_bloqueo_temporal() -> void:
 
 			candidatos.append(celda)
 
-	if candidatos.is_empty():
-		push_warning("No hay celdas disponibles para un bloqueo temporal.")
-		return
-
 	var bloqueos_colocados: int = 0
 	while not candidatos.is_empty() and bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
 		var indice: int = generador_aleatorio.randi_range(
@@ -421,7 +418,7 @@ func _cambiar_bloqueo_temporal() -> void:
 
 		grafo_piso.bloqueos_temporales[candidata] = true
 		var libres := grafo_piso.celdas_alcanzables(celda_jugador)
-		var hay_ruta := libres.size() > 1
+		var hay_ruta := libres.size() >= minimo_libres
 		for destino: Vector2i in destinos_protegidos:
 			if not libres.has(destino):
 				hay_ruta = false
@@ -439,7 +436,7 @@ func _cambiar_bloqueo_temporal() -> void:
 	_calcular_ruta_a_proxima_estacion()
 
 	if bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
-		push_warning(
+		print(
 			"Solo se colocaron %d de %d bloqueos sin cerrar la ruta."
 			% [bloqueos_colocados, BLOQUEOS_SIMULTANEOS]
 		)

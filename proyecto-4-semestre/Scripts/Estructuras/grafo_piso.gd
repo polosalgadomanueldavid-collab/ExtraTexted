@@ -99,6 +99,27 @@ func posicion_a_celda(posicion: Vector3) -> Vector2i:
 	return Vector2i(columna, fila)
 
 
+func celda_de_acceso(posicion: Vector3) -> Vector2i:
+	# Una mesa puede bloquear parte de una celda mientras el personaje cabe
+	# en el borde libre. Proyectar al grafo sin abrir la celda de la mesa.
+	var actual := posicion_a_celda(posicion)
+	if es_transitable(actual):
+		return actual
+	var cercana := Vector2i(-1, -1)
+	var menor_distancia := INF
+	for fila: int in range(FILAS):
+		for columna: int in range(COLUMNAS):
+			var celda := Vector2i(columna, fila)
+			if not es_transitable(celda):
+				continue
+			var centro := celda_a_posicion(celda)
+			var distancia := Vector2(centro.x - posicion.x, centro.z - posicion.z).length_squared()
+			if distancia < menor_distancia:
+				menor_distancia = distancia
+				cercana = celda
+	return cercana
+
+
 func construir_adyacencia() -> void:
 	adyacencia.clear()
 

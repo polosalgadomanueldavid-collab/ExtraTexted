@@ -78,21 +78,25 @@ La implementación actual busca linealmente el siguiente vértice de menor dista
 
 ## 6. Bloqueos dinámicos
 
-Cada 10 segundos, `gestor_partida.gd` intenta ubicar un bloqueo temporal en una celda libre. Antes de aceptarlo, reconstruye la adyacencia y comprueba que siga existiendo una ruta hacia la estación activa.
+Cada 10 segundos, `gestor_partida.gd` renueva los bloqueos e intenta colocar hasta 30 cajones en celdas libres. Excluye las zonas seguras, los destinos, la celda de acceso del jugador y cualquier celda que invada su cuerpo. Antes de aceptar cada cajón, comprueba que se conserve la salida del jugador y el acceso a las estaciones que podía alcanzar al comenzar.
+
+El personaje puede caber en el borde libre de una celda que el grafo marca como ocupada por una mesa. En ese caso, `celda_de_acceso()` usa la celda transitable más cercana como origen de navegación, sin desbloquear la mesa. Esto evita que un origen lógico bloqueado haga rechazar todos los cajones aunque existan espacios disponibles.
 
 ```text
 Elegir candidata libre
         ↓
 Agregarla a bloqueos_temporales
         ↓
-Reconstruir adyacencia
+Consultar celdas alcanzables con la ocupación provisional
         ↓
-¿Hay ruta al destino activo?
-   ├── Sí: conservar bloqueo y recalcular ruta
+¿Se conservan la salida y los destinos protegidos?
+   ├── Sí: conservar bloqueo y seguir colocando
    └── No: retirar candidata y probar otra
 ```
 
-Con esta validación, un bloqueo puede obligar al jugador a tomar un desvío, pero no puede dejar imposible el protocolo que está realizando.
+Se recorren las candidatas hasta llegar a 30 o agotarlas. Si solo se pueden colocar tres cajones, se conservan esos tres; la cantidad parcial es un resultado normal. Al terminar se reconstruye la adyacencia, se actualizan los obstáculos visibles y se recalcula la ruta del caso activo. Si no existe ninguna candidata válida, se mantiene el mapa libre de nuevos cajones sin invadir zonas protegidas.
+
+La prueba `Pruebas/Bloqueos/prueba_generacion_bloqueos.gd` reproduce posiciones de borde en la oficina real, comprueba que el jugador no se solape con los cajones y que las estaciones sigan conectadas, y verifica mapas con tres o cero huecos disponibles. Se ejecuta con Godot mediante `--headless --path <proyecto> --script res://Pruebas/Bloqueos/prueba_generacion_bloqueos.gd`.
 
 ## 7. Integración con el flujo de juego
 
