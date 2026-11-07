@@ -3,6 +3,7 @@ extends Node3D
 @onready var panel_despacho: PanelDespacho = $CanvasLayer/PanelDespacho
 @onready var computador: PCStatic = $Computer
 @onready var jugador: Player = $Gameplay/Node3D
+@onready var evento_apagon: EventoApagonScript = $EventoApagon
 
 const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
@@ -20,6 +21,7 @@ const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPa
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const VER_CLASIFICACION := &"VerClasificacion"
 const ALTURA_INDICADOR_ESTACION: float = 1.82
+const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
 
 
 var sistema_despacho: SistemaDespacho
@@ -46,6 +48,7 @@ var indicadores_estaciones: Dictionary = {}
 var guia_estacion: Control
 var clasificacion_partida: ClasificacionPartida
 var _nombre_partida: String = ""
+var _aviso_apagon: Label
 
 
 func _ready() -> void:
@@ -58,6 +61,7 @@ func _ready() -> void:
 	clasificacion_partida = CLASIFICACION_PARTIDA_ESCENA.instantiate()
 	panel_despacho.add_child(clasificacion_partida)
 	sistema_despacho.puntuacion.puntos_actualizados.connect(_al_actualizar_puntaje)
+	evento_apagon.estado_cambiado.connect(_al_cambiar_estado_apagon)
 	grafo_piso = GrafoPiso.new()
 	depurador_grafo = GrafoDebugVisual.new()
 	depurador_grafo.name = "DepuradorGrafo"
@@ -72,6 +76,7 @@ func _ready() -> void:
 	sistema_despacho.estacion_completada.connect(_on_estacion_completada)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
+	_crear_aviso_apagon()
 	# Desactiva el flujo antiguo de preguntas del computador.
 	computador.lista_problemas.clear()
 	# El computador avisa cuando el jugador interactúa con él.
@@ -102,18 +107,81 @@ func _process(_delta: float) -> void:
 			var disponible := indicador.visible and objetivo is Estacion and (objetivo as Estacion).estacion_id == estacion_id
 			indicador.establecer_interactuable(disponible)
 	if is_instance_valid(guia_estacion):
-		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using)
+		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO)
+	_actualizar_aviso_apagon(objetivo)
 
 
 func _input(evento: InputEvent) -> void:
+	if evento.is_action_released(VER_CLASIFICACION) and clasificacion_partida.visible:
+		clasificacion_partida.hide()
+		get_viewport().set_input_as_handled()
+		return
+	if evento_apagon.estado == EventoApagonScript.Estado.REPARANDO:
+		return
 	if evento.is_action_pressed(VER_CLASIFICACION, true, true):
 		if not evento.is_echo() and not clasificacion_partida.visible:
 			_presentar_clasificacion()
 			clasificacion_partida.show()
 		get_viewport().set_input_as_handled()
-	elif evento.is_action_released(VER_CLASIFICACION) and clasificacion_partida.visible:
+
+
+func _unhandled_key_input(evento: InputEvent) -> void:
+	if not evento is InputEventKey or not evento.pressed or evento.echo:
+		return
+	if evento.physical_keycode != KEY_B and evento.keycode != KEY_B:
+		return
+	if get_tree().paused or computador.is_using or jugador.input_locked or clasificacion_partida.visible or MenuGlobal.capa.visible:
+		return
+	evento_apagon.iniciar_apagon()
+	get_viewport().set_input_as_handled()
+
+
+func _crear_aviso_apagon() -> void:
+	_aviso_apagon = Label.new()
+	_aviso_apagon.name = "AvisoApagon"
+	_aviso_apagon.theme = panel_despacho.theme
+	_aviso_apagon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_aviso_apagon.add_theme_font_size_override("font_size", 22)
+	_aviso_apagon.add_theme_color_override("font_color", Color("fff1d8"))
+	_aviso_apagon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var fondo := StyleBoxFlat.new()
+	fondo.bg_color = Color(0.06, 0.15, 0.2, 0.94)
+	fondo.border_color = Color("ffc969")
+	fondo.border_width_left = 4
+	fondo.set_corner_radius_all(10)
+	fondo.content_margin_left = 16
+	fondo.content_margin_right = 16
+	fondo.content_margin_top = 12
+	fondo.content_margin_bottom = 12
+	_aviso_apagon.add_theme_stylebox_override("normal", fondo)
+	$CanvasLayer.add_child(_aviso_apagon)
+	get_viewport().size_changed.connect(_ajustar_aviso_apagon)
+	_ajustar_aviso_apagon()
+
+
+func _ajustar_aviso_apagon() -> void:
+	var tamano := get_viewport().get_visible_rect().size
+	var factor := minf(tamano.x / 1920.0, tamano.y / 1080.0)
+	_aviso_apagon.scale = Vector2.ONE * factor
+	_aviso_apagon.size = Vector2(590, 80)
+	_aviso_apagon.position = Vector2(28.0 * factor, tamano.y - 108.0 * factor)
+
+
+func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
+	if not is_instance_valid(_aviso_apagon):
+		return
+	_aviso_apagon.visible = not computador.is_using and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO
+	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
+		_aviso_apagon.text = "LUZ RESTAURADA  ·  [B] PROBAR APAGÓN"
+	elif objetivo == evento_apagon.taco:
+		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
+	else:
+		_aviso_apagon.text = "APAGÓN  ·  BUSCA EL TACO DE LUZ\nPARED DERECHA  ·  ZONA DE DESCANSO"
+
+
+func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
+	if nuevo_estado == EventoApagonScript.Estado.REPARANDO:
 		clasificacion_partida.hide()
-		get_viewport().set_input_as_handled()
 
 
 func _notification(what: int) -> void:

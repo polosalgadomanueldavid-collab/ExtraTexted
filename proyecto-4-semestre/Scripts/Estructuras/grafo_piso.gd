@@ -33,7 +33,11 @@ const CELDAS_BLOQUEADAS_FIJAS: Array[Vector2i] = [
 	Vector2i(1, 0),
 	Vector2i(4, 0),
 	Vector2i(1, 12),
-	Vector2i(12, 12)
+	Vector2i(12, 12),
+	# Taco de luz de la pared derecha. La aproximación queda en la columna 12.
+	Vector2i(13, 15),
+	Vector2i(13, 16),
+	Vector2i(13, 17)
 ]
 
 const DIRECCIONES: Array[Vector2i] = [

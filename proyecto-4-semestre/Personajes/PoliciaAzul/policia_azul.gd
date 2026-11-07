@@ -181,9 +181,9 @@ func _input(event: InputEvent) -> void:
 	if objetivo is PCStatic:
 		get_viewport().set_input_as_handled()
 		(objetivo as PCStatic).toggle_use()
-	elif objetivo is Estacion:
+	elif objetivo != null and objetivo.has_method("interactuar"):
 		get_viewport().set_input_as_handled()
-		(objetivo as Estacion).interactuar(self)
+		objetivo.interactuar(self)
 
 
 func _notification(what: int) -> void:
@@ -222,7 +222,7 @@ func obtener_objetivo_interaccion() -> Node3D:
 		var collider := shape_cast_3d.get_collider(indice) as Node
 		var actual := collider
 		while actual != null:
-			if actual is PCStatic or actual is Estacion:
+			if actual is PCStatic or (actual is Node3D and actual.has_method("interactuar")):
 				return actual as Node3D
 			actual = actual.get_parent()
 	return null

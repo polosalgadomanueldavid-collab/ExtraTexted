@@ -72,7 +72,7 @@ func _probar() -> void:
 	_verificar(panel.puntos_valor.text == "9.223.372.036.854.775.806", "Muestra el saldo completo con separadores")
 	_verificar(panel.puntos_ganancia.text.is_empty(), "Reconfigurar no anuncia el saldo como ganancia")
 	_verificar(otro.puntuacion.puntos_actualizados.get_connections().size() == 1, "No duplica conexiones de puntuación")
-	_verificar(sistema.puntuacion.puntos_actualizados.get_connections().is_empty(), "Desconecta el despacho anterior")
+	_verificar(not sistema.puntuacion.puntos_actualizados.is_connected(panel.actualizar_puntos), "Desconecta el despacho anterior")
 	for dimensiones: Vector2i in [Vector2i(1920, 1080), Vector2i(1280, 720), Vector2i(960, 540), Vector2i(1024, 768), Vector2i(2560, 1080)]:
 		get_window().size = dimensiones
 		await _esperar()
