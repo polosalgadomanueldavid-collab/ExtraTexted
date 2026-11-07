@@ -48,7 +48,7 @@ var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_grav
 
 @onready var visual: Node3D = $Visual
 @onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
-
+@onready var sonido_pasos: AudioStreamPlayer3D = $SonidosPasos
 
 func _enter_tree() -> void:
 	add_to_group("player")
@@ -107,6 +107,11 @@ func _physics_process(delta: float) -> void:
 	if moving:
 		var angle := atan2(direction.x, direction.z)
 		visual.rotation.y = lerp_angle(visual.rotation.y, angle, 1.0 - exp(-turn_speed * delta))
+	var caminando := Vector2(velocity.x, velocity.z).length() > 0.1
+	if caminando and not sonido_pasos.playing:
+		sonido_pasos.play()
+	elif not caminando and sonido_pasos.playing:
+		sonido_pasos.stop()
 
 	move_and_slide()
 	_update_animation(moving, running)
