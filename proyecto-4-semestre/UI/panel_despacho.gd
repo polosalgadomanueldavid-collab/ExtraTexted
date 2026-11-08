@@ -2,6 +2,7 @@ class_name PanelDespacho
 extends Control
 
 const IconoDespacho := preload("res://UI/Despacho/icono_despacho.gd")
+const EfectoTarea := preload("res://UI/Despacho/efecto_tarea_completada.gd")
 const ANCHO_DISENO := 408.0
 const TAMANO_DISENO := Vector2(1920, 1080)
 const MARGEN := 28.0
@@ -32,9 +33,12 @@ var segundos_mensaje: float = 0.0
 var segundos_recompensa: float = 0.0
 var _puntos_mostrados: int = 0
 var _id_activo: String = ""
+var efecto_tarea: EfectoTarea
 
 
 func _ready() -> void:
+	efecto_tarea = EfectoTarea.new()
+	add_child(efecto_tarea)
 	resized.connect(_ajustar_presentacion)
 	puntos_valor.resized.connect(_ajustar_tamano_puntos)
 	for etiqueta: Label in [calma_texto, calma_valor, %TituloActiva, $Contenido/CabeceraEspera/Titulo, %SinCasoActivo, %SinPendientes, mensaje_estacion]:
@@ -75,6 +79,7 @@ func configurar_sistema(nuevo_sistema: SistemaDespacho) -> void:
 		_cambiar_conexiones(false)
 	sistema_despacho = nuevo_sistema
 	# Un HUD reutilizado no arrastra avisos ni datos del caso anterior.
+	efecto_tarea.detener()
 	segundos_mensaje = 0.0
 	mensaje_estacion.hide()
 	segundos_recompensa = 0.0
@@ -312,8 +317,9 @@ func _estilo_sobre_escenario(etiqueta: Label) -> void:
 	etiqueta.add_theme_constant_override("shadow_outline_size", 3)
 
 
-func _on_estacion_completada(_denuncia: Denuncia, estacion_id: String) -> void:
+func _on_estacion_completada(denuncia: Denuncia, estacion_id: String) -> void:
 	_actualizar_denuncia_activa()
+	efecto_tarea.reproducir(IconoDespacho.nombre_estacion(estacion_id), denuncia.id)
 	_mostrar_mensaje("Correcto: %s completada." % IconoDespacho.nombre_estacion(estacion_id), Color("86efac"))
 
 
@@ -329,6 +335,8 @@ func _on_denuncia_resuelta(_denuncia: Denuncia) -> void:
 
 
 func _on_denuncia_vencida(denuncia: Denuncia) -> void:
+	if efecto_tarea.caso_id == denuncia.id:
+		efecto_tarea.detener()
 	_mostrar_mensaje("La denuncia '%s' venció." % denuncia.titulo, CORAL)
 
 

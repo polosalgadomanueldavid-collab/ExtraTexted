@@ -23,6 +23,17 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   tienen la misma importancia visual; no hay una etapa obligatoria siguiente.
 - Repetir una estación muestra un aviso y conserva el progreso. Al completar todas,
   el caso se cierra automáticamente y el panel retira la tarjeta activa.
+- Cada estación completada reproduce **Check con garabato** durante 1,4 segundos:
+  check verde dibujado, círculo crema irregular, chispas y subrayado coral,
+  «¡HECHO!» y nombre de la estación en el centro superior del juego. No captura
+  entradas. Incluye un sonido original estéreo de lápiz y dos notas suaves,
+  `Audios/tarea_completada.wav` (1,1 segundos), sincronizado con el dibujo.
+  El efecto y el audio se congelan con la pausa; repetir una tarea o usar una
+  estación incorrecta no los vuelve a activar. La última tarea conserva el efecto
+  aunque su caso se cierre. Cambiar de sistema o vencer el mismo caso lo cancela.
+  El audio sigue el volumen del bus Master, con una atenuación adicional de 6,5 dB.
+  Se regenera con `python herramientas/generar_sonido_tarea.py` desde la raíz del
+  repositorio; la síntesis es determinista y no usa muestras ni servicios externos.
 - En la oficina, E en el computador entrega una hoja física vinculada al caso.
   Las estaciones solo aceptan la interacción si el personaje lleva esa hoja.
   E sobre un espacio libre la lanza; E cerca de la hoja la recoge.
@@ -73,6 +84,12 @@ dejar vencer un caso no concede puntos. El canje y los efectos sobre el mapa
 se incorporarán en una etapa posterior.
 
 ## Comprobación
+
+`UI/Despacho/Pruebas/PruebaEfectoTarea.tscn` comprueba las estaciones correctas,
+repetidas e incorrectas, pausa y reanudación audiovisual, cierre de caso,
+vencimiento, cambio de sistema y escalado del efecto. Admite `--headless` y,
+en ejecución renderizada, `-- --capturas` guarda imágenes en
+`.godot/efecto_tarea_qa/`.
 
 Ejecutar con F6 `UI/Despacho/Pruebas/PruebaBarraLateral.tscn`.
 Por CLI, añadir `--headless` para pruebas funcionales o `-- --capturas` para
