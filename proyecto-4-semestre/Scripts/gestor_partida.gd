@@ -21,7 +21,7 @@ const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/papel_denuncia.gd")
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const VER_CLASIFICACION := &"VerClasificacion"
-const ALTURA_INDICADOR_ESTACION: float = 1.82
+const ALTURA_INDICADOR_ESTACION: float = 1.25
 const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
 
 

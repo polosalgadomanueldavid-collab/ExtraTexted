@@ -201,7 +201,8 @@ func _probar_orden_libre_con_tecla() -> void:
 		_verificar(_jugador.papel_en_mano == null and hoja.portador == null and not hoja.freeze, "E puede lanzar la hoja física")
 		_verificar((_jugador.collision_mask & hoja.collision_layer) == 0 and (hoja.collision_mask & 1) != 0, "La hoja choca con el suelo pero no con el jugador")
 		_verificar((hoja.get_node("HojaVisual") as MeshInstance3D).material_overlay != null, "La hoja suelta usa el contorno de interacción")
-		_verificar((hoja.get_node("MarcadorRecoger") as Label3D).visible and (hoja.get_node("MarcadorRecoger") as Label3D).text == "✋ E", "La hoja suelta muestra la mano y la tecla E")
+		var marcador := hoja.get_node("MarcadorRecoger") as Node3D
+		_verificar(marcador.visible and marcador.has_node("ManoRecoger/ManoGuante") and (marcador.get_node("LetraE") as Label3D).text == "E", "La hoja suelta muestra una mano modelada y la tecla E")
 		_verificar(Vector2(hoja.linear_velocity.x, hoja.linear_velocity.z).length() <= 1.5, "La hoja sale con un impulso corto")
 		_oficina.interactuar_estacion_con_papel(_jugador, "reporte")
 		_verificar(caso.estaciones_completadas.is_empty(), "Sin llevar la hoja, las estaciones rechazan el trámite")
@@ -212,7 +213,7 @@ func _probar_orden_libre_con_tecla() -> void:
 		await get_tree().process_frame
 		_verificar(_jugador.papel_en_mano == hoja and hoja.freeze, "E recoge la hoja y conserva su caso")
 		_verificar((hoja.get_node("HojaVisual") as MeshInstance3D).material_overlay == null, "La hoja en mano retira el contorno del suelo")
-		_verificar(not (hoja.get_node("MarcadorRecoger") as Label3D).visible, "La mano de recogida desaparece al llevar la hoja")
+		_verificar(not (hoja.get_node("MarcadorRecoger") as Node3D).visible, "La mano de recogida desaparece al llevar la hoja")
 	var panel := _oficina.panel_despacho as PanelDespacho
 	var saldo := _sistema.puntuacion.puntos
 	var orden: Array[String] = ["reporte", "privacidad", "verificacion", "evidencias"]

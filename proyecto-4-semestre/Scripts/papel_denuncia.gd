@@ -5,6 +5,7 @@ const TAMANO := Vector3(0.24, 0.012, 0.18)
 const IMPULSO_HORIZONTAL := 1.4
 const IMPULSO_VERTICAL := 0.5
 const RESALTADO := preload("res://MarcadoresEstaciones/resaltado_interaccion.gdshader")
+const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")
 
 var denuncia_id: String = ""
 var portador: Player = null
@@ -12,7 +13,7 @@ var _malla_hoja: MeshInstance3D
 var _contorno: ShaderMaterial
 var _material_hoja: StandardMaterial3D
 var _tiempo_resaltado: float = 0.0
-var _marcador_recoger: Label3D
+var _marcador_recoger: Node3D
 
 
 func _ready() -> void:
@@ -55,15 +56,7 @@ func _ready() -> void:
 	tinta.albedo_color = Color("173b50")
 	franja.material_override = tinta
 	add_child(franja)
-	_marcador_recoger = Label3D.new()
-	_marcador_recoger.name = "MarcadorRecoger"
-	_marcador_recoger.text = "✋ E"
-	_marcador_recoger.font_size = 30
-	_marcador_recoger.pixel_size = 0.003
-	_marcador_recoger.outline_size = 8
-	_marcador_recoger.modulate = Color("fff1d8")
-	_marcador_recoger.outline_modulate = Color("173b50")
-	_marcador_recoger.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_marcador_recoger = MODELOS.crear_mano_recoger()
 	add_child(_marcador_recoger)
 	_marcador_recoger.top_level = true
 	_actualizar_marcador()
@@ -82,7 +75,10 @@ func _actualizar_marcador() -> void:
 		return
 	_marcador_recoger.visible = portador == null
 	if portador == null:
-		_marcador_recoger.global_position = global_position + Vector3.UP * (0.23 + sin(_tiempo_resaltado * 3.0) * 0.015)
+		_marcador_recoger.global_position = global_position + Vector3.UP * (0.34 + sin(_tiempo_resaltado * 3.0) * 0.015)
+		var camara := get_viewport().get_camera_3d()
+		if is_instance_valid(camara):
+			_marcador_recoger.global_basis = camara.global_basis.orthonormalized().scaled(Vector3.ONE * 0.55)
 
 
 func _actualizar_resaltado() -> void:

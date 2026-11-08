@@ -26,6 +26,14 @@ enum Vista { ACTUAL, FRONTAL, GOD }
 @export var limite_min_z: float = -0.153
 @export var limite_max_z: float = 12.473
 
+@export_group("Zona segura del encuadre")
+@export var zona_segura_activa: bool = true
+## Caras interiores de los muros de Oficina, en coordenadas X/Z del mundo.
+@export var recinto_visible := Rect2(-4.38, -0.07, 6.74, 12.46)
+@export_range(0.05, 0.8, 0.01) var margen_pared: float = 0.22
+## La cota más baja de las coronaciones evita ver por fuera en vista cenital.
+@export var altura_pared: float = 6.10
+
 var _orientacion_original: Quaternion
 var _orientacion: Quaternion
 var _posicion_seguimiento: Vector3
@@ -71,8 +79,7 @@ func establecer_vista(vista: int) -> void:
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(objetivo):
 		return
-	# Los límites originales delimitan el seguimiento; cada vista añade su distancia.
-	# Así el encuadre se conserva también al cambiar de vista junto a una pared.
+	# Conserva el seguimiento original y aplica luego la seguridad al encuadre real.
 	var ancla := objetivo.global_position + offset
 	ancla.x = clampf(ancla.x, limite_min_x, limite_max_x)
 	ancla.z = clampf(ancla.z, limite_min_z, limite_max_z)
@@ -85,8 +92,20 @@ func _physics_process(delta: float) -> void:
 	elif vista_actual == Vista.GOD:
 		desfase = offset_god
 		orientacion_deseada = Quaternion(Vector3.RIGHT, -PI / 2.0)
+	var posicion_deseada := _limitar_encuadre(ancla + desfase, Basis(orientacion_deseada))
+	if zona_segura_activa and vista_actual != Vista.GOD:
+		# Al detenerse antes del muro posterior, inclina la vista lo necesario para
+		# conservar al personaje dentro de la pantalla, sin atravesar la pared.
+		var hacia := objetivo.global_position + Vector3.UP * 0.45 - posicion_deseada
+		var inclinacion_objetivo := atan2(hacia.y, -hacia.z)
+		var inclinacion_base := Basis(orientacion_deseada).get_euler().x
+		var rayo_inferior := project_local_ray_normal(Vector2(get_viewport().get_visible_rect().size.x * 0.5, get_viewport().get_visible_rect().size.y))
+		var margen_angular := atan2(-rayo_inferior.y, -rayo_inferior.z) * 0.55
+		var inclinacion_segura := minf(inclinacion_base, inclinacion_objetivo + margen_angular)
+		orientacion_deseada = Quaternion(Vector3.RIGHT, maxf(-PI * 0.5, inclinacion_segura))
+		posicion_deseada = _limitar_encuadre(posicion_deseada, Basis(orientacion_deseada))
 	var avance := 1.0 - exp(-suavizado * delta)
-	_posicion_seguimiento = _posicion_seguimiento.lerp(ancla + desfase, avance)
+	_posicion_seguimiento = _posicion_seguimiento.lerp(posicion_deseada, avance)
 	_orientacion = _orientacion.slerp(orientacion_deseada, 1.0 - exp(-suavizado_giro * delta))
 	global_basis = Basis(_orientacion)
 
@@ -95,4 +114,43 @@ func _physics_process(delta: float) -> void:
 	_fase_balanceo = fposmod(_fase_balanceo + TAU * delta / periodo_balanceo, TAU)
 	_peso_balanceo = lerpf(_peso_balanceo, 1.0 if balanceo_activo else 0.0, avance)
 	var balanceo := Vector2(sin(_fase_balanceo), sin(2.0 * _fase_balanceo)) * amplitud_balanceo * _peso_balanceo
-	global_position = _posicion_seguimiento + global_basis.x * balanceo.x + global_basis.y * balanceo.y
+	# Limita también cada cuadro intermedio y el balanceo, no solo el destino.
+	_posicion_seguimiento = _limitar_encuadre(_posicion_seguimiento, global_basis)
+	global_position = _limitar_encuadre(_posicion_seguimiento + global_basis.x * balanceo.x + global_basis.y * balanceo.y, global_basis)
+
+
+func _limitar_encuadre(posicion: Vector3, orientacion: Basis) -> Vector3:
+	if not zona_segura_activa:
+		return posicion
+	var minimo := recinto_visible.position + Vector2.ONE * margen_pared
+	var maximo := recinto_visible.end - Vector2.ONE * margen_pared
+	if posicion.y > altura_pared:
+		# Proyecta las esquinas sobre la altura de los muros. Por debajo, las
+		# paredes ya cierran la vista; por encima, todo el encuadre debe caber.
+		var pantalla := get_viewport().get_visible_rect().size
+		var alcance_min := Vector2.ZERO
+		var alcance_max := Vector2.ZERO
+		for esquina: Vector2 in [Vector2.ZERO, Vector2(pantalla.x, 0), pantalla, Vector2(0, pantalla.y)]:
+			var rayo := orientacion * project_local_ray_normal(esquina)
+			if rayo.y >= -0.001:
+				# Una transición aún demasiado horizontal se mantiene bajo el muro.
+				posicion.y = altura_pared - margen_pared
+				alcance_min = Vector2.ZERO
+				alcance_max = Vector2.ZERO
+				break
+			var alcance := Vector2(rayo.x, rayo.z) / -rayo.y
+			alcance_min = alcance_min.min(alcance)
+			alcance_max = alcance_max.max(alcance)
+		var amplitud := alcance_max - alcance_min
+		var disponible := maximo - minimo
+		var altura_disponible := posicion.y - altura_pared
+		if amplitud.x > 0.001:
+			altura_disponible = minf(altura_disponible, disponible.x / amplitud.x)
+		if amplitud.y > 0.001:
+			altura_disponible = minf(altura_disponible, disponible.y / amplitud.y)
+		posicion.y = minf(posicion.y, altura_pared + altura_disponible)
+		minimo -= alcance_min * altura_disponible
+		maximo -= alcance_max * altura_disponible
+	posicion.x = clampf(posicion.x, minimo.x, maxf(minimo.x, maximo.x))
+	posicion.z = clampf(posicion.z, minimo.y, maxf(minimo.y, maximo.y))
+	return posicion

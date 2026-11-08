@@ -43,7 +43,7 @@ un balanceo limitados, sin girar la cara del icono de espaldas. Todos los objeti
 pendientes procesan animación; la pausa congela su fase y los marcadores ocultos
 no procesan cuadros.
 
-El gestor ancla cada marcador 1,82 unidades sobre su estación. La altura se
+El gestor ancla cada marcador 1,25 unidades sobre su estación. La altura se
 ajusta en `ALTURA_INDICADOR_ESTACION` de `Scripts/gestor_partida.gd`; el balanceo
 y la separación del puntero se ajustan en el script del indicador. Su propiedad
 `alto_maximo_pantalla` limita el tamaño al 18 % del alto del viewport al acercarse,
@@ -56,7 +56,13 @@ animación juntas.
 Completar una estación oculta únicamente su marcador. La resolución y el vencimiento
 ocultan todos los marcadores del caso inmediatamente. El HUD conserva la lista de
 estaciones y marca las completadas; la flecha identifica como sugerencia la pendiente
-más cercana por camino transitable y se actualiza al cambiar de celda.
+más cercana por camino transitable y se actualiza al cambiar de celda. La tarjeta
+muestra solo el nombre de la estación, sin el prefijo «Sugerida:».
+
+`crear_mano_recoger()` construye el aviso de la hoja suelta con el mismo bisel,
+guante crema, canto y puño petróleo y banda coral. Incluye una tecla E en relieve;
+solo la letra usa una fuente, la mano es geometría y no depende de un emoji.
+El papel orienta el conjunto a cada cámara y lo oculta al recoger la hoja.
 
 ## Disponibilidad de interacción
 

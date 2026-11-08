@@ -248,7 +248,7 @@ func _probar_guia_pantalla(oficina: Node, sistema: SistemaDespacho, indicadores:
 	camara.look_at(indicador.global_position)
 	await _cuadros(2)
 	_verificar(guia.visible and guia.objetivo == indicador and not guia.fuera_de_vista, "La guía se proyecta sobre la estación activa")
-	_verificar(guia.icono.tipo == PanelDespacho.IconoDespacho.Tipo.BIENESTAR and guia.rotulo.text == "Sugerida: Bienestar", "La guía presenta la estación como sugerencia")
+	_verificar(guia.icono.tipo == PanelDespacho.IconoDespacho.Tipo.BIENESTAR and guia.rotulo.text == "Bienestar", "La guía presenta únicamente el nombre de la estación")
 	var centro_guia: Vector2 = guia.tarjeta.get_global_rect().get_center()
 	var punto_proyectado := camara.unproject_position(indicador.global_position)
 	_verificar(centro_guia.y < punto_proyectado.y and guia.direccion.y > 0.9, "La tarjeta apunta desde encima del modelo 3D")

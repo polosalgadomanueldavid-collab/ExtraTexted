@@ -41,7 +41,7 @@ func _probar() -> void:
 	var techo := _oficina.get_node("Pared, suelo, techo/Techo") as CSGBox3D
 	_verificar((techo.layers & _camara.cull_mask) == 0, "La cámara excluye el techo para despejar la vista cenital y las transiciones")
 	var pared_posterior := _oficina.get_node("Pared, suelo, techo/Pared4") as CSGBox3D
-	_verificar((pared_posterior.layers & _camara.cull_mask) == 0, "La pared posterior no tapa la vista frontal al acercarse al fondo")
+	_verificar((pared_posterior.layers & _camara.cull_mask) != 0, "La pared posterior se dibuja también desde arriba")
 
 	await _pulsar(KEY_C)
 	_verificar(_camara.vista_actual == Camara.Vista.FRONTAL, "C cambia a la vista frontal")
@@ -95,12 +95,16 @@ func _probar() -> void:
 	_camara.make_current()
 
 	_probar_limites()
+	await _probar_zona_segura()
 	await _probar_balanceo()
 	for vista: int in range(Camara.Vista.size()):
 		_camara.establecer_vista(vista)
 		_avanzar(6.0)
 		await _capturar(["01_actual", "02_frontal", "03_god"][vista])
 	_jugador.global_position.z = 11.3
+	_camara.establecer_vista(Camara.Vista.GOD)
+	_avanzar(6.0)
+	await _capturar("04_god_fondo")
 	_camara.establecer_vista(Camara.Vista.FRONTAL)
 	_avanzar(6.0)
 	await _capturar("04_frontal_fondo")
@@ -125,9 +129,7 @@ func _probar_limites() -> void:
 		for vista: int in range(Camara.Vista.size()):
 			_camara.establecer_vista(vista)
 			_avanzar(6.0)
-			var desfase: Vector3 = [_camara.offset, _camara.offset_frontal, _camara.offset_god][vista]
-			var centro := _camara.global_position - desfase + _camara.offset
-			_verificar(centro.x >= _camara.limite_min_x - 0.001 and centro.x <= _camara.limite_max_x + 0.001 and centro.z >= _camara.limite_min_z - 0.001 and centro.z <= _camara.limite_max_z + 0.001, "Límites de seguimiento en esquina %s, vista %d" % [esquina, vista])
+			_verificar(_camara.recinto_visible.has_point(Vector2(_camara.global_position.x, _camara.global_position.z)), "La cámara permanece dentro de las paredes en esquina %s, vista %d" % [esquina, vista])
 	_jugador.global_position = origen
 	_camara.establecer_vista(Camara.Vista.ACTUAL)
 	_avanzar(6.0)
@@ -137,6 +139,50 @@ func _probar_limites() -> void:
 	_verificar(_camara.global_position.x >= antes.x and _camara.global_position.x <= _jugador.global_position.x, "Un cuadro lento no hace que el seguimiento sobrepase al jugador")
 	_jugador.global_position = origen
 	_avanzar(6.0)
+
+
+func _probar_zona_segura() -> void:
+	var origen := _jugador.global_position
+	var tamano := root.size
+	var balanceo := _camara.balanceo_activo
+	_camara.balanceo_activo = true
+	var esquinas: Array[Vector2] = [Vector2(-3.9, 0.6), Vector2(1.9, 0.6), Vector2(-3.9, 11.8), Vector2(1.9, 11.8)]
+	for resolucion: Vector2i in [Vector2i(1280, 720), Vector2i(1024, 768), Vector2i(2560, 1080), Vector2i(2560, 720)]:
+		root.size = resolucion
+		await _cuadros(2)
+		for esquina: Vector2 in esquinas:
+			_jugador.global_position = Vector3(esquina.x, origen.y, esquina.y)
+			for vista: int in [Camara.Vista.ACTUAL, Camara.Vista.FRONTAL, Camara.Vista.GOD, Camara.Vista.FRONTAL, Camara.Vista.ACTUAL, Camara.Vista.GOD, Camara.Vista.ACTUAL]:
+				_camara.establecer_vista(vista)
+				var encuadre_cerrado := true
+				for cuadro: int in range(180):
+					_camara._physics_process(1.0 / 60.0)
+					if cuadro % 15 == 0:
+						encuadre_cerrado = _rayos_dentro_de_oficina() and encuadre_cerrado
+				_verificar(encuadre_cerrado, "Sin exterior visible durante transición a vista %d en %s a %s" % [vista, esquina, resolucion])
+				var punto := _camara.unproject_position(_jugador.global_position + Vector3.UP * 0.45)
+				_verificar(not _camara.is_position_behind(_jugador.global_position) and Rect2(Vector2.ZERO, Vector2(root.size)).has_point(punto), "El personaje sigue en pantalla junto a la pared, vista %d a %s" % [vista, resolucion])
+	root.size = tamano
+	await _cuadros(2)
+	_jugador.global_position = origen
+	_camara.balanceo_activo = balanceo
+	_camara.establecer_vista(Camara.Vista.ACTUAL)
+	_avanzar(6.0)
+
+
+func _rayos_dentro_de_oficina() -> bool:
+	var pantalla := Vector2(root.size)
+	var espacio := _oficina.get_world_3d().direct_space_state
+	for uv: Vector2 in [Vector2(0.001, 0.001), Vector2(0.5, 0.001), Vector2(0.999, 0.001), Vector2(0.001, 0.5), Vector2(0.999, 0.5), Vector2(0.001, 0.999), Vector2(0.5, 0.999), Vector2(0.999, 0.999)]:
+		var inicio := _camara.project_ray_origin(uv * pantalla)
+		var consulta := PhysicsRayQueryParameters3D.create(inicio, inicio + _camara.project_ray_normal(uv * pantalla) * 150.0, 1)
+		var impacto := espacio.intersect_ray(consulta)
+		if impacto.is_empty():
+			return false
+		var punto: Vector3 = impacto["position"]
+		if not _camara.recinto_visible.grow(0.18).has_point(Vector2(punto.x, punto.z)):
+			return false
+	return true
 
 
 func _probar_balanceo() -> void:

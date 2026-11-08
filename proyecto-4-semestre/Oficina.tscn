@@ -440,7 +440,6 @@ material = SubResource("StandardMaterial3D_qg7b0")
 
 [node name="Pared4" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=41972868]
 transform = Transform3D(15, 0, 0, 0, 0.2, 0, 0, 0, 15, -1.0834912, 3.317305, 12.473137)
-layers = 524288
 use_collision = true
 size = Vector3(0.45762634, 29.045013, 0.010009766)
 material = SubResource("StandardMaterial3D_wg1wp")
