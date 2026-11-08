@@ -26,6 +26,32 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
 - En la oficina, E en el computador entrega una hoja física vinculada al caso.
   Las estaciones solo aceptan la interacción si el personaje lleva esa hoja.
   E sobre un espacio libre la lanza; E cerca de la hoja la recoge.
+- El medallón de `indicador_papel.gd` aparece abajo a la izquierda mientras el
+  jugador lleva la hoja, con la leyenda «E - soltar». Se oculta al soltarla,
+  terminar/vencer el caso y durante las interfaces del computador o reparación.
+  Su referencia es 140×158 píxeles a 1280×720, con margen de 24 píxeles;
+  escala proporcionalmente y desplaza los avisos de apagón hacia arriba solo mientras
+  está visible. No captura entradas. El círculo y la leyenda son controles
+  nativos; `Arte/papel_medallon.png` conserva el documento 3D aprobado sin
+  renderizar una escena adicional cada cuadro. Se regenera desde el modelo real
+  ejecutando Godot con `--path proyecto-4-semestre --script ../herramientas/renderizar_papel_hud.gd`.
+- La mesa física de seguridad (`privacidad`) inicia un desencriptado de seis
+  segundos al pulsar E con la hoja. La barra coral se llena sobre la estación y
+  otra línea se llena debajo de «DESENCRIPTANDO», en el centro inferior. La tarea
+  sigue mientras el jugador se mueve y se detiene al pausar. Tras seis segundos
+  queda lista: el jugador debe regresar a la mesa y pulsar E para completar la
+  estación. Volver a pulsar E antes no reinicia el tiempo. Si el caso vence o se
+  resuelve por otra vía, la tarea y sus avisos se cancelan.
+- En reportes la impresora tiene un 35 % de probabilidad de atascarse al primer
+  uso de cada caso. La herramienta aparece en la zona de descanso: recogerla con
+  E y regresar a la mesa con la hoja repara la impresora y completa la tarea.
+  El atasco y la herramienta desaparecen si vence el caso.
+- Evidencias abre tres documentos en orden aleatorio. A/D o flechas cambia la
+  bandeja, E archiva el documento y Esc sale conservando el avance. Solo tres
+  clasificaciones correctas completan la estación; un error no da progreso.
+- El aviso «Luz restaurada» solo se muestra durante una ejecución de depuración
+  con la capa F3 visible. En juego normal desaparece. La tecla B de prueba del
+  apagón solo está disponible en ejecuciones de depuración.
 - El HUD escala desde 1920×1080 sin alterar el mundo; la cola permite desplazamiento
   cuando no cabe y no captura el foco del teclado.
 

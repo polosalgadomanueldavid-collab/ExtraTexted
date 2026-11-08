@@ -18,10 +18,16 @@ const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 )
 const GUIA_ESTACION_ESCENA := preload("res://UI/Despacho/GuiaEstacion.tscn")
 const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/papel_denuncia.gd")
+const IndicadorPapel := preload("res://UI/Despacho/indicador_papel.gd")
+const ProgresoSeguridad := preload("res://UI/Despacho/progreso_seguridad.gd")
+const ClasificadorEvidencias := preload("res://UI/Despacho/clasificador_evidencias.gd")
+const HerramientaReporte := preload("res://Scripts/herramienta_reporte.gd")
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const VER_CLASIFICACION := &"VerClasificacion"
 const ALTURA_INDICADOR_ESTACION: float = 1.25
+const DURACION_DESENCRIPTADO: float = 6.0
+@export_range(0.0, 1.0, 0.05) var probabilidad_atasco_reporte: float = 0.35
 const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
 
 
@@ -54,6 +60,17 @@ var guia_estacion: Control
 var clasificacion_partida: ClasificacionPartida
 var _nombre_partida: String = ""
 var _aviso_apagon: Label
+var indicador_papel: IndicadorPapel
+var progreso_seguridad: ProgresoSeguridad
+var temporizador_seguridad: Timer
+var _denuncia_en_descriptado: String = ""
+var _mesa_seguridad: Estacion
+var _seguridad_lista: bool = false
+var clasificador_evidencias: ClasificadorEvidencias
+var herramienta_reporte: HerramientaReporte
+var _aviso_reporte_atasco: Label3D
+var _reporte_atascado_id: String = ""
+var _reporte_herramienta_recogida: bool = false
 var papel_actual: PapelDenuncia = null
 
 
@@ -84,6 +101,41 @@ func _ready() -> void:
 	sistema_despacho.denuncia_vencida.connect(_on_caso_finalizado)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
+	indicador_papel = IndicadorPapel.new()
+	$CanvasLayer.add_child(indicador_papel)
+	progreso_seguridad = ProgresoSeguridad.new()
+	$CanvasLayer.add_child(progreso_seguridad)
+	clasificador_evidencias = ClasificadorEvidencias.new()
+	$CanvasLayer.add_child(clasificador_evidencias)
+	clasificador_evidencias.terminado.connect(_al_archivar_evidencias)
+	clasificador_evidencias.cerrado.connect(_al_cerrar_clasificador)
+	herramienta_reporte = HerramientaReporte.new()
+	herramienta_reporte.position = grafo_piso.celda_a_posicion(Vector2i(7, 15)) + Vector3.UP * 0.26
+	add_child(herramienta_reporte)
+	_aviso_reporte_atasco = Label3D.new()
+	_aviso_reporte_atasco.text = "IMPRESORA ATASCADA"
+	_aviso_reporte_atasco.font = preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
+	_aviso_reporte_atasco.font_size = 24
+	_aviso_reporte_atasco.pixel_size = 0.004
+	_aviso_reporte_atasco.modulate = Color("ff785f")
+	_aviso_reporte_atasco.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_aviso_reporte_atasco.visible = false
+	add_child(_aviso_reporte_atasco)
+	for nodo: Node in find_children("*", "Estacion", true, false):
+		var estacion_reporte := nodo as Estacion
+		if estacion_reporte.estacion_id == "reporte":
+			_aviso_reporte_atasco.global_position = estacion_reporte.global_position + Vector3.UP * 2.0
+			break
+	temporizador_seguridad = Timer.new()
+	temporizador_seguridad.one_shot = true
+	temporizador_seguridad.wait_time = DURACION_DESENCRIPTADO
+	temporizador_seguridad.timeout.connect(_completar_descriptado)
+	add_child(temporizador_seguridad)
+	for nodo: Node in find_children("*", "Estacion", true, false):
+		var estacion := nodo as Estacion
+		if estacion.estacion_id == "privacidad":
+			_mesa_seguridad = estacion
+			break
 	_crear_aviso_apagon()
 	# Desactiva el flujo antiguo de preguntas del computador.
 	computador.lista_problemas.clear()
@@ -119,7 +171,11 @@ func _process(_delta: float) -> void:
 			indicador.establecer_interactuable(disponible)
 	if is_instance_valid(guia_estacion):
 		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO)
+	_actualizar_indicador_papel()
 	_actualizar_aviso_apagon(objetivo)
+	if not _denuncia_en_descriptado.is_empty() and is_instance_valid(_mesa_seguridad):
+		var avance := 1.0 if _seguridad_lista else 1.0 - temporizador_seguridad.time_left / DURACION_DESENCRIPTADO
+		progreso_seguridad.actualizar(avance, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * 2.05)
 
 
 func _input(evento: InputEvent) -> void:
@@ -137,6 +193,8 @@ func _input(evento: InputEvent) -> void:
 
 
 func _unhandled_key_input(evento: InputEvent) -> void:
+	if not OS.is_debug_build():
+		return
 	if not evento is InputEventKey or not evento.pressed or evento.echo:
 		return
 	if evento.physical_keycode != KEY_B and evento.keycode != KEY_B:
@@ -172,16 +230,31 @@ func _crear_aviso_apagon() -> void:
 
 func _ajustar_aviso_apagon() -> void:
 	var tamano := get_viewport().get_visible_rect().size
+	indicador_papel.ajustar_pantalla(tamano)
 	var factor := minf(tamano.x / 1920.0, tamano.y / 1080.0)
 	_aviso_apagon.scale = Vector2.ONE * factor
 	_aviso_apagon.size = Vector2(590, 80)
 	_aviso_apagon.position = Vector2(28.0 * factor, tamano.y - 108.0 * factor)
+	if indicador_papel.visible:
+		var separacion := 14.0 * indicador_papel.scale.y
+		_aviso_apagon.position = Vector2(indicador_papel.position.x, indicador_papel.position.y - separacion - _aviso_apagon.size.y * factor)
+
+
+func _actualizar_indicador_papel() -> void:
+	if not is_instance_valid(indicador_papel):
+		return
+	var papel := jugador.papel_en_mano
+	var llevando := is_instance_valid(papel) and not papel.is_queued_for_deletion() and papel.portador == jugador
+	var disponible := llevando and not computador.is_using and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO
+	if indicador_papel.visible != disponible:
+		indicador_papel.visible = disponible
+		_ajustar_aviso_apagon()
 
 
 func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 	if not is_instance_valid(_aviso_apagon):
 		return
-	_aviso_apagon.visible = not computador.is_using and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO
+	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible))
 	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
 		_aviso_apagon.text = "LUZ RESTAURADA  ·  [B] PROBAR APAGÓN"
 	elif objetivo == evento_apagon.taco:
@@ -285,6 +358,7 @@ func _entregar_papel(portador: Player) -> void:
 	papel_actual.denuncia_id = denuncia.id
 	add_child(papel_actual)
 	papel_actual.tomar(portador)
+	_actualizar_indicador_papel()
 	panel_despacho._mostrar_mensaje("Ve con la denuncia.", Color("86efac"))
 
 
@@ -293,6 +367,7 @@ func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
 	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
 		return
 	papel.tomar(portador)
+	_actualizar_indicador_papel()
 	panel_despacho._mostrar_mensaje("Ve con la denuncia.", Color("86efac"))
 
 
@@ -307,11 +382,18 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 
 
 func _on_caso_finalizado(denuncia: Denuncia) -> void:
+	if _denuncia_en_descriptado == denuncia.id:
+		_cancelar_descriptado()
+	if _reporte_atascado_id == denuncia.id:
+		_limpiar_atasco_reporte()
+	if clasificador_evidencias.caso_id == denuncia.id:
+		clasificador_evidencias.cancelar()
 	if is_instance_valid(papel_actual) and papel_actual.denuncia_id == denuncia.id:
 		if is_instance_valid(papel_actual.portador):
 			papel_actual.portador.papel_en_mano = null
 		papel_actual.queue_free()
 		papel_actual = null
+		_actualizar_indicador_papel()
 
 
 func interactuar_estacion_con_papel(portador: Player, estacion_id: String) -> void:
@@ -322,6 +404,87 @@ func interactuar_estacion_con_papel(portador: Player, estacion_id: String) -> vo
 	interactuar_estacion(estacion_id)
 
 func interactuar_estacion(estacion_id: String) -> void:
+	if estacion_id == "reporte" and _interactuar_reporte():
+		return
+	if estacion_id == "evidencias" and _interactuar_evidencias():
+		return
+	if estacion_id == "privacidad":
+		var denuncia := sistema_despacho.obtener_denuncia_activa()
+		if denuncia != null and denuncia.obtener_estaciones_pendientes().has(estacion_id):
+			if _denuncia_en_descriptado.is_empty():
+				_denuncia_en_descriptado = denuncia.id
+				_seguridad_lista = false
+				progreso_seguridad.listo_para_recoger = false
+				temporizador_seguridad.start()
+				progreso_seguridad.show()
+				progreso_seguridad.actualizar(0.0, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * 2.05)
+				panel_despacho._mostrar_mensaje("Seguridad está desencriptando. Vuelve a recoger el archivo cuando termine.", Color("86efac"))
+			elif _seguridad_lista and _denuncia_en_descriptado == denuncia.id:
+				_cancelar_descriptado()
+				_aplicar_estacion("privacidad")
+			else:
+				panel_despacho._mostrar_mensaje("Aún se está desencriptando. Vuelve cuando esté listo.", PanelDespacho.CORAL)
+			return
+	_aplicar_estacion(estacion_id)
+
+
+func _interactuar_reporte() -> bool:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if denuncia == null or not denuncia.obtener_estaciones_pendientes().has("reporte"):
+		return false
+	if _reporte_atascado_id == denuncia.id:
+		if not _reporte_herramienta_recogida:
+			panel_despacho._mostrar_mensaje("Impresora atascada. Busca la herramienta junto a la zona de descanso.", PanelDespacho.CORAL)
+			return true
+		_limpiar_atasco_reporte()
+		panel_despacho._mostrar_mensaje("Impresora reparada. Reporte entregado.", Color("86efac"))
+		return false
+	if generador_aleatorio.randf() < probabilidad_atasco_reporte:
+		_reporte_atascado_id = denuncia.id
+		_reporte_herramienta_recogida = false
+		herramienta_reporte.establecer_activa(true)
+		_aviso_reporte_atasco.visible = true
+		panel_despacho._mostrar_mensaje("Impresora atascada. Busca la herramienta junto a la zona de descanso y vuelve.", PanelDespacho.CORAL)
+		return true
+	return false
+
+
+func recoger_herramienta_reporte(portador: Player) -> void:
+	if portador != jugador or _reporte_atascado_id.is_empty() or not herramienta_reporte.activa:
+		return
+	_reporte_herramienta_recogida = true
+	herramienta_reporte.establecer_activa(false)
+	panel_despacho._mostrar_mensaje("Herramienta recogida. Vuelve a la mesa de reportes y pulsa E.", Color("86efac"))
+
+
+func _limpiar_atasco_reporte() -> void:
+	_reporte_atascado_id = ""
+	_reporte_herramienta_recogida = false
+	herramienta_reporte.establecer_activa(false)
+	_aviso_reporte_atasco.visible = false
+
+
+func _interactuar_evidencias() -> bool:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if denuncia == null or not denuncia.obtener_estaciones_pendientes().has("evidencias"):
+		return false
+	clasificador_evidencias.iniciar(denuncia.id)
+	jugador.input_locked = true
+	panel_despacho._mostrar_mensaje("Archiva los tres documentos en su bandeja.", Color("86efac"))
+	return true
+
+
+func _al_archivar_evidencias(caso_id: String) -> void:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if denuncia != null and denuncia.id == caso_id and denuncia.obtener_estaciones_pendientes().has("evidencias"):
+		_aplicar_estacion("evidencias")
+
+
+func _al_cerrar_clasificador() -> void:
+	jugador.input_locked = computador.is_using or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO
+
+
+func _aplicar_estacion(estacion_id: String) -> void:
 	print("[Despacho] Se solicitó usar la estación: ", estacion_id)
 	var fue_correcta: bool = sistema_despacho.interactuar_estacion(estacion_id)
 
@@ -329,6 +492,25 @@ func interactuar_estacion(estacion_id: String) -> void:
 		print("Estación correcta: ", estacion_id)
 	else:
 		print("Estación incorrecta o no hay denuncia activa: ", estacion_id)
+
+
+func _completar_descriptado() -> void:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	var validar := denuncia != null and denuncia.id == _denuncia_en_descriptado and denuncia.obtener_estaciones_pendientes().has("privacidad")
+	if validar:
+		_seguridad_lista = true
+		progreso_seguridad.listo_para_recoger = true
+		panel_despacho._mostrar_mensaje("Archivo listo. Vuelve a seguridad y pulsa E para recogerlo.", Color("86efac"))
+	else:
+		_cancelar_descriptado()
+
+
+func _cancelar_descriptado() -> void:
+	temporizador_seguridad.stop()
+	_denuncia_en_descriptado = ""
+	_seguridad_lista = false
+	progreso_seguridad.listo_para_recoger = false
+	progreso_seguridad.hide()
 
 
 
