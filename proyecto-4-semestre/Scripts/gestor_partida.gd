@@ -22,6 +22,7 @@ const IndicadorPapel := preload("res://UI/Despacho/indicador_papel.gd")
 const ProgresoSeguridad := preload("res://UI/Despacho/progreso_seguridad.gd")
 const ClasificadorEvidencias := preload("res://UI/Despacho/clasificador_evidencias.gd")
 const EscanerVerificacion := preload("res://UI/Despacho/escaner_verificacion.gd")
+const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
 const HerramientaReporte := preload("res://Scripts/herramienta_reporte.gd")
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
@@ -69,6 +70,7 @@ var _mesa_seguridad: Estacion
 var _seguridad_lista: bool = false
 var clasificador_evidencias: ClasificadorEvidencias
 var escaner_verificacion: EscanerVerificacion
+var sonidos_mesas: SonidosMesas
 var herramienta_reporte: HerramientaReporte
 var _aviso_reporte_atasco: Label3D
 var _reporte_atascado_id: String = ""
@@ -78,6 +80,8 @@ var papel_actual: PapelDenuncia = null
 
 func _ready() -> void:
 	add_to_group("gestor_partida")
+	sonidos_mesas = SonidosMesas.new()
+	add_child(sonidos_mesas)
 	generador_aleatorio.randomize()
 
 	sistema_despacho = SistemaDespacho.new()
@@ -426,6 +430,7 @@ func interactuar_estacion(estacion_id: String) -> void:
 				_seguridad_lista = false
 				progreso_seguridad.listo_para_recoger = false
 				temporizador_seguridad.start()
+				sonidos_mesas.iniciar_seguridad()
 				progreso_seguridad.show()
 				progreso_seguridad.actualizar(0.0, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * 2.05)
 				panel_despacho._mostrar_mensaje("Seguridad está desencriptando. Vuelve a recoger el archivo cuando termine.", Color("86efac"))
@@ -447,6 +452,7 @@ func _interactuar_reporte() -> bool:
 			panel_despacho._mostrar_mensaje("Impresora atascada. Busca la herramienta junto a la zona de descanso.", PanelDespacho.CORAL)
 			return true
 		_limpiar_atasco_reporte()
+		sonidos_mesas.reparar_impresora()
 		panel_despacho._mostrar_mensaje("Impresora reparada. Reporte entregado.", Color("86efac"))
 		return false
 	if generador_aleatorio.randf() < probabilidad_atasco_reporte:
@@ -454,8 +460,10 @@ func _interactuar_reporte() -> bool:
 		_reporte_herramienta_recogida = false
 		herramienta_reporte.establecer_activa(true)
 		_aviso_reporte_atasco.visible = true
+		sonidos_mesas.atascar_impresora()
 		panel_despacho._mostrar_mensaje("Impresora atascada. Busca la herramienta junto a la zona de descanso y vuelve.", PanelDespacho.CORAL)
 		return true
+	sonidos_mesas.imprimir()
 	return false
 
 
@@ -515,6 +523,8 @@ func _aplicar_estacion(estacion_id: String) -> void:
 	var fue_correcta: bool = sistema_despacho.interactuar_estacion(estacion_id)
 
 	if fue_correcta:
+		if estacion_id == "bienestar":
+			sonidos_mesas.bienestar.play()
 		print("Estación correcta: ", estacion_id)
 	else:
 		print("Estación incorrecta o no hay denuncia activa: ", estacion_id)
@@ -525,6 +535,7 @@ func _completar_descriptado() -> void:
 	var validar := denuncia != null and denuncia.id == _denuncia_en_descriptado and denuncia.obtener_estaciones_pendientes().has("privacidad")
 	if validar:
 		_seguridad_lista = true
+		sonidos_mesas.terminar_seguridad()
 		progreso_seguridad.listo_para_recoger = true
 		panel_despacho._mostrar_mensaje("Archivo listo. Vuelve a seguridad y pulsa E para recogerlo.", Color("86efac"))
 	else:
@@ -532,6 +543,7 @@ func _completar_descriptado() -> void:
 
 
 func _cancelar_descriptado() -> void:
+	sonidos_mesas.cancelar_seguridad()
 	temporizador_seguridad.stop()
 	_denuncia_en_descriptado = ""
 	_seguridad_lista = false

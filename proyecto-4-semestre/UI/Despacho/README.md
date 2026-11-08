@@ -65,6 +65,16 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   desaparecen del planillero; tres elecciones correctas completan la estación.
   Una equivocada no da progreso. El planillero sube desde el borde inferior al
   abrirse y las instrucciones se presentan como teclas individuales.
+- Las cinco mesas tienen audio de interacción: Evidencias alterna tres sonidos
+  de pasar página al cambiar realmente de hoja y un golpe de papel al archivar;
+  Verificación mantiene un motor en bucle sincronizado con una ida y vuelta de la
+  luz, con un aviso corto al fallar; Seguridad tiene teclas durante el desencriptado
+  y dos pitidos cuando está listo; Reportes distingue rodillos, atasco y reparación;
+  Bienestar añade un toque suave al completar su tarea. Los bucles se interrumpen
+  al cancelar o vencer el caso, y todo el audio se pausa con el juego. El motor del
+  escáner espera a que termine la entrada del panel y se detiene también al salir,
+  fallar o acertar. Son complementarios al sonido de «Check con garabato».
+  `Audios/Mesas/README.md` documenta los archivos, sus fuentes y las licencias.
 - Verificación muestra de cerca el cristal de un escáner con un documento físico.
   El aparato sube desde abajo al abrirse, como el planillero de Evidencias, y
   las indicaciones E y Esc usan las mismas teclas dibujadas. La luz coral recorre
@@ -84,6 +94,12 @@ dejar vencer un caso no concede puntos. El canje y los efectos sobre el mapa
 se incorporarán en una etapa posterior.
 
 ## Comprobación
+
+`UI/Despacho/Pruebas/PruebaSonidosMesas.tscn` prueba las acciones de las cinco
+mesas dentro de la oficina real: entrada del panel, cambio de hojas, variantes,
+archivo correcto e incorrecto, pausas, reintento y salida del escáner, duración
+del bucle, desencriptado completo, atasco, reparación, impresión normal, Bienestar
+y cancelación de bucles al vencer el caso. Admite ejecución con `--headless`.
 
 `UI/Despacho/Pruebas/PruebaEfectoTarea.tscn` comprueba las estaciones correctas,
 repetidas e incorrectas, pausa y reanudación audiovisual, cierre de caso,

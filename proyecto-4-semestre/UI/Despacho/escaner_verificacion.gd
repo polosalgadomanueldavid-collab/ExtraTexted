@@ -14,6 +14,7 @@ const DURACION_ENTRADA: float = 0.48
 const VELOCIDAD: float = 0.55
 const DURACION_FALLO: float = 0.55
 const ANCHO_ZONA: float = 0.16
+const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
 
 var caso_id: String = ""
 var marcador: float = 0.0
@@ -22,6 +23,8 @@ var zona_centro: float = 0.5
 var error_restante: float = 0.0
 var entrada_restante: float = 0.0
 var aleatorio := RandomNumberGenerator.new()
+var sonido_barrido: AudioStreamPlayer
+var sonido_error: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -29,10 +32,15 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	aleatorio.randomize()
+	sonido_barrido = SonidosMesas.crear_reproductor(self, "MotorEscaner", SonidosMesas.ESCANER, -15.0, true)
+	sonido_error = SonidosMesas.crear_reproductor(self, "ErrorEscaner", SonidosMesas.RECHAZO, -12.0)
+	visibility_changed.connect(_al_cambiar_visibilidad)
 	hide()
 
 
 func iniciar(id: String) -> void:
+	sonido_barrido.stop()
+	sonido_error.stop()
 	if caso_id != id:
 		caso_id = id
 		zona_centro = aleatorio.randf_range(0.27, 0.73)
@@ -53,7 +61,7 @@ func cancelar() -> void:
 
 
 func _process(delta: float) -> void:
-	if not visible:
+	if not is_visible_in_tree():
 		return
 	if entrada_restante > 0.0:
 		entrada_restante = maxf(0.0, entrada_restante - delta)
@@ -62,6 +70,8 @@ func _process(delta: float) -> void:
 	if error_restante > 0.0:
 		error_restante = maxf(0.0, error_restante - delta)
 	else:
+		if not sonido_barrido.playing:
+			sonido_barrido.play()
 		marcador += direccion * VELOCIDAD * delta
 		if marcador >= 1.0:
 			marcador = 2.0 - marcador
@@ -73,7 +83,7 @@ func _process(delta: float) -> void:
 
 
 func _input(evento: InputEvent) -> void:
-	if not visible or not evento is InputEventKey or not evento.pressed or evento.echo:
+	if not is_visible_in_tree() or not evento is InputEventKey or not evento.pressed or evento.echo:
 		return
 	var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
 	if tecla == KEY_ESCAPE:
@@ -92,16 +102,24 @@ func _input(evento: InputEvent) -> void:
 func _detener() -> void:
 	if error_restante > 0.0:
 		return
+	sonido_barrido.stop()
 	if absf(marcador - zona_centro) > ANCHO_ZONA * 0.5:
 		marcador = 0.0
 		direccion = 1.0
 		error_restante = DURACION_FALLO
+		sonido_error.play()
 		return
 	var id_terminado := caso_id
 	hide()
 	caso_id = ""
 	cerrado.emit()
 	verificacion_terminada.emit(id_terminado)
+
+
+func _al_cambiar_visibilidad() -> void:
+	if not is_visible_in_tree():
+		sonido_barrido.stop()
+		sonido_error.stop()
 
 
 func _draw() -> void:

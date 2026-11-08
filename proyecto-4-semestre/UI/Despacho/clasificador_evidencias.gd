@@ -14,6 +14,7 @@ const METAL := Color("8e9d97")
 const DURACION_ENTRADA: float = 0.48
 const COLORES := [Color("ff785f"), Color("54bfe4"), Color("79d693")]
 const TIPOS := ["IDENTIDAD", "MENSAJES", "ENLACES"]
+const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
 
 var caso_id: String = ""
 var objetivos: Array[int] = []
@@ -22,16 +23,24 @@ var archivados: int = 0
 var seleccion: int = 1
 var error_restante: float = 0.0
 var entrada_restante: float = 0.0
+var sonido_hoja: AudioStreamPlayer
+var sonido_archivar: AudioStreamPlayer
+var sonido_error: AudioStreamPlayer
+var _variante_hoja: int = 0
 
 
 func _ready() -> void:
 	name = "ClasificadorEvidencias"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	sonido_hoja = SonidosMesas.crear_reproductor(self, "PasarHoja", SonidosMesas.HOJAS[0], -8.0)
+	sonido_archivar = SonidosMesas.crear_reproductor(self, "ArchivarHoja", SonidosMesas.ARCHIVAR, -11.0)
+	sonido_error = SonidosMesas.crear_reproductor(self, "ArchivoIncorrecto", SonidosMesas.RECHAZO, -15.0)
 	hide()
 
 
 func iniciar(id: String) -> void:
+	_detener_sonidos()
 	if caso_id != id or objetivos.is_empty():
 		caso_id = id
 		objetivos = [0, 1, 2]
@@ -47,6 +56,7 @@ func iniciar(id: String) -> void:
 
 
 func cancelar() -> void:
+	_detener_sonidos()
 	hide()
 	caso_id = ""
 	objetivos.clear()
@@ -57,7 +67,7 @@ func cancelar() -> void:
 
 
 func _process(delta: float) -> void:
-	if not visible:
+	if not is_visible_in_tree():
 		return
 	if entrada_restante > 0.0:
 		entrada_restante = maxf(0.0, entrada_restante - delta)
@@ -68,7 +78,7 @@ func _process(delta: float) -> void:
 
 
 func _input(evento: InputEvent) -> void:
-	if not visible or not evento is InputEventKey or not evento.pressed or evento.echo:
+	if not is_visible_in_tree() or not evento is InputEventKey or not evento.pressed or evento.echo:
 		return
 	var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
 	if entrada_restante > 0.0 and tecla != KEY_ESCAPE:
@@ -76,12 +86,13 @@ func _input(evento: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if tecla == KEY_A or tecla == KEY_LEFT:
-		seleccion = posmod(seleccion - 1, papeles.size())
+		_cambiar_hoja(-1)
 	elif tecla == KEY_D or tecla == KEY_RIGHT:
-		seleccion = posmod(seleccion + 1, papeles.size())
+		_cambiar_hoja(1)
 	elif tecla == KEY_E:
 		_archivar()
 	elif tecla == KEY_ESCAPE:
+		_detener_sonidos()
 		hide()
 		entrada_restante = 0.0
 		cerrado.emit()
@@ -96,7 +107,11 @@ func _archivar() -> void:
 		return
 	if papeles[seleccion] != objetivos[archivados]:
 		error_restante = 0.55
+		sonido_error.play()
 		return
+	sonido_hoja.stop()
+	sonido_error.stop()
+	sonido_archivar.play()
 	papeles.remove_at(seleccion)
 	archivados += 1
 	error_restante = 0.0
@@ -110,6 +125,22 @@ func _archivar() -> void:
 		terminado.emit(id_terminado)
 	else:
 		seleccion = mini(seleccion, papeles.size() - 1)
+
+
+func _cambiar_hoja(paso: int) -> void:
+	if papeles.size() <= 1:
+		return
+	seleccion = posmod(seleccion + paso, papeles.size())
+	sonido_hoja.stop()
+	sonido_hoja.stream = SonidosMesas.HOJAS[_variante_hoja]
+	_variante_hoja = (_variante_hoja + 1) % SonidosMesas.HOJAS.size()
+	sonido_hoja.play()
+
+
+func _detener_sonidos() -> void:
+	sonido_hoja.stop()
+	sonido_archivar.stop()
+	sonido_error.stop()
 
 
 func _draw() -> void:
