@@ -25,6 +25,8 @@ const CONTROLES := [
 	["W A S D  /  ↑ ← ↓ →", "Moverse por la oficina"],
 	["Mayús", "Correr mientras te mueves"],
 	["Espacio", "Saltar"],
+	["C  /  1 · 2 · 3", "Cámara: actual, frontal o God (desde arriba)"],
+	["M", "Activar o desactivar el balanceo de cámara"],
 	["E", "Imprimir, usar estación, lanzar o recoger la hoja"],
 	["Mantener Tab", "Ver la clasificación durante la partida"],
 	["Esc", "Pausar o volver a la pantalla anterior"],

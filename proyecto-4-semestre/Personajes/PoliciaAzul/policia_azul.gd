@@ -131,6 +131,10 @@ func _camera_relative_direction(input_direction: Vector2) -> Vector3:
 	var forward := -camera.global_basis.z
 	right.y = 0.0
 	forward.y = 0.0
+	# En vista cenital la mirada es vertical: el norte de pantalla es el eje Y de cámara.
+	if forward.length_squared() < 0.01:
+		forward = camera.global_basis.y
+		forward.y = 0.0
 	return (right.normalized() * input_direction.x - forward.normalized() * input_direction.y).normalized()
 
 

@@ -426,6 +426,7 @@ material = SubResource("StandardMaterial3D_qg7b0")
 
 [node name="Pared4" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=41972868]
 transform = Transform3D(15, 0, 0, 0, 0.2, 0, 0, 0, 15, -1.0834912, 3.317305, 12.473137)
+layers = 524288
 use_collision = true
 size = Vector3(0.45762634, 29.045013, 0.010009766)
 material = SubResource("StandardMaterial3D_wg1wp")
@@ -450,6 +451,7 @@ material = SubResource("StandardMaterial3D_nwhbu")
 
 [node name="Techo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1880558723]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0452919, 6.201772, 6.162117)
+layers = 524288
 size = Vector3(6.941887, 0.038208008, 12.481461)
 
 [node name="OmniLight3D" type="OmniLight3D" parent="Pared, suelo, techo" unique_id=186002390]
@@ -465,6 +467,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.38361645, 0.80757535, 3.33
 
 [node name="Camera3D" type="Camera3D" parent="Gameplay" unique_id=1464768205 node_paths=PackedStringArray("objetivo")]
 transform = Transform3D(1, 0, 0, 0, 0.73925513, 0.6734255, 0, -0.6734255, 0.73925513, -1.1127048, 3.0837698, 5.2279215)
+cull_mask = 524287
 current = true
 script = ExtResource("5_wg1wp")
 objetivo = NodePath("../Node3D")
