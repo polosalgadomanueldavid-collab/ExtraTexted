@@ -152,13 +152,13 @@ func _probar_balanceo() -> void:
 		maximo = maxf(maximo, local.length())
 		if absf(local.x) > 0.005 and absf(local.y) > 0.005:
 			cuadrantes[Vector2i(int(signf(local.x)), int(signf(local.y)))] = true
-	_verificar(maximo > 0.02 and maximo < 0.03, "El balanceo se percibe y se mantiene por debajo de tres centímetros")
+	_verificar(maximo > 0.11 and maximo < 0.14, "El balanceo es visible y mantiene una amplitud moderada")
 	_verificar(cuadrantes.size() == 4, "El infinito recorre los dos lóbulos por arriba y por abajo")
 	_verificar(_camara._posicion_seguimiento.distance_to(centro) < 0.0001, "Tres ciclos de balanceo no acumulan deriva")
 	await _pulsar(KEY_M)
 	var antes := _camara.global_position
 	_camara._physics_process(1.0 / 60.0)
-	_verificar(_camara.global_position.distance_to(antes) < 0.005, "Desactivar el balanceo lo desvanece suavemente")
+	_verificar(_camara.global_position.distance_to(antes) < 0.015, "Desactivar el balanceo lo desvanece suavemente")
 	_avanzar(6.0)
 	_verificar(not _camara.balanceo_activo and _camara.global_position.distance_to(centro) < 0.0001, "M permite dejar la cámara completamente estable")
 

@@ -5,7 +5,7 @@
 - **M:** activa o desactiva el balanceo ambiental. Empieza activado.
 
 Las transiciones de posición y ángulo son suaves. El balanceo dibuja un infinito
-en el plano de la pantalla cada 12 segundos, con amplitudes de 2,5 cm y 1,2 cm.
+en el plano de la pantalla cada 10 segundos, con amplitudes de 12 cm y 6 cm.
 Se pueden ajustar vistas, velocidades y balanceo en el Inspector de
 `Oficina/Gameplay/Camera3D`. La vista original conserva el ángulo de la escena.
 Los atajos se suspenden durante la pausa, las interacciones que bloquean al

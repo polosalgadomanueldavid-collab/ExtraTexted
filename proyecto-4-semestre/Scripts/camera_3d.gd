@@ -17,8 +17,8 @@ enum Vista { ACTUAL, FRONTAL, GOD }
 
 @export_group("Balanceo ambiental")
 @export var balanceo_activo: bool = true
-@export var amplitud_balanceo := Vector2(0.025, 0.012)
-@export_range(4.0, 30.0, 0.5) var periodo_balanceo: float = 12.0
+@export var amplitud_balanceo := Vector2(0.12, 0.06)
+@export_range(4.0, 30.0, 0.5) var periodo_balanceo: float = 10.0
 
 @export_group("Límites de Cámara")
 @export var limite_min_x: float = -4.592
