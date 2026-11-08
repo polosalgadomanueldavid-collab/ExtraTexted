@@ -43,7 +43,7 @@ func _probar() -> void:
 	_verificar(is_equal_approx(panel.reloj_activo.proporcion_restante, 0.7), "Arena sincronizada al 70% restante")
 	_verificar(panel.reloj_activo.animado and panel.reloj_activo.is_processing(), "Solo el reloj activo procesa animación")
 	_verificar(panel.protocolo.completadas == ["evidencias"] and panel.protocolo.estaciones.size() == 3, "La lista marca la estación realmente completada")
-	_verificar(panel.progreso_estaciones.text == "1/3 COMPLETADAS · ORDEN LIBRE", "El panel explica el avance y la libertad de orden")
+	_verificar(panel.progreso_estaciones.text == "1/3 COMPLETADAS", "El panel muestra el avance sin texto adicional")
 	var icono_espera: Control = panel.tarjetas["D-004"].find_child("IconoCaso", true, false)
 	_verificar(icono_espera != null and icono_espera.tipo == panel.IconoDespacho.Tipo.ALERTA, "La denuncia en espera identifica su riesgo sin imponer una primera estación")
 	for tarjeta: PanelContainer in panel.tarjetas.values():

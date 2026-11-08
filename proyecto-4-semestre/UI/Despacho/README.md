@@ -19,7 +19,7 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
 - Los iconos de los casos en espera son estáticos; sus números siguen mostrando
   el tiempo real. Al aceptar el siguiente caso se usa su tiempo restante actual.
 - El protocolo muestra las estaciones como tareas independientes, con marca de
-  completada por ID y contador `N/T COMPLETADAS · ORDEN LIBRE`. Todas las pendientes
+  completada por ID y contador `N/T COMPLETADAS`. Todas las pendientes
   tienen la misma importancia visual; no hay una etapa obligatoria siguiente.
 - Repetir una estación muestra un aviso y conserva el progreso. Al completar todas,
   el caso se cierra automáticamente y el panel retira la tarjeta activa.

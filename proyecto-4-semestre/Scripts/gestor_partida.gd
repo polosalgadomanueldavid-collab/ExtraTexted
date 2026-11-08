@@ -285,7 +285,7 @@ func _entregar_papel(portador: Player) -> void:
 	papel_actual.denuncia_id = denuncia.id
 	add_child(papel_actual)
 	papel_actual.tomar(portador)
-	panel_despacho._mostrar_mensaje("Denuncia impresa. E en una estación para tramitarla; E en espacio libre para lanzarla.", Color("86efac"))
+	panel_despacho._mostrar_mensaje("Ve con la denuncia.", Color("86efac"))
 
 
 func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
@@ -293,7 +293,7 @@ func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
 	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
 		return
 	papel.tomar(portador)
-	panel_despacho._mostrar_mensaje("Denuncia recogida. Busca las estaciones marcadas.", Color("86efac"))
+	panel_despacho._mostrar_mensaje("Ve con la denuncia.", Color("86efac"))
 
 
 func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
@@ -426,6 +426,7 @@ func _cambiar_bloqueo_temporal() -> void:
 		Vector2(limites.size.x, limites.size.z)
 	).grow(jugador.safe_margin)
 	var tamano_celda := Vector2.ONE * GrafoPiso.TAMANO_CELDA
+	var huella_papel := _huella_papel_suelto()
 
 	var candidatos: Array[Vector2i] = []
 
@@ -449,6 +450,8 @@ func _cambiar_bloqueo_temporal() -> void:
 			var centro := grafo_piso.celda_a_posicion(celda)
 			var huella_cajon := Rect2(Vector2(centro.x, centro.z) - tamano_celda * 0.5, tamano_celda)
 			if huella_cajon.intersects(huella_jugador):
+				continue
+			if huella_papel.has_area() and huella_cajon.intersects(huella_papel):
 				continue
 
 			candidatos.append(celda)
@@ -489,6 +492,17 @@ func _cambiar_bloqueo_temporal() -> void:
 		)
 	else:
 		print("Bloqueos temporales activos: ", bloqueos_colocados)
+
+
+func _huella_papel_suelto() -> Rect2:
+	if not is_instance_valid(papel_actual) or papel_actual.portador != null:
+		return Rect2()
+	var posicion := Vector2(papel_actual.global_position.x, papel_actual.global_position.z)
+	var tamano := Vector2(PapelDenuncia.TAMANO.x, PapelDenuncia.TAMANO.z)
+	var actual := Rect2(posicion - tamano * 0.5, tamano)
+	# Reservar también el trayecto breve si cambia la distribución durante el vuelo.
+	var avance := Vector2(papel_actual.linear_velocity.x, papel_actual.linear_velocity.z) * 0.65
+	return actual.merge(Rect2(actual.position + avance, tamano)).grow(0.15)
 
 func _depurar_ruta(
 	origen: Vector2i,
@@ -533,9 +547,13 @@ func _mostrar_bloqueo_temporal(celda: Vector2i) -> void:
 
 
 func _limpiar_bloqueos_temporales() -> void:
+	var habia_bloqueos := not bloqueos_visuales.is_empty()
 	for bloqueo_visual: Node3D in bloqueos_visuales.values():
 		if is_instance_valid(bloqueo_visual):
 			bloqueo_visual.queue_free()
+	# Un RigidBody3D dormido no siempre despierta al retirar el soporte con queue_free.
+	if habia_bloqueos and is_instance_valid(papel_actual) and papel_actual.portador == null:
+		papel_actual.sleeping = false
 
 	bloqueos_visuales.clear()
 	grafo_piso.bloqueos_temporales.clear()

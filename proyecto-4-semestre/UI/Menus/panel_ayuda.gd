@@ -7,7 +7,7 @@ const TAMANO_CAPTURA := Vector2(368, 207)
 const PASOS := [
 	[
 		"Recibe una denuncia",
-		"Cuando llegue un caso, acércate al computador y pulsa E. Te entregará la hoja de la denuncia más urgente.",
+		"Cuando llegue un caso, acércate al computador o a su silla y pulsa E. Recibirás la hoja de la denuncia más urgente.",
 		preload("res://UI/Menus/ArtePiloto/tutorial_denuncia.webp"),
 	],
 	[

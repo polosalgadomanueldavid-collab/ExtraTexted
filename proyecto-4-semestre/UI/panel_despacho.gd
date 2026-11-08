@@ -277,7 +277,7 @@ func _actualizar_denuncia_activa() -> void:
 	reloj_activo.sincronizar_tiempo(tiempo, denuncia.tiempo_limite_segundos, true)
 	var requeridas := denuncia.obtener_estaciones_requeridas()
 	protocolo.configurar(requeridas, denuncia.estaciones_completadas)
-	progreso_estaciones.text = "%d/%d COMPLETADAS · ORDEN LIBRE" % [denuncia.estaciones_completadas.size(), requeridas.size()]
+	progreso_estaciones.text = "%d/%d COMPLETADAS" % [denuncia.estaciones_completadas.size(), requeridas.size()]
 
 
 func _formatear_tiempo(tiempo: float) -> String:
