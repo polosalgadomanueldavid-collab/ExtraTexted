@@ -1,6 +1,9 @@
 extends StaticBody3D
 class_name PCStatic
 signal computador_despacho_abierto
+signal papel_solicitado(jugador: Player)
+
+@export var entregar_papel: bool = false
 
 var player: Player
 var is_using: bool = false
@@ -60,6 +63,8 @@ func _on_tiempo_nuevo_problema_agotado() -> void:
 			actualizar_interfaz_segun_estado()
 
 func toggle_use() -> void:
+	if entregar_papel:
+		return
 	is_using = !is_using
 	camera_3d.current = is_using
 	
@@ -78,6 +83,13 @@ func toggle_use() -> void:
 				ui_pantalla.boton_si.grab_focus()
 	else:
 		apagar_pc()
+
+
+func interactuar(jugador: Player) -> void:
+	if entregar_papel:
+		papel_solicitado.emit(jugador)
+	else:
+		toggle_use()
 
 func encender_pc() -> void:
 	actualizar_interfaz_segun_estado()

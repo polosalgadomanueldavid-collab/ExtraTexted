@@ -190,6 +190,18 @@ func _probar_protocolo_con_tecla(caso: Denuncia, postura: Dictionary) -> void:
 
 func _probar_orden_libre_con_tecla() -> void:
 	var caso := _recibir_caso("ORDEN-LIBRE-CON-TECLA", ["evidencias", "verificacion", "privacidad", "reporte"])
+	var hoja := _jugador.papel_en_mano
+	_verificar(is_instance_valid(hoja) and hoja.denuncia_id == caso.id, "El computador entrega una hoja vinculada al caso")
+	if is_instance_valid(hoja):
+		hoja.lanzar()
+		_verificar(_jugador.papel_en_mano == null and hoja.portador == null and not hoja.freeze, "E puede lanzar la hoja física")
+		_oficina.interactuar_estacion_con_papel(_jugador, "reporte")
+		_verificar(caso.estaciones_completadas.is_empty(), "Sin llevar la hoja, las estaciones rechazan el trámite")
+		await get_tree().process_frame
+		_verificar(_jugador.obtener_objetivo_interaccion() == hoja, "La hoja lanzada queda al alcance de E")
+		_pulsar_interaccion()
+		await get_tree().process_frame
+		_verificar(_jugador.papel_en_mano == hoja and hoja.freeze, "E recoge la hoja y conserva su caso")
 	var panel := _oficina.panel_despacho as PanelDespacho
 	var saldo := _sistema.puntuacion.puntos
 	var orden: Array[String] = ["reporte", "privacidad", "verificacion", "evidencias"]
@@ -217,6 +229,7 @@ func _probar_orden_libre_con_tecla() -> void:
 			if estacion_id == "reporte":
 				await _capturar("05_reporte_primero")
 	_verificar(caso.estado == Denuncia.Estado.RESUELTA and _sistema.obtener_denuncia_activa() == null, "La última estación pendiente cierra el caso sin volver al computador")
+	_verificar(_jugador.papel_en_mano == null and _oficina.papel_actual == null, "Resolver retira la hoja del caso")
 	_verificar(_sistema.puntuacion.puntos == saldo + caso.obtener_puntaje_recompensa(), "El cierre libre concede una sola recompensa")
 	_verificar(not panel.denuncia_activa_detalle.visible and not _oficina.guia_estacion.visible and _oficina.ruta_actual.is_empty(), "Cerrar retira tarjeta, guía y ruta")
 
@@ -304,7 +317,8 @@ func _recibir_caso(id: String, protocolo: Array[String]) -> Denuncia:
 	caso.tiempo_limite_segundos = 120.0
 	caso.protocolo_estaciones = protocolo
 	_verificar(_sistema.recibir_denuncia(caso), "El despacho recibe " + id)
-	_verificar(_sistema.iniciar_denuncia_prioritaria() == caso, "El despacho activa " + id)
+	_oficina._entregar_papel(_jugador)
+	_verificar(_sistema.obtener_denuncia_activa() == caso and is_instance_valid(_jugador.papel_en_mano), "El computador activa el caso y entrega su hoja " + id)
 	return caso
 
 

@@ -205,7 +205,7 @@ func _probar() -> void:
 	oficina.temporizador_denuncias.stop()
 	oficina.temporizador_bloqueos.stop()
 	oficina._limpiar_bloqueos_temporales()
-	pc.computador_despacho_abierto.connect(func() -> void: _aperturas_pc += 1)
+	pc.papel_solicitado.connect(func(_portador: Player) -> void: _aperturas_pc += 1)
 	var consulta := jugador.shape_cast_3d
 	var transformacion_consulta := consulta.global_transform
 	var destino_consulta := consulta.target_position
@@ -216,24 +216,22 @@ func _probar() -> void:
 	await get_tree().process_frame
 	_pulsar_tecla(KEY_E)
 	await get_tree().process_frame
-	_verificar(pc.is_using and jugador.input_locked and _aperturas_pc == 1, "E abre la PC una sola vez sin cerrarla con el mismo evento")
+	_verificar(not pc.is_using and not jugador.input_locked and _aperturas_pc == 1, "E solicita una hoja sin abrir el panel del computador")
+	pc.toggle_use()
+	_verificar(not pc.is_using and not pc.camera_3d.current, "La apertura antigua del computador queda deshabilitada en la oficina")
 	var denuncia_activa := sistema.obtener_denuncia_activa()
-	_verificar(denuncia_activa != null, "La PC inicia la denuncia")
+	_verificar(denuncia_activa != null and is_instance_valid(jugador.papel_en_mano) and jugador.papel_en_mano.denuncia_id == denuncia_activa.id, "La PC entrega el papel del caso activo")
 	_pulsar_escape()
 	await get_tree().process_frame
-	_verificar(get_tree().paused and pc.is_using, "ESC pausa sin salir de la PC")
+	_verificar(get_tree().paused and not pc.is_using, "ESC pausa el juego después de imprimir")
 	_verificar(not MenuGlobal.has_node("%SalirComputador"), "La pausa no incluye Salir del computador")
-	_verificar(pc.camera_3d.current and jugador.input_locked and not jugador.can_process(), "Se conserva la camara y el bloqueo del jugador")
+	_verificar(oficina.get_node("Gameplay/Camera3D").current and not jugador.input_locked, "La cámara y el movimiento permanecen en la oficina")
 	await _capturar("04_pausa_computador")
 	MenuGlobal.reanudar_juego()
-	_verificar(pc.is_using and jugador.input_locked and _aperturas_pc == 1 and sistema.obtener_denuncia_activa() == denuncia_activa, "Reanudar no vuelve a abrir ni aceptar una denuncia")
+	_verificar(not pc.is_using and _aperturas_pc == 1 and sistema.obtener_denuncia_activa() == denuncia_activa, "Reanudar conserva la hoja y la denuncia")
 	_pulsar_tecla(KEY_E)
 	await get_tree().process_frame
-	_verificar(not pc.is_using and not get_tree().paused and not jugador.input_locked and jugador.is_physics_processing() and _aperturas_pc == 1, "E sale de la PC sin reabrirla y devuelve el control")
-	_verificar(oficina.get_node("Gameplay/Camera3D").current, "Se recupera la camara de la oficina")
-	_pulsar_tecla(KEY_E)
-	await get_tree().process_frame
-	_verificar(pc.is_using and jugador.input_locked and _aperturas_pc == 2, "Una nueva pulsacion de E vuelve a abrir la PC")
+	_verificar(not pc.is_using and jugador.papel_en_mano == oficina.papel_actual and _aperturas_pc == 2, "Pulsar E otra vez no duplica la hoja")
 	var mantener_interaccion := InputEventKey.new()
 	mantener_interaccion.physical_keycode = KEY_E
 	mantener_interaccion.keycode = KEY_E
@@ -241,10 +239,7 @@ func _probar() -> void:
 	mantener_interaccion.echo = true
 	Input.parse_input_event(mantener_interaccion)
 	await get_tree().process_frame
-	_verificar(pc.is_using and _aperturas_pc == 2, "Mantener E no alterna el uso del computador")
-	_pulsar_tecla(KEY_E)
-	await get_tree().process_frame
-	_verificar(not pc.is_using and not jugador.input_locked and jugador.is_processing_input() and jugador.is_physics_processing() and _aperturas_pc == 2, "E tambien sale correctamente en usos consecutivos")
+	_verificar(not pc.is_using and _aperturas_pc == 2 and jugador.papel_en_mano == oficina.papel_actual, "Mantener E no crea otra hoja")
 	consulta.global_transform = transformacion_consulta
 	consulta.target_position = destino_consulta
 	_pulsar_escape()

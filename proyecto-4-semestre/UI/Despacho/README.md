@@ -23,6 +23,9 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   tienen la misma importancia visual; no hay una etapa obligatoria siguiente.
 - Repetir una estación muestra un aviso y conserva el progreso. Al completar todas,
   el caso se cierra automáticamente y el panel retira la tarjeta activa.
+- En la oficina, E en el computador entrega una hoja física vinculada al caso.
+  Las estaciones solo aceptan la interacción si el personaje lleva esa hoja.
+  E sobre un espacio libre la lanza; E cerca de la hoja la recoge.
 - El HUD escala desde 1920×1080 sin alterar el mundo; la cola permite desplazamiento
   cuando no cabe y no captura el foco del teclado.
 

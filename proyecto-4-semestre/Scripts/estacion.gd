@@ -5,7 +5,7 @@ extends StaticBody3D
 @export var nombre_visible: String = ""
 
 
-func interactuar(_jugador: Player) -> void:
+func interactuar(jugador: Player) -> void:
 	print("[Estación] Interacción recibida en '", estacion_id, "' (", nombre_visible, ").")
 	var gestor: Node = get_tree().get_first_node_in_group("gestor_partida")
 
@@ -17,4 +17,4 @@ func interactuar(_jugador: Player) -> void:
 		push_warning("El gestor no puede procesar estaciones.")
 		return
 
-	gestor.interactuar_estacion(estacion_id)
+	gestor.interactuar_estacion_con_papel(jugador, estacion_id)

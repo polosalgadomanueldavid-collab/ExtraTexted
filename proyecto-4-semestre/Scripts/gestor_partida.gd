@@ -17,6 +17,7 @@ const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 	"res://Scripts/indicador_proxima_estacion.gd"
 )
 const GUIA_ESTACION_ESCENA := preload("res://UI/Despacho/GuiaEstacion.tscn")
+const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/papel_denuncia.gd")
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const VER_CLASIFICACION := &"VerClasificacion"
@@ -53,6 +54,7 @@ var guia_estacion: Control
 var clasificacion_partida: ClasificacionPartida
 var _nombre_partida: String = ""
 var _aviso_apagon: Label
+var papel_actual: PapelDenuncia = null
 
 
 func _ready() -> void:
@@ -78,13 +80,15 @@ func _ready() -> void:
 	panel_despacho.add_child(guia_estacion)
 	sistema_despacho.denuncias_actualizadas.connect(_on_denuncias_actualizadas)
 	sistema_despacho.estacion_completada.connect(_on_estacion_completada)
+	sistema_despacho.denuncia_resuelta.connect(_on_caso_finalizado)
+	sistema_despacho.denuncia_vencida.connect(_on_caso_finalizado)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
 	_crear_aviso_apagon()
 	# Desactiva el flujo antiguo de preguntas del computador.
 	computador.lista_problemas.clear()
-	# El computador avisa cuando el jugador interactúa con él.
-	computador.computador_despacho_abierto.connect(_on_computador_despacho_abierto)
+	computador.entregar_papel = true
+	computador.papel_solicitado.connect(_entregar_papel)
 
 	temporizador_denuncias = Timer.new()
 	temporizador_denuncias.one_shot = true
@@ -262,6 +266,60 @@ func _on_computador_despacho_abierto() -> void:
 		" - ",
 		denuncia.titulo
 	)
+
+
+func _entregar_papel(portador: Player) -> void:
+	if not is_instance_valid(portador):
+		return
+	if is_instance_valid(portador.papel_en_mano):
+		panel_despacho._mostrar_mensaje("Ya llevas una denuncia. Usa E en una estación o lánzala en un espacio libre.", PanelDespacho.CORAL)
+		return
+	if is_instance_valid(papel_actual):
+		panel_despacho._mostrar_mensaje("La denuncia ya está impresa. Recoge la hoja con E.", PanelDespacho.CORAL)
+		return
+	var denuncia := sistema_despacho.iniciar_denuncia_prioritaria()
+	if denuncia == null:
+		panel_despacho._mostrar_mensaje("No hay denuncias pendientes para imprimir.", PanelDespacho.CORAL)
+		return
+	papel_actual = PAPEL_DENUNCIA_SCRIPT.new() as PapelDenuncia
+	papel_actual.denuncia_id = denuncia.id
+	add_child(papel_actual)
+	papel_actual.tomar(portador)
+	panel_despacho._mostrar_mensaje("Denuncia impresa. E en una estación para tramitarla; E en espacio libre para lanzarla.", Color("86efac"))
+
+
+func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
+		return
+	papel.tomar(portador)
+	panel_despacho._mostrar_mensaje("Denuncia recogida. Busca las estaciones marcadas.", Color("86efac"))
+
+
+func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
+	if papel != papel_actual:
+		return
+	papel.freeze = true
+	papel.linear_velocity = Vector3.ZERO
+	papel.angular_velocity = Vector3.ZERO
+	papel.global_position = computador.global_position + Vector3.UP * 0.7
+	papel.freeze = false
+
+
+func _on_caso_finalizado(denuncia: Denuncia) -> void:
+	if is_instance_valid(papel_actual) and papel_actual.denuncia_id == denuncia.id:
+		if is_instance_valid(papel_actual.portador):
+			papel_actual.portador.papel_en_mano = null
+		papel_actual.queue_free()
+		papel_actual = null
+
+
+func interactuar_estacion_con_papel(portador: Player, estacion_id: String) -> void:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if denuncia == null or not is_instance_valid(portador.papel_en_mano) or portador.papel_en_mano != papel_actual or portador.papel_en_mano.denuncia_id != denuncia.id:
+		panel_despacho._mostrar_mensaje("Necesitas llevar la hoja de la denuncia para usar esta estación.", PanelDespacho.CORAL)
+		return
+	interactuar_estacion(estacion_id)
 
 func interactuar_estacion(estacion_id: String) -> void:
 	print("[Despacho] Se solicitó usar la estación: ", estacion_id)

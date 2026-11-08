@@ -45,6 +45,7 @@ var _emote_hold_remaining: float = 0.0
 var _emote_menu_active: bool = false
 var _animation_names: Dictionary = {}
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
+var papel_en_mano: PapelDenuncia = null
 
 @onready var visual: Node3D = $Visual
 @onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
@@ -180,10 +181,13 @@ func _input(event: InputEvent) -> void:
 	var objetivo := obtener_objetivo_interaccion()
 	if objetivo is PCStatic:
 		get_viewport().set_input_as_handled()
-		(objetivo as PCStatic).toggle_use()
+		(objetivo as PCStatic).interactuar(self)
 	elif objetivo != null and objetivo.has_method("interactuar"):
 		get_viewport().set_input_as_handled()
 		objetivo.interactuar(self)
+	elif is_instance_valid(papel_en_mano):
+		get_viewport().set_input_as_handled()
+		papel_en_mano.lanzar()
 
 
 func _notification(what: int) -> void:
@@ -214,6 +218,10 @@ func obtener_objetivo_interaccion() -> Node3D:
 		return null
 	if get_tree().paused:
 		return null
+	if papel_en_mano == null:
+		var papel_cercano := _buscar_papel_cercano()
+		if papel_cercano != null:
+			return papel_cercano
 	if not is_instance_valid(shape_cast_3d):
 		return null
 
@@ -226,6 +234,26 @@ func obtener_objetivo_interaccion() -> Node3D:
 				return actual as Node3D
 			actual = actual.get_parent()
 	return null
+
+
+func _buscar_papel_cercano() -> PapelDenuncia:
+	var frente := visual.global_basis.z.normalized()
+	var mas_cercano: PapelDenuncia = null
+	var menor_distancia := 1.0
+	for nodo: Node in get_tree().get_nodes_in_group("papeles_denuncia"):
+		var papel := nodo as PapelDenuncia
+		if not is_instance_valid(papel) or papel.portador != null:
+			continue
+		var desplazamiento := papel.global_position - global_position
+		if absf(desplazamiento.y) > 1.1:
+			continue
+		desplazamiento.y = 0.0
+		var distancia := desplazamiento.length()
+		if distancia >= menor_distancia or (distancia > 0.1 and frente.dot(desplazamiento / distancia) < 0.1):
+			continue
+		menor_distancia = distancia
+		mas_cercano = papel
+	return mas_cercano
 
 
 func reset_to_spawn() -> void:

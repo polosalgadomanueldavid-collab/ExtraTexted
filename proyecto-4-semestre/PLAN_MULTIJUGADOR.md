@@ -1,7 +1,7 @@
 # Plan de desarrollo del multijugador de ExtraTexted
 
 Fecha: 7 de noviembre de 2026.
-Estado: fase 1 implementada el 7 de noviembre de 2026; las fases de multijugador siguen pendientes.
+Estado: fase 1 implementada; el 7 de noviembre de 2026 se añadió la hoja física del caso para la futura entrega entre jugadores. Las fases de red siguen pendientes.
 
 ## Objetivo y decisiones de diseño
 
@@ -39,9 +39,10 @@ La entrega final del documento está prevista para la semana del 16 al 20 de nov
 
 - `Scripts/Estructuras/denuncia.gd`: almacena `protocolo_estaciones` y `estaciones_completadas`; ya permite cualquier orden.
 - `Scripts/SistemaDespacho.gd`: mantiene una sola `denuncia_activa_id`, actualiza tiempos y cierra automáticamente al completar todas las estaciones.
-- `Scripts/gestor_partida.gd`: referencia un jugador, genera denuncias y bloqueos, conecta el computador y calcula la ruta a una estación.
-- `Scripts/estacion.gd`: comunica la estación usada, sin identificar una denuncia concreta para varios casos simultáneos.
-- `Scripts/computer.gd`: obtiene el primer jugador del grupo y controla su entrada y cámara al abrir la PC.
+- `Scripts/gestor_partida.gd`: genera denuncias y bloqueos, entrega una hoja física por caso activo y calcula la ruta a una estación.
+- `Scripts/papel_denuncia.gd`: conserva el ID de la denuncia; se puede llevar, lanzar con E y recoger con E.
+- `Scripts/estacion.gd`: exige que el jugador lleve la hoja del caso activo; la validación de varios casos simultáneos sigue pendiente.
+- `Scripts/computer.gd`: en la oficina entrega la hoja con E sin abrir el panel ni cambiar la cámara.
 - `UI/panel_despacho.gd` y los indicadores: muestran una denuncia activa, sus estaciones completadas y todas las pendientes. La guía sugiere la más cercana.
 - `UI/Menus/menu_global.gd`: usa la pausa del árbol de escenas; debe adaptarse para que un menú individual no detenga o desincronice la sesión.
 - `Eventos/Apagon/evento_apagon.gd`: el apagón y su reparación también necesitarán un estado compartido, con controles y efectos visuales locales por jugador.
@@ -79,7 +80,8 @@ Revisar estos puntos al comenzar: las correcciones de bugs pueden modificar el c
 - Identificar claramente sobre qué caso actuará cada jugador. Una pulsación nunca debe completar una estación para todos los casos por accidente.
 - Mostrar todas las estaciones pendientes del caso elegido. El grafo puede recomendar la más cercana por distancia de camino transitable; esa recomendación no obliga al jugador.
 - Calcular la orientación desde cada jugador. Al generar bloqueos, proteger las posiciones ocupadas y comprobar accesibilidad a los objetivos necesarios para que nadie quede atrapado.
-- La interacción con la PC debe ser breve. El menú, la cámara de PC o la reparación del circuito afectan solo a quien los usa; los demás continúan jugando.
+- La PC entrega una hoja por denuncia, sin abrir panel. En cooperativo, el anfitrión debe asignar autoridad al papel, sincronizar su lanzamiento y recogida, y permitir pasarlo entre jugadores sin duplicarlo.
+- La reparación del circuito afecta solo a quien la usa; los demás continúan jugando.
 - Mantener una sola fuente de verdad para el resultado del caso y la recompensa mostrada en ambos equipos.
 
 ## Orden de implementación

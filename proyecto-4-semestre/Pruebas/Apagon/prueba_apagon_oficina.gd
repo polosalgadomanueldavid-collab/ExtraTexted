@@ -217,29 +217,28 @@ func _probar_pausa() -> void:
 
 func _probar_pc() -> void:
 	var computador: Node = _escena.get("computador")
-	computador.call("toggle_use")
+	computador.call("interactuar", _jugador)
 	await _cuadros(3)
-	_verificar(bool(computador.get("is_using")), "El computador puede usarse mientras la oficina está sin luz")
-	_verificar(root.get_camera_3d() == computador.get("camera_3d"), "Entrar al computador activa su cámara real")
-	_verificar(not (_evento.get("mascara") as ColorRect).visible, "La cámara del computador oculta la máscara de la cámara de juego")
+	_verificar(not bool(computador.get("is_using")) and is_instance_valid((_jugador as Player).papel_en_mano), "El computador entrega el papel durante el apagón sin abrir su panel")
+	_verificar(root.get_camera_3d() == _camara, "Imprimir conserva la cámara de la oficina")
+	_verificar((_evento.get("mascara") as ColorRect).visible, "La visión limitada permanece al imprimir")
 	var semilla: int = _evento.get("semilla_circuito")
 	await _pulsar_tecla(KEY_B)
-	_verificar(int(_evento.get("semilla_circuito")) == semilla and not bool(_evento.call("iniciar_apagon")), "El uso del computador rechaza B y un inicio directo de apagón")
+	_verificar(int(_evento.get("semilla_circuito")) == semilla and not bool(_evento.call("iniciar_apagon")), "El apagón activo rechaza otro inicio")
 	for luz: Light3D in _luces_iniciales:
-		_verificar(not luz.visible, "Usar la PC conserva apagadas las luces de la oficina")
+		_verificar(not luz.visible, "Imprimir conserva apagadas las luces de la oficina")
 	await _capturar("01b_oficina_pc_apagon")
 	await _pulsar_tecla(KEY_ESCAPE)
-	_verificar(paused and bool(computador.get("is_using")), "Escape abre la pausa normal y conserva el uso del computador")
+	_verificar(paused and not bool(computador.get("is_using")), "Escape abre la pausa normal con el papel en mano")
 	var tiempo: float = _despacho.tiempos_restantes[_caso_activo.id]
 	await create_timer(0.2).timeout
-	_verificar(is_equal_approx(float(_despacho.tiempos_restantes[_caso_activo.id]), tiempo), "La pausa desde la PC detiene el tiempo de denuncia")
+	_verificar(is_equal_approx(float(_despacho.tiempos_restantes[_caso_activo.id]), tiempo), "La pausa detiene el tiempo de denuncia")
 	await _pulsar_tecla(KEY_ESCAPE)
-	_verificar(not paused and bool(computador.get("is_using")), "Reanudar devuelve el uso del computador")
-	await _pulsar_tecla(KEY_E)
+	_verificar(not paused and is_instance_valid((_jugador as Player).papel_en_mano), "Reanudar conserva la hoja")
 	_jugador.set_physics_process(false)
 	await _cuadros(3)
-	_verificar(not bool(computador.get("is_using")) and root.get_camera_3d() == _camara, "E sale de la PC y recupera la cámara normal")
-	_verificar((_evento.get("mascara") as ColorRect).visible and int(_evento.get("estado")) == 1, "Salir del computador recupera la visión limitada y conserva el apagón")
+	_verificar(not bool(computador.get("is_using")) and root.get_camera_3d() == _camara, "La pantalla del computador permanece deshabilitada")
+	_verificar((_evento.get("mascara") as ColorRect).visible and int(_evento.get("estado")) == 1, "El papel no altera el apagón")
 
 
 func _colocar(posicion: Vector3, giro: float) -> void:
