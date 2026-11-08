@@ -5,6 +5,7 @@ extends Node
 const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")
 const INDICADOR := preload("res://Scripts/indicador_proxima_estacion.gd")
 const CLASIFICADOR := preload("res://UI/Despacho/clasificador_evidencias.gd")
+const ESCANER := preload("res://UI/Despacho/escaner_verificacion.gd")
 
 var _errores: Array[String] = []
 var _comprobaciones: int = 0
@@ -76,6 +77,7 @@ func _probar() -> void:
 	await _probar_orden_libre_con_tecla()
 	await _probar_cancelar_seguridad()
 	await _probar_cancelar_evidencias()
+	await _probar_cancelar_verificacion()
 	await _probar_atasco_reporte()
 	await _probar_silla_computador()
 	await _probar_papel_sin_mesa_encima()
@@ -270,25 +272,72 @@ func _probar_orden_libre_con_tecla() -> void:
 			_pulsar_interaccion()
 			await get_tree().process_frame
 			_verificar(not _oficina.progreso_seguridad.visible, "Recoger con E oculta ambas barras")
+		elif estacion_id == "verificacion":
+			var escaner: ESCANER = _oficina.escaner_verificacion
+			_verificar(escaner.visible and _jugador.input_locked and not caso.estaciones_completadas.has("verificacion"), "Verificación abre un escáner sin completar la mesa al instante")
+			var zona_inicial: float = escaner.zona_centro
+			_pulsar_tecla(KEY_ESCAPE)
+			await get_tree().process_frame
+			_verificar(not escaner.visible and not _jugador.input_locked, "Esc cierra el escáner y devuelve el control")
+			_pulsar_interaccion()
+			await get_tree().process_frame
+			_verificar(escaner.visible and escaner.entrada_restante > 0.0 and is_equal_approx(escaner.zona_centro, zona_inicial), "Volver a Verificación hace subir el escáner y conserva la zona del caso")
+			var posicion_inicial: float = escaner.marcador
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(escaner.visible and is_zero_approx(escaner.error_restante), "E durante la entrada no detiene el barrido accidentalmente")
+			await get_tree().create_timer(0.25).timeout
+			_verificar(escaner.entrada_restante > 0.0 and is_equal_approx(escaner.marcador, posicion_inicial), "La luz espera mientras sube el escáner")
+			await get_tree().create_timer(0.31).timeout
+			_verificar(is_zero_approx(escaner.entrada_restante), "El escáner completa su entrada desde abajo")
+			await get_tree().create_timer(0.14).timeout
+			_verificar(escaner.marcador > posicion_inicial, "La línea del escáner se desplaza sola")
+			await _capturar("16_escaner_verificacion")
+			var posicion_pausada: float = escaner.marcador
+			get_tree().paused = true
+			await get_tree().create_timer(0.2).timeout
+			_verificar(absf(escaner.marcador - posicion_pausada) < 0.01, "La pausa congela la línea del escáner")
+			get_tree().paused = false
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(escaner.visible and escaner.error_restante > 0.0 and not caso.estaciones_completadas.has("verificacion"), "Detener fuera de la zona falla y permite reintentar")
+			await get_tree().create_timer(0.6).timeout
+			var limite: int = Time.get_ticks_msec() + 3000
+			while absf(escaner.marcador - escaner.zona_centro) > ESCANER.ANCHO_ZONA * 0.5 and Time.get_ticks_msec() < limite:
+				await get_tree().process_frame
+			_verificar(absf(escaner.marcador - escaner.zona_centro) <= ESCANER.ANCHO_ZONA * 0.5, "La línea entra físicamente en la zona marcada")
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(not escaner.visible and not _jugador.input_locked, "E en la zona completa el escaneo y libera al jugador")
 		elif estacion_id == "evidencias":
 			var clasificador: CLASIFICADOR = _oficina.clasificador_evidencias
-			_verificar(clasificador.visible and caso.estaciones_completadas.has("evidencias") == false, "E en evidencias abre tres documentos por clasificar")
+			_verificar(clasificador.visible and clasificador.entrada_restante > 0.0 and clasificador.papeles.size() == 3 and caso.estaciones_completadas.has("evidencias") == false, "E en evidencias hace subir un planillero con tres hojas")
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(clasificador.archivados == 0, "La entrada animada no toma una hoja accidentalmente")
+			await get_tree().create_timer(0.25).timeout
+			_verificar(clasificador.entrada_restante > 0.0 and clasificador.entrada_restante < CLASIFICADOR.DURACION_ENTRADA, "La entrada avanza durante la subida")
+			await _capturar("15_evidencias_entrada")
+			await get_tree().create_timer(0.31).timeout
+			_verificar(is_zero_approx(clasificador.entrada_restante), "El planillero termina su entrada desde abajo")
 			await _capturar("11_evidencias_clasificacion")
-			clasificador.seleccion = (clasificador.documentos[0] + 1) % 3
+			clasificador.seleccion = (clasificador.papeles.find(clasificador.objetivos[0]) + 1) % 3
 			_pulsar_tecla(KEY_E)
 			await get_tree().process_frame
-			_verificar(clasificador.archivados == 0, "Una bandeja equivocada no archiva el documento")
-			clasificador.seleccion = clasificador.documentos[0]
+			_verificar(clasificador.archivados == 0 and clasificador.papeles.size() == 3, "Tomar una hoja equivocada no avanza")
+			clasificador.seleccion = clasificador.papeles.find(clasificador.objetivos[0])
 			_pulsar_tecla(KEY_E)
 			await get_tree().process_frame
+			_verificar(clasificador.archivados == 1 and clasificador.papeles.size() == 2, "La hoja correcta sale del planillero")
 			_pulsar_tecla(KEY_ESCAPE)
 			await get_tree().process_frame
 			_verificar(not clasificador.visible and clasificador.archivados == 1 and not _jugador.input_locked, "Salir del clasificador conserva el primer documento archivado")
 			_pulsar_interaccion()
 			await get_tree().process_frame
 			_verificar(clasificador.visible and clasificador.archivados == 1, "Volver a evidencias reanuda la clasificación")
+			await get_tree().create_timer(0.52).timeout
 			for numero: int in range(1, 3):
-				clasificador.seleccion = clasificador.documentos[numero]
+				clasificador.seleccion = clasificador.papeles.find(clasificador.objetivos[numero])
 				_pulsar_tecla(KEY_E)
 				await get_tree().process_frame
 			_verificar(not clasificador.visible and not _jugador.input_locked, "Archivar tres documentos cierra el clasificador y libera al jugador")
@@ -340,6 +389,22 @@ func _probar_cancelar_evidencias() -> void:
 	_verificar(_oficina.clasificador_evidencias.visible and _jugador.input_locked, "La clasificación inmoviliza al jugador mientras está abierta")
 	_sistema.vencer_denuncia(caso.id)
 	_verificar(not _oficina.clasificador_evidencias.visible and not _jugador.input_locked and caso.estaciones_completadas.is_empty(), "Vencer cancela el clasificador y devuelve el control")
+
+
+func _probar_cancelar_verificacion() -> void:
+	var caso := _recibir_caso("VERIFICACION-VENCE", ["verificacion"])
+	var postura := _buscar_postura(_estaciones["verificacion"] as Estacion)
+	_verificar(not postura.is_empty(), "Verificación es accesible antes de vencer")
+	if postura.is_empty():
+		_sistema.vencer_denuncia(caso.id)
+		return
+	_colocar(postura["cerca"], float(postura["giro"]))
+	await _esperar_efecto()
+	_pulsar_interaccion()
+	await get_tree().process_frame
+	_verificar(_oficina.escaner_verificacion.visible and _jugador.input_locked, "El escáner inmoviliza al jugador mientras está abierto")
+	_sistema.vencer_denuncia(caso.id)
+	_verificar(not _oficina.escaner_verificacion.visible and not _jugador.input_locked and caso.estaciones_completadas.is_empty(), "Vencer cancela el escáner sin completar la estación")
 
 
 func _probar_atasco_reporte() -> void:

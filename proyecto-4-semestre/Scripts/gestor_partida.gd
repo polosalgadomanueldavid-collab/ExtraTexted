@@ -21,6 +21,7 @@ const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/papel_denuncia.gd")
 const IndicadorPapel := preload("res://UI/Despacho/indicador_papel.gd")
 const ProgresoSeguridad := preload("res://UI/Despacho/progreso_seguridad.gd")
 const ClasificadorEvidencias := preload("res://UI/Despacho/clasificador_evidencias.gd")
+const EscanerVerificacion := preload("res://UI/Despacho/escaner_verificacion.gd")
 const HerramientaReporte := preload("res://Scripts/herramienta_reporte.gd")
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
@@ -67,6 +68,7 @@ var _denuncia_en_descriptado: String = ""
 var _mesa_seguridad: Estacion
 var _seguridad_lista: bool = false
 var clasificador_evidencias: ClasificadorEvidencias
+var escaner_verificacion: EscanerVerificacion
 var herramienta_reporte: HerramientaReporte
 var _aviso_reporte_atasco: Label3D
 var _reporte_atascado_id: String = ""
@@ -108,7 +110,11 @@ func _ready() -> void:
 	clasificador_evidencias = ClasificadorEvidencias.new()
 	$CanvasLayer.add_child(clasificador_evidencias)
 	clasificador_evidencias.terminado.connect(_al_archivar_evidencias)
-	clasificador_evidencias.cerrado.connect(_al_cerrar_clasificador)
+	clasificador_evidencias.cerrado.connect(_al_cerrar_tarea_estacion)
+	escaner_verificacion = EscanerVerificacion.new()
+	$CanvasLayer.add_child(escaner_verificacion)
+	escaner_verificacion.verificacion_terminada.connect(_al_terminar_verificacion)
+	escaner_verificacion.cerrado.connect(_al_cerrar_tarea_estacion)
 	herramienta_reporte = HerramientaReporte.new()
 	herramienta_reporte.position = grafo_piso.celda_a_posicion(Vector2i(7, 15)) + Vector3.UP * 0.26
 	add_child(herramienta_reporte)
@@ -254,7 +260,7 @@ func _actualizar_indicador_papel() -> void:
 func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 	if not is_instance_valid(_aviso_apagon):
 		return
-	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible))
+	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible))
 	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
 		_aviso_apagon.text = "LUZ RESTAURADA  ·  [B] PROBAR APAGÓN"
 	elif objetivo == evento_apagon.taco:
@@ -388,6 +394,8 @@ func _on_caso_finalizado(denuncia: Denuncia) -> void:
 		_limpiar_atasco_reporte()
 	if clasificador_evidencias.caso_id == denuncia.id:
 		clasificador_evidencias.cancelar()
+	if escaner_verificacion.caso_id == denuncia.id:
+		escaner_verificacion.cancelar()
 	if is_instance_valid(papel_actual) and papel_actual.denuncia_id == denuncia.id:
 		if is_instance_valid(papel_actual.portador):
 			papel_actual.portador.papel_en_mano = null
@@ -407,6 +415,8 @@ func interactuar_estacion(estacion_id: String) -> void:
 	if estacion_id == "reporte" and _interactuar_reporte():
 		return
 	if estacion_id == "evidencias" and _interactuar_evidencias():
+		return
+	if estacion_id == "verificacion" and _interactuar_verificacion():
 		return
 	if estacion_id == "privacidad":
 		var denuncia := sistema_despacho.obtener_denuncia_activa()
@@ -470,7 +480,7 @@ func _interactuar_evidencias() -> bool:
 		return false
 	clasificador_evidencias.iniciar(denuncia.id)
 	jugador.input_locked = true
-	panel_despacho._mostrar_mensaje("Archiva los tres documentos en su bandeja.", Color("86efac"))
+	panel_despacho._mostrar_mensaje("Elige las hojas solicitadas del planillero.", Color("86efac"))
 	return true
 
 
@@ -480,7 +490,23 @@ func _al_archivar_evidencias(caso_id: String) -> void:
 		_aplicar_estacion("evidencias")
 
 
-func _al_cerrar_clasificador() -> void:
+func _interactuar_verificacion() -> bool:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if denuncia == null or not denuncia.obtener_estaciones_pendientes().has("verificacion"):
+		return false
+	escaner_verificacion.iniciar(denuncia.id)
+	jugador.input_locked = true
+	panel_despacho._mostrar_mensaje("Detén la línea coral dentro de la zona verde.", Color("86efac"))
+	return true
+
+
+func _al_terminar_verificacion(caso_id: String) -> void:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if denuncia != null and denuncia.id == caso_id and denuncia.obtener_estaciones_pendientes().has("verificacion"):
+		_aplicar_estacion("verificacion")
+
+
+func _al_cerrar_tarea_estacion() -> void:
 	jugador.input_locked = computador.is_using or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO
 
 

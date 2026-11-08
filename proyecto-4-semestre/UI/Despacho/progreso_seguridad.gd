@@ -36,11 +36,11 @@ func _draw() -> void:
 		var x := clampf(ancla_pantalla.x - ancho * 0.5, margen, maxf(margen, size.x - ancho - margen))
 		var y := clampf(ancla_pantalla.y - 44.0 * factor, margen, size.y - 112.0 * factor)
 		var base := Rect2(x, y, ancho, alto)
-		draw_rect(base.grow(3.0 * factor), TINTA)
-		draw_rect(base, CREMA)
+		_dibujar_pista(base.grow(3.0 * factor), TINTA)
+		_dibujar_pista(base, CREMA)
 		var relleno := Rect2(base.position + Vector2.ONE * 3.0 * factor, Vector2(maxf(0.0, ancho - 6.0 * factor) * proporcion, alto - 6.0 * factor))
 		if relleno.size.x > 0.0:
-			draw_rect(relleno, CORAL)
+			_dibujar_pista(relleno, CORAL)
 	var texto := "LISTO · VUELVE A SEGURIDAD" if listo_para_recoger else "DESENCRIPTANDO"
 	var tamano := maxi(10, roundi(21.0 * factor))
 	var ancho_texto := FUENTE.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano).x
@@ -54,6 +54,13 @@ func _draw() -> void:
 	draw_style_box(estilo, fondo)
 	draw_string(FUENTE, Vector2((size.x - ancho_texto) * 0.5, fondo.position.y + 27.0 * factor), texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano, CREMA)
 	var pista := Rect2(fondo.position + Vector2(12.0, 36.0) * factor, Vector2(fondo.size.x - 24.0 * factor, 6.0 * factor))
-	draw_rect(pista, CREMA.darkened(0.55))
+	_dibujar_pista(pista, CREMA.darkened(0.55))
 	if proporcion > 0.0:
-		draw_rect(Rect2(pista.position, Vector2(pista.size.x * proporcion, pista.size.y)), CORAL)
+		_dibujar_pista(Rect2(pista.position, Vector2(pista.size.x * proporcion, pista.size.y)), CORAL)
+
+
+func _dibujar_pista(rectangulo: Rect2, color: Color) -> void:
+	var estilo := StyleBoxFlat.new()
+	estilo.bg_color = color
+	estilo.set_corner_radius_all(maxi(1, roundi(minf(rectangulo.size.x, rectangulo.size.y) * 0.5)))
+	draw_style_box(estilo, rectangulo)

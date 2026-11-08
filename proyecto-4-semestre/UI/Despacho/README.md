@@ -37,7 +37,8 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   ejecutando Godot con `--path proyecto-4-semestre --script ../herramientas/renderizar_papel_hud.gd`.
 - La mesa física de seguridad (`privacidad`) inicia un desencriptado de seis
   segundos al pulsar E con la hoja. La barra coral se llena sobre la estación y
-  otra línea se llena debajo de «DESENCRIPTANDO», en el centro inferior. La tarea
+  otra línea se llena debajo de «DESENCRIPTANDO», en el centro inferior. Ambas
+  pistas y sus rellenos tienen extremos redondeados. La tarea
   sigue mientras el jugador se mueve y se detiene al pausar. Tras seis segundos
   queda lista: el jugador debe regresar a la mesa y pulsar E para completar la
   estación. Volver a pulsar E antes no reinicia el tiempo. Si el caso vence o se
@@ -46,9 +47,21 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   uso de cada caso. La herramienta aparece en la zona de descanso: recogerla con
   E y regresar a la mesa con la hoja repara la impresora y completa la tarea.
   El atasco y la herramienta desaparecen si vence el caso.
-- Evidencias abre tres documentos en orden aleatorio. A/D o flechas cambia la
-  bandeja, E archiva el documento y Esc sale conservando el avance. Solo tres
-  clasificaciones correctas completan la estación; un error no da progreso.
+- Evidencias abre un planillero de cartón con pinza metálica. La hoja de
+  referencia a la izquierda muestra el archivo solicitado; tres papeles de
+  colores aparecen a la derecha en orden aleatorio. A/D o flechas elige la
+  hoja, E la toma y Esc sale conservando el avance. Las hojas correctas
+  desaparecen del planillero; tres elecciones correctas completan la estación.
+  Una equivocada no da progreso. El planillero sube desde el borde inferior al
+  abrirse y las instrucciones se presentan como teclas individuales.
+- Verificación muestra de cerca el cristal de un escáner con un documento físico.
+  El aparato sube desde abajo al abrirse, como el planillero de Evidencias, y
+  las indicaciones E y Esc usan las mismas teclas dibujadas. La luz coral recorre
+  verticalmente el documento y E la detiene dentro de una franja verde cuya
+  posición cambia por caso. Durante la entrada no se puede detener la luz.
+  Acertar completa la estación; fallar reinicia el barrido tras un aviso breve.
+  Esc permite salir y regresar; pausa y vencimiento detienen o cancelan el
+  escáner junto con la partida.
 - El aviso «Luz restaurada» solo se muestra durante una ejecución de depuración
   con la capa F3 visible. En juego normal desaparece. La tecla B de prueba del
   apagón solo está disponible en ejecuciones de depuración.
