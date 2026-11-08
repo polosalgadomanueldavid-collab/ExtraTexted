@@ -233,18 +233,17 @@ text = "AL RESOLVER\n+500 PTS"
 horizontal_alignment = 2
 clip_text = true
 
+[node name="ProgresoEstaciones" type="Label" parent="Contenido/TarjetaActiva/Detalle"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 14
+text = "0/3 COMPLETADAS"
+
 [node name="Estaciones" type="HBoxContainer" parent="Contenido/TarjetaActiva/Detalle"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 6
-
-[node name="IconoActividad" type="Control" parent="Contenido/TarjetaActiva/Detalle/Estaciones"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(34, 52)
-layout_mode = 2
-mouse_filter = 2
-script = ExtResource("3_icono")
-tipo = 3
 
 [node name="Protocolo" type="Control" parent="Contenido/TarjetaActiva/Detalle/Estaciones"]
 unique_name_in_owner = true

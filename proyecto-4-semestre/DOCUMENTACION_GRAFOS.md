@@ -2,9 +2,9 @@
 
 ## 1. Propósito
 
-El proyecto usa un **grafo no dirigido y no ponderado** para representar las zonas transitables del piso de la comisaría. Su función es calcular una ruta válida desde la posición actual del jugador hasta la estación requerida por la denuncia activa.
+El proyecto usa un **grafo no dirigido y no ponderado** para representar las zonas transitables del piso de la comisaría. Su función es sugerir una ruta desde la posición del jugador hasta la estación pendiente que requiere menos recorrido. El jugador puede completar las estaciones de su denuncia en cualquier orden.
 
-La ruta se actualiza cuando se inicia una denuncia, se completa una estación del protocolo o cambia un bloqueo temporal. Así, la navegación respeta tanto los obstáculos permanentes del mapa como los obstáculos dinámicos de la partida.
+La ruta se actualiza cuando se inicia una denuncia, se completa una estación, el jugador cambia de celda o cambia un bloqueo temporal. Así, la navegación respeta tanto los obstáculos permanentes del mapa como los obstáculos dinámicos de la partida.
 
 ## 2. Modelado del grafo
 
@@ -62,7 +62,7 @@ Una celda es transitable si está dentro de los límites y no figura ni en `bloq
 
 ## 5. Cálculo de la ruta mínima
 
-El método `calcular_ruta(origen, destino)` implementa **Dijkstra**. Todas las aristas tienen costo `1`, porque desplazarse entre dos celdas vecinas representa un paso equivalente.
+El método `calcular_ruta(origen, destino)` utiliza **Dijkstra**. Todas las aristas tienen costo `1`, porque desplazarse entre dos celdas vecinas representa un paso equivalente. `calcular_ruta_a_mas_cercana(origen, destinos)` realiza una sola búsqueda y termina al alcanzar la primera estación pendiente con distancia mínima; el método de un único destino delega en esta búsqueda.
 
 1. Asigna distancia infinita a cada vértice y `0` al origen.
 2. Selecciona el vértice no visitado con menor distancia.
@@ -78,38 +78,42 @@ La implementación actual busca linealmente el siguiente vértice de menor dista
 
 ## 6. Bloqueos dinámicos
 
-Cada 10 segundos, `gestor_partida.gd` intenta ubicar un bloqueo temporal en una celda libre. Antes de aceptarlo, reconstruye la adyacencia y comprueba que siga existiendo una ruta hacia la estación activa.
+Cada 10 segundos, `gestor_partida.gd` renueva los bloqueos e intenta colocar hasta 30 cajones en celdas libres. Excluye las zonas seguras, los destinos, la celda de acceso del jugador y cualquier celda que invada su cuerpo. Antes de aceptar cada cajón, comprueba que se conserve la salida del jugador y el acceso a las estaciones que podía alcanzar al comenzar.
+
+El personaje puede caber en el borde libre de una celda que el grafo marca como ocupada por una mesa. En ese caso, `celda_de_acceso()` usa la celda transitable más cercana como origen de navegación, sin desbloquear la mesa. Esto evita que un origen lógico bloqueado haga rechazar todos los cajones aunque existan espacios disponibles.
 
 ```text
 Elegir candidata libre
         ↓
 Agregarla a bloqueos_temporales
         ↓
-Reconstruir adyacencia
+Consultar celdas alcanzables con la ocupación provisional
         ↓
-¿Hay ruta al destino activo?
-   ├── Sí: conservar bloqueo y recalcular ruta
+¿Se conservan la salida y los destinos protegidos?
+   ├── Sí: conservar bloqueo y seguir colocando
    └── No: retirar candidata y probar otra
 ```
 
-Con esta validación, un bloqueo puede obligar al jugador a tomar un desvío, pero no puede dejar imposible el protocolo que está realizando.
+Se recorren las candidatas hasta llegar a 30 o agotarlas. Si solo se pueden colocar tres cajones, se conservan esos tres; la cantidad parcial es un resultado normal. Al terminar se reconstruye la adyacencia, se actualizan los obstáculos visibles y se recalcula la ruta del caso activo. Si no existe ninguna candidata válida, se mantiene el mapa libre de nuevos cajones sin invadir zonas protegidas.
+
+La prueba `Pruebas/Bloqueos/prueba_generacion_bloqueos.gd` reproduce posiciones de borde en la oficina real, comprueba que el jugador no se solape con los cajones y que las estaciones sigan conectadas, y verifica mapas con tres o cero huecos disponibles. Se ejecuta con Godot mediante `--headless --path <proyecto> --script res://Pruebas/Bloqueos/prueba_generacion_bloqueos.gd`.
 
 ## 7. Integración con el flujo de juego
 
 ```text
 Denuncia prioritaria activada
         ↓
-Se lee la siguiente estación del protocolo
+Se obtienen todas las estaciones pendientes
         ↓
-Posición 3D del jugador → celda de origen
-Estación solicitada      → celda de destino
+Posición 3D del jugador → celda transitable de acceso
+Estaciones pendientes  → celdas de destino
         ↓
-GrafoPiso.calcular_ruta(origen, destino)
+GrafoPiso.calcular_ruta_a_mas_cercana(origen, destinos)
         ↓
-ruta_actual: secuencia ordenada de celdas
+ruta_actual: recorrido sugerido a la estación alcanzable más cercana
 ```
 
-La conversión se realiza con `posicion_a_celda()` y `celda_a_posicion()`, usando el origen espacial del piso y un tamaño de celda de `0.5` unidades. Esto conecta el modelo lógico en 2D con las posiciones reales de la escena 3D.
+La conversión se realiza con `posicion_a_celda()` y `celda_a_posicion()`, usando el origen espacial del piso y un tamaño de celda de `0.5` unidades. `celda_de_acceso()` resuelve los bordes libres de casillas ocupadas. Todos los marcadores pendientes permanecen visibles, aunque la guía señale solo una sugerencia; las casillas del depurador actualizan sus colores sin recrear sus mallas al caminar.
 
 ## 8. Archivos principales
 

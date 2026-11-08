@@ -1,6 +1,6 @@
 class_name IndicadorProximaEstacion
 extends Node3D
-## Objeto 3D flotante que identifica la próxima estación del protocolo.
+## Objeto 3D flotante que identifica una estación pendiente de la denuncia.
 ## La orientación sigue a la cámara sin mover el anclaje de la mesa.
 
 const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")

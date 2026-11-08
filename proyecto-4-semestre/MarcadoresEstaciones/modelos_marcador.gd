@@ -36,6 +36,57 @@ static func crear_puntero() -> MeshInstance3D:
 	return _pieza("Puntero", _redondear(contorno, 0.025, 7), 0.065, CORAL, 0.014)
 
 
+static func crear_mano_recoger() -> Node3D:
+	var marcador := Node3D.new()
+	marcador.name = "MarcadorRecoger"
+	var mano := Node3D.new()
+	mano.name = "ManoRecoger"
+	mano.position.x = -0.16
+	mano.rotation.z = -0.10
+	marcador.add_child(mano)
+	var silueta := _redondear(PackedVector2Array([
+		Vector2(-0.11, -0.17), Vector2(0.10, -0.17),
+		Vector2(0.17, -0.04), Vector2(0.20, 0.20),
+		Vector2(0.185, 0.25), Vector2(0.145, 0.25), Vector2(0.135, 0.06),
+		Vector2(0.118, 0.30), Vector2(0.10, 0.335), Vector2(0.065, 0.335),
+		Vector2(0.05, 0.30), Vector2(0.045, 0.10), Vector2(0.025, 0.35),
+		Vector2(-0.015, 0.36), Vector2(-0.045, 0.33), Vector2(-0.045, 0.10),
+		Vector2(-0.075, 0.29), Vector2(-0.11, 0.30), Vector2(-0.14, 0.27),
+		Vector2(-0.13, 0.01), Vector2(-0.23, 0.10), Vector2(-0.27, 0.085),
+		Vector2(-0.29, 0.045), Vector2(-0.26, -0.01), Vector2(-0.15, -0.14)
+	]), 0.016, 5)
+	var canto := _pieza("ManoCanto", silueta, 0.11, PETROLEO, 0.012)
+	canto.scale = Vector3(1.04, 1.04, 1.0)
+	canto.position.z = -0.022
+	mano.add_child(canto)
+	var guante := _pieza("ManoGuante", silueta, 0.085, CREMA, 0.012)
+	guante.position.z = 0.025
+	mano.add_child(guante)
+	var puno := _pieza("ManoPuno", _rectangulo_redondeado(Vector2(0.26, 0.11), 0.025), 0.12, PETROLEO, 0.016)
+	puno.position = Vector3(-0.005, -0.205, 0.015)
+	mano.add_child(puno)
+	var banda := _pieza("ManoBandaCoral", _rectangulo_redondeado(Vector2(0.19, 0.028), 0.012), 0.022, CORAL, 0.005)
+	banda.position = Vector3(-0.005, -0.205, 0.080)
+	mano.add_child(banda)
+	var tecla := _pieza("TeclaRecoger", _rectangulo_redondeado(Vector2(0.28, 0.29), 0.055), 0.11, PETROLEO, 0.018)
+	tecla.position = Vector3(0.27, -0.025, 0.0)
+	marcador.add_child(tecla)
+	var frente := _pieza("TeclaFrente", _rectangulo_redondeado(Vector2(0.235, 0.245), 0.045), 0.040, CREMA, 0.010)
+	frente.position = Vector3(0.27, -0.015, 0.060)
+	marcador.add_child(frente)
+	var letra := Label3D.new()
+	letra.name = "LetraE"
+	letra.text = "E"
+	letra.font_size = 64
+	letra.pixel_size = 0.0028
+	letra.outline_size = 0
+	letra.modulate = PETROLEO
+	letra.no_depth_test = false
+	letra.position = Vector3(0.27, -0.015, 0.09)
+	marcador.add_child(letra)
+	return marcador
+
+
 static func _crear_carpeta(modelo: Node3D) -> void:
 	var silueta := PackedVector2Array([
 		Vector2(-0.315, -0.25), Vector2(0.315, -0.25),

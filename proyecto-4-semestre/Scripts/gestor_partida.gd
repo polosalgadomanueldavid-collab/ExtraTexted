@@ -3,6 +3,7 @@ extends Node3D
 @onready var panel_despacho: PanelDespacho = $CanvasLayer/PanelDespacho
 @onready var computador: PCStatic = $Computer
 @onready var jugador: Player = $Gameplay/Node3D
+@onready var evento_apagon: EventoApagonScript = $EventoApagon
 
 const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
@@ -16,10 +17,12 @@ const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 	"res://Scripts/indicador_proxima_estacion.gd"
 )
 const GUIA_ESTACION_ESCENA := preload("res://UI/Despacho/GuiaEstacion.tscn")
+const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/papel_denuncia.gd")
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const VER_CLASIFICACION := &"VerClasificacion"
-const ALTURA_INDICADOR_ESTACION: float = 1.82
+const ALTURA_INDICADOR_ESTACION: float = 1.25
+const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
 
 
 var sistema_despacho: SistemaDespacho
@@ -38,6 +41,10 @@ var catalogo_denuncias: Array[Denuncia] = [
 
 var grafo_piso: GrafoPiso
 var ruta_actual: Array[Vector2i] = []
+var estacion_sugerida: String = ""
+var _estaciones_pendientes: Array[String] = []
+var _denuncia_orientada_id: String = ""
+var _celda_ruta := Vector2i(-1, -1)
 var temporizador_bloqueos: Timer
 var bloqueos_iniciados: bool = false
 var bloqueos_visuales: Dictionary = {}
@@ -46,6 +53,8 @@ var indicadores_estaciones: Dictionary = {}
 var guia_estacion: Control
 var clasificacion_partida: ClasificacionPartida
 var _nombre_partida: String = ""
+var _aviso_apagon: Label
+var papel_actual: PapelDenuncia = null
 
 
 func _ready() -> void:
@@ -58,6 +67,7 @@ func _ready() -> void:
 	clasificacion_partida = CLASIFICACION_PARTIDA_ESCENA.instantiate()
 	panel_despacho.add_child(clasificacion_partida)
 	sistema_despacho.puntuacion.puntos_actualizados.connect(_al_actualizar_puntaje)
+	evento_apagon.estado_cambiado.connect(_al_cambiar_estado_apagon)
 	grafo_piso = GrafoPiso.new()
 	depurador_grafo = GrafoDebugVisual.new()
 	depurador_grafo.name = "DepuradorGrafo"
@@ -70,12 +80,15 @@ func _ready() -> void:
 	panel_despacho.add_child(guia_estacion)
 	sistema_despacho.denuncias_actualizadas.connect(_on_denuncias_actualizadas)
 	sistema_despacho.estacion_completada.connect(_on_estacion_completada)
+	sistema_despacho.denuncia_resuelta.connect(_on_caso_finalizado)
+	sistema_despacho.denuncia_vencida.connect(_on_caso_finalizado)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
+	_crear_aviso_apagon()
 	# Desactiva el flujo antiguo de preguntas del computador.
 	computador.lista_problemas.clear()
-	# El computador avisa cuando el jugador interactúa con él.
-	computador.computador_despacho_abierto.connect(_on_computador_despacho_abierto)
+	computador.entregar_papel = true
+	computador.papel_solicitado.connect(_entregar_papel)
 
 	temporizador_denuncias = Timer.new()
 	temporizador_denuncias.one_shot = true
@@ -92,6 +105,9 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
+	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
+		_calcular_ruta_a_proxima_estacion()
 	# La misma consulta que procesa E determina si el icono ofrece interacción.
 	var objetivo: Node3D = null
 	if is_instance_valid(jugador) and not computador.is_using:
@@ -102,18 +118,81 @@ func _process(_delta: float) -> void:
 			var disponible := indicador.visible and objetivo is Estacion and (objetivo as Estacion).estacion_id == estacion_id
 			indicador.establecer_interactuable(disponible)
 	if is_instance_valid(guia_estacion):
-		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using)
+		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO)
+	_actualizar_aviso_apagon(objetivo)
 
 
 func _input(evento: InputEvent) -> void:
+	if evento.is_action_released(VER_CLASIFICACION) and clasificacion_partida.visible:
+		clasificacion_partida.hide()
+		get_viewport().set_input_as_handled()
+		return
+	if evento_apagon.estado == EventoApagonScript.Estado.REPARANDO:
+		return
 	if evento.is_action_pressed(VER_CLASIFICACION, true, true):
 		if not evento.is_echo() and not clasificacion_partida.visible:
 			_presentar_clasificacion()
 			clasificacion_partida.show()
 		get_viewport().set_input_as_handled()
-	elif evento.is_action_released(VER_CLASIFICACION) and clasificacion_partida.visible:
+
+
+func _unhandled_key_input(evento: InputEvent) -> void:
+	if not evento is InputEventKey or not evento.pressed or evento.echo:
+		return
+	if evento.physical_keycode != KEY_B and evento.keycode != KEY_B:
+		return
+	if get_tree().paused or computador.is_using or jugador.input_locked or clasificacion_partida.visible or MenuGlobal.capa.visible:
+		return
+	evento_apagon.iniciar_apagon()
+	get_viewport().set_input_as_handled()
+
+
+func _crear_aviso_apagon() -> void:
+	_aviso_apagon = Label.new()
+	_aviso_apagon.name = "AvisoApagon"
+	_aviso_apagon.theme = panel_despacho.theme
+	_aviso_apagon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_aviso_apagon.add_theme_font_size_override("font_size", 22)
+	_aviso_apagon.add_theme_color_override("font_color", Color("fff1d8"))
+	_aviso_apagon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var fondo := StyleBoxFlat.new()
+	fondo.bg_color = Color(0.06, 0.15, 0.2, 0.94)
+	fondo.border_color = Color("ffc969")
+	fondo.border_width_left = 4
+	fondo.set_corner_radius_all(10)
+	fondo.content_margin_left = 16
+	fondo.content_margin_right = 16
+	fondo.content_margin_top = 12
+	fondo.content_margin_bottom = 12
+	_aviso_apagon.add_theme_stylebox_override("normal", fondo)
+	$CanvasLayer.add_child(_aviso_apagon)
+	get_viewport().size_changed.connect(_ajustar_aviso_apagon)
+	_ajustar_aviso_apagon()
+
+
+func _ajustar_aviso_apagon() -> void:
+	var tamano := get_viewport().get_visible_rect().size
+	var factor := minf(tamano.x / 1920.0, tamano.y / 1080.0)
+	_aviso_apagon.scale = Vector2.ONE * factor
+	_aviso_apagon.size = Vector2(590, 80)
+	_aviso_apagon.position = Vector2(28.0 * factor, tamano.y - 108.0 * factor)
+
+
+func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
+	if not is_instance_valid(_aviso_apagon):
+		return
+	_aviso_apagon.visible = not computador.is_using and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO
+	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
+		_aviso_apagon.text = "LUZ RESTAURADA  ·  [B] PROBAR APAGÓN"
+	elif objetivo == evento_apagon.taco:
+		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
+	else:
+		_aviso_apagon.text = "APAGÓN  ·  BUSCA EL TACO DE LUZ\nPARED DERECHA  ·  ZONA DE DESCANSO"
+
+
+func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
+	if nuevo_estado == EventoApagonScript.Estado.REPARANDO:
 		clasificacion_partida.hide()
-		get_viewport().set_input_as_handled()
 
 
 func _notification(what: int) -> void:
@@ -187,7 +266,60 @@ func _on_computador_despacho_abierto() -> void:
 		" - ",
 		denuncia.titulo
 	)
-	_calcular_ruta_a_proxima_estacion()
+
+
+func _entregar_papel(portador: Player) -> void:
+	if not is_instance_valid(portador):
+		return
+	if is_instance_valid(portador.papel_en_mano):
+		panel_despacho._mostrar_mensaje("Ya llevas una denuncia. Usa E en una estación o lánzala en un espacio libre.", PanelDespacho.CORAL)
+		return
+	if is_instance_valid(papel_actual):
+		panel_despacho._mostrar_mensaje("La denuncia ya está impresa. Recoge la hoja con E.", PanelDespacho.CORAL)
+		return
+	var denuncia := sistema_despacho.iniciar_denuncia_prioritaria()
+	if denuncia == null:
+		panel_despacho._mostrar_mensaje("No hay denuncias pendientes para imprimir.", PanelDespacho.CORAL)
+		return
+	papel_actual = PAPEL_DENUNCIA_SCRIPT.new() as PapelDenuncia
+	papel_actual.denuncia_id = denuncia.id
+	add_child(papel_actual)
+	papel_actual.tomar(portador)
+	panel_despacho._mostrar_mensaje("Ve con la denuncia.", Color("86efac"))
+
+
+func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
+		return
+	papel.tomar(portador)
+	panel_despacho._mostrar_mensaje("Ve con la denuncia.", Color("86efac"))
+
+
+func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
+	if papel != papel_actual:
+		return
+	papel.freeze = true
+	papel.linear_velocity = Vector3.ZERO
+	papel.angular_velocity = Vector3.ZERO
+	papel.global_position = computador.global_position + Vector3.UP * 0.7
+	papel.freeze = false
+
+
+func _on_caso_finalizado(denuncia: Denuncia) -> void:
+	if is_instance_valid(papel_actual) and papel_actual.denuncia_id == denuncia.id:
+		if is_instance_valid(papel_actual.portador):
+			papel_actual.portador.papel_en_mano = null
+		papel_actual.queue_free()
+		papel_actual = null
+
+
+func interactuar_estacion_con_papel(portador: Player, estacion_id: String) -> void:
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if denuncia == null or not is_instance_valid(portador.papel_en_mano) or portador.papel_en_mano != papel_actual or portador.papel_en_mano.denuncia_id != denuncia.id:
+		panel_despacho._mostrar_mensaje("Necesitas llevar la hoja de la denuncia para usar esta estación.", PanelDespacho.CORAL)
+		return
+	interactuar_estacion(estacion_id)
 
 func interactuar_estacion(estacion_id: String) -> void:
 	print("[Despacho] Se solicitó usar la estación: ", estacion_id)
@@ -195,7 +327,6 @@ func interactuar_estacion(estacion_id: String) -> void:
 
 	if fue_correcta:
 		print("Estación correcta: ", estacion_id)
-		_calcular_ruta_a_proxima_estacion()
 	else:
 		print("Estación incorrecta o no hay denuncia activa: ", estacion_id)
 
@@ -204,35 +335,25 @@ func interactuar_estacion(estacion_id: String) -> void:
 
 func _calcular_ruta_a_proxima_estacion() -> void:
 	var denuncia: Denuncia = sistema_despacho.obtener_denuncia_activa()
-
-	if denuncia == null:
-		ruta_actual.clear()
-		_actualizar_indicador_estacion("")
-		return
-
-	var indice: int = denuncia.indice_estacion_actual
-
-	if indice >= denuncia.protocolo_estaciones.size():
-		ruta_actual.clear()
-		_actualizar_indicador_estacion("")
-		return
-
-	var estacion_id: String = denuncia.protocolo_estaciones[indice]
-
-	if not GrafoPiso.DESTINOS.has(estacion_id):
-		push_warning("La estación no existe en el grafo: " + estacion_id)
-		_actualizar_indicador_estacion("")
-		return
-
-	var origen: Vector2i = grafo_piso.posicion_a_celda(jugador.global_position)
-	var destino: Vector2i = GrafoPiso.DESTINOS[estacion_id]
-
-	ruta_actual = grafo_piso.calcular_ruta(origen, destino)
+	_denuncia_orientada_id = denuncia.id if denuncia != null else ""
+	_estaciones_pendientes.clear()
+	if denuncia != null:
+		_estaciones_pendientes = denuncia.obtener_estaciones_pendientes()
+	_celda_ruta = grafo_piso.posicion_a_celda(jugador.global_position)
+	var destinos: Array[Vector2i] = []
+	for estacion_id: String in _estaciones_pendientes:
+		if GrafoPiso.DESTINOS.has(estacion_id):
+			destinos.append(GrafoPiso.DESTINOS[estacion_id])
+	var origen: Vector2i = grafo_piso.celda_de_acceso(jugador.global_position)
+	ruta_actual = grafo_piso.calcular_ruta_a_mas_cercana(origen, destinos)
+	estacion_sugerida = ""
+	if not ruta_actual.is_empty():
+		for estacion_id: String in _estaciones_pendientes:
+			if GrafoPiso.DESTINOS.get(estacion_id) == ruta_actual.back():
+				estacion_sugerida = estacion_id
+				break
 	depurador_grafo.actualizar_ruta(ruta_actual)
-	_actualizar_indicador_estacion(estacion_id)
-	_depurar_ruta(origen, destino, ruta_actual)
-
-	print("Ruta hacia ", estacion_id, ": ", ruta_actual)
+	_actualizar_indicadores_estaciones()
 
 
 func _crear_indicadores_estaciones() -> void:
@@ -251,22 +372,19 @@ func _crear_indicadores_estaciones() -> void:
 	print("[Orientación] Indicadores creados: ", indicadores_estaciones.size())
 
 
-func _actualizar_indicador_estacion(estacion_objetivo: String) -> void:
+func _actualizar_indicadores_estaciones() -> void:
 	for estacion_id: String in indicadores_estaciones:
 		var indicador := indicadores_estaciones[estacion_id] as IndicadorProximaEstacion
 		if is_instance_valid(indicador):
-			var activo := estacion_id == estacion_objetivo
+			var activo := _estaciones_pendientes.has(estacion_id)
 			if indicador.visible != activo or indicador.is_processing() != activo:
 				indicador.establecer_activo(activo)
-	guia_estacion.establecer_objetivo(indicadores_estaciones.get(estacion_objetivo) as IndicadorProximaEstacion)
-
-	if not estacion_objetivo.is_empty() and not indicadores_estaciones.has(estacion_objetivo):
-		push_warning("No hay indicador visual para la estación: " + estacion_objetivo)
+	guia_estacion.establecer_objetivo(indicadores_estaciones.get(estacion_sugerida) as IndicadorProximaEstacion)
 
 
 func _on_denuncias_actualizadas(_denuncias: Array[Denuncia]) -> void:
 	# Esta señal llega después de limpiar el caso activo al resolver o vencer.
-	# Sincronizar solo el marcador evita recalcular rutas al cambiar la cola.
+	# Los cambios en otros casos de la cola no alteran la orientación del activo.
 	_sincronizar_indicador_con_despacho()
 
 
@@ -276,15 +394,12 @@ func _on_estacion_completada(_denuncia: Denuncia, _estacion_id: String) -> void:
 
 func _sincronizar_indicador_con_despacho() -> void:
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
-	var estacion_objetivo: String = ""
-	if denuncia != null and denuncia.indice_estacion_actual < denuncia.protocolo_estaciones.size():
-		var siguiente: String = denuncia.protocolo_estaciones[denuncia.indice_estacion_actual]
-		if GrafoPiso.DESTINOS.has(siguiente):
-			estacion_objetivo = siguiente
-	_actualizar_indicador_estacion(estacion_objetivo)
-	if estacion_objetivo.is_empty() and not ruta_actual.is_empty():
-		ruta_actual.clear()
-		depurador_grafo.actualizar_ruta(ruta_actual)
+	var id := denuncia.id if denuncia != null else ""
+	var pendientes: Array[String] = []
+	if denuncia != null:
+		pendientes = denuncia.obtener_estaciones_pendientes()
+	if id != _denuncia_orientada_id or pendientes != _estaciones_pendientes:
+		_calcular_ruta_a_proxima_estacion()
 
 
 func _on_temporizador_bloqueos_timeout() -> void:
@@ -293,12 +408,13 @@ func _on_temporizador_bloqueos_timeout() -> void:
 func _cambiar_bloqueo_temporal() -> void:
 	_limpiar_bloqueos_temporales()
 
-	var celda_jugador: Vector2i = grafo_piso.posicion_a_celda(
+	var celda_jugador: Vector2i = grafo_piso.celda_de_acceso(
 		jugador.global_position
 	)
 
 	var destinos_protegidos: Array[Vector2i] = []
 	var libres_al_inicio := grafo_piso.celdas_alcanzables(celda_jugador)
+	var minimo_libres := mini(2, libres_al_inicio.size())
 	for destino: Vector2i in GrafoPiso.DESTINOS.values():
 		if libres_al_inicio.has(destino):
 			destinos_protegidos.append(destino)
@@ -310,6 +426,7 @@ func _cambiar_bloqueo_temporal() -> void:
 		Vector2(limites.size.x, limites.size.z)
 	).grow(jugador.safe_margin)
 	var tamano_celda := Vector2.ONE * GrafoPiso.TAMANO_CELDA
+	var huella_papel := _huella_papel_suelto()
 
 	var candidatos: Array[Vector2i] = []
 
@@ -334,12 +451,10 @@ func _cambiar_bloqueo_temporal() -> void:
 			var huella_cajon := Rect2(Vector2(centro.x, centro.z) - tamano_celda * 0.5, tamano_celda)
 			if huella_cajon.intersects(huella_jugador):
 				continue
+			if huella_papel.has_area() and huella_cajon.intersects(huella_papel):
+				continue
 
 			candidatos.append(celda)
-
-	if candidatos.is_empty():
-		push_warning("No hay celdas disponibles para un bloqueo temporal.")
-		return
 
 	var bloqueos_colocados: int = 0
 	while not candidatos.is_empty() and bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
@@ -353,7 +468,7 @@ func _cambiar_bloqueo_temporal() -> void:
 
 		grafo_piso.bloqueos_temporales[candidata] = true
 		var libres := grafo_piso.celdas_alcanzables(celda_jugador)
-		var hay_ruta := libres.size() > 1
+		var hay_ruta := libres.size() >= minimo_libres
 		for destino: Vector2i in destinos_protegidos:
 			if not libres.has(destino):
 				hay_ruta = false
@@ -371,12 +486,23 @@ func _cambiar_bloqueo_temporal() -> void:
 	_calcular_ruta_a_proxima_estacion()
 
 	if bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
-		push_warning(
+		print(
 			"Solo se colocaron %d de %d bloqueos sin cerrar la ruta."
 			% [bloqueos_colocados, BLOQUEOS_SIMULTANEOS]
 		)
 	else:
 		print("Bloqueos temporales activos: ", bloqueos_colocados)
+
+
+func _huella_papel_suelto() -> Rect2:
+	if not is_instance_valid(papel_actual) or papel_actual.portador != null:
+		return Rect2()
+	var posicion := Vector2(papel_actual.global_position.x, papel_actual.global_position.z)
+	var tamano := Vector2(PapelDenuncia.TAMANO.x, PapelDenuncia.TAMANO.z)
+	var actual := Rect2(posicion - tamano * 0.5, tamano)
+	# Reservar también el trayecto breve si cambia la distribución durante el vuelo.
+	var avance := Vector2(papel_actual.linear_velocity.x, papel_actual.linear_velocity.z) * 0.65
+	return actual.merge(Rect2(actual.position + avance, tamano)).grow(0.15)
 
 func _depurar_ruta(
 	origen: Vector2i,
@@ -421,9 +547,13 @@ func _mostrar_bloqueo_temporal(celda: Vector2i) -> void:
 
 
 func _limpiar_bloqueos_temporales() -> void:
+	var habia_bloqueos := not bloqueos_visuales.is_empty()
 	for bloqueo_visual: Node3D in bloqueos_visuales.values():
 		if is_instance_valid(bloqueo_visual):
 			bloqueo_visual.queue_free()
+	# Un RigidBody3D dormido no siempre despierta al retirar el soporte con queue_free.
+	if habia_bloqueos and is_instance_valid(papel_actual) and papel_actual.portador == null:
+		papel_actual.sleeping = false
 
 	bloqueos_visuales.clear()
 	grafo_piso.bloqueos_temporales.clear()

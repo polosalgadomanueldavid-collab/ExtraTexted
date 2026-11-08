@@ -7,7 +7,7 @@ signal denuncia_resuelta(denuncia: Denuncia)
 signal denuncia_vencida(denuncia: Denuncia)
 signal partida_terminada
 signal estacion_completada(denuncia: Denuncia, estacion_id: String)
-signal estacion_incorrecta(denuncia: Denuncia, estacion_esperada: String)
+signal estacion_incorrecta(denuncia: Denuncia, estacion_usada: String)
 
 const CALMA_MAXIMA: int = 100
 const CALMA_RECUPERADA_AL_RESOLVER: int = 5
@@ -34,6 +34,7 @@ func recibir_denuncia(denuncia: Denuncia) -> bool:
 		return false
 
 	denuncia.estado = Denuncia.Estado.PENDIENTE
+	denuncia.estaciones_completadas.clear()
 	arbol.insertar(denuncia)
 	tiempos_restantes[denuncia.id] = denuncia.tiempo_limite_segundos
 
@@ -147,26 +148,16 @@ func interactuar_estacion(estacion_id: String) -> bool:
 	var denuncia: Denuncia = obtener_denuncia_activa()
 
 	if denuncia == null:
-		push_warning("No hay una denuncia activa.")
 		return false
 
-	if denuncia.indice_estacion_actual >= denuncia.protocolo_estaciones.size():
-		push_warning("La denuncia ya completó todas sus estaciones.")
+	if not denuncia.completar_estacion(estacion_id):
+		estacion_incorrecta.emit(denuncia, estacion_id)
 		return false
 
-	var estacion_esperada: String = denuncia.protocolo_estaciones[
-		denuncia.indice_estacion_actual
-	]
-
-	if estacion_id != estacion_esperada:
-		estacion_incorrecta.emit(denuncia, estacion_esperada)
-		return false
-
-	denuncia.indice_estacion_actual += 1
 	estacion_completada.emit(denuncia, estacion_id)
 
-	# La última estación del protocolo cierra la denuncia correctamente.
-	if denuncia.indice_estacion_actual >= denuncia.protocolo_estaciones.size():
+	# Cualquier estación puede ser la última: cerrar cuando no quede ninguna pendiente.
+	if denuncia.obtener_estaciones_pendientes().is_empty():
 		resolver_denuncia(denuncia.id)
 
 	return true

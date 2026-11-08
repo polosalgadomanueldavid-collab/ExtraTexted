@@ -7,17 +7,17 @@ const TAMANO_CAPTURA := Vector2(368, 207)
 const PASOS := [
 	[
 		"Recibe una denuncia",
-		"Cuando llegue un caso a la barra de denuncias, acércate al computador y pulsa E para aceptar el más urgente.",
+		"Cuando llegue un caso, acércate al computador o a su silla y pulsa E. Recibirás la hoja de la denuncia más urgente.",
 		preload("res://UI/Menus/ArtePiloto/tutorial_denuncia.webp"),
 	],
 	[
-		"Ve a la estación indicada",
-		"Pulsa E para salir del computador. Sigue el icono de la próxima estación. Si queda fuera de vista, la flecha indica la dirección.",
+		"Elige una estación pendiente",
+		"Lleva la hoja a las estaciones marcadas en cualquier orden. E la lanza cuando miras a un espacio libre; E también la recoge. La flecha sugiere la estación más cercana.",
 		preload("res://UI/Menus/ArtePiloto/tutorial_estacion.webp"),
 	],
 	[
 		"Completa el protocolo",
-		"Ponte frente a la estación y pulsa E. Completa todos los pasos antes de que se agote el tiempo para ganar puntos.",
+		"Con la hoja en la mano, ponte frente a cada estación y pulsa E una vez. Al completar todas, el caso se cierra automáticamente y ganas puntos.",
 		preload("res://UI/Menus/ArtePiloto/tutorial_protocolo.webp"),
 	],
 ]
@@ -25,7 +25,9 @@ const CONTROLES := [
 	["W A S D  /  ↑ ← ↓ →", "Moverse por la oficina"],
 	["Mayús", "Correr mientras te mueves"],
 	["Espacio", "Saltar"],
-	["E", "Usar una estación o entrar y salir del computador"],
+	["C  /  1 · 2 · 3", "Cámara: actual, frontal o God (desde arriba)"],
+	["M", "Activar o desactivar el balanceo de cámara"],
+	["E", "Imprimir, usar estación, lanzar o recoger la hoja"],
 	["Mantener Tab", "Ver la clasificación durante la partida"],
 	["Esc", "Pausar o volver a la pantalla anterior"],
 	["Tab  /  Mayús + Tab", "Recorrer las opciones del menú"],

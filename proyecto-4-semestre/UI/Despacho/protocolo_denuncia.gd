@@ -1,12 +1,11 @@
 extends Control
-## Secuencia plana de estaciones: completada, actual y pendiente.
+## Lista de estaciones independientes: pendiente o completada, en cualquier orden.
 
 var estaciones: Array[String] = []
-var indice_actual: int = 0
+var completadas: Array[String] = []
 const TINTA := Color("173b50")
 const CORAL := Color("ff785f")
 const COMPLETADA := Color("16b6b6")
-const PENDIENTE := Color("819cb0")
 const ICONO := preload("res://UI/Despacho/icono_despacho.gd")
 
 
@@ -15,11 +14,11 @@ func _ready() -> void:
 	resized.connect(queue_redraw)
 
 
-func configurar(nuevas_estaciones: Array[String], nuevo_indice: int) -> void:
-	if estaciones == nuevas_estaciones and indice_actual == nuevo_indice:
+func configurar(nuevas_estaciones: Array[String], nuevas_completadas: Array[String]) -> void:
+	if estaciones == nuevas_estaciones and completadas == nuevas_completadas:
 		return
 	estaciones = nuevas_estaciones.duplicate()
-	indice_actual = nuevo_indice
+	completadas = nuevas_completadas.duplicate()
 	queue_redraw()
 
 
@@ -29,14 +28,11 @@ func _draw() -> void:
 	var ancho_paso := size.x / estaciones.size()
 	var radio := minf(19, ancho_paso * 0.24)
 	var y := 22.0
-	if estaciones.size() > 1:
-		draw_line(Vector2(ancho_paso * 0.5, y), Vector2(size.x - ancho_paso * 0.5, y), TINTA, 2, true)
 	var fuente := get_theme_font("font", "Label")
 	for indice: int in range(estaciones.size()):
 		var centro := Vector2(ancho_paso * (indice + 0.5), y)
-		var completada := indice < indice_actual
-		var actual := indice == indice_actual
-		var color := COMPLETADA if completada else (CORAL if actual else PENDIENTE)
+		var completada := completadas.has(estaciones[indice])
+		var color := COMPLETADA if completada else CORAL
 		draw_circle(centro, radio, color)
 		draw_arc(centro, radio, 0, TAU, 40, TINTA, 1.8, true)
 		var id := estaciones[indice]

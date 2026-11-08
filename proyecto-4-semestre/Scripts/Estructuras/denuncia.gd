@@ -27,7 +27,31 @@ enum Estado {
 @export var protocolo_estaciones: Array[String] = []
 
 var estado: Estado = Estado.PENDIENTE
-var indice_estacion_actual: int = 0
+var estaciones_completadas: Array[String] = []
+
+
+func obtener_estaciones_requeridas() -> Array[String]:
+	# El orden del recurso solo organiza la presentación. Cada estación cuenta una vez.
+	var requeridas: Array[String] = []
+	for estacion_id: String in protocolo_estaciones:
+		if not estacion_id.is_empty() and not requeridas.has(estacion_id):
+			requeridas.append(estacion_id)
+	return requeridas
+
+
+func obtener_estaciones_pendientes() -> Array[String]:
+	var pendientes: Array[String] = []
+	for estacion_id: String in obtener_estaciones_requeridas():
+		if not estaciones_completadas.has(estacion_id):
+			pendientes.append(estacion_id)
+	return pendientes
+
+
+func completar_estacion(estacion_id: String) -> bool:
+	if not obtener_estaciones_pendientes().has(estacion_id):
+		return false
+	estaciones_completadas.append(estacion_id)
+	return true
 
 
 func obtener_puntaje_recompensa() -> int:

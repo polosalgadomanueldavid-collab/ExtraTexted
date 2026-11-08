@@ -88,8 +88,35 @@ VerClasificacion={
 ]
 }
 
+CambiarCamara={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":67)
+]
+}
+CamaraActual={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":49)
+]
+}
+CamaraFrontal={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":50)
+]
+}
+CamaraGod={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":51)
+]
+}
+AlternarBalanceoCamara={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":77)
+]
+}
+
 [layer_names]
 
+3d_render/layer_20="Oclusores de cámara"
 3d_physics/layer_1="Mundo"
 3d_physics/layer_2="Jugador"
 3d_physics/layer_3="Interactuar"

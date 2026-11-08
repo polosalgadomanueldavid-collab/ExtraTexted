@@ -41,6 +41,8 @@ func establecer_objetivo(nuevo_objetivo: IndicadorProximaEstacion) -> void:
 	icono.tipo = ICONO.tipo_estacion(objetivo.estacion_id)
 	icono.queue_redraw()
 	rotulo.text = ICONO.nombre_estacion(objetivo.estacion_id)
+	# Recalcula el ancho también al pasar de un nombre largo a uno corto.
+	tarjeta.reset_size()
 
 
 func actualizar(barra_despacho: Control, usando_computador: bool) -> void:

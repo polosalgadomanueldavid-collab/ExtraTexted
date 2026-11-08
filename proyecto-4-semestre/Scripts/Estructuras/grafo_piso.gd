@@ -33,7 +33,11 @@ const CELDAS_BLOQUEADAS_FIJAS: Array[Vector2i] = [
 	Vector2i(1, 0),
 	Vector2i(4, 0),
 	Vector2i(1, 12),
-	Vector2i(12, 12)
+	Vector2i(12, 12),
+	# Taco de luz de la pared derecha. La aproximación queda en la columna 12.
+	Vector2i(13, 15),
+	Vector2i(13, 16),
+	Vector2i(13, 17)
 ]
 
 const DIRECCIONES: Array[Vector2i] = [
@@ -95,6 +99,27 @@ func posicion_a_celda(posicion: Vector3) -> Vector2i:
 	return Vector2i(columna, fila)
 
 
+func celda_de_acceso(posicion: Vector3) -> Vector2i:
+	# Una mesa puede bloquear parte de una celda mientras el personaje cabe
+	# en el borde libre. Proyectar al grafo sin abrir la celda de la mesa.
+	var actual := posicion_a_celda(posicion)
+	if es_transitable(actual):
+		return actual
+	var cercana := Vector2i(-1, -1)
+	var menor_distancia := INF
+	for fila: int in range(FILAS):
+		for columna: int in range(COLUMNAS):
+			var celda := Vector2i(columna, fila)
+			if not es_transitable(celda):
+				continue
+			var centro := celda_a_posicion(celda)
+			var distancia := Vector2(centro.x - posicion.x, centro.z - posicion.z).length_squared()
+			if distancia < menor_distancia:
+				menor_distancia = distancia
+				cercana = celda
+	return cercana
+
+
 func construir_adyacencia() -> void:
 	adyacencia.clear()
 
@@ -133,8 +158,14 @@ func celdas_alcanzables(origen: Vector2i) -> Dictionary:
 
 
 func calcular_ruta(origen: Vector2i, destino: Vector2i) -> Array[Vector2i]:
-	if not adyacencia.has(origen) or not adyacencia.has(destino):
+	return calcular_ruta_a_mas_cercana(origen, [destino])
+
+
+func calcular_ruta_a_mas_cercana(origen: Vector2i, destinos: Array[Vector2i]) -> Array[Vector2i]:
+	# Un solo Dijkstra: termina al alcanzar el primer destino pendiente.
+	if not adyacencia.has(origen) or destinos.is_empty():
 		return []
+	var destino := Vector2i(-1, -1)
 
 	var infinito: float = INF
 	var distancias: Dictionary = {}
@@ -159,7 +190,8 @@ func calcular_ruta(origen: Vector2i, destino: Vector2i) -> Array[Vector2i]:
 		if actual == Vector2i(-1, -1):
 			break
 
-		if actual == destino:
+		if destinos.has(actual):
+			destino = actual
 			break
 
 		sin_visitar.erase(actual)
@@ -171,7 +203,7 @@ func calcular_ruta(origen: Vector2i, destino: Vector2i) -> Array[Vector2i]:
 				distancias[vecina] = distancia_nueva
 				anterior[vecina] = actual
 
-	if origen != destino and not anterior.has(destino):
+	if destino == Vector2i(-1, -1):
 		return []
 
 	var ruta: Array[Vector2i] = [destino]

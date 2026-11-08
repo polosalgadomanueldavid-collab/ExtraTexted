@@ -67,6 +67,10 @@ func _probar() -> void:
 		_sistema.resolver_denuncia(caso.id)
 	modelo_reserva.free()
 	await _probar_vencimiento()
+	await _probar_orden_libre_con_tecla()
+	await _probar_silla_computador()
+	await _probar_papel_sin_mesa_encima()
+	await _probar_caida_sobre_mesa_temporal()
 	await _probar_reconfiguracion()
 	get_tree().paused = false
 	_oficina.queue_free()
@@ -164,7 +168,7 @@ func _probar_protocolo_con_tecla(caso: Denuncia, postura: Dictionary) -> void:
 	await _esperar_efecto()
 	_pulsar_interaccion()
 	await get_tree().process_frame
-	_verificar(caso.indice_estacion_actual == 1, "La misma tecla E completa la estación iluminada")
+	_verificar(caso.estaciones_completadas == ["bienestar"], "La misma tecla E completa la estación iluminada")
 	_verificar(caso.estado == Denuncia.Estado.RESUELTA, "E en bienestar resuelve su protocolo completo")
 	_validar_interactuables("", "al resolver el primer protocolo")
 	for indicador: IndicadorProximaEstacion in _indicadores.values():
@@ -185,6 +189,166 @@ func _probar_protocolo_con_tecla(caso: Denuncia, postura: Dictionary) -> void:
 	_validar_interactuables("", "al resolver el caso completo")
 	for indicador: IndicadorProximaEstacion in _indicadores.values():
 		_verificar(not indicador.visible and is_zero_approx(float(indicador.get("_intensidad_interaccion"))), "Resolver oculta y reinicia el efecto de " + indicador.estacion_id)
+
+
+func _probar_orden_libre_con_tecla() -> void:
+	var caso := _recibir_caso("ORDEN-LIBRE-CON-TECLA", ["evidencias", "verificacion", "privacidad", "reporte"])
+	var hoja := _jugador.papel_en_mano
+	_verificar(is_instance_valid(hoja) and hoja.denuncia_id == caso.id, "El computador entrega una hoja vinculada al caso")
+	_verificar(_oficina.panel_despacho.mensaje_estacion.text == "Ve con la denuncia.", "El aviso verde muestra solo la instrucción breve")
+	if is_instance_valid(hoja):
+		hoja.lanzar()
+		_verificar(_jugador.papel_en_mano == null and hoja.portador == null and not hoja.freeze, "E puede lanzar la hoja física")
+		_verificar((_jugador.collision_mask & hoja.collision_layer) == 0 and (hoja.collision_mask & 1) != 0, "La hoja choca con el suelo pero no con el jugador")
+		_verificar((hoja.get_node("HojaVisual") as MeshInstance3D).material_overlay != null, "La hoja suelta usa el contorno de interacción")
+		var marcador := hoja.get_node("MarcadorRecoger") as Node3D
+		_verificar(marcador.visible and marcador.has_node("ManoRecoger/ManoGuante") and (marcador.get_node("LetraE") as Label3D).text == "E", "La hoja suelta muestra una mano modelada y la tecla E")
+		_verificar(Vector2(hoja.linear_velocity.x, hoja.linear_velocity.z).length() <= 1.5, "La hoja sale con un impulso corto")
+		_oficina.interactuar_estacion_con_papel(_jugador, "reporte")
+		_verificar(caso.estaciones_completadas.is_empty(), "Sin llevar la hoja, las estaciones rechazan el trámite")
+		await get_tree().process_frame
+		_verificar(_jugador.obtener_objetivo_interaccion() == hoja, "La hoja lanzada queda al alcance de E")
+		await _capturar("06_hoja_suelta")
+		_pulsar_interaccion()
+		await get_tree().process_frame
+		_verificar(_jugador.papel_en_mano == hoja and hoja.freeze, "E recoge la hoja y conserva su caso")
+		_verificar((hoja.get_node("HojaVisual") as MeshInstance3D).material_overlay == null, "La hoja en mano retira el contorno del suelo")
+		_verificar(not (hoja.get_node("MarcadorRecoger") as Node3D).visible, "La mano de recogida desaparece al llevar la hoja")
+	var panel := _oficina.panel_despacho as PanelDespacho
+	var saldo := _sistema.puntuacion.puntos
+	var orden: Array[String] = ["reporte", "privacidad", "verificacion", "evidencias"]
+	await _capturar("04_todas_pendientes")
+	for estacion_id: String in orden:
+		var postura := _buscar_postura(_estaciones[estacion_id] as Estacion)
+		_verificar(not postura.is_empty(), "La estación %s es accesible para completarla fuera de orden" % estacion_id)
+		if postura.is_empty():
+			return
+		_colocar(postura["cerca"], float(postura["giro"]))
+		await _esperar_efecto()
+		_validar_interactuables(estacion_id, "al elegir libremente " + estacion_id)
+		_pulsar_interaccion()
+		await get_tree().process_frame
+		_verificar(caso.estaciones_completadas.has(estacion_id), "E completa %s sin exigir otra estación primero" % estacion_id)
+		for id: String in _indicadores:
+			_verificar((_indicadores[id] as Node3D).visible == caso.obtener_estaciones_pendientes().has(id), "Solo permanecen visibles las estaciones pendientes")
+		if caso.estado == Denuncia.Estado.EN_PROCESO:
+			_verificar(panel.protocolo.completadas == caso.estaciones_completadas, "El panel marca la estación realmente visitada")
+			_verificar(_sistema.puntuacion.puntos == saldo, "Un caso incompleto no da puntos")
+			_pulsar_interaccion()
+			await get_tree().process_frame
+			_verificar(panel.mensaje_estacion.text.begins_with("Ya completaste"), "Repetir una estación muestra un aviso específico")
+			_verificar(caso.estaciones_completadas.size() == orden.find(estacion_id) + 1, "Repetir E conserva el avance")
+			if estacion_id == "reporte":
+				await _capturar("05_reporte_primero")
+	_verificar(caso.estado == Denuncia.Estado.RESUELTA and _sistema.obtener_denuncia_activa() == null, "La última estación pendiente cierra el caso sin volver al computador")
+	_verificar(_jugador.papel_en_mano == null and _oficina.papel_actual == null, "Resolver retira la hoja del caso")
+	_verificar(_sistema.puntuacion.puntos == saldo + caso.obtener_puntaje_recompensa(), "El cierre libre concede una sola recompensa")
+	_verificar(not panel.denuncia_activa_detalle.visible and not _oficina.guia_estacion.visible and _oficina.ruta_actual.is_empty(), "Cerrar retira tarjeta, guía y ruta")
+
+
+func _probar_silla_computador() -> void:
+	var silla := _oficina.get_node("Mesas Horizontales UP/Table_010/Chair_002/InteraccionComputador") as SillaComputador
+	_verificar(is_instance_valid(silla), "La silla frente al computador ofrece la interacción")
+	if not is_instance_valid(silla):
+		return
+	_verificar((_jugador.collision_mask & silla.collision_layer) == 0, "La zona de interacción de la silla no bloquea al personaje")
+	var caso := Denuncia.new()
+	caso.id = "PC-DESDE-SILLA"
+	caso.protocolo_estaciones = ["reporte"]
+	caso.tiempo_limite_segundos = 120.0
+	_sistema.recibir_denuncia(caso)
+	var al_alcance := false
+	var colision := _jugador.get_node("Colision") as CollisionShape3D
+	for distancia: float in [0.55, 0.65, 0.75, 0.85]:
+		_colocar(Vector3(silla.global_position.x, _altura_pies, silla.global_position.z + distancia), PI)
+		var consulta := PhysicsShapeQueryParameters3D.new()
+		consulta.shape = colision.shape
+		consulta.transform = colision.global_transform
+		consulta.collision_mask = 1
+		consulta.exclude = [_jugador.get_rid()]
+		var espacio_libre := _jugador.get_world_3d().direct_space_state.intersect_shape(consulta, 1).is_empty()
+		if espacio_libre and _jugador.obtener_objetivo_interaccion() == silla:
+			al_alcance = true
+			break
+	_verificar(al_alcance, "E alcanza la silla desde delante sin pegarse a la pantalla")
+	if al_alcance:
+		_pulsar_interaccion()
+		await get_tree().process_frame
+		_verificar(_sistema.obtener_denuncia_activa() == caso and is_instance_valid(_jugador.papel_en_mano), "E en la silla entrega la denuncia del computador")
+		_verificar(not _oficina.computador.is_using and not _jugador.input_locked, "La silla no abre el panel ni inmoviliza al jugador")
+	_sistema.resolver_denuncia(caso.id)
+
+
+func _probar_papel_sin_mesa_encima() -> void:
+	_oficina._limpiar_bloqueos_temporales()
+	var grafo_original := _oficina.grafo_piso as GrafoPiso
+	_jugador.global_position = grafo_original.celda_a_posicion(Vector2i(7, 15)) + Vector3.UP * _altura_pies
+	_jugador.visual.rotation.y = 0.0
+	var papel := PapelDenuncia.new()
+	_oficina.add_child(papel)
+	_oficina.papel_actual = papel
+	papel.tomar(_jugador)
+	var salida := _jugador.global_position
+	papel.lanzar()
+	await _fisicas(90)
+	var distancia := Vector2(papel.global_position.x - salida.x, papel.global_position.z - salida.z).length()
+	_verificar(distancia < 1.2, "La hoja cae cerca del jugador después del lanzamiento completo")
+	papel.freeze = true
+	papel.linear_velocity = Vector3.ZERO
+	papel.angular_velocity = Vector3.ZERO
+	var limitado := GrafoPiso.new()
+	var libres: Array[Vector2i] = [Vector2i(7, 15)]
+	for x: int in range(4, 11):
+		libres.append(Vector2i(x, 14))
+	var huecos: Array[Vector2i] = [Vector2i(5, 13), Vector2i(7, 13), Vector2i(9, 13)]
+	libres.append_array(huecos)
+	limitado.bloqueos_fijos.clear()
+	for fila: int in range(GrafoPiso.FILAS):
+		for columna: int in range(GrafoPiso.COLUMNAS):
+			var celda := Vector2i(columna, fila)
+			if not libres.has(celda):
+				limitado.bloqueos_fijos[celda] = true
+	limitado.construir_adyacencia()
+	_oficina.grafo_piso = limitado
+	_oficina.depurador_grafo.grafo = limitado
+	_jugador.global_position = limitado.celda_a_posicion(Vector2i(7, 15)) + Vector3.UP * _altura_pies
+	papel.global_position = limitado.celda_a_posicion(huecos[1]) + Vector3.UP * 0.1
+	_oficina._cambiar_bloqueo_temporal()
+	_verificar(limitado.bloqueos_temporales.size() == 2, "Los otros dos huecos reciben mesa cuando el tercero contiene la hoja")
+	_verificar(not limitado.bloqueos_temporales.has(huecos[1]), "La casilla donde cayó la hoja queda libre")
+	_oficina.papel_actual = null
+	papel.queue_free()
+	_oficina._limpiar_bloqueos_temporales()
+	_oficina.grafo_piso = grafo_original
+	_oficina.depurador_grafo.grafo = grafo_original
+	await get_tree().process_frame
+
+
+func _probar_caida_sobre_mesa_temporal() -> void:
+	var centro: Vector3 = _oficina.grafo_piso.celda_a_posicion(Vector2i(7, 15))
+	var mesa := preload("res://BloqueoTemporal.tscn").instantiate() as StaticBody3D
+	_oficina.add_child(mesa)
+	mesa.global_position = centro
+	await _fisicas(3)
+	var hoja := PapelDenuncia.new()
+	_oficina.add_child(hoja)
+	_oficina.papel_actual = hoja
+	_oficina.bloqueos_visuales[Vector2i(7, 15)] = mesa
+	_colocar(centro - Vector3(0.0, 0.0, 0.5) + Vector3.UP * _altura_pies, 0.0)
+	hoja.tomar(_jugador)
+	hoja.lanzar()
+	await _fisicas(90)
+	_verificar(hoja.global_position.y >= 0.91 and absf(hoja.global_position.x - centro.x) < 0.25 and absf(hoja.global_position.z - centro.z) < 0.25, "La hoja lanzada desde la casilla vecina reposa sobre la superficie visible de la mesa temporal")
+	_verificar(_jugador.obtener_objetivo_interaccion() == hoja, "La hoja sobre la mesa temporal sigue al alcance de E")
+	await _capturar("07_hoja_sobre_mesa")
+	_oficina._limpiar_bloqueos_temporales()
+	await get_tree().process_frame
+	await _fisicas(90)
+	_verificar(hoja.global_position.y < 0.45, "Al desaparecer la mesa temporal, la hoja cae al piso")
+	await _capturar("08_hoja_tras_mesa")
+	_oficina.papel_actual = null
+	hoja.queue_free()
+	await get_tree().process_frame
 
 
 func _probar_vencimiento() -> void:
@@ -270,7 +434,8 @@ func _recibir_caso(id: String, protocolo: Array[String]) -> Denuncia:
 	caso.tiempo_limite_segundos = 120.0
 	caso.protocolo_estaciones = protocolo
 	_verificar(_sistema.recibir_denuncia(caso), "El despacho recibe " + id)
-	_verificar(_sistema.iniciar_denuncia_prioritaria() == caso, "El despacho activa " + id)
+	_oficina._entregar_papel(_jugador)
+	_verificar(_sistema.obtener_denuncia_activa() == caso and is_instance_valid(_jugador.papel_en_mano), "El computador activa el caso y entrega su hoja " + id)
 	return caso
 
 
