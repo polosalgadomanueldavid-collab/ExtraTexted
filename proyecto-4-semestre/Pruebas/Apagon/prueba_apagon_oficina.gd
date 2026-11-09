@@ -54,9 +54,9 @@ func _probar() -> void:
 	await _capturar("00_oficina_con_luz")
 	_guardar_luces()
 	await _probar_cajones()
-	for tipo: int in range(4):
+	for tipo: int in TIPOS_CIRCUITO:
 		await _probar_circuito(tipo)
-	_verificar(_restauraciones == 4, "Los cuatro circuitos restauran la oficina exactamente una vez")
+	_verificar(_restauraciones == 3, "Los tres circuitos restauran la oficina exactamente una vez")
 	_verificar(float(_despacho.tiempos_restantes[_caso_activo.id]) < 300.0, "El tiempo de la denuncia sigue avanzando durante las reparaciones")
 	_verificar(_caso_activo.estaciones_completadas.is_empty(), "Reparar la luz conserva el protocolo de la denuncia")
 	await _probar_salida_durante_apagon()
@@ -166,6 +166,7 @@ func _probar_circuito(tipo: int) -> void:
 	_verificar(int(_evento.get("estado")) == 2 and _panel.visible, "E abre el circuito %d desde la aproximación real de Oficina" % tipo)
 	if not _panel.visible:
 		return
+	await _esperar_entrada()
 	_verificar(_jugador.get("input_locked") and not paused, "El circuito bloquea movimiento mientras la denuncia sigue activa")
 	await _comprobar_clasificacion()
 	await _probar_reapertura(tipo)
@@ -213,13 +214,23 @@ func _probar_pausa() -> void:
 	_verificar(not paused, "Escape reanuda la partida")
 	await _pulsar_tecla(KEY_E)
 	_verificar(_panel.visible and int(_evento.get("estado")) == 2, "Tras reanudar E recupera el circuito pendiente")
+	await _esperar_entrada()
 
 
 func _probar_pc() -> void:
 	var computador: Node = _escena.get("computador")
-	computador.call("interactuar", _jugador)
-	await _cuadros(3)
-	_verificar(not bool(computador.get("is_using")) and is_instance_valid((_jugador as Player).papel_en_mano), "El computador entrega el papel durante el apagón sin abrir su panel")
+	var taco_original := _taco
+	_taco = _escena.find_child("InteraccionComputador", true, false) as StaticBody3D
+	var postura_silla := _buscar_postura() if _taco != null else {}
+	_taco = taco_original
+	_verificar(not postura_silla.is_empty(), "La silla ofrece una aproximación física válida para recibir la denuncia")
+	if postura_silla.is_empty():
+		return
+	_colocar(postura_silla["cerca"], float(postura_silla["giro"]))
+	await _pulsar_tecla(KEY_E)
+	await create_timer(0.85).timeout
+	var papel := _jugador.get("papel_en_mano") as Node3D
+	_verificar(not bool(computador.get("is_using")) and is_instance_valid(papel), "E en la silla entrega el papel al contacto del gesto durante el apagón")
 	_verificar(root.get_camera_3d() == _camara, "Imprimir conserva la cámara de la oficina")
 	_verificar((_evento.get("mascara") as ColorRect).visible, "La visión limitada permanece al imprimir")
 	var semilla: int = _evento.get("semilla_circuito")
@@ -234,11 +245,12 @@ func _probar_pc() -> void:
 	await create_timer(0.2).timeout
 	_verificar(is_equal_approx(float(_despacho.tiempos_restantes[_caso_activo.id]), tiempo), "La pausa detiene el tiempo de denuncia")
 	await _pulsar_tecla(KEY_ESCAPE)
-	_verificar(not paused and is_instance_valid((_jugador as Player).papel_en_mano), "Reanudar conserva la hoja")
+	_verificar(not paused and is_instance_valid(_jugador.get("papel_en_mano")), "Reanudar conserva la hoja")
 	_jugador.set_physics_process(false)
 	await _cuadros(3)
 	_verificar(not bool(computador.get("is_using")) and root.get_camera_3d() == _camara, "La pantalla del computador permanece deshabilitada")
 	_verificar((_evento.get("mascara") as ColorRect).visible and int(_evento.get("estado")) == 1, "El papel no altera el apagón")
+	_colocar(_postura["cerca"], float(_postura["giro"]))
 
 
 func _colocar(posicion: Vector3, giro: float) -> void:

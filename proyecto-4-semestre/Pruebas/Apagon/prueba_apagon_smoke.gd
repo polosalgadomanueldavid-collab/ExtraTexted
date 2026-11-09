@@ -4,6 +4,7 @@ extends SceneTree
 
 const ESCENA_PRUEBA := "res://Pruebas/Apagon/PruebaApagon.tscn"
 const DIRECTORIO_CAPTURAS := "res://.godot/apagon_qa"
+const TIPOS_CIRCUITO := [0, 2, 3]
 
 var _errores: Array[String] = []
 var _comprobaciones: int = 0
@@ -43,6 +44,10 @@ func _probar() -> void:
 	_taco = _escena.get_node("TacoLuz") as StaticBody3D
 	_camara = _escena.get_node("Camara") as Camera3D
 	_panel = _evento.get("panel") as Control
+	var tipos: Array = _evento.get_script().get_script_constant_map().get("TIPOS_DISPONIBLES", [])
+	tipos = tipos.duplicate()
+	tipos.sort()
+	_verificar(tipos == TIPOS_CIRCUITO, "El evento ofrece exclusivamente interruptores, fases y cables")
 	_verificar(_jugador.is_on_floor(), "El personaje inicia sobre el suelo real del piloto")
 	_altura_pies = _jugador.global_position.y
 	_jugador.set_physics_process(false)
@@ -53,9 +58,9 @@ func _probar() -> void:
 	_verificar(not _panel.visible, "El circuito comienza cerrado")
 	await _capturar("00_laboratorio")
 	_guardar_luces()
-	for tipo: int in range(4):
+	for tipo: int in TIPOS_CIRCUITO:
 		await _probar_circuito(tipo)
-	_verificar(_restauraciones == 4, "Cada uno de los cuatro circuitos restaura la luz una vez")
+	_verificar(_restauraciones == 3, "Cada uno de los tres circuitos restaura la luz una vez")
 	_verificar(_despacho.puntuacion.puntos == _saldo_inicial, "Resolver los circuitos conserva el saldo de denuncias")
 	_verificar(str(ProjectSettings.get_setting("application/run/main_scene", "")) == principal_inicial, "El piloto conserva la escena principal configurada")
 	await _probar_salida_durante_apagon()
@@ -90,14 +95,14 @@ func _probar_circuito(tipo: int) -> void:
 	if tipo == 0:
 		await _pulsar_tecla(KEY_B)
 		_verificar(int(_evento.get("estado")) == 1, "La tecla B normal inicia el apagón del piloto")
-	elif tipo == 1:
+	elif tipo == 2:
 		(_escena.get("boton_apagon") as Button).pressed.emit()
 		await process_frame
 		_verificar(int(_evento.get("estado")) == 1, "El botón del piloto inicia un apagón")
 	else:
 		_verificar(bool(_evento.call("iniciar_apagon")), "El circuito %d inicia un apagón" % tipo)
 	_verificar(int(_evento.get("estado")) == 1, "Iniciar cambia al estado APAGADO")
-	_verificar(int(_evento.get("tipo_circuito")) in [0, 1, 2, 3], "La selección aleatoria elige uno de los cuatro circuitos")
+	_verificar(int(_evento.get("tipo_circuito")) in TIPOS_CIRCUITO, "La selección aleatoria elige uno de los tres circuitos disponibles")
 	var semilla: int = _evento.get("semilla_circuito")
 	var elegido: int = _evento.get("tipo_circuito")
 	_verificar(not bool(_evento.call("iniciar_apagon")), "Un apagón activo rechaza un segundo inicio")
@@ -125,6 +130,7 @@ func _probar_circuito(tipo: int) -> void:
 	_verificar(not bool(_evento.call("iniciar_apagon")), "Reparar un circuito rechaza un segundo apagón")
 	if not _panel.visible:
 		return
+	await _esperar_entrada()
 	await _probar_reapertura(tipo)
 	await _capturar("02_circuito_%d" % tipo)
 	await _resolver_circuito(tipo)
@@ -194,6 +200,7 @@ func _probar_reapertura(tipo: int) -> void:
 	var actual: Dictionary = _panel.call("obtener_estado")
 	_verificar(_panel.visible and actual == anterior, "Reabrir conserva el circuito y su progreso")
 	_panel.set_process(true)
+	await _esperar_entrada()
 
 
 func _hacer_progreso(tipo: int) -> void:
@@ -203,16 +210,13 @@ func _hacer_progreso(tipo: int) -> void:
 			var interruptores: Array = _panel.get("interruptores")
 			_verificar(interruptores.size() == 5, "El primer circuito presenta cinco interruptores")
 			(interruptores[0] as Button).button_pressed = true
+			await create_timer(0.25).timeout
 			_verificar(int(_evento.get("estado")) == 2, "Un interruptor activo conserva incompleto el circuito")
 			(interruptores[0] as Button).button_pressed = false
+			await create_timer(0.25).timeout
 			_verificar(not bool((_panel.call("obtener_estado") as Dictionary).interruptores[0]), "Un interruptor puede volver al estado apagado")
 			(interruptores[0] as Button).button_pressed = true
-		1:
-			var reguladores: Array = _panel.get("reguladores")
-			_verificar(reguladores.size() == 4, "El segundo circuito presenta cuatro reguladores")
-			(reguladores[0] as HSlider).value = float(estado.objetivos[0]) + 10.0
-			_verificar(int(_evento.get("estado")) == 2, "Un regulador fuera del objetivo conserva incompleto el circuito")
-			(reguladores[0] as HSlider).value = float(estado.objetivos[0])
+			await create_timer(0.25).timeout
 		2:
 			var botones: Array = _panel.get("botones_anillos")
 			_verificar(botones.size() == 3, "El tercer circuito presenta tres anillos")
@@ -233,6 +237,7 @@ func _hacer_progreso(tipo: int) -> void:
 			(destinos[(fila_correcta + 1) % 4] as Button).pressed.emit()
 			_verificar(int((_panel.call("obtener_estado") as Dictionary).conexiones[0]) == -1, "Un destino de identidad distinta rechaza el cable")
 			(destinos[fila_correcta] as Button).pressed.emit()
+			await create_timer(0.25).timeout
 			_verificar(int((_panel.call("obtener_estado") as Dictionary).conexiones[0]) == fila_correcta, "El cable acepta el destino del mismo color y número")
 	var parcial: Dictionary = _panel.call("obtener_estado")
 	_verificar(not bool(parcial.resuelto), "El progreso parcial conserva el circuito %d pendiente" % tipo)
@@ -245,10 +250,6 @@ func _resolver_circuito(tipo: int) -> void:
 			var interruptores: Array = _panel.get("interruptores")
 			for interruptor: Button in interruptores:
 				interruptor.button_pressed = true
-		1:
-			var reguladores: Array = _panel.get("reguladores")
-			for indice: int in range(4):
-				(reguladores[indice] as HSlider).value = float(estado.objetivos[indice])
 		2:
 			var botones: Array = _panel.get("botones_anillos")
 			for indice: int in range(3):
@@ -264,6 +265,7 @@ func _resolver_circuito(tipo: int) -> void:
 					continue
 				(origenes[origen] as Button).pressed.emit()
 				(destinos[int(estado.destinos.find(origen))] as Button).pressed.emit()
+	await create_timer(0.95).timeout
 	_verificar(bool((_panel.call("obtener_estado") as Dictionary).resuelto), "Los controles reales completan el circuito %d" % tipo)
 
 
@@ -286,7 +288,7 @@ func _comprobar_luces() -> void:
 
 
 func _probar_salida_durante_apagon() -> void:
-	_verificar(bool(_evento.call("iniciar_apagon")), "Puede iniciarse otro apagón después de cuatro reparaciones")
+	_verificar(bool(_evento.call("iniciar_apagon")), "Puede iniciarse otro apagón después de tres reparaciones")
 	if not _postura.is_empty():
 		_colocar(_postura["cerca"], float(_postura["giro"]))
 		await _pulsar_tecla(KEY_E)
@@ -335,6 +337,10 @@ func _fisicas(cantidad: int) -> void:
 func _cuadros(cantidad: int) -> void:
 	for cuadro: int in range(cantidad):
 		await process_frame
+
+
+func _esperar_entrada() -> void:
+	await create_timer(0.55).timeout
 
 
 func _capturar(nombre: String) -> void:
