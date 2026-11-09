@@ -6,7 +6,7 @@ signal interaccion_solicitada(jugador: Player)
 const COLOR_CON_LUZ := Color("69d8cd")
 const COLOR_SIN_LUZ := Color("ffc969")
 const ANGULO_ABIERTO := -105.0
-const POSICION_BISAGRA := Vector3(-1.013955, 0.0, 0.039187)
+const POSICION_BISAGRA := Vector3(-1.013955, 0.0, -0.20)
 
 @export var montado_en_pared: bool = false
 
@@ -15,7 +15,6 @@ var abierto: bool = false
 var _animacion_tapa: Tween
 
 @onready var _tapa_pivot: Node3D = $Modelo/TacoLuz/TapaPivot
-@onready var _etiqueta_estado: Label3D = $Estado
 @onready var _testigo: MeshInstance3D = $Testigo
 @onready var _luz_testigo: OmniLight3D = $Testigo/Luz
 
@@ -23,7 +22,7 @@ var _animacion_tapa: Tween
 func _ready() -> void:
 	$Base.visible = not montado_en_pared
 	$Soporte.visible = not montado_en_pared
-	# El GLB trae la tapa apartada. Esta bisagra alinea su reposo con la caja.
+	# El GLB trae la tapa apartada. El rebaje de la tapa entra en el marco al cerrar.
 	_tapa_pivot.position = POSICION_BISAGRA
 	_tapa_pivot.rotation.y = deg_to_rad(ANGULO_ABIERTO if abierto else 0.0)
 	_actualizar_estado()
@@ -53,8 +52,6 @@ func establecer_abierto(nuevo_estado: bool) -> void:
 
 func _actualizar_estado() -> void:
 	var color := COLOR_SIN_LUZ if apagon_activo else COLOR_CON_LUZ
-	_etiqueta_estado.text = "SIN LUZ · [E] REPARAR" if apagon_activo else "LUZ RESTABLECIDA"
-	_etiqueta_estado.modulate = color
 	var material := _testigo.material_override as StandardMaterial3D
 	material.albedo_color = color
 	material.emission = color

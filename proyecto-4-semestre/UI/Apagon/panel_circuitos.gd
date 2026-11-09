@@ -35,6 +35,7 @@ var _foco_indice: int = 0
 var _foco_destino: bool = false
 var _seleccion_cable: int = -1
 var _arrastrando: bool = false
+var _usa_raton: bool = false
 var _inicio_arrastre := Vector2.ZERO
 var _raton := Vector2.ZERO
 var _entrada_restante: float = 0.0
@@ -83,6 +84,7 @@ func abrir(tipo: int, semilla: int) -> void:
 		_senal_emitida = false
 	_seleccion_cable = int(_estado.get("seleccion", -1))
 	_arrastrando = false
+	_usa_raton = false
 	_foco_destino = _tipo == Tipo.CABLES and _seleccion_cable >= 0
 	_foco_indice = 0
 	_entrada_restante = DURACION_ENTRADA
@@ -211,15 +213,15 @@ func _boton(caja: Rect2, nombre: String, indice: int, destino: bool = false) -> 
 
 
 func _actualizar_controles() -> void:
-	var resuelto: bool = _estado.resuelto
+	var bloqueado: bool = _estado.resuelto or _entrada_restante > 0.0
 	for indice: int in range(interruptores.size()):
 		interruptores[indice].set_pressed_no_signal(_estado.interruptores[indice])
-		interruptores[indice].disabled = resuelto
+		interruptores[indice].disabled = bloqueado
 	for indice: int in range(botones_anillos.size()):
-		botones_anillos[indice].disabled = resuelto or _estado.fijados[indice]
+		botones_anillos[indice].disabled = bloqueado or _estado.fijados[indice]
 	for indice: int in range(origenes_cables.size()):
-		origenes_cables[indice].disabled = resuelto or int(_estado.conexiones[indice]) >= 0
-		destinos_cables[indice].disabled = resuelto or _estado.conexiones.has(indice)
+		origenes_cables[indice].disabled = bloqueado or int(_estado.conexiones[indice]) >= 0
+		destinos_cables[indice].disabled = bloqueado or _estado.conexiones.has(indice)
 
 
 func _input(evento: InputEvent) -> void:
@@ -234,16 +236,21 @@ func _input(evento: InputEvent) -> void:
 		if tecla == KEY_E:
 			get_viewport().set_input_as_handled()
 			if evento.pressed and not evento.echo and _acepta_entrada():
+				_usa_raton = false
+				_arrastrando = false
 				_activar_foco()
 			return
 		if evento.pressed and not evento.echo and tecla in [KEY_A, KEY_D, KEY_LEFT, KEY_RIGHT]:
 			get_viewport().set_input_as_handled()
 			if _acepta_entrada():
+				_usa_raton = false
+				_arrastrando = false
 				_navegar(-1 if tecla in [KEY_A, KEY_LEFT] else 1)
 			return
 	if _tipo != Tipo.CABLES or not _acepta_entrada():
 		return
 	if evento is InputEventMouseMotion and _seleccion_cable >= 0:
+		_usa_raton = true
 		_actualizar_raton(evento.position)
 		_refrescar()
 		if _arrastrando:
@@ -253,6 +260,7 @@ func _input(evento: InputEvent) -> void:
 
 
 func _procesar_raton(evento: InputEventMouseButton) -> void:
+	_usa_raton = true
 	var posicion := _lienzo.get_global_transform_with_canvas().affine_inverse() * evento.position
 	_actualizar_raton(evento.position)
 	var origen := _indice_boton(origenes_cables, posicion)
@@ -260,6 +268,7 @@ func _procesar_raton(evento: InputEventMouseButton) -> void:
 	if evento.pressed:
 		if origen >= 0 and not origenes_cables[origen].disabled:
 			_seleccionar_cable(origen)
+			_actualizar_raton(evento.position)
 			_arrastrando = true
 			_inicio_arrastre = posicion
 			get_viewport().set_input_as_handled()
@@ -452,8 +461,8 @@ func _process(delta: float) -> void:
 		_entrada_restante = maxf(0.0, _entrada_restante - delta)
 		_ajustar_presentacion()
 		if _entrada_restante <= 0.0:
-			_enfocar_disponible()
 			_actualizar_controles()
+			_enfocar_disponible()
 		animando = true
 	if _error_restante > 0.0:
 		_error_restante = maxf(0.0, _error_restante - delta)
@@ -513,7 +522,7 @@ func _refrescar() -> void:
 		"destino_seleccionado": _foco_indice if _tipo == Tipo.CABLES and _foco_destino else -1,
 		"foco_indice": _foco_indice,
 		"foco_destino": _foco_destino,
-		"cable_arrastrado": _seleccion_cable,
+		"cable_arrastrado": _seleccion_cable if _usa_raton else -1,
 		"raton": _raton,
 		"brillo": clampf(1.0 - _fin_restante / DURACION_FIN, 0.0, 1.0) if _estado.resuelto else 0.0,
 		"tiempo": _tiempo

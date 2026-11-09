@@ -9,6 +9,7 @@ signal luz_restaurada
 enum Estado { RESTAURADO, APAGADO, REPARANDO }
 
 const PANEL_CIRCUITOS := preload("res://UI/Apagon/panel_circuitos.gd")
+const TIPOS_DISPONIBLES := PANEL_CIRCUITOS.TIPOS_DISPONIBLES
 const TACO_LUZ := preload("res://Eventos/Apagon/taco_luz.gd")
 const VISION_APAGON := preload("res://Eventos/Apagon/vision_apagon.gdshader")
 
@@ -77,7 +78,7 @@ func iniciar_apagon() -> bool:
 		return false
 	if get_tree().paused or jugador.input_locked:
 		return false
-	tipo_circuito = _azar.randi_range(0, 3)
+	tipo_circuito = TIPOS_DISPONIBLES[_azar.randi_range(0, TIPOS_DISPONIBLES.size() - 1)]
 	semilla_circuito = _azar.randi()
 	_visibilidad_luces.clear()
 	for luz: Light3D in luces:

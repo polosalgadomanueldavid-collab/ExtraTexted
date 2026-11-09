@@ -26,7 +26,7 @@ func _probar() -> void:
 	_evento = _escena.get_node_or_null("EventoApagon")
 	_verificar(_taco != null and _evento != null, "La oficina real instancia el taco y el evento de apagón")
 	if _taco == null or _evento == null:
-		_finalizar()
+		await _finalizar()
 		return
 	_panel = _evento.get("panel") as Control
 	_hud = _escena.get_node("CanvasLayer/PanelDespacho") as Control
@@ -48,7 +48,7 @@ func _probar() -> void:
 	_postura = _buscar_postura()
 	_verificar(not _postura.is_empty(), "Existe una aproximación sin solape físico que alcanza el taco con E")
 	if _postura.is_empty():
-		_finalizar()
+		await _finalizar()
 		return
 	_colocar(_postura["cerca"], float(_postura["giro"]))
 	await _capturar("00_oficina_con_luz")
@@ -60,7 +60,7 @@ func _probar() -> void:
 	_verificar(float(_despacho.tiempos_restantes[_caso_activo.id]) < 300.0, "El tiempo de la denuncia sigue avanzando durante las reparaciones")
 	_verificar(_caso_activo.estaciones_completadas.is_empty(), "Reparar la luz conserva el protocolo de la denuncia")
 	await _probar_salida_durante_apagon()
-	_finalizar()
+	await _finalizar()
 
 
 func _preparar_saldo() -> void:
@@ -274,5 +274,9 @@ func _capturar(nombre: String) -> void:
 
 func _finalizar() -> void:
 	paused = false
+	if is_instance_valid(_escena):
+		_escena.queue_free()
+		await process_frame
+	await _esperar_audio_al_salir()
 	print("[APAGON OFICINA] %d comprobaciones, %d errores." % [_comprobaciones, _errores.size()])
 	quit(0 if _errores.is_empty() else 1)

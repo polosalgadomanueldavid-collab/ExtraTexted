@@ -56,7 +56,7 @@ mesh = SubResource("CylinderMesh_Soporte")
 transform = Transform3D(0.68, 0, 0, 0, 0.68, 0, 0, 0, 0.68, 0.277, 1, 0.199)
 
 [node name="Testigo" type="MeshInstance3D" parent="." unique_id=1894702109]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.36, 1.46, 0.34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.36, 1.46, 0.1774)
 material_override = SubResource("Material_Testigo")
 mesh = SubResource("SphereMesh_Testigo")
 
@@ -64,21 +64,3 @@ mesh = SubResource("SphereMesh_Testigo")
 light_color = Color(0.411765, 0.847059, 0.803922, 1)
 light_energy = 0.15
 omni_range = 0.55
-
-[node name="Nombre" type="Label3D" parent="." unique_id=403018139]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.73, 0.1)
-pixel_size = 0.0025
-billboard = 1
-modulate = Color(0.88, 0.94, 0.96, 1)
-text = "TACO DE LUZ"
-font_size = 34
-outline_size = 8
-
-[node name="Estado" type="Label3D" parent="." unique_id=36852399]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0.1)
-pixel_size = 0.002
-billboard = 1
-modulate = Color(0.411765, 0.847059, 0.803922, 1)
-text = "LUZ RESTABLECIDA"
-font_size = 29
-outline_size = 8

@@ -491,9 +491,9 @@ layer = 30
 [node name="PanelDespacho" parent="CanvasLayer" unique_id=1634710326 instance=ExtResource("7_sa8v2")]
 
 [node name="TacoLuz" parent="." instance=ExtResource("13_taco_luz")]
-position = Vector3(2.26, 0.372, 8.2)
+position = Vector3(2.28, 0.502, 8.2)
 rotation_degrees = Vector3(0, -90, 0)
-scale = Vector3(0.65, 0.65, 0.65)
+scale = Vector3(0.52, 0.52, 0.52)
 montado_en_pared = true
 
 [node name="EventoApagon" type="Node" parent="." node_paths=PackedStringArray("jugador", "camara", "taco", "luces")]

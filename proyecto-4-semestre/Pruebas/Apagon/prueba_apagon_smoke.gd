@@ -64,6 +64,7 @@ func _probar() -> void:
 	_verificar(_despacho.puntuacion.puntos == _saldo_inicial, "Resolver los circuitos conserva el saldo de denuncias")
 	_verificar(str(ProjectSettings.get_setting("application/run/main_scene", "")) == principal_inicial, "El piloto conserva la escena principal configurada")
 	await _probar_salida_durante_apagon()
+	await _esperar_audio_al_salir()
 	print("[APAGON SMOKE] %d comprobaciones, %d errores." % [_comprobaciones, _errores.size()])
 	quit(0 if _errores.is_empty() else 1)
 
@@ -238,7 +239,7 @@ func _hacer_progreso(tipo: int) -> void:
 			_verificar(int((_panel.call("obtener_estado") as Dictionary).conexiones[0]) == -1, "Un destino de identidad distinta rechaza el cable")
 			(destinos[fila_correcta] as Button).pressed.emit()
 			await create_timer(0.25).timeout
-			_verificar(int((_panel.call("obtener_estado") as Dictionary).conexiones[0]) == fila_correcta, "El cable acepta el destino del mismo color y número")
+			_verificar(int((_panel.call("obtener_estado") as Dictionary).conexiones[0]) == fila_correcta, "El cable acepta el destino del mismo color")
 	var parcial: Dictionary = _panel.call("obtener_estado")
 	_verificar(not bool(parcial.resuelto), "El progreso parcial conserva el circuito %d pendiente" % tipo)
 
@@ -341,6 +342,13 @@ func _cuadros(cantidad: int) -> void:
 
 func _esperar_entrada() -> void:
 	await create_timer(0.55).timeout
+
+
+func _esperar_audio_al_salir() -> void:
+	# --fixed-fps acelera el tiempo del juego; el mezclador libera las voces en tiempo real.
+	var limite := Time.get_ticks_msec() + 500
+	while Time.get_ticks_msec() < limite:
+		await process_frame
 
 
 func _capturar(nombre: String) -> void:

@@ -44,7 +44,7 @@ func presentar(entradas: Array[Dictionary], nombre: String, puntos: int, error: 
 	tabla.visible = filas.get_child_count() > 0
 	estado.visible = not tabla.visible
 	estado.text = "Aún no hay récords locales." if error == OK else "No se pudo leer la clasificación local."
-	tu_puesto.text = "TU PARTIDA · PUESTO #%d" % posicion if posicion > 0 else "TU PARTIDA"
+	tu_puesto.text = "PUESTO #%d" % posicion if posicion > 0 else "PUESTO"
 	tu_alias.text = "Sin alias" if clave.is_empty() else nombre
 	tus_puntos.text = str(puntos)
 	_ajustar_presentacion()

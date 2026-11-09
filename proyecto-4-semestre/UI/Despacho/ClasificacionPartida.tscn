@@ -111,13 +111,6 @@ size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 35
 text = "CLASIFICACIÓN"
 
-[node name="Ayuda" type="Label" parent="Tarjeta/Contenido/Encabezado"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.73, 0.86, 0.86, 1)
-theme_override_fonts/font = SubResource("FuenteHUD")
-theme_override_font_sizes/font_size = 16
-text = "SUELTA TAB"
-
 [node name="Tabla" type="VBoxContainer" parent="Tarjeta/Contenido"]
 unique_name_in_owner = true
 visible = false
@@ -191,7 +184,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.64, 0.53, 1)
 theme_override_fonts/font = SubResource("FuenteHUD")
 theme_override_font_sizes/font_size = 16
-text = "TU PARTIDA"
+text = "PUESTO"
 
 [node name="TuAlias" type="Label" parent="Tarjeta/Contenido/TuPartida/Resumen/Identidad"]
 unique_name_in_owner = true

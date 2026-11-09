@@ -34,7 +34,7 @@ func _probar() -> void:
 	paused = false
 	_escena.queue_free()
 	await process_frame
-	await create_timer(0.12).timeout
+	await _esperar_audio_al_salir()
 	print("[PANEL CIRCUITOS] %d comprobaciones, %d errores." % [_comprobaciones, _errores.size()])
 	quit(0 if _errores.is_empty() else 1)
 
@@ -133,6 +133,8 @@ func _probar_teclado() -> void:
 	var correcta: int = estado.destinos.find(0)
 	var incorrecta := (correcta + 1) % 4
 	await _pulsar_tecla(KEY_E)
+	var visual: Dictionary = (_panel.get("_arte") as Control).get("_visual")
+	_verificar(int(visual.cable_arrastrado) == -1, "El cable de teclado sigue el destino seleccionado sin usar la posición del ratón")
 	for paso: int in range(incorrecta):
 		await _pulsar_tecla(KEY_D)
 	await _pulsar_tecla(KEY_E)
@@ -202,12 +204,16 @@ func _probar_pausa_y_audio() -> void:
 
 
 func _probar_entrada() -> void:
-	_panel.call("abrir", 0, 9905)
-	var anterior: Dictionary = _panel.call("obtener_estado")
-	await _pulsar_tecla(KEY_E)
-	_verificar((_panel.call("obtener_estado") as Dictionary) == anterior, "La E de apertura no conmuta una palanca durante la entrada")
-	await _esperar_entrada()
-	_panel.call("cerrar")
+	for tipo: int in TIPOS_CIRCUITO:
+		_panel.call("abrir", tipo, 9905 + tipo)
+		var anterior: Dictionary = _panel.call("obtener_estado")
+		for grupo: String in ["interruptores", "botones_anillos", "origenes_cables", "destinos_cables"]:
+			for boton: Button in _panel.get(grupo):
+				_verificar(boton.disabled, "El control %s no acepta clics mientras entra el gabinete" % boton.name)
+		await _pulsar_tecla(KEY_E)
+		_verificar((_panel.call("obtener_estado") as Dictionary) == anterior, "La E de apertura conserva intacto el circuito %d durante la entrada" % tipo)
+		await _esperar_entrada()
+		_panel.call("cerrar")
 
 
 func _probar_cierre_durante_exito() -> void:
@@ -246,6 +252,8 @@ func _arrastrar(origen: Button, destino: Button) -> void:
 	await _mover_raton(inicio, false)
 	_enviar_boton(inicio, true)
 	await process_frame
+	var visual: Dictionary = (_panel.get("_arte") as Control).get("_visual")
+	_verificar(int(visual.cable_arrastrado) >= 0, "El cable arrastrado sigue el ratón al sujetar su origen")
 	for paso: int in range(1, 5):
 		await _mover_raton(inicio.lerp(fin, float(paso) / 4.0), true)
 	_enviar_boton(fin, false)

@@ -121,7 +121,7 @@ func _actualizar_estado(nuevo_estado: EVENTO_APAGON.Estado) -> void:
 		EVENTO_APAGON.Estado.RESTAURADO:
 			_estado.text = "ENERGÍA RESTAURADA"
 			_estado.modulate = VERDE
-			_instruccion.text = "Activa el apagón para probar uno de los cuatro circuitos."
+			_instruccion.text = "Activa el apagón para probar uno de los tres circuitos."
 		EVENTO_APAGON.Estado.APAGADO:
 			_estado.text = "APAGÓN  ·  VISIÓN LIMITADA"
 			_estado.modulate = AMBAR
