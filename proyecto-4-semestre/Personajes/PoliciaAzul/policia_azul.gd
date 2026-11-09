@@ -50,6 +50,10 @@ var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_grav
 var papel_en_mano: PapelDenuncia = null
 var gestos: AnimacionesInteraccion
 var _efecto_gesto: Callable
+var _reloj_reposo: float = 0.0
+var _reposo_disponible: bool = false
+var _ultimo_reposo: StringName = &"idle_tambaleo"
+var _azar_reposo := RandomNumberGenerator.new()
 
 @onready var visual: Node3D = $Visual
 @onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
@@ -87,6 +91,8 @@ func _ready() -> void:
 		esqueleto.add_child(gestos)
 		gestos.contacto.connect(_al_contacto_gesto)
 		gestos.terminada.connect(_al_terminar_gesto)
+		gestos.reposo_terminado.connect(_al_terminar_reposo)
+	_azar_reposo.randomize()
 	_play_animation(&"idle")
 	if not is_in_group("player"):
 		add_to_group("player")
@@ -130,6 +136,7 @@ func _physics_process(delta: float) -> void:
 	var caminando := is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
 	sonido_pasos.actualizar(delta, caminando, running)
 	_update_animation(moving, running)
+	_update_idle_variants(delta)
 	# Una caída fuera de la plataforma siempre vuelve al punto inicial.
 	if global_position.y < -12.0:
 		reset_to_spawn()
@@ -176,6 +183,7 @@ func _play_animation(clip: StringName) -> void:
 func play_wave() -> void:
 	if input_locked or realizando_gesto() or not is_on_floor():
 		return
+	_cancelar_reposo()
 	_wave_remaining = 1.8
 	if animation_player != null and _animation_names.has(&"wave"):
 		_wave_remaining = animation_player.get_animation(_animation_names[&"wave"]).length
@@ -287,6 +295,8 @@ func _buscar_papel_cercano() -> PapelDenuncia:
 
 func reset_to_spawn() -> void:
 	cancelar_gesto()
+	_cancelar_reposo()
+	_reposo_disponible = false
 	_finish_emote_menu(true)
 	voz.detener()
 	sonido_pasos.detener()
@@ -324,6 +334,50 @@ func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: N
 	_play_animation(&"idle")
 	animation_state_changed.emit(tipo)
 	return true
+
+
+func play_idle_variant(tipo: StringName) -> bool:
+	if not is_instance_valid(gestos) or input_locked or realizando_gesto() or not is_on_floor():
+		return false
+	if current_animation != &"idle" or Vector2(velocity.x, velocity.z).length() > 0.15:
+		return false
+	if not gestos.iniciar_reposo(tipo):
+		return false
+	_ultimo_reposo = tipo
+	animation_state_changed.emit(tipo)
+	return true
+
+
+func _update_idle_variants(delta: float) -> void:
+	if not is_instance_valid(gestos):
+		return
+	var disponible := current_animation == &"idle" and is_on_floor() and not input_locked and not realizando_gesto() and not _emote_menu_active
+	if not disponible:
+		if _reposo_disponible:
+			_cancelar_reposo()
+		_reposo_disponible = false
+		return
+	if not _reposo_disponible:
+		_reposo_disponible = true
+		_reloj_reposo = _azar_reposo.randf_range(4.5, 7.0)
+	if gestos.reposo_especial != &"":
+		return
+	_reloj_reposo -= delta
+	if _reloj_reposo <= 0.0:
+		var siguiente: StringName = &"idle_despistado" if _ultimo_reposo == &"idle_tambaleo" else &"idle_tambaleo"
+		play_idle_variant(siguiente)
+
+
+func _cancelar_reposo() -> void:
+	if is_instance_valid(gestos) and gestos.reposo_especial != &"":
+		gestos.cancelar_reposo()
+		if current_animation == &"idle" and not realizando_gesto() and _wave_remaining <= 0.0:
+			animation_state_changed.emit(&"idle")
+
+
+func _al_terminar_reposo() -> void:
+	_reloj_reposo = _azar_reposo.randf_range(4.5, 7.0)
+	animation_state_changed.emit(&"idle")
 
 
 func cancelar_gesto() -> void:

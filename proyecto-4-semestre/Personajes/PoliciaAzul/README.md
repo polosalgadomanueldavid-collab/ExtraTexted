@@ -22,7 +22,9 @@ Los pasos usan **Suela de goma (opción 3)**, con seis variaciones y dos cadenci
 
 La entrega, la recogida y el lanzamiento ocurren al llegar al contacto del gesto. Reparar dura 2,4 segundos y resuelve el atasco al terminar el trabajo de la herramienta. Se vuelve a comprobar el caso al aplicar el efecto para evitar completar una denuncia que venció durante el gesto.
 
-`intensidad_tambaleo` en el controlador ajusta el balanceo caricaturesco (0–2; predeterminado 1). Afecta al torso y a la cabeza tanto en locomoción como en las acciones. Los anclajes reciben la pose final, por lo que la hoja acompaña el movimiento sin deslizarse. Las dos variantes adicionales de reposo quedan pendientes.
+`intensidad_tambaleo` en el controlador ajusta el balanceo caricaturesco (0–2; predeterminado 1). Afecta al torso y a la cabeza tanto en locomoción como en las acciones. Los anclajes reciben la pose final, por lo que la hoja acompaña el movimiento sin deslizarse.
+
+Tras 4,5–7 segundos quieto, el policía alterna dos reposos especiales: **despistado**, que mira a los lados y se rasca la gorra, y **tambaleo**, en el que pierde un poco el equilibrio, abre los brazos y se recompone. Se interrumpen al moverse, saltar, saludar o interactuar; no bloquean el control. La escena de prueba tiene botones para reproducirlos sin esperar. `prueba_reposos_policia.gd` comprueba ambas poses, la alternancia, la pausa, las interrupciones y la sujeción del papel.
 
 Validación: `Godot --headless --fixed-fps 60 --path proyecto-4-semestre --script res://Pruebas/PersonajePolicia/prueba_gestos_policia.gd`. El paso fijo permite comprobar los momentos de contacto de forma reproducible. Comprueba entrega, sujeción, pausa, bloqueo de duplicados, reparación, lanzamiento, recogida, reinicio y retirada de una denuncia durante el gesto. Sin `--headless`, añadir `-- --capturas` guarda poses en `.godot/gestos_qa`.
 
