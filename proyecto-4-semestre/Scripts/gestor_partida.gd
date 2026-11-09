@@ -372,14 +372,26 @@ func _entregar_papel(portador: Player) -> void:
 	papel_actual = PAPEL_DENUNCIA_SCRIPT.new() as PapelDenuncia
 	papel_actual.denuncia_id = denuncia.id
 	add_child(papel_actual)
-	papel_actual.tomar(portador)
-	_actualizar_indicador_papel()
-	panel_despacho._mostrar_mensaje("Ve con la denuncia.", Color("86efac"))
+	papel_actual.global_position = computador.global_position + Vector3.UP * 0.7
+	papel_actual.freeze = true
+	if not portador.ejecutar_gesto(&"recibir", _tomar_papel_si_vigente.bind(portador, papel_actual), computador):
+		papel_actual.freeze = false
 
 
 func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
 	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
+		return
+	portador.ejecutar_gesto(&"recoger", _tomar_papel_si_vigente.bind(portador, papel), papel)
+
+
+func _tomar_papel_si_vigente(portador: Player, papel: PapelDenuncia) -> void:
+	if not is_instance_valid(portador) or not is_instance_valid(papel) or papel.is_queued_for_deletion():
+		return
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
+		return
+	if is_instance_valid(portador.papel_en_mano) or is_instance_valid(papel.portador):
 		return
 	papel.tomar(portador)
 	_actualizar_indicador_papel()
@@ -413,10 +425,23 @@ func _on_caso_finalizado(denuncia: Denuncia) -> void:
 		_actualizar_indicador_papel()
 
 
-func interactuar_estacion_con_papel(portador: Player, estacion_id: String) -> void:
+func interactuar_estacion_con_papel(portador: Player, estacion_id: String, objetivo: Node3D = null) -> void:
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
 	if denuncia == null or not is_instance_valid(portador.papel_en_mano) or portador.papel_en_mano != papel_actual or portador.papel_en_mano.denuncia_id != denuncia.id:
 		panel_despacho._mostrar_mensaje("Necesitas llevar la hoja de la denuncia para usar esta estación.", PanelDespacho.CORAL)
+		return
+	var tipo: StringName = &"interactuar"
+	if estacion_id == "reporte" and _reporte_atascado_id == denuncia.id and _reporte_herramienta_recogida:
+		tipo = &"reparar"
+	portador.ejecutar_gesto(tipo, _resolver_gesto_estacion.bind(portador, estacion_id, denuncia.id), objetivo)
+
+
+func _resolver_gesto_estacion(portador: Player, estacion_id: String, caso_id: String) -> void:
+	# Un caso puede vencer durante el gesto: no completar ni puntuar uno distinto.
+	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	if not is_instance_valid(portador) or denuncia == null or denuncia.id != caso_id:
+		return
+	if not is_instance_valid(portador.papel_en_mano) or portador.papel_en_mano != papel_actual:
 		return
 	interactuar_estacion(estacion_id)
 

@@ -89,7 +89,7 @@ func interactuar(jugador: Player) -> void:
 	if entregar_papel:
 		papel_solicitado.emit(jugador)
 	else:
-		toggle_use()
+		jugador.ejecutar_gesto(&"interactuar", toggle_use, self)
 
 func encender_pc() -> void:
 	actualizar_interfaz_segun_estado()

@@ -53,7 +53,7 @@ func interactuar(jugador: Player) -> void:
 		return
 	var gestor := get_tree().get_first_node_in_group("gestor_partida")
 	if gestor != null:
-		gestor.recoger_herramienta_reporte(jugador)
+		jugador.ejecutar_gesto(&"interactuar", gestor.recoger_herramienta_reporte.bind(jugador), self)
 
 
 func _agregar_pieza(posicion: Vector3, tamano: Vector3, color: Color) -> void:

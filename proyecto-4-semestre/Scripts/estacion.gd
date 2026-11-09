@@ -17,4 +17,4 @@ func interactuar(jugador: Player) -> void:
 		push_warning("El gestor no puede procesar estaciones.")
 		return
 
-	gestor.interactuar_estacion_con_papel(jugador, estacion_id)
+	gestor.interactuar_estacion_con_papel(jugador, estacion_id, self)
