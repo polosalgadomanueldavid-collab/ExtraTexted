@@ -1,0 +1,192 @@
+{
+  "frecuencia_hz": 48000,
+  "formato": "PCM 16 bits mono",
+  "voces": [
+    {
+      "id": "01_redondita",
+      "nombre": "Redondita",
+      "pistas": [
+        {
+          "archivo": "clips/01_redondita/saludo.wav",
+          "duracion_s": 1.05,
+          "pico_dbfs": -10.51,
+          "rms_dbfs": -20.71
+        },
+        {
+          "archivo": "clips/01_redondita/esfuerzo.wav",
+          "duracion_s": 0.58,
+          "pico_dbfs": -11.05,
+          "rms_dbfs": -25.33
+        },
+        {
+          "archivo": "clips/01_redondita/sorpresa.wav",
+          "duracion_s": 0.9,
+          "pico_dbfs": -9.75,
+          "rms_dbfs": -22.32
+        },
+        {
+          "archivo": "clips/01_redondita/alegria.wav",
+          "duracion_s": 1.35,
+          "pico_dbfs": -6.8,
+          "rms_dbfs": -17.61
+        },
+        {
+          "archivo": "01_redondita.wav",
+          "duracion_s": 6.1,
+          "pico_dbfs": -6.8,
+          "rms_dbfs": -21.91
+        }
+      ]
+    },
+    {
+      "id": "02_traviesa",
+      "nombre": "Traviesa",
+      "pistas": [
+        {
+          "archivo": "clips/02_traviesa/saludo.wav",
+          "duracion_s": 1.05,
+          "pico_dbfs": -7.99,
+          "rms_dbfs": -18.26
+        },
+        {
+          "archivo": "clips/02_traviesa/esfuerzo.wav",
+          "duracion_s": 0.58,
+          "pico_dbfs": -8.42,
+          "rms_dbfs": -24.42
+        },
+        {
+          "archivo": "clips/02_traviesa/sorpresa.wav",
+          "duracion_s": 0.9,
+          "pico_dbfs": -8.46,
+          "rms_dbfs": -19.35
+        },
+        {
+          "archivo": "clips/02_traviesa/alegria.wav",
+          "duracion_s": 1.35,
+          "pico_dbfs": -8.93,
+          "rms_dbfs": -20.85
+        },
+        {
+          "archivo": "02_traviesa.wav",
+          "duracion_s": 6.1,
+          "pico_dbfs": -7.99,
+          "rms_dbfs": -21.91
+        }
+      ]
+    },
+    {
+      "id": "03_bonachona",
+      "nombre": "Bonachona",
+      "pistas": [
+        {
+          "archivo": "clips/03_bonachona/saludo.wav",
+          "duracion_s": 1.05,
+          "pico_dbfs": -9.43,
+          "rms_dbfs": -19.45
+        },
+        {
+          "archivo": "clips/03_bonachona/esfuerzo.wav",
+          "duracion_s": 0.58,
+          "pico_dbfs": -11.41,
+          "rms_dbfs": -25.96
+        },
+        {
+          "archivo": "clips/03_bonachona/sorpresa.wav",
+          "duracion_s": 0.9,
+          "pico_dbfs": -8.64,
+          "rms_dbfs": -22.21
+        },
+        {
+          "archivo": "clips/03_bonachona/alegria.wav",
+          "duracion_s": 1.35,
+          "pico_dbfs": -8.41,
+          "rms_dbfs": -18.19
+        },
+        {
+          "archivo": "03_bonachona.wav",
+          "duracion_s": 6.1,
+          "pico_dbfs": -8.41,
+          "rms_dbfs": -21.91
+        }
+      ]
+    },
+    {
+      "id": "04_gomosa",
+      "nombre": "Gomosa",
+      "pistas": [
+        {
+          "archivo": "clips/04_gomosa/saludo.wav",
+          "duracion_s": 1.05,
+          "pico_dbfs": -8.77,
+          "rms_dbfs": -18.98
+        },
+        {
+          "archivo": "clips/04_gomosa/esfuerzo.wav",
+          "duracion_s": 0.58,
+          "pico_dbfs": -10.04,
+          "rms_dbfs": -25.25
+        },
+        {
+          "archivo": "clips/04_gomosa/sorpresa.wav",
+          "duracion_s": 0.9,
+          "pico_dbfs": -10.13,
+          "rms_dbfs": -20.45
+        },
+        {
+          "archivo": "clips/04_gomosa/alegria.wav",
+          "duracion_s": 1.35,
+          "pico_dbfs": -7.32,
+          "rms_dbfs": -19.21
+        },
+        {
+          "archivo": "04_gomosa.wav",
+          "duracion_s": 6.1,
+          "pico_dbfs": -7.32,
+          "rms_dbfs": -21.91
+        }
+      ]
+    },
+    {
+      "id": "05_peluche",
+      "nombre": "Peluche",
+      "pistas": [
+        {
+          "archivo": "clips/05_peluche/saludo.wav",
+          "duracion_s": 1.05,
+          "pico_dbfs": -9.71,
+          "rms_dbfs": -18.37
+        },
+        {
+          "archivo": "clips/05_peluche/esfuerzo.wav",
+          "duracion_s": 0.58,
+          "pico_dbfs": -11.72,
+          "rms_dbfs": -26.56
+        },
+        {
+          "archivo": "clips/05_peluche/sorpresa.wav",
+          "duracion_s": 0.9,
+          "pico_dbfs": -10.67,
+          "rms_dbfs": -20.38
+        },
+        {
+          "archivo": "clips/05_peluche/alegria.wav",
+          "duracion_s": 1.35,
+          "pico_dbfs": -9.17,
+          "rms_dbfs": -19.7
+        },
+        {
+          "archivo": "05_peluche.wav",
+          "duracion_s": 6.1,
+          "pico_dbfs": -9.17,
+          "rms_dbfs": -21.91
+        }
+      ]
+    }
+  ],
+  "comparativa": {
+    "archivo": "00_comparativa.wav",
+    "duracion_s": 12.5,
+    "pico_dbfs": -7.99,
+    "rms_dbfs": -22.32
+  }
+}

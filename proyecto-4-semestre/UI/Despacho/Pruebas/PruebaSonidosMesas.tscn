@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://UI/Despacho/Pruebas/prueba_sonidos_mesas.gd" id="1"]
+
+[node name="PruebaSonidosMesas" type="Node"]
+script = ExtResource("1")

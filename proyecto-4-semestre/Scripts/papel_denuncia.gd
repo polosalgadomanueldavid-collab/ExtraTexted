@@ -107,10 +107,10 @@ func tomar(jugador: Player) -> void:
 	angular_velocity = Vector3.ZERO
 	collision_layer = 0
 	collision_mask = 0
-	get_parent().remove_child(self)
-	jugador.visual.add_child(self)
-	position = Vector3(0.42, 2.45, 0.55)
-	rotation = Vector3(-0.18, 0.0, 0.2)
+	# Conservar el tamaño mundial al pasar del escenario al esqueleto escalado.
+	reparent(jugador.anclaje_papel(), true)
+	position = Vector3(0.0, 0.12, TAMANO.z * scale.z * 0.5 + 0.025)
+	rotation = Vector3.ZERO
 	jugador.papel_en_mano = self
 	_actualizar_resaltado()
 	_actualizar_marcador()
@@ -120,14 +120,11 @@ func lanzar() -> void:
 	if not is_instance_valid(portador):
 		return
 	var jugador := portador
-	var origen := jugador.global_position + Vector3.UP * 0.65 + jugador.visual.global_basis.z.normalized() * 0.32
 	var direccion := jugador.visual.global_basis.z.normalized()
 	jugador.papel_en_mano = null
 	portador = null
-	get_parent().remove_child(self)
-	jugador.get_tree().current_scene.add_child(self)
-	global_position = origen
-	global_rotation = jugador.visual.global_rotation
+	# Se libera donde está la mano, con el tamaño y orientación del último frame.
+	reparent(jugador.get_tree().current_scene, true)
 	freeze = false
 	# El ShapeCast (máscara 5) aún la detecta; el cuerpo del jugador (máscara 1) no.
 	collision_layer = 4

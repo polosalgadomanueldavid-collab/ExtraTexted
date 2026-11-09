@@ -4,6 +4,8 @@ extends Node
 
 const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")
 const INDICADOR := preload("res://Scripts/indicador_proxima_estacion.gd")
+const CLASIFICADOR := preload("res://UI/Despacho/clasificador_evidencias.gd")
+const ESCANER := preload("res://UI/Despacho/escaner_verificacion.gd")
 
 var _errores: Array[String] = []
 var _comprobaciones: int = 0
@@ -30,6 +32,7 @@ func _probar() -> void:
 	await _fisicas(3)
 	_oficina.temporizador_denuncias.stop()
 	_oficina.temporizador_bloqueos.stop()
+	_oficina.probabilidad_atasco_reporte = 0.0
 	_oficina.computador.timer_nuevo_problema.stop()
 	_sistema = _oficina.sistema_despacho
 	_sistema.set_process(false)
@@ -46,6 +49,10 @@ func _probar() -> void:
 	_jugador.set_physics_process(false)
 	_camara.set_physics_process(false)
 	_oficina.depurador_grafo.hide()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_verificar(not (_oficina.get("_aviso_apagon") as Label).visible, "Luz restaurada se oculta fuera de la vista F3")
+	_verificar(not _oficina.indicador_papel.visible, "El medallón empieza oculto sin papel en mano")
 	_validar_geometria()
 	_validar_interactuables("", "sin denuncia activa")
 	var materiales_originales := _estado_materiales(_indicadores["reporte"] as Node3D)
@@ -68,6 +75,10 @@ func _probar() -> void:
 	modelo_reserva.free()
 	await _probar_vencimiento()
 	await _probar_orden_libre_con_tecla()
+	await _probar_cancelar_seguridad()
+	await _probar_cancelar_evidencias()
+	await _probar_cancelar_verificacion()
+	await _probar_atasco_reporte()
 	await _probar_silla_computador()
 	await _probar_papel_sin_mesa_encima()
 	await _probar_caida_sobre_mesa_temporal()
@@ -147,10 +158,12 @@ func _probar_bloqueos(indicador: IndicadorProximaEstacion, postura: Dictionary, 
 	# Aísla la guarda del computador: aquí E aún alcanzaría físicamente la estación.
 	_oficina.computador.is_using = true
 	await _esperar_efecto()
+	_verificar(not _oficina.indicador_papel.visible, "El computador oculta el aviso de soltar")
 	_verificar(_jugador.obtener_objetivo_interaccion() == _estaciones["bienestar"], "La comprobación del computador no cambia el alcance del ShapeCast3D")
 	_validar_interactuables("", "mientras se usa el computador")
 	_oficina.computador.is_using = false
 	await _esperar_efecto()
+	_verificar(_oficina.indicador_papel.visible, "Cerrar el computador recupera el medallón del papel llevado")
 	_validar_interactuables("bienestar", "al cerrar el computador")
 	get_tree().paused = true
 	_verificar(_jugador.obtener_objetivo_interaccion() == null, "La pausa impide que E devuelva un objetivo")
@@ -170,6 +183,7 @@ func _probar_protocolo_con_tecla(caso: Denuncia, postura: Dictionary) -> void:
 	await get_tree().process_frame
 	_verificar(caso.estaciones_completadas == ["bienestar"], "La misma tecla E completa la estación iluminada")
 	_verificar(caso.estado == Denuncia.Estado.RESUELTA, "E en bienestar resuelve su protocolo completo")
+	_verificar(not _oficina.indicador_papel.visible, "Resolver el caso retira el medallón junto con la hoja")
 	_validar_interactuables("", "al resolver el primer protocolo")
 	for indicador: IndicadorProximaEstacion in _indicadores.values():
 		_verificar(not indicador.visible and is_zero_approx(float(indicador.get("_intensidad_interaccion"))), "Resolver oculta y reinicia el efecto de " + indicador.estacion_id)
@@ -193,6 +207,7 @@ func _probar_protocolo_con_tecla(caso: Denuncia, postura: Dictionary) -> void:
 
 func _probar_orden_libre_con_tecla() -> void:
 	var caso := _recibir_caso("ORDEN-LIBRE-CON-TECLA", ["evidencias", "verificacion", "privacidad", "reporte"])
+	await _probar_hud_papel_adaptable()
 	var hoja := _jugador.papel_en_mano
 	_verificar(is_instance_valid(hoja) and hoja.denuncia_id == caso.id, "El computador entrega una hoja vinculada al caso")
 	_verificar(_oficina.panel_despacho.mensaje_estacion.text == "Ve con la denuncia.", "El aviso verde muestra solo la instrucción breve")
@@ -208,10 +223,14 @@ func _probar_orden_libre_con_tecla() -> void:
 		_verificar(caso.estaciones_completadas.is_empty(), "Sin llevar la hoja, las estaciones rechazan el trámite")
 		await get_tree().process_frame
 		_verificar(_jugador.obtener_objetivo_interaccion() == hoja, "La hoja lanzada queda al alcance de E")
+		_verificar(not _oficina.indicador_papel.visible, "Soltar la hoja oculta el medallón")
+		var aviso := _oficina.get("_aviso_apagon") as Label
+		_verificar(aviso.get_global_rect().end.y > get_viewport().get_visible_rect().size.y * 0.95, "Sin papel, el aviso de luz regresa al borde inferior")
 		await _capturar("06_hoja_suelta")
 		_pulsar_interaccion()
 		await get_tree().process_frame
 		_verificar(_jugador.papel_en_mano == hoja and hoja.freeze, "E recoge la hoja y conserva su caso")
+		_verificar(_oficina.indicador_papel.visible, "Recoger la hoja con E vuelve a mostrar el medallón")
 		_verificar((hoja.get_node("HojaVisual") as MeshInstance3D).material_overlay == null, "La hoja en mano retira el contorno del suelo")
 		_verificar(not (hoja.get_node("MarcadorRecoger") as Node3D).visible, "La mano de recogida desaparece al llevar la hoja")
 	var panel := _oficina.panel_despacho as PanelDespacho
@@ -228,6 +247,100 @@ func _probar_orden_libre_con_tecla() -> void:
 		_validar_interactuables(estacion_id, "al elegir libremente " + estacion_id)
 		_pulsar_interaccion()
 		await get_tree().process_frame
+		if estacion_id == "privacidad":
+			_verificar(not caso.estaciones_completadas.has("privacidad") and _oficina.temporizador_seguridad.time_left > 5.0 and _oficina.progreso_seguridad.visible, "Seguridad empieza seis segundos de desencriptado sin completar la mesa al instante")
+			var tiempo_inicial: float = _oficina.temporizador_seguridad.time_left
+			_pulsar_interaccion()
+			await get_tree().process_frame
+			_verificar(_oficina.temporizador_seguridad.time_left <= tiempo_inicial and not caso.estaciones_completadas.has("privacidad"), "Repetir E no reinicia ni duplica el desencriptado")
+			await get_tree().create_timer(1.0).timeout
+			_verificar(_oficina.progreso_seguridad.proporcion > 0.1 and _oficina.progreso_seguridad.proporcion < 0.5, "La barra aumenta mientras transcurre el desencriptado")
+			await _capturar("10_seguridad_desencriptando")
+			_colocar(postura["lejos"], float(postura["giro"]))
+			_verificar(_jugador.obtener_objetivo_interaccion() != _estaciones["privacidad"] and _oficina.temporizador_seguridad.time_left > 0.0, "El desencriptado sigue mientras el jugador se aleja de la mesa")
+			var restante: float = _oficina.temporizador_seguridad.time_left
+			get_tree().paused = true
+			await get_tree().create_timer(0.25).timeout
+			_verificar(absf(_oficina.temporizador_seguridad.time_left - restante) < 0.05, "La pausa detiene el desencriptado")
+			get_tree().paused = false
+			await _oficina.temporizador_seguridad.timeout
+			await get_tree().process_frame
+			_verificar(_oficina.progreso_seguridad.visible and _oficina.progreso_seguridad.listo_para_recoger and not caso.estaciones_completadas.has("privacidad"), "Al terminar, seguridad queda lista y exige volver a recoger")
+			await _capturar("13_seguridad_lista")
+			_colocar(postura["cerca"], float(postura["giro"]))
+			await get_tree().process_frame
+			_pulsar_interaccion()
+			await get_tree().process_frame
+			_verificar(not _oficina.progreso_seguridad.visible, "Recoger con E oculta ambas barras")
+		elif estacion_id == "verificacion":
+			var escaner: ESCANER = _oficina.escaner_verificacion
+			_verificar(escaner.visible and _jugador.input_locked and not caso.estaciones_completadas.has("verificacion"), "Verificación abre un escáner sin completar la mesa al instante")
+			var zona_inicial: float = escaner.zona_centro
+			_pulsar_tecla(KEY_ESCAPE)
+			await get_tree().process_frame
+			_verificar(not escaner.visible and not _jugador.input_locked, "Esc cierra el escáner y devuelve el control")
+			_pulsar_interaccion()
+			await get_tree().process_frame
+			_verificar(escaner.visible and escaner.entrada_restante > 0.0 and is_equal_approx(escaner.zona_centro, zona_inicial), "Volver a Verificación hace subir el escáner y conserva la zona del caso")
+			var posicion_inicial: float = escaner.marcador
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(escaner.visible and is_zero_approx(escaner.error_restante), "E durante la entrada no detiene el barrido accidentalmente")
+			await get_tree().create_timer(0.25).timeout
+			_verificar(escaner.entrada_restante > 0.0 and is_equal_approx(escaner.marcador, posicion_inicial), "La luz espera mientras sube el escáner")
+			await get_tree().create_timer(0.31).timeout
+			_verificar(is_zero_approx(escaner.entrada_restante), "El escáner completa su entrada desde abajo")
+			await get_tree().create_timer(0.14).timeout
+			_verificar(escaner.marcador > posicion_inicial, "La línea del escáner se desplaza sola")
+			await _capturar("16_escaner_verificacion")
+			var posicion_pausada: float = escaner.marcador
+			get_tree().paused = true
+			await get_tree().create_timer(0.2).timeout
+			_verificar(absf(escaner.marcador - posicion_pausada) < 0.01, "La pausa congela la línea del escáner")
+			get_tree().paused = false
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(escaner.visible and escaner.error_restante > 0.0 and not caso.estaciones_completadas.has("verificacion"), "Detener fuera de la zona falla y permite reintentar")
+			await get_tree().create_timer(0.6).timeout
+			var limite: int = Time.get_ticks_msec() + 3000
+			while absf(escaner.marcador - escaner.zona_centro) > ESCANER.ANCHO_ZONA * 0.5 and Time.get_ticks_msec() < limite:
+				await get_tree().process_frame
+			_verificar(absf(escaner.marcador - escaner.zona_centro) <= ESCANER.ANCHO_ZONA * 0.5, "La línea entra físicamente en la zona marcada")
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(not escaner.visible and not _jugador.input_locked, "E en la zona completa el escaneo y libera al jugador")
+		elif estacion_id == "evidencias":
+			var clasificador: CLASIFICADOR = _oficina.clasificador_evidencias
+			_verificar(clasificador.visible and clasificador.entrada_restante > 0.0 and clasificador.papeles.size() == 3 and caso.estaciones_completadas.has("evidencias") == false, "E en evidencias hace subir un planillero con tres hojas")
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(clasificador.archivados == 0, "La entrada animada no toma una hoja accidentalmente")
+			await get_tree().create_timer(0.25).timeout
+			_verificar(clasificador.entrada_restante > 0.0 and clasificador.entrada_restante < CLASIFICADOR.DURACION_ENTRADA, "La entrada avanza durante la subida")
+			await _capturar("15_evidencias_entrada")
+			await get_tree().create_timer(0.31).timeout
+			_verificar(is_zero_approx(clasificador.entrada_restante), "El planillero termina su entrada desde abajo")
+			await _capturar("11_evidencias_clasificacion")
+			clasificador.seleccion = (clasificador.papeles.find(clasificador.objetivos[0]) + 1) % 3
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(clasificador.archivados == 0 and clasificador.papeles.size() == 3, "Tomar una hoja equivocada no avanza")
+			clasificador.seleccion = clasificador.papeles.find(clasificador.objetivos[0])
+			_pulsar_tecla(KEY_E)
+			await get_tree().process_frame
+			_verificar(clasificador.archivados == 1 and clasificador.papeles.size() == 2, "La hoja correcta sale del planillero")
+			_pulsar_tecla(KEY_ESCAPE)
+			await get_tree().process_frame
+			_verificar(not clasificador.visible and clasificador.archivados == 1 and not _jugador.input_locked, "Salir del clasificador conserva el primer documento archivado")
+			_pulsar_interaccion()
+			await get_tree().process_frame
+			_verificar(clasificador.visible and clasificador.archivados == 1, "Volver a evidencias reanuda la clasificación")
+			await get_tree().create_timer(0.52).timeout
+			for numero: int in range(1, 3):
+				clasificador.seleccion = clasificador.papeles.find(clasificador.objetivos[numero])
+				_pulsar_tecla(KEY_E)
+				await get_tree().process_frame
+			_verificar(not clasificador.visible and not _jugador.input_locked, "Archivar tres documentos cierra el clasificador y libera al jugador")
 		_verificar(caso.estaciones_completadas.has(estacion_id), "E completa %s sin exigir otra estación primero" % estacion_id)
 		for id: String in _indicadores:
 			_verificar((_indicadores[id] as Node3D).visible == caso.obtener_estaciones_pendientes().has(id), "Solo permanecen visibles las estaciones pendientes")
@@ -244,6 +357,105 @@ func _probar_orden_libre_con_tecla() -> void:
 	_verificar(_jugador.papel_en_mano == null and _oficina.papel_actual == null, "Resolver retira la hoja del caso")
 	_verificar(_sistema.puntuacion.puntos == saldo + caso.obtener_puntaje_recompensa(), "El cierre libre concede una sola recompensa")
 	_verificar(not panel.denuncia_activa_detalle.visible and not _oficina.guia_estacion.visible and _oficina.ruta_actual.is_empty(), "Cerrar retira tarjeta, guía y ruta")
+
+
+func _probar_cancelar_seguridad() -> void:
+	var caso := _recibir_caso("SEGURIDAD-VENCE", ["privacidad"])
+	var postura := _buscar_postura(_estaciones["privacidad"] as Estacion)
+	_verificar(not postura.is_empty(), "La mesa de seguridad es accesible para el caso de vencimiento")
+	if postura.is_empty():
+		_sistema.vencer_denuncia(caso.id)
+		return
+	_colocar(postura["cerca"], float(postura["giro"]))
+	await _esperar_efecto()
+	_pulsar_interaccion()
+	await get_tree().process_frame
+	_verificar(_oficina.temporizador_seguridad.time_left > 0.0 and _oficina.progreso_seguridad.visible, "La barra está activa antes de vencer el caso")
+	_sistema.vencer_denuncia(caso.id)
+	_verificar(_oficina.temporizador_seguridad.is_stopped() and not _oficina.progreso_seguridad.visible and caso.estaciones_completadas.is_empty(), "Vencer el caso cancela la tarea sin completar la estación")
+
+
+func _probar_cancelar_evidencias() -> void:
+	var caso := _recibir_caso("EVIDENCIAS-VENCE", ["evidencias"])
+	var postura := _buscar_postura(_estaciones["evidencias"] as Estacion)
+	_verificar(not postura.is_empty(), "Evidencias es accesible antes de vencer")
+	if postura.is_empty():
+		_sistema.vencer_denuncia(caso.id)
+		return
+	_colocar(postura["cerca"], float(postura["giro"]))
+	await _esperar_efecto()
+	_pulsar_interaccion()
+	await get_tree().process_frame
+	_verificar(_oficina.clasificador_evidencias.visible and _jugador.input_locked, "La clasificación inmoviliza al jugador mientras está abierta")
+	_sistema.vencer_denuncia(caso.id)
+	_verificar(not _oficina.clasificador_evidencias.visible and not _jugador.input_locked and caso.estaciones_completadas.is_empty(), "Vencer cancela el clasificador y devuelve el control")
+
+
+func _probar_cancelar_verificacion() -> void:
+	var caso := _recibir_caso("VERIFICACION-VENCE", ["verificacion"])
+	var postura := _buscar_postura(_estaciones["verificacion"] as Estacion)
+	_verificar(not postura.is_empty(), "Verificación es accesible antes de vencer")
+	if postura.is_empty():
+		_sistema.vencer_denuncia(caso.id)
+		return
+	_colocar(postura["cerca"], float(postura["giro"]))
+	await _esperar_efecto()
+	_pulsar_interaccion()
+	await get_tree().process_frame
+	_verificar(_oficina.escaner_verificacion.visible and _jugador.input_locked, "El escáner inmoviliza al jugador mientras está abierto")
+	_sistema.vencer_denuncia(caso.id)
+	_verificar(not _oficina.escaner_verificacion.visible and not _jugador.input_locked and caso.estaciones_completadas.is_empty(), "Vencer cancela el escáner sin completar la estación")
+
+
+func _probar_atasco_reporte() -> void:
+	_oficina.probabilidad_atasco_reporte = 1.0
+	var caso := _recibir_caso("REPORTE-ATASCADO", ["reporte"])
+	var postura := _buscar_postura(_estaciones["reporte"] as Estacion)
+	_verificar(not postura.is_empty(), "Reporte sigue accesible cuando se atasca")
+	if postura.is_empty():
+		_sistema.vencer_denuncia(caso.id)
+		return
+	_colocar(postura["cerca"], float(postura["giro"]))
+	await _esperar_efecto()
+	_pulsar_interaccion()
+	await get_tree().process_frame
+	_verificar(caso.estaciones_completadas.is_empty() and _oficina.herramienta_reporte.activa, "El atasco impide completar reporte y hace aparecer la herramienta")
+	await _capturar("12_reporte_atascado")
+	_pulsar_interaccion()
+	await get_tree().process_frame
+	_verificar(caso.estaciones_completadas.is_empty(), "Insistir sin herramienta conserva el atasco")
+	var herramienta := _oficina.herramienta_reporte as StaticBody3D
+	var alcanzable := false
+	for distancia: float in [0.55, 0.45, 0.35, 0.25]:
+		_colocar(Vector3(herramienta.global_position.x, _altura_pies, herramienta.global_position.z - distancia), 0.0)
+		await get_tree().physics_frame
+		if _jugador.obtener_objetivo_interaccion() == herramienta:
+			alcanzable = true
+			break
+	_verificar(alcanzable, "La herramienta se puede recoger con E en una casilla del suelo")
+	if alcanzable:
+		await _esperar_efecto()
+		_verificar(_jugador.obtener_objetivo_interaccion() == herramienta, "E conserva la herramienta como objetivo tras entrar en alcance")
+		await _capturar("14_herramienta_impresora")
+		_pulsar_interaccion()
+	else:
+		_oficina.herramienta_reporte.interactuar(_jugador)
+	await get_tree().process_frame
+	_verificar(not _oficina.herramienta_reporte.activa, "Recoger la herramienta retira su objeto físico")
+	_colocar(postura["cerca"], float(postura["giro"]))
+	await get_tree().process_frame
+	_pulsar_interaccion()
+	await get_tree().process_frame
+	_verificar(caso.estado == Denuncia.Estado.RESUELTA and not _oficina._aviso_reporte_atasco.visible, "Volver con la herramienta repara la impresora y completa reporte")
+	var caso_vencido := _recibir_caso("REPORTE-VENCE", ["reporte"])
+	_colocar(postura["cerca"], float(postura["giro"]))
+	await _esperar_efecto()
+	_pulsar_interaccion()
+	await get_tree().process_frame
+	_verificar(_oficina.herramienta_reporte.activa, "Un nuevo atasco activa su herramienta")
+	_sistema.vencer_denuncia(caso_vencido.id)
+	_verificar(not _oficina.herramienta_reporte.activa and not _oficina._aviso_reporte_atasco.visible, "Vencer retira la herramienta y el aviso de atasco")
+	_oficina.probabilidad_atasco_reporte = 0.0
 
 
 func _probar_silla_computador() -> void:
@@ -359,9 +571,31 @@ func _probar_vencimiento() -> void:
 		await _esperar_efecto()
 		_validar_interactuables("bienestar", "antes de vencer un caso al alcance")
 	_sistema.vencer_denuncia(caso.id)
+	_verificar(not _oficina.indicador_papel.visible, "Vencer el caso retira inmediatamente el medallón")
 	_validar_interactuables("", "inmediatamente al vencer el caso")
 	var indicador := _indicadores["bienestar"] as IndicadorProximaEstacion
 	_verificar(not indicador.visible and is_zero_approx(float(indicador.get("_intensidad_interaccion"))), "Vencer reinicia el efecto incluso estando junto a la mesa")
+
+
+func _probar_hud_papel_adaptable() -> void:
+	var hud := _oficina.indicador_papel as Control
+	var aviso := _oficina.get("_aviso_apagon") as Label
+	var original := get_window().size
+	_verificar(hud.visible and hud.rotulo.text == "E - soltar", "Llevar el papel muestra el diseño con E - soltar")
+	for resolucion: Vector2i in [Vector2i(1280, 720), Vector2i(1920, 1080), Vector2i(1024, 768), Vector2i(2560, 1080), Vector2i(640, 360)]:
+		get_window().size = resolucion
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var pantalla := get_viewport().get_visible_rect()
+		var medallon := hud.get_global_rect()
+		var luz := aviso.get_global_rect()
+		_verificar(pantalla.encloses(medallon) and pantalla.encloses(luz), "Medallón y aviso caben en %s" % resolucion)
+		_verificar(luz.end.y < medallon.position.y and not luz.intersects(medallon), "El aviso de luz queda por encima sin tapar el papel en %s" % resolucion)
+		if resolucion == Vector2i(1280, 720):
+			await _capturar("09_medallon_papel")
+	get_window().size = original
+	await get_tree().process_frame
+	await get_tree().process_frame
 
 
 func _probar_reconfiguracion() -> void:
@@ -446,6 +680,19 @@ func _pulsar_interaccion() -> void:
 	Input.parse_input_event(pulsacion)
 	var liberacion := InputEventAction.new()
 	liberacion.action = &"Interactuar"
+	liberacion.pressed = false
+	Input.parse_input_event(liberacion)
+
+
+func _pulsar_tecla(codigo: Key) -> void:
+	var pulsacion := InputEventKey.new()
+	pulsacion.keycode = codigo
+	pulsacion.physical_keycode = codigo
+	pulsacion.pressed = true
+	Input.parse_input_event(pulsacion)
+	var liberacion := InputEventKey.new()
+	liberacion.keycode = codigo
+	liberacion.physical_keycode = codigo
 	liberacion.pressed = false
 	Input.parse_input_event(liberacion)
 

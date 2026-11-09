@@ -17,6 +17,7 @@ const RUN := &"policia_prueba_correr"
 const JUMP := &"policia_prueba_saltar"
 const EMOTE_MENU := &"policia_menu_emotes"
 const EMOTE_HOLD_SECONDS := 0.3
+const AnimacionesInteraccion := preload("res://Personajes/PoliciaAzul/animaciones_interaccion.gd")
 
 @export_category("Movimiento")
 @export var walk_speed: float = 2.0
@@ -35,6 +36,7 @@ const EMOTE_HOLD_SECONDS := 0.3
 @export_range(0.1, 2.0, 0.05) var character_scale: float = 0.3
 @export_category("Animación")
 @export var blend_time: float = 0.15
+@export_range(0.0, 2.0, 0.05) var intensidad_tambaleo: float = 1.0
 
 var animation_player: AnimationPlayer
 var current_animation: StringName = &""
@@ -46,10 +48,13 @@ var _emote_menu_active: bool = false
 var _animation_names: Dictionary = {}
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 var papel_en_mano: PapelDenuncia = null
+var gestos: AnimacionesInteraccion
+var _efecto_gesto: Callable
 
 @onready var visual: Node3D = $Visual
 @onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
-@onready var sonido_pasos: AudioStreamPlayer3D = $SonidosPasos
+@onready var sonido_pasos: SonidosPasos = $SonidosPasos
+@onready var voz: VozPersonaje = $VozPersonaje
 
 func _enter_tree() -> void:
 	add_to_group("player")
@@ -73,6 +78,15 @@ func _ready() -> void:
 				if leaf.to_lower() == String(clip):
 					_animation_names[clip] = imported_name
 					break
+	var esqueleto := $Visual/Modelo.find_child("Skeleton3D", true, false) as Skeleton3D
+	if esqueleto != null:
+		gestos = AnimacionesInteraccion.new()
+		gestos.name = "AnimacionesInteraccion"
+		gestos.jugador = self
+		gestos.tambaleo = intensidad_tambaleo
+		esqueleto.add_child(gestos)
+		gestos.contacto.connect(_al_contacto_gesto)
+		gestos.terminada.connect(_al_terminar_gesto)
 	_play_animation(&"idle")
 	if not is_in_group("player"):
 		add_to_group("player")
@@ -86,16 +100,17 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 
 	var input_direction := Vector2.ZERO
-	if not input_locked:
+	if not input_locked and not realizando_gesto():
 		input_direction = Input.get_vector(LEFT, RIGHT, FORWARD, BACK)
 	var direction := _camera_relative_direction(input_direction)
 	var moving := direction.length_squared() > 0.001
-	var running := not input_locked and Input.is_action_pressed(RUN)
+	var running := not input_locked and not realizando_gesto() and Input.is_action_pressed(RUN)
 
-	if not input_locked and Input.is_action_just_pressed(JUMP) and is_on_floor():
+	if not input_locked and not realizando_gesto() and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
-	if moving or input_locked or not is_on_floor():
+		reproducir_expresion(&"esfuerzo")
+	if moving or input_locked or realizando_gesto() or not is_on_floor():
 		_wave_remaining = 0.0
 	else:
 		_wave_remaining = maxf(0.0, _wave_remaining - delta)
@@ -108,13 +123,12 @@ func _physics_process(delta: float) -> void:
 	if moving:
 		var angle := atan2(direction.x, direction.z)
 		visual.rotation.y = lerp_angle(visual.rotation.y, angle, 1.0 - exp(-turn_speed * delta))
-	var caminando := Vector2(velocity.x, velocity.z).length() > 0.1
-	if caminando and not sonido_pasos.playing:
-		sonido_pasos.play()
-	elif not caminando and sonido_pasos.playing:
-		sonido_pasos.stop()
-
+	var posicion_anterior := global_position
 	move_and_slide()
+	var desplazamiento := Vector2(global_position.x - posicion_anterior.x, global_position.z - posicion_anterior.z).length()
+	# El desplazamiento real evita seguir pisando al empujar una pared.
+	var caminando := is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
+	sonido_pasos.actualizar(delta, caminando, running)
 	_update_animation(moving, running)
 	# Una caída fuera de la plataforma siempre vuelve al punto inicial.
 	if global_position.y < -12.0:
@@ -160,7 +174,7 @@ func _play_animation(clip: StringName) -> void:
 
 
 func play_wave() -> void:
-	if input_locked or not is_on_floor():
+	if input_locked or realizando_gesto() or not is_on_floor():
 		return
 	_wave_remaining = 1.8
 	if animation_player != null and _animation_names.has(&"wave"):
@@ -169,9 +183,16 @@ func play_wave() -> void:
 		if current_animation == &"wave":
 			animation_player.seek(0.0, true)
 	_play_animation(&"wave")
+	reproducir_expresion(&"saludo")
+
+
+func reproducir_expresion(expresion: StringName) -> bool:
+	return voz.reproducir(expresion) if is_instance_valid(voz) else false
 
 
 func _input(event: InputEvent) -> void:
+	if input_locked or realizando_gesto():
+		return
 	if event.is_action(EMOTE_MENU):
 		if event.is_action_released(EMOTE_MENU):
 			_finish_emote_menu(false)
@@ -191,7 +212,11 @@ func _input(event: InputEvent) -> void:
 		objetivo.interactuar(self)
 	elif is_instance_valid(papel_en_mano):
 		get_viewport().set_input_as_handled()
-		papel_en_mano.lanzar()
+		var hoja := papel_en_mano
+		ejecutar_gesto(&"lanzar", func() -> void:
+			if is_instance_valid(hoja) and hoja.portador == self:
+				hoja.lanzar()
+		)
 
 
 func _notification(what: int) -> void:
@@ -218,7 +243,7 @@ func _finish_emote_menu(cancelled: bool) -> void:
 
 func obtener_objetivo_interaccion() -> Node3D:
 	# La consulta visual y la tecla E comparten alcance, orden y disponibilidad.
-	if not is_inside_tree() or input_locked or not is_processing_input():
+	if not is_inside_tree() or input_locked or realizando_gesto() or not is_processing_input():
 		return null
 	if get_tree().paused:
 		return null
@@ -261,13 +286,66 @@ func _buscar_papel_cercano() -> PapelDenuncia:
 
 
 func reset_to_spawn() -> void:
+	cancelar_gesto()
 	_finish_emote_menu(true)
+	voz.detener()
+	sonido_pasos.detener()
 	global_transform = _spawn_transform
 	visual.rotation = _spawn_visual_rotation
 	velocity = Vector3.ZERO
 	_wave_remaining = 0.0
 	_play_animation(&"idle")
 	reset_performed.emit()
+
+
+func realizando_gesto() -> bool:
+	return is_instance_valid(gestos) and gestos.gesto != &""
+
+
+func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: Node3D = null, segundos: float = 0.0) -> bool:
+	if input_locked or realizando_gesto() or not is_on_floor():
+		return false
+	if not is_instance_valid(gestos):
+		# Mantiene funcionales escenas con un modelo alternativo sin esqueleto.
+		if efecto.is_valid():
+			efecto.call()
+		return true
+	if not gestos.iniciar(tipo, objetivo, segundos):
+		return false
+	_efecto_gesto = efecto
+	_wave_remaining = 0.0
+	_finish_emote_menu(true)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	if is_instance_valid(objetivo):
+		var direccion := objetivo.global_position - global_position
+		if Vector2(direccion.x, direccion.z).length() > 0.05:
+			visual.rotation.y = atan2(direccion.x, direccion.z)
+	_play_animation(&"idle")
+	animation_state_changed.emit(tipo)
+	return true
+
+
+func cancelar_gesto() -> void:
+	_efecto_gesto = Callable()
+	if is_instance_valid(gestos):
+		gestos.cancelar()
+
+
+func _al_contacto_gesto() -> void:
+	var efecto := _efecto_gesto
+	_efecto_gesto = Callable()
+	if efecto.is_valid():
+		efecto.call()
+
+
+func _al_terminar_gesto() -> void:
+	_efecto_gesto = Callable()
+	animation_state_changed.emit(current_animation)
+
+
+func anclaje_papel() -> Node3D:
+	return gestos.mano_izquierda if is_instance_valid(gestos) else visual
 
 
 func _register_inputs() -> void:

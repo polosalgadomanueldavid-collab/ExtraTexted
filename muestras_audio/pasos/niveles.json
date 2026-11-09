@@ -1,0 +1,288 @@
+{
+  "frecuencia_hz": 48000,
+  "formato": "PCM 16 bits",
+  "propuestas": [
+    {
+      "id": "01_gomita_ligera",
+      "nombre": "Gomita ligera",
+      "pistas": [
+        {
+          "archivo": "golpes/01_gomita_ligera/paso_01.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -9.04,
+          "rms_dbfs": -21.64
+        },
+        {
+          "archivo": "golpes/01_gomita_ligera/paso_02.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -9.22,
+          "rms_dbfs": -22.4
+        },
+        {
+          "archivo": "golpes/01_gomita_ligera/paso_03.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -9.4,
+          "rms_dbfs": -21.96
+        },
+        {
+          "archivo": "golpes/01_gomita_ligera/paso_04.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -8.62,
+          "rms_dbfs": -21.47
+        },
+        {
+          "archivo": "golpes/01_gomita_ligera/paso_05.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -8.95,
+          "rms_dbfs": -22.24
+        },
+        {
+          "archivo": "golpes/01_gomita_ligera/paso_06.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -9.29,
+          "rms_dbfs": -22.37
+        },
+        {
+          "archivo": "01_gomita_ligera.wav",
+          "duracion_s": 7.0,
+          "canales": 2,
+          "pico_dbfs": -8.09,
+          "rms_dbfs": -23.74
+        }
+      ]
+    },
+    {
+      "id": "02_peluche",
+      "nombre": "Peluche",
+      "pistas": [
+        {
+          "archivo": "golpes/02_peluche/paso_01.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -7.15,
+          "rms_dbfs": -23.75
+        },
+        {
+          "archivo": "golpes/02_peluche/paso_02.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -6.33,
+          "rms_dbfs": -23.46
+        },
+        {
+          "archivo": "golpes/02_peluche/paso_03.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -4.44,
+          "rms_dbfs": -22.55
+        },
+        {
+          "archivo": "golpes/02_peluche/paso_04.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -6.49,
+          "rms_dbfs": -23.15
+        },
+        {
+          "archivo": "golpes/02_peluche/paso_05.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -5.24,
+          "rms_dbfs": -23.13
+        },
+        {
+          "archivo": "golpes/02_peluche/paso_06.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -7.2,
+          "rms_dbfs": -23.91
+        },
+        {
+          "archivo": "02_peluche.wav",
+          "duracion_s": 7.0,
+          "canales": 2,
+          "pico_dbfs": -3.63,
+          "rms_dbfs": -25.02
+        }
+      ]
+    },
+    {
+      "id": "03_suela_de_goma",
+      "nombre": "Suela de goma",
+      "pistas": [
+        {
+          "archivo": "golpes/03_suela_de_goma/paso_01.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -4.46,
+          "rms_dbfs": -21.82
+        },
+        {
+          "archivo": "golpes/03_suela_de_goma/paso_02.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -5.3,
+          "rms_dbfs": -22.09
+        },
+        {
+          "archivo": "golpes/03_suela_de_goma/paso_03.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -4.71,
+          "rms_dbfs": -21.94
+        },
+        {
+          "archivo": "golpes/03_suela_de_goma/paso_04.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -5.01,
+          "rms_dbfs": -22.41
+        },
+        {
+          "archivo": "golpes/03_suela_de_goma/paso_05.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -4.44,
+          "rms_dbfs": -22.03
+        },
+        {
+          "archivo": "golpes/03_suela_de_goma/paso_06.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -4.61,
+          "rms_dbfs": -21.96
+        },
+        {
+          "archivo": "03_suela_de_goma.wav",
+          "duracion_s": 7.0,
+          "canales": 2,
+          "pico_dbfs": -3.64,
+          "rms_dbfs": -23.77
+        }
+      ]
+    },
+    {
+      "id": "04_gelatina",
+      "nombre": "Gelatina",
+      "pistas": [
+        {
+          "archivo": "golpes/04_gelatina/paso_01.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -8.65,
+          "rms_dbfs": -22.01
+        },
+        {
+          "archivo": "golpes/04_gelatina/paso_02.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -9.28,
+          "rms_dbfs": -22.41
+        },
+        {
+          "archivo": "golpes/04_gelatina/paso_03.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -8.64,
+          "rms_dbfs": -21.8
+        },
+        {
+          "archivo": "golpes/04_gelatina/paso_04.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -8.88,
+          "rms_dbfs": -22.25
+        },
+        {
+          "archivo": "golpes/04_gelatina/paso_05.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -8.61,
+          "rms_dbfs": -21.74
+        },
+        {
+          "archivo": "golpes/04_gelatina/paso_06.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -8.17,
+          "rms_dbfs": -21.79
+        },
+        {
+          "archivo": "04_gelatina.wav",
+          "duracion_s": 7.0,
+          "canales": 2,
+          "pico_dbfs": -7.81,
+          "rms_dbfs": -23.72
+        }
+      ]
+    },
+    {
+      "id": "05_rebote",
+      "nombre": "Rebote caricaturesco",
+      "pistas": [
+        {
+          "archivo": "golpes/05_rebote/paso_01.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -9.7,
+          "rms_dbfs": -21.71
+        },
+        {
+          "archivo": "golpes/05_rebote/paso_02.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -10.54,
+          "rms_dbfs": -22.21
+        },
+        {
+          "archivo": "golpes/05_rebote/paso_03.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -10.34,
+          "rms_dbfs": -22.18
+        },
+        {
+          "archivo": "golpes/05_rebote/paso_04.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -9.57,
+          "rms_dbfs": -21.45
+        },
+        {
+          "archivo": "golpes/05_rebote/paso_05.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -10.67,
+          "rms_dbfs": -22.27
+        },
+        {
+          "archivo": "golpes/05_rebote/paso_06.wav",
+          "duracion_s": 0.28,
+          "canales": 1,
+          "pico_dbfs": -10.43,
+          "rms_dbfs": -22.15
+        },
+        {
+          "archivo": "05_rebote.wav",
+          "duracion_s": 7.0,
+          "canales": 2,
+          "pico_dbfs": -9.16,
+          "rms_dbfs": -23.73
+        }
+      ]
+    }
+  ],
+  "comparativa": {
+    "archivo": "00_comparativa.wav",
+    "duracion_s": 18.5,
+    "canales": 2,
+    "pico_dbfs": -4.42,
+    "rms_dbfs": -25.41
+  }
+}
