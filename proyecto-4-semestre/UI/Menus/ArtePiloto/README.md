@@ -1,6 +1,6 @@
 # Menú piloto
 
-Implementado en `res://MainMenu.tscn` y en los paneles de `UI/Menus/MenuGlobal.tscn`.
+Implementado en `res://UI/Menus/MainMenu.tscn` y en los paneles de `UI/Menus/MenuGlobal.tscn`.
 Paleta: petróleo `#173B50`, crema
 `#FFF1D8` y coral `#FF785F`. El fondo del menú principal queda liso.
 
@@ -54,7 +54,7 @@ Parámetro `transparent_background: true`.
 ## Probar
 
 Abrir el proyecto `proyecto-4-semestre/project.godot` y ejecutar con F6
-`MainMenu.tscn`, o F5 para iniciar el proyecto completo.
+`UI/Menus/MainMenu.tscn`, o F5 para iniciar el proyecto completo.
 Ratón, flechas arriba/abajo, Tab/Shift+Tab y Enter/Espacio usan la navegación
 nativa. Jugar abre la oficina; Opciones abre el panel existente; Salir guarda
 los ajustes y termina la aplicación.

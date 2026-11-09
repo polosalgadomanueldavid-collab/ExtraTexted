@@ -13,7 +13,7 @@ func _ready() -> void:
 func _probar() -> void:
 	_mover_raton(Vector2(5, 5))
 	get_tree().current_scene = null
-	get_tree().change_scene_to_file("res://MainMenu.tscn")
+	get_tree().change_scene_to_file("res://UI/Menus/MainMenu.tscn")
 	await get_tree().scene_changed
 	await _esperar_layout()
 	var menu := get_tree().current_scene

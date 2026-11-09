@@ -1,5 +1,5 @@
 extends SceneTree
-## Godot --headless --path <proyecto> --script res://Pruebas/prueba_protocolo_libre.gd
+## Godot --headless --path <proyecto> --script res://Pruebas/Despacho/prueba_protocolo_libre.gd
 
 const CASOS: Array[String] = [
 	"uso_excesivo", "enlace_sospechoso", "suplantacion",

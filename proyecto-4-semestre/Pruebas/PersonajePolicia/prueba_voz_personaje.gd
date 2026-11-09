@@ -9,7 +9,7 @@ func _initialize() -> void:
 
 
 func _probar() -> void:
-	var oficina := (load("res://Oficina.tscn") as PackedScene).instantiate() as Node3D
+	var oficina := (load("res://Mundo/Oficina.tscn") as PackedScene).instantiate() as Node3D
 	root.add_child(oficina)
 	current_scene = oficina
 	await _cuadros(4)

@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 
 func _probar() -> void:
-	_oficina = (load("res://Oficina.tscn") as PackedScene).instantiate() as Node3D
+	_oficina = (load("res://Mundo/Oficina.tscn") as PackedScene).instantiate() as Node3D
 	root.add_child(_oficina)
 	await _fisicas(3)
 	(_oficina.get("temporizador_denuncias") as Timer).stop()

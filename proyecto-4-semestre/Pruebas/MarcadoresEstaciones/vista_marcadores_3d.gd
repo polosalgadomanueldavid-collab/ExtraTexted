@@ -1,7 +1,7 @@
 extends Node3D
 ## F6 muestra las cinco mallas reales. -- --capturas guarda una imagen y sale.
 
-const INDICADOR := preload("res://Scripts/indicador_proxima_estacion.gd")
+const INDICADOR := preload("res://MarcadoresEstaciones/indicador_proxima_estacion.gd")
 const FUENTE := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const ESTACIONES := ["evidencias", "verificacion", "privacidad", "reporte", "bienestar"]
 const NOMBRES := ["EVIDENCIAS", "VERIFICACIÓN", "PRIVACIDAD", "REPORTE", "BIENESTAR"]

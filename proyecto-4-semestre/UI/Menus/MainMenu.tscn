@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://ccitwqm0mfqgf"]
 
-[ext_resource type="Script" uid="uid://2bp8nqtevvx8" path="res://Scripts/MainMenu.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://2bp8nqtevvx8" path="res://UI/Menus/MainMenu.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://dgai3sla0rjbf" path="res://UI/Menus/ArtePiloto/extra_texted_logo.png" id="2_logo"]
 [ext_resource type="Script" uid="uid://o06w8ljyvwwd" path="res://UI/Menus/boton_piloto.gd" id="5_boton"]
 [ext_resource type="Texture2D" uid="uid://gucbragsn4wx" path="res://UI/Menus/ArtePiloto/jugar.svg" id="6_jugar"]

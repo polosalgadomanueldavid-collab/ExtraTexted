@@ -22,7 +22,7 @@ func _probar() -> void:
 	_verificar(pasos.pasos.size() == 6, "Se cargan las seis variaciones de la opción 3")
 	for pista: AudioStream in pasos.pasos:
 		_verificar(pista.resource_path.begins_with("res://Audios/Pasos/SuelaGoma/") and (pista as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_DISABLED, "Suela de goma se reproduce como pisada individual")
-	var principal := (load("res://Policia.tscn") as PackedScene).instantiate()
+	var principal := (load("res://Personajes/PoliciaAzul/Policia.tscn") as PackedScene).instantiate()
 	_verificar(principal.get_node_or_null("SonidosPasos") is SonidosPasos, "La escena de la oficina usa el mismo sistema de pasos")
 	principal.free()
 

@@ -2,7 +2,7 @@ extends PanelContainer
 
 signal nombre_confirmado(nombre: String)
 
-const ClasificacionLocalScript := preload("res://Scripts/ClasificacionLocal.gd")
+const ClasificacionLocalScript := preload("res://Scripts/Partida/ClasificacionLocal.gd")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff9e8a")
 

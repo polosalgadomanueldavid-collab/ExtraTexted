@@ -38,12 +38,12 @@ La entrega final del documento está prevista para la semana del 16 al 20 de nov
 ## Punto de partida del código
 
 - `Scripts/Estructuras/denuncia.gd`: almacena `protocolo_estaciones` y `estaciones_completadas`; ya permite cualquier orden.
-- `Scripts/SistemaDespacho.gd`: mantiene una sola `denuncia_activa_id`, actualiza tiempos y cierra automáticamente al completar todas las estaciones.
-- `Scripts/gestor_partida.gd`: genera denuncias y bloqueos, entrega una hoja física por caso activo y calcula la ruta a una estación.
-- `Scripts/papel_denuncia.gd`: conserva el ID de la denuncia; se puede llevar, lanzar con E y recoger con E.
-- `Scripts/estacion.gd`: exige que el jugador lleve la hoja del caso activo; la validación de varios casos simultáneos sigue pendiente.
-- `Scripts/computer.gd`: en la oficina entrega la hoja con E sin abrir el panel ni cambiar la cámara.
-- `UI/panel_despacho.gd` y los indicadores: muestran una denuncia activa, sus estaciones completadas y todas las pendientes. La guía sugiere la más cercana.
+- `Scripts/Despacho/SistemaDespacho.gd`: mantiene una sola `denuncia_activa_id`, actualiza tiempos y cierra automáticamente al completar todas las estaciones.
+- `Scripts/Partida/gestor_partida.gd`: genera denuncias y bloqueos, entrega una hoja física por caso activo y calcula la ruta a una estación.
+- `Scripts/Despacho/papel_denuncia.gd`: conserva el ID de la denuncia; se puede llevar, lanzar con E y recoger con E.
+- `Scripts/Despacho/estacion.gd`: exige que el jugador lleve la hoja del caso activo; la validación de varios casos simultáneos sigue pendiente.
+- `Objetos/Computador/computer.gd`: en la oficina entrega la hoja con E sin abrir el panel ni cambiar la cámara.
+- `UI/Despacho/panel_despacho.gd` y los indicadores: muestran una denuncia activa, sus estaciones completadas y todas las pendientes. La guía sugiere la más cercana.
 - `UI/Menus/menu_global.gd`: usa la pausa del árbol de escenas; debe adaptarse para que un menú individual no detenga o desincronice la sesión.
 - `Eventos/Apagon/evento_apagon.gd`: el apagón y su reparación también necesitarán un estado compartido, con controles y efectos visuales locales por jugador.
 

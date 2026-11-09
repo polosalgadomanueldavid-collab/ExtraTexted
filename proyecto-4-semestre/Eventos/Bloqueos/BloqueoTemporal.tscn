@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://b53kynuebo0yh"]
 
 [ext_resource type="PackedScene" uid="uid://bdc5ekusmor4i" path="res://Furniture Pack/Cajon/Cajon.glb" id="1_cajon"]
-[ext_resource type="Script" uid="uid://d26vos64cba4o" path="res://Scripts/bloqueo_temporal.gd" id="2_script"]
+[ext_resource type="Script" uid="uid://d26vos64cba4o" path="res://Eventos/Bloqueos/bloqueo_temporal.gd" id="2_script"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ql73s"]
 size = Vector3(0.5, 0.91, 0.5)

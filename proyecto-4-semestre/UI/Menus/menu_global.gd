@@ -1,12 +1,12 @@
 extends Node
 
-const ESCENA_JUEGO := "res://Oficina.tscn"
-const ESCENA_MENU := "res://MainMenu.tscn"
+const ESCENA_JUEGO := "res://Mundo/Oficina.tscn"
+const ESCENA_MENU := "res://UI/Menus/MainMenu.tscn"
 const TAMANO_DISENO := Vector2(1920, 1080)
 const ESCALA_PAUSA := 0.8
 const PanelAyuda = preload("res://UI/Menus/panel_ayuda.gd")
 const PanelClasificacion := preload("res://UI/Menus/panel_clasificacion.gd")
-const ClasificacionLocalScript := preload("res://Scripts/ClasificacionLocal.gd")
+const ClasificacionLocalScript := preload("res://Scripts/Partida/ClasificacionLocal.gd")
 
 enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
 

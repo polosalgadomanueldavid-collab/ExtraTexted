@@ -14,7 +14,7 @@ func _probar() -> void:
 	root.size = Vector2i(1280, 720)
 	_menu = root.get_node("MenuGlobal")
 	_menu.set("nombre_partida", "")
-	_escena = (load("res://Oficina.tscn") as PackedScene).instantiate() as Node3D
+	_escena = (load("res://Mundo/Oficina.tscn") as PackedScene).instantiate() as Node3D
 	root.add_child(_escena)
 	current_scene = _escena
 	await _cuadros(3)

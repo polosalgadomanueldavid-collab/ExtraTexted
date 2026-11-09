@@ -120,8 +120,8 @@ La conversión se realiza con `posicion_a_celda()` y `celda_a_posicion()`, usand
 | Archivo | Responsabilidad |
 |---|---|
 | `Scripts/Estructuras/grafo_piso.gd` | Modelo de cuadrícula, adyacencia, Dijkstra y conversiones de coordenadas. |
-| `Scripts/gestor_partida.gd` | Solicita rutas, administra bloqueos temporales y los visualiza en la escena. |
-| `Pruebas/prueba_grafo.gd` | Prueba el cálculo de una ruta entre origen y destino. |
+| `Scripts/Partida/gestor_partida.gd` | Solicita rutas, administra bloqueos temporales y los visualiza en la escena. |
+| `Pruebas/Estructuras/prueba_grafo.gd` | Prueba el cálculo de una ruta entre origen y destino. |
 
 ## 9. Guion breve para la sustentación
 

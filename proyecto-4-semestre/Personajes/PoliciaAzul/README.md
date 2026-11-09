@@ -4,7 +4,7 @@ Modelo 3D ajustado a las proporciones de las cuatro vistas de referencia. Las co
 
 ## Usarlo en Godot
 
-Abre `res://Pruebas/PersonajePolicia/PruebaPoliciaAzul.tscn` y pulsa **F6**. La plataforma de pruebas y `res://Policia.tscn` usan el mismo GLB. En el juego, `character_scale = 0.3` da una altura de aproximadamente 0,8 unidades.
+Abre `res://Pruebas/PersonajePolicia/PruebaPoliciaAzul.tscn` y pulsa **F6**. La plataforma de pruebas y `res://Personajes/PoliciaAzul/Policia.tscn` usan el mismo GLB. En el juego, `character_scale = 0.3` da una altura de aproximadamente 0,8 unidades.
 
 `PoliciaAzul.tscn` es el personaje reutilizable con `CharacterBody3D`, colisión, controlador y modelo. Puede instanciarse en otra escena con suelo de colisión en la capa 1. El modelo mide aproximadamente 2,7 m, tiene los pies en el origen y mira hacia **+Z**. La velocidad, aceleración, salto y cámara se ajustan en el Inspector.
 

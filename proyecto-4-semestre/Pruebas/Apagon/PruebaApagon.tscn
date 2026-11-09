@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://Pruebas/Apagon/prueba_apagon.gd" id="1_prueba"]
-[ext_resource type="PackedScene" path="res://Policia.tscn" id="2_jugador"]
+[ext_resource type="PackedScene" path="res://Personajes/PoliciaAzul/Policia.tscn" id="2_jugador"]
 [ext_resource type="PackedScene" path="res://Eventos/Apagon/TacoLuz.tscn" id="3_taco"]
 [ext_resource type="Script" path="res://Eventos/Apagon/evento_apagon.gd" id="4_evento"]
 [ext_resource type="PackedScene" path="res://Furniture Pack/Mesas_estaciones/Estacion1.glb" id="5_mesa"]

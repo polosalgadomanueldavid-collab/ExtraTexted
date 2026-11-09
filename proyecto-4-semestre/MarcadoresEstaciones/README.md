@@ -37,14 +37,14 @@ el mobiliario.
 
 ## Integración
 
-`Scripts/indicador_proxima_estacion.gd` coloca el modelo y el puntero bajo
+`MarcadoresEstaciones/indicador_proxima_estacion.gd` coloca el modelo y el puntero bajo
 `OrientacionCamara`. Los orienta a la cámara activa y aplica una flotación y
 un balanceo limitados, sin girar la cara del icono de espaldas. Todos los objetivos
 pendientes procesan animación; la pausa congela su fase y los marcadores ocultos
 no procesan cuadros.
 
 El gestor ancla cada marcador 1,25 unidades sobre su estación. La altura se
-ajusta en `ALTURA_INDICADOR_ESTACION` de `Scripts/gestor_partida.gd`; el balanceo
+ajusta en `ALTURA_INDICADOR_ESTACION` de `Scripts/Partida/gestor_partida.gd`; el balanceo
 y la separación del puntero se ajustan en el script del indicador. Su propiedad
 `alto_maximo_pantalla` limita el tamaño al 18 % del alto del viewport al acercarse,
 sin agrandar los objetos lejanos. `ESCALA_MARCADOR = 0.85` reduce un 15 % el
