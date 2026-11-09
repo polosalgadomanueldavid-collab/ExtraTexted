@@ -91,6 +91,7 @@ func _ready() -> void:
 	panel_despacho.add_child(clasificacion_partida)
 	sistema_despacho.puntuacion.puntos_actualizados.connect(_al_actualizar_puntaje)
 	evento_apagon.estado_cambiado.connect(_al_cambiar_estado_apagon)
+	evento_apagon.apagon_iniciado.connect(_al_iniciar_apagon)
 	grafo_piso = GrafoPiso.new()
 	depurador_grafo = GrafoDebugVisual.new()
 	depurador_grafo.name = "DepuradorGrafo"
@@ -276,6 +277,10 @@ func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
 	if nuevo_estado == EventoApagonScript.Estado.REPARANDO:
 		clasificacion_partida.hide()
+
+
+func _al_iniciar_apagon(_tipo: int) -> void:
+	jugador.reproducir_expresion(&"sorpresa")
 
 
 func _notification(what: int) -> void:
@@ -609,6 +614,7 @@ func _on_denuncias_actualizadas(_denuncias: Array[Denuncia]) -> void:
 
 
 func _on_estacion_completada(_denuncia: Denuncia, _estacion_id: String) -> void:
+	jugador.reproducir_expresion(&"alegria")
 	_sincronizar_indicador_con_despacho()
 
 

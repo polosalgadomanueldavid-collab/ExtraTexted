@@ -49,7 +49,8 @@ var papel_en_mano: PapelDenuncia = null
 
 @onready var visual: Node3D = $Visual
 @onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
-@onready var sonido_pasos: AudioStreamPlayer3D = $SonidosPasos
+@onready var sonido_pasos: SonidosPasos = $SonidosPasos
+@onready var voz: VozPersonaje = $VozPersonaje
 
 func _enter_tree() -> void:
 	add_to_group("player")
@@ -95,6 +96,7 @@ func _physics_process(delta: float) -> void:
 	if not input_locked and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
+		reproducir_expresion(&"esfuerzo")
 	if moving or input_locked or not is_on_floor():
 		_wave_remaining = 0.0
 	else:
@@ -108,13 +110,12 @@ func _physics_process(delta: float) -> void:
 	if moving:
 		var angle := atan2(direction.x, direction.z)
 		visual.rotation.y = lerp_angle(visual.rotation.y, angle, 1.0 - exp(-turn_speed * delta))
-	var caminando := Vector2(velocity.x, velocity.z).length() > 0.1
-	if caminando and not sonido_pasos.playing:
-		sonido_pasos.play()
-	elif not caminando and sonido_pasos.playing:
-		sonido_pasos.stop()
-
+	var posicion_anterior := global_position
 	move_and_slide()
+	var desplazamiento := Vector2(global_position.x - posicion_anterior.x, global_position.z - posicion_anterior.z).length()
+	# El desplazamiento real evita seguir pisando al empujar una pared.
+	var caminando := is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
+	sonido_pasos.actualizar(delta, caminando, running)
 	_update_animation(moving, running)
 	# Una caída fuera de la plataforma siempre vuelve al punto inicial.
 	if global_position.y < -12.0:
@@ -169,6 +170,11 @@ func play_wave() -> void:
 		if current_animation == &"wave":
 			animation_player.seek(0.0, true)
 	_play_animation(&"wave")
+	reproducir_expresion(&"saludo")
+
+
+func reproducir_expresion(expresion: StringName) -> bool:
+	return voz.reproducir(expresion) if is_instance_valid(voz) else false
 
 
 func _input(event: InputEvent) -> void:
@@ -262,6 +268,8 @@ func _buscar_papel_cercano() -> PapelDenuncia:
 
 func reset_to_spawn() -> void:
 	_finish_emote_menu(true)
+	voz.detener()
+	sonido_pasos.detener()
 	global_transform = _spawn_transform
 	visual.rotation = _spawn_visual_rotation
 	velocity = Vector3.ZERO

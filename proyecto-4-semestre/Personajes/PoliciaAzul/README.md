@@ -12,6 +12,10 @@ Abre `res://Pruebas/PersonajePolicia/PruebaPoliciaAzul.tscn` y pulsa **F6**. La 
 
 Los controles de prueba usan acciones con prefijo `policia_prueba_`, registradas al ejecutar el personaje. No requieren modificar el mapa de entradas del juego. El controlador expone `input_locked`, `play_wave()`, `reset_to_spawn()` y la señal `animation_state_changed`.
 
+La voz provisional es **Gomosa (opción 4)**. Saluda con `play_wave()` y hace un esfuerzo al saltar. En la oficina también expresa sorpresa al iniciar un apagón y alegría al completar una estación. Las pistas, el tono, la variación y el volumen se ajustan en el hijo `VozPersonaje` del personaje. Detalles en `Audios/VozPersonaje/README.md`.
+
+Los pasos usan **Suela de goma (opción 3)**, con seis variaciones y dos cadencias para caminar y correr. Solo suenan con desplazamiento real sobre el suelo. Los ajustes están en el hijo `SonidosPasos`; detalles en `Audios/Pasos/README.md`.
+
 ## Editar el modelo
 
 Fuera de la carpeta del proyecto Godot, en la raíz del repositorio:

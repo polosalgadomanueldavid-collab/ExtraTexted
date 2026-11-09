@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://dkumt5d6kqdb" path="res://Personajes/PoliciaAzul/policia_azul.gd" id="1_vcfys"]
 [ext_resource type="PackedScene" uid="uid://bergxnx112j2t" path="res://Personajes/PoliciaAzul/policia_azul.glb" id="2_n2jeu"]
+[ext_resource type="Script" path="res://Personajes/PoliciaAzul/voz_personaje.gd" id="3_voz"]
+[ext_resource type="Script" path="res://Personajes/PoliciaAzul/sonidos_pasos.gd" id="4_pasos"]
 
 [sub_resource type="BoxShape3D" id="CajaCuerpo"]
 size = Vector3(1.5, 2.66, 1.0173798)
@@ -35,3 +37,13 @@ collision_mask = 5
 
 [node name="SonidosPasos" type="AudioStreamPlayer3D" parent="." unique_id=543803698]
 volume_db = -9.0
+unit_size = 10.0
+max_distance = 30.0
+script = ExtResource("4_pasos")
+
+[node name="VozPersonaje" type="AudioStreamPlayer3D" parent="."]
+position = Vector3(0, 1.9, 0)
+volume_db = -5.0
+unit_size = 10.0
+max_distance = 30.0
+script = ExtResource("3_voz")
