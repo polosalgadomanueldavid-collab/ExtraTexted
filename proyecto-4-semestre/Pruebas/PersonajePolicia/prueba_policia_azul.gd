@@ -33,6 +33,8 @@ func _ready() -> void:
 	%VistaEspalda.pressed.connect(_set_view.bind(PI))
 	%Centrar.pressed.connect(reset_scene)
 	%Saludar.pressed.connect(_wave)
+	%Despistado.pressed.connect(_mostrar_reposo.bind(&"idle_despistado"))
+	%Tambaleo.pressed.connect(_mostrar_reposo.bind(&"idle_tambaleo"))
 	policia.connect("animation_state_changed", _animation_changed)
 	_animation_changed(&"idle")
 	_update_camera(1.0)
@@ -114,6 +116,10 @@ func _wave() -> void:
 	policia.call("play_wave")
 
 
+func _mostrar_reposo(tipo: StringName) -> void:
+	policia.call("play_idle_variant", tipo)
+
+
 func reset_scene() -> void:
 	policia.call("reset_to_spawn")
 	_yaw = CAMERA_YAW
@@ -127,6 +133,8 @@ func reset_scene() -> void:
 func _animation_changed(animation: StringName) -> void:
 	var names := {
 		&"idle": "En reposo", &"walk": "Caminando", &"run": "Corriendo",
-		&"jump": "Saltando", &"fall": "En el aire", &"wave": "Saludando"
+		&"jump": "Saltando", &"fall": "En el aire", &"wave": "Saludando",
+		&"idle_despistado": "Mirando y rascándose la gorra",
+		&"idle_tambaleo": "Perdiendo el equilibrio"
 	}
 	animation_label.text = str(names.get(animation, animation))

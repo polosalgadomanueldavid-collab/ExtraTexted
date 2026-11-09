@@ -342,6 +342,24 @@ layout_mode = 2
 focus_mode = 0
 text = "Saludar   [ G ]"
 
+[node name="Reposos" type="HBoxContainer" parent="HUD/Interfaz/Vistas/Contenido"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Despistado" type="Button" parent="HUD/Interfaz/Vistas/Contenido/Reposos"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "Despistado"
+
+[node name="Tambaleo" type="Button" parent="HUD/Interfaz/Vistas/Contenido/Reposos"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "Tambaleo"
+
 [node name="Centrar" type="Button" parent="HUD/Interfaz/Vistas/Contenido"]
 unique_name_in_owner = true
 layout_mode = 2

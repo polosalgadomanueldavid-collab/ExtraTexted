@@ -4,9 +4,11 @@ extends SkeletonModifier3D
 
 signal contacto
 signal terminada
+signal reposo_terminado
 
 const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95}
 const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46}
+const REPOSOS := {&"idle_despistado": 3.4, &"idle_tambaleo": 3.1}
 var jugador: CharacterBody3D
 var gesto: StringName = &""
 var tiempo: float = 0.0
@@ -21,6 +23,10 @@ var _peso_papel: float = 0.0
 var _huesos: Dictionary = {}
 var _reposo: Dictionary = {}
 var _llave: Node3D
+var reposo_especial: StringName = &""
+var tiempo_reposo: float = 0.0
+var _peso_reposo: float = 0.0
+var _saliendo_reposo: bool = false
 
 
 func _ready() -> void:
@@ -46,7 +52,23 @@ func iniciar(tipo: StringName, destino: Node3D = null, segundos: float = 0.0) ->
 	duracion = segundos if segundos > 0.0 else float(DURACIONES[tipo])
 	_contacto_emitido = false
 	objetivo = destino
+	cancelar_reposo()
 	return true
+
+
+func iniciar_reposo(tipo: StringName) -> bool:
+	if gesto != &"" or reposo_especial != &"" or not REPOSOS.has(tipo):
+		return false
+	reposo_especial = tipo
+	tiempo_reposo = 0.0
+	_peso_reposo = 0.0
+	_saliendo_reposo = false
+	return true
+
+
+func cancelar_reposo() -> void:
+	if reposo_especial != &"":
+		_saliendo_reposo = true
 
 
 func cancelar() -> void:
@@ -60,6 +82,18 @@ func _process(delta: float) -> void:
 	_reloj += delta
 	var lleva: bool = is_instance_valid(jugador.papel_en_mano)
 	_peso_papel = move_toward(_peso_papel, 1.0 if lleva else 0.0, delta * 7.0)
+	if reposo_especial != &"":
+		if _saliendo_reposo:
+			_peso_reposo = move_toward(_peso_reposo, 0.0, delta * 7.0)
+			if is_zero_approx(_peso_reposo):
+				reposo_especial = &""
+				_saliendo_reposo = false
+		else:
+			_peso_reposo = move_toward(_peso_reposo, 1.0, delta * 5.0)
+			tiempo_reposo += delta
+			if tiempo_reposo >= float(REPOSOS[reposo_especial]):
+				_saliendo_reposo = true
+				reposo_terminado.emit()
 	if gesto == &"":
 		return
 	tiempo = minf(tiempo + delta, duracion)
@@ -94,12 +128,45 @@ func _process_modification() -> void:
 	_sumar("chest", Vector3(0.025 * sin(_reloj * ritmo - 0.6) * tambaleo, balanceo * 0.35, -balanceo * 0.3))
 	_sumar("head", Vector3(0.035 * sin(_reloj * ritmo - 0.9) * tambaleo, 0.0, -sin(_reloj * ritmo - 0.7) * amplitud * 1.4 * tambaleo))
 	_sostener(_peso_papel)
+	if reposo_especial != &"":
+		_aplicar_reposo(_peso_reposo)
 	_llave.visible = gesto == &"reparar"
 	if gesto != &"":
 		_aplicar_gesto(tiempo / duracion)
 	var esqueleto := get_skeleton()
 	mano_izquierda.transform = esqueleto.get_bone_global_pose(_huesos["hand.L"])
 	mano_derecha.transform = esqueleto.get_bone_global_pose(_huesos["hand.R"])
+
+
+func _aplicar_reposo(peso: float) -> void:
+	var t := tiempo_reposo
+	var entrar := smoothstep(0.0, 0.35, t)
+	var salir := 1.0 - smoothstep(float(REPOSOS[reposo_especial]) - 0.55, float(REPOSOS[reposo_especial]), t)
+	var suave := peso * entrar * salir
+	if reposo_especial == &"idle_despistado":
+		var mirar := sin(t * 2.4) * 0.32 * suave
+		var rascar := smoothstep(0.75, 1.2, t) * (1.0 - smoothstep(2.3, 2.8, t)) * peso
+		_sumar("spine", Vector3(0.0, mirar * 0.35, sin(t * 3.0) * 0.065 * suave * tambaleo))
+		_sumar("head", Vector3(0.08 * suave, mirar, sin(t * 4.0) * 0.11 * suave * tambaleo))
+		_pose("upper_arm.R", Vector3(-0.28, 0.0, 2.30), rascar)
+		_pose("forearm.R", Vector3(-0.35, 0.0, 0.20 * sin(t * 13.0)), rascar)
+		_pose("hand.R", Vector3(0.0, 0.0, 0.20 * sin(t * 13.0)), rascar)
+		_sumar("chest", Vector3(0.0, -mirar * 0.3, 0.0))
+	else:
+		var perder := smoothstep(0.15, 0.55, t) * (1.0 - smoothstep(1.85, 2.3, t)) * peso
+		var vaiven := (sin(t * 5.5) * 0.26 + 0.18) * perder * tambaleo
+		_sumar("spine", Vector3(0.10 * perder, 0.0, vaiven))
+		_sumar("chest", Vector3(-0.08 * perder, 0.0, -vaiven * 0.4))
+		_sumar("head", Vector3(-0.13 * perder, 0.0, -vaiven * 1.5))
+		_pose("upper_arm.R", Vector3(-0.30, 0.0, 0.85 + 0.20 * sin(t * 8.0)), perder)
+		_sumar("upper_arm.L", Vector3(-0.12 * perder, 0.0, -0.18 * perder))
+		_pose("thigh.R", Vector3(-0.34, 0.0, 0.0), perder)
+		_pose("shin.R", Vector3(0.48, 0.0, 0.0), perder)
+		var esqueleto := get_skeleton()
+		var raiz: int = _huesos["root"]
+		esqueleto.set_bone_pose_position(raiz, esqueleto.get_bone_pose_position(raiz) + Vector3(0.0, -0.07 * perder, 0.0))
+		if t > 2.15:
+			_sumar("head", Vector3(0.11 * sin((t - 2.15) * 9.0) * suave, 0.0, 0.0))
 
 
 func _aplicar_gesto(t: float) -> void:
