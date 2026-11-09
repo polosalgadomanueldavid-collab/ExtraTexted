@@ -374,7 +374,7 @@ func _entregar_papel(portador: Player) -> void:
 	add_child(papel_actual)
 	papel_actual.global_position = computador.global_position + Vector3.UP * 0.7
 	papel_actual.freeze = true
-	if not portador.ejecutar_gesto(&"recibir", _tomar_papel_si_vigente.bind(portador, papel_actual), computador):
+	if not portador.ejecutar_gesto(&"recibir", _tomar_papel_si_vigente.bind(portador, papel_actual.get_instance_id()), computador):
 		papel_actual.freeze = false
 
 
@@ -382,14 +382,18 @@ func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
 	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
 		return
-	portador.ejecutar_gesto(&"recoger", _tomar_papel_si_vigente.bind(portador, papel), papel)
+	portador.ejecutar_gesto(&"recoger", _tomar_papel_si_vigente.bind(portador, papel.get_instance_id()), papel)
 
 
-func _tomar_papel_si_vigente(portador: Player, papel: PapelDenuncia) -> void:
-	if not is_instance_valid(portador) or not is_instance_valid(papel) or papel.is_queued_for_deletion():
+func _tomar_papel_si_vigente(portador: Player, papel_id: int) -> void:
+	# El gesto puede terminar después de que la denuncia haya liberado la hoja.
+	if not is_instance_valid(portador) or not is_instance_valid(papel_actual) or papel_actual.is_queued_for_deletion():
+		return
+	var papel := papel_actual
+	if papel.get_instance_id() != papel_id:
 		return
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
-	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
+	if denuncia == null or denuncia.id != papel.denuncia_id:
 		return
 	if is_instance_valid(portador.papel_en_mano) or is_instance_valid(papel.portador):
 		return

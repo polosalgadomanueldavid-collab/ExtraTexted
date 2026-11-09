@@ -107,6 +107,34 @@ func _probar() -> void:
 	oficina.call("_on_caso_finalizado", caso)
 	await _cuadros(55)
 	_verificar(not caso.estaciones_completadas.has("bienestar") and jugador.papel_en_mano == null, "Una hoja retirada durante el gesto no puntúa ni deja referencias activas")
+	sistema.resolver_denuncia(caso.id)
+	# La entrega y la recogida conservan un gesto pendiente mientras la hoja puede vencer.
+	var caso_entrega = Denuncia.new()
+	caso_entrega.id = "QA-ENTREGA-VENCE"
+	caso_entrega.tiempo_limite_segundos = 300.0
+	caso_entrega.protocolo_estaciones.assign(["reporte"])
+	sistema.recibir_denuncia(caso_entrega)
+	oficina.call("_entregar_papel", jugador)
+	_verificar(jugador.realizando_gesto() and oficina.papel_actual != null, "La entrega está pendiente antes de vencer")
+	sistema.vencer_denuncia(caso_entrega.id)
+	await _cuadros(55)
+	_verificar(jugador.papel_en_mano == null and oficina.papel_actual == null, "Vencer durante la entrega no toma una hoja liberada")
+	var caso_recogida = Denuncia.new()
+	caso_recogida.id = "QA-RECOGIDA-VENCE"
+	caso_recogida.tiempo_limite_segundos = 300.0
+	caso_recogida.protocolo_estaciones.assign(["reporte"])
+	sistema.recibir_denuncia(caso_recogida)
+	oficina.call("_entregar_papel", jugador)
+	await _cuadros(55)
+	var hoja_recogida = jugador.papel_en_mano
+	_verificar(is_instance_valid(hoja_recogida), "La segunda denuncia entrega una hoja para recoger")
+	if is_instance_valid(hoja_recogida):
+		hoja_recogida.lanzar()
+		oficina.call("recoger_papel", jugador, hoja_recogida)
+		_verificar(jugador.realizando_gesto() and jugador.papel_en_mano == null, "La recogida está pendiente antes de vencer")
+		sistema.vencer_denuncia(caso_recogida.id)
+		await _cuadros(75)
+		_verificar(jugador.papel_en_mano == null and oficina.papel_actual == null, "Vencer durante la recogida no toma una hoja liberada")
 	print("GESTOS_POLICIA: %d errores" % errores)
 	oficina.queue_free()
 	await _cuadros(3)
