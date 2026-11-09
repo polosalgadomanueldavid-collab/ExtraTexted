@@ -11,19 +11,19 @@ const MAX_DENUNCIAS_PENDIENTES: int = 5
 const DURACION_BLOQUEO_SEGUNDOS: float = 10.0
 const BLOQUEOS_SIMULTANEOS: int = 30
 const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
-	"res://BloqueoTemporal.tscn"
+	"res://Eventos/Bloqueos/BloqueoTemporal.tscn"
 )
 const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
-	"res://Scripts/indicador_proxima_estacion.gd"
+	"res://MarcadoresEstaciones/indicador_proxima_estacion.gd"
 )
 const GUIA_ESTACION_ESCENA := preload("res://UI/Despacho/GuiaEstacion.tscn")
-const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/papel_denuncia.gd")
+const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/Despacho/papel_denuncia.gd")
 const IndicadorPapel := preload("res://UI/Despacho/indicador_papel.gd")
 const ProgresoSeguridad := preload("res://UI/Despacho/progreso_seguridad.gd")
 const ClasificadorEvidencias := preload("res://UI/Despacho/clasificador_evidencias.gd")
 const EscanerVerificacion := preload("res://UI/Despacho/escaner_verificacion.gd")
 const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
-const HerramientaReporte := preload("res://Scripts/herramienta_reporte.gd")
+const HerramientaReporte := preload("res://Scripts/Despacho/herramienta_reporte.gd")
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const VER_CLASIFICACION := &"VerClasificacion"

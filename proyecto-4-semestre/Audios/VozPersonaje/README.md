@@ -13,7 +13,7 @@ Audio original sintetizado, sin muestras de otros juegos. Mono, PCM de 16 bits,
 | Sorpresa | Una vez al empezar un apagón; cerrar su panel no la repite. |
 | Alegría | Al completar una estación válida del protocolo de denuncia. |
 
-Las escenas `Policia.tscn` y `Personajes/PoliciaAzul/PoliciaAzul.tscn` incorporan
+Las escenas `Personajes/PoliciaAzul/Policia.tscn` y `Personajes/PoliciaAzul/PoliciaAzul.tscn` incorporan
 un hijo `VozPersonaje`. Selecciónalo en el Inspector para cambiar las cuatro
 pistas, `tono_base`, `variacion_tono`, `pausa_minima`, `habilitada` y el
 `volume_db` del reproductor. Valores iniciales: tono 1.0, variación 2 %, pausa

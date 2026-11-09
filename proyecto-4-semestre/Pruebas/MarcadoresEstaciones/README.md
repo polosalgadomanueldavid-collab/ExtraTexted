@@ -1,9 +1,9 @@
 # QA de marcadores de estaciones
 
-Ejecuta `res://Pruebas/PruebaIndicadoresEstaciones.tscn` con F6 o por CLI:
+Ejecuta `res://Pruebas/MarcadoresEstaciones/PruebaIndicadoresEstaciones.tscn` con F6 o por CLI:
 
 ```text
-Godot --headless --path proyecto-4-semestre res://Pruebas/PruebaIndicadoresEstaciones.tscn
+Godot --headless --path proyecto-4-semestre res://Pruebas/MarcadoresEstaciones/PruebaIndicadoresEstaciones.tscn
 ```
 
 La prueba usa la oficina real y comprueba los cinco modelos distintos, ausencia

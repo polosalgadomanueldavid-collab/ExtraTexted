@@ -127,7 +127,7 @@ Repetir una estación o usar otra ajena al caso no cambia el progreso, los punto
 
 El panel muestra una lista con marcas individuales y el contador de completadas. Todos los marcadores pendientes están activos; la flecha sugiere el de menor recorrido transitable. Las cinco estaciones físicas están integradas en la oficina.
 
-La prueba `Pruebas/prueba_protocolo_libre.gd` recorre los 50 órdenes posibles de las seis plantillas, comprueba duplicados, vencimiento y cierre único. La prueba de interacción de marcadores completa un caso en orden inverso mediante la tecla E en las estaciones reales.
+La prueba `Pruebas/Despacho/prueba_protocolo_libre.gd` recorre los 50 órdenes posibles de las seis plantillas, comprueba duplicados, vencimiento y cierre único. La prueba de interacción de marcadores completa un caso en orden inverso mediante la tecla E en las estaciones reales.
 
 ## 8. Archivos principales
 
@@ -136,10 +136,10 @@ La prueba `Pruebas/prueba_protocolo_libre.gd` recorre los 50 órdenes posibles d
 | `Scripts/Estructuras/denuncia.gd` | Modelo de una denuncia y comparación de prioridad. |
 | `Scripts/Estructuras/nodo_avl.gd` | Nodo interno del árbol. |
 | `Scripts/Estructuras/arbol_denuncias_avl.gd` | Inserción, búsqueda, recorrido, eliminación y rotaciones AVL. |
-| `Scripts/SistemaDespacho.gd` | Temporizadores, calma, denuncia activa y validación de estaciones. |
-| `Scripts/gestor_partida.gd` | Generación dinámica y conexión entre escena, computador, panel y despacho. |
-| `UI/panel_despacho.gd` | Actualización visual del panel lateral. |
-| `Pruebas/prueba_avl.gd` | Pruebas de orden, eliminación y las cuatro rotaciones. |
+| `Scripts/Despacho/SistemaDespacho.gd` | Temporizadores, calma, denuncia activa y validación de estaciones. |
+| `Scripts/Partida/gestor_partida.gd` | Generación dinámica y conexión entre escena, computador, panel y despacho. |
+| `UI/Despacho/panel_despacho.gd` | Actualización visual del panel lateral. |
+| `Pruebas/Estructuras/prueba_avl.gd` | Pruebas de orden, eliminación y las cuatro rotaciones. |
 
 ## 9. Pruebas realizadas
 

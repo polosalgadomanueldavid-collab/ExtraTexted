@@ -3,7 +3,7 @@ extends Node
 ## Ejecutar esta escena; -- --capturas guarda lejos/cerca/salida en la oficina.
 
 const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")
-const INDICADOR := preload("res://Scripts/indicador_proxima_estacion.gd")
+const INDICADOR := preload("res://MarcadoresEstaciones/indicador_proxima_estacion.gd")
 const CLASIFICADOR := preload("res://UI/Despacho/clasificador_evidencias.gd")
 const ESCANER := preload("res://UI/Despacho/escaner_verificacion.gd")
 
@@ -26,7 +26,7 @@ func _ready() -> void:
 
 
 func _probar() -> void:
-	_oficina = preload("res://Oficina.tscn").instantiate()
+	_oficina = preload("res://Mundo/Oficina.tscn").instantiate()
 	_oficina.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(_oficina)
 	await _fisicas(3)
@@ -538,7 +538,7 @@ func _probar_papel_sin_mesa_encima() -> void:
 
 func _probar_caida_sobre_mesa_temporal() -> void:
 	var centro: Vector3 = _oficina.grafo_piso.celda_a_posicion(Vector2i(7, 15))
-	var mesa := preload("res://BloqueoTemporal.tscn").instantiate() as StaticBody3D
+	var mesa := preload("res://Eventos/Bloqueos/BloqueoTemporal.tscn").instantiate() as StaticBody3D
 	_oficina.add_child(mesa)
 	mesa.global_position = centro
 	await _fisicas(3)

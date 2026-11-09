@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://gysqqn4wkayp"]
 
-[ext_resource type="Script" path="res://UI/panel_despacho.gd" id="1_panel"]
+[ext_resource type="Script" path="res://UI/Despacho/panel_despacho.gd" id="1_panel"]
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf" id="2_fuente"]
 [ext_resource type="Script" path="res://UI/Despacho/icono_despacho.gd" id="3_icono"]
 [ext_resource type="Script" path="res://UI/Despacho/protocolo_denuncia.gd" id="4_protocolo"]

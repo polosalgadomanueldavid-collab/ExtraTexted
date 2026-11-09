@@ -12,7 +12,7 @@ func _ready() -> void:
 
 
 func _probar() -> void:
-	oficina = (load("res://Oficina.tscn") as PackedScene).instantiate()
+	oficina = (load("res://Mundo/Oficina.tscn") as PackedScene).instantiate()
 	oficina.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(oficina)
 	for cuadro: int in range(6):

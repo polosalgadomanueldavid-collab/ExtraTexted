@@ -2,7 +2,7 @@ extends SceneTree
 ## Godot --headless --path <proyecto> --script res://Pruebas/Camara/prueba_camara.gd
 ## Sin --headless, añadir -- --capturas para guardar las tres vistas de la oficina.
 
-const Camara := preload("res://Scripts/camera_3d.gd")
+const Camara := preload("res://Scripts/Mundo/camera_3d.gd")
 
 var _errores: int = 0
 var _oficina: Node3D
@@ -17,7 +17,7 @@ func _initialize() -> void:
 func _probar() -> void:
 	root.mode = Window.MODE_WINDOWED
 	root.size = Vector2i(1280, 720)
-	_oficina = (load("res://Oficina.tscn") as PackedScene).instantiate()
+	_oficina = (load("res://Mundo/Oficina.tscn") as PackedScene).instantiate()
 	root.add_child(_oficina)
 	current_scene = _oficina
 	await _cuadros(3)

@@ -1,7 +1,7 @@
 extends Control
 ## Consulta rápida de los mejores puntajes en el escenario de la partida.
 
-const CLASIFICACION := preload("res://Scripts/ClasificacionLocal.gd")
+const CLASIFICACION := preload("res://Scripts/Partida/ClasificacionLocal.gd")
 const MAX_FILAS := 5
 const MARGEN := 20.0
 const TAMANO_DISENO := Vector2(1600, 900)

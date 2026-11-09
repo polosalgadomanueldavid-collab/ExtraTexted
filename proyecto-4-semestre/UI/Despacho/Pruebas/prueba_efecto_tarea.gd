@@ -1,7 +1,7 @@
 extends Node
 ## Integración del efecto real con estaciones, cierre de caso, pausa y reconexión.
 
-const PANEL := preload("res://UI/PanelDespacho.tscn")
+const PANEL := preload("res://UI/Despacho/PanelDespacho.tscn")
 var errores: int = 0
 
 

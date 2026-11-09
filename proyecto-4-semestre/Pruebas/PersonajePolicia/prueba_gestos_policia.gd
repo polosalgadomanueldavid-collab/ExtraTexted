@@ -15,7 +15,7 @@ func _initialize() -> void:
 func _probar() -> void:
 	root.mode = Window.MODE_WINDOWED
 	root.size = Vector2i(1000, 760)
-	oficina = (load("res://Oficina.tscn") as PackedScene).instantiate() as Node3D
+	oficina = (load("res://Mundo/Oficina.tscn") as PackedScene).instantiate() as Node3D
 	root.add_child(oficina)
 	current_scene = oficina
 	await _cuadros(4)

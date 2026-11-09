@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dotsgy2qcedx6"]
 
-[ext_resource type="Script" uid="uid://n44cq8hm3nho" path="res://Scripts/interfaz_pc.gd" id="1_jqa86"]
+[ext_resource type="Script" uid="uid://n44cq8hm3nho" path="res://UI/Computador/interfaz_pc.gd" id="1_jqa86"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_8lruo"]
 

@@ -1,6 +1,6 @@
 # Barra lateral de denuncias
 
-HUD exclusivo de `res://UI/PanelDespacho.tscn`: fondo general transparente,
+HUD exclusivo de `res://UI/Despacho/PanelDespacho.tscn`: fondo general transparente,
 tarjetas crema compactas, acentos laterales por riesgo y fuente Luckiest Guy
 reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los menús.
 

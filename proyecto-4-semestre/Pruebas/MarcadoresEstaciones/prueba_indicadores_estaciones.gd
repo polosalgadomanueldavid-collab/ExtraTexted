@@ -2,7 +2,7 @@ extends Node
 ## Regresión de los modelos flotantes y del objetivo del despacho real.
 ## Ejecutar PruebaIndicadoresEstaciones.tscn; añadir -- --capturas para QA visual.
 
-const INDICADOR_SCRIPT: Script = preload("res://Scripts/indicador_proxima_estacion.gd")
+const INDICADOR_SCRIPT: Script = preload("res://MarcadoresEstaciones/indicador_proxima_estacion.gd")
 const ESTACIONES: Array[String] = ["bienestar", "verificacion", "evidencias", "privacidad", "reporte"]
 const CASOS: Array[Denuncia] = [
 	preload("res://Casos/Despacho/denuncia_uso_excesivo.tres") as Denuncia,
@@ -28,7 +28,7 @@ func _ready() -> void:
 
 
 func _probar() -> void:
-	var oficina := preload("res://Oficina.tscn").instantiate()
+	var oficina := preload("res://Mundo/Oficina.tscn").instantiate()
 	oficina.process_mode = Node.PROCESS_MODE_PAUSABLE
 	get_tree().root.add_child(oficina)
 	await get_tree().physics_frame
