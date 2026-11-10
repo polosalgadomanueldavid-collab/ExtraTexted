@@ -67,12 +67,32 @@ func probar() -> void:
 		print("Captura relevo: ", ruta_relevo)
 	await create_timer(3.9, true, false, true).timeout
 	_verificar(oficina.final_partida._fase == 2 and oficina.final_partida._cuaderno.visible, "El cuaderno se abre al terminar el relevo")
-	_verificar(oficina.final_partida._estadisticas.text.contains("RESUELTAS  1") and oficina.final_partida._estadisticas.text.contains("SIN CERRAR  1"), "Las estadísticas reflejan el turno")
+	_verificar(oficina.final_partida._estadisticas.text.contains("1 de 3"), "Las estadísticas reflejan el turno")
 	if OS.get_environment("CAPTURAR_FINAL") == "1":
 		await RenderingServer.frame_post_draw
 		var ruta := ProjectSettings.globalize_path("user://prueba_final_partida.png")
 		get_root().get_texture().get_image().save_png(ruta)
 		print("Captura: ", ruta)
+	oficina.final_partida._siguiente.emit_signal("pressed")
+	await create_timer(0.8, true, false, true).timeout
+	_verificar(oficina.final_partida._pagina_actual == 1 and (oficina.final_partida._paginas[0]["titulo"] as Label).text == "Lo que hiciste", "Las páginas muestran resueltos y vencidos")
+	if OS.get_environment("CAPTURAR_FINAL") == "1":
+		await RenderingServer.frame_post_draw
+		var ruta_casos := ProjectSettings.globalize_path("user://prueba_cuaderno_casos.png")
+		get_root().get_texture().get_image().save_png(ruta_casos)
+		print("Captura casos: ", ruta_casos)
+	oficina.final_partida._pestanas[2].emit_signal("pressed")
+	await create_timer(0.8, true, false, true).timeout
+	_verificar(oficina.final_partida._pagina_actual == 2 and (oficina.final_partida._paginas[1]["titulo"] as Label).text == "Estadísticas", "La última apertura muestra pendientes y gráficos")
+	_verificar(oficina.final_partida._cuerpo(1).get_child_count() >= 9, "Los gráficos incluyen resultados y estaciones")
+	if OS.get_environment("CAPTURAR_FINAL") == "1":
+		await RenderingServer.frame_post_draw
+		var ruta_graficos := ProjectSettings.globalize_path("user://prueba_cuaderno_graficos.png")
+		get_root().get_texture().get_image().save_png(ruta_graficos)
+		print("Captura gráficos: ", ruta_graficos)
+	oficina.final_partida._pestanas[0].emit_signal("pressed")
+	await create_timer(0.8, true, false, true).timeout
+	_verificar(oficina.final_partida._pagina_actual == 0, "Las pestañas regresan al balance")
 	oficina._reiniciar_despues_del_final()
 	for indice: int in range(20):
 		if is_instance_valid(current_scene) and current_scene != oficina:
