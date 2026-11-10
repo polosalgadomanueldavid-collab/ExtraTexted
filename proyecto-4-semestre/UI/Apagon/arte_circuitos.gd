@@ -385,14 +385,6 @@ func _dibujar_cables(lienzo: CanvasItem) -> void:
 		var y: float = ALTURAS_CABLE[indice]
 		_dibujar_conector(lienzo, Vector2(144, y), Vector2(128, y), COLORES_CABLE[indice], -0.7 + indice * 0.23)
 		_dibujar_conector(lienzo, Vector2(594, y), Vector2(610, y), COLORES_CABLE[int(destinos[indice])], 0.45 - indice * 0.29)
-	if activo >= 0:
-		var rectangulo := rect_origen(activo)
-		rectangulo.position -= ORIGEN_INTERIOR
-		lienzo.draw_rect(rectangulo.grow(3), Color(CREMA, 0.65), false, 2)
-	if destino_seleccionado >= 0:
-		var rectangulo := rect_destino(destino_seleccionado)
-		rectangulo.position -= ORIGEN_INTERIOR
-		lienzo.draw_rect(rectangulo.grow(3), Color(CREMA, 0.65), false, 2)
 	var error_indice := int(_visual.get("error_indice", -1))
 	var error := clampf(float(_visual.get("error", 0.0)), 0.0, 1.0)
 	if error_indice >= 0 and error > 0.0:

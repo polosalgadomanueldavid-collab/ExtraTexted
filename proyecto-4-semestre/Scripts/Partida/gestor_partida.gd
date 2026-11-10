@@ -289,16 +289,16 @@ func _notification(what: int) -> void:
 			clasificacion_partida.hide()
 
 
-func _al_actualizar_puntaje(total: int) -> void:
+func _al_actualizar_puntaje(_saldo: int) -> void:
 	if not _nombre_partida.is_empty():
-		MenuGlobal.registrar_puntaje(total, _nombre_partida)
+		MenuGlobal.registrar_puntaje(sistema_despacho.puntuacion.puntos_ganados, _nombre_partida)
 	if clasificacion_partida.visible:
 		_presentar_clasificacion()
 
 
 func _presentar_clasificacion() -> void:
 	var consulta: Dictionary = MenuGlobal.consultar_clasificacion()
-	clasificacion_partida.presentar(consulta.entradas, _nombre_partida, sistema_despacho.puntuacion.puntos, consulta.error)
+	clasificacion_partida.presentar(consulta.entradas, _nombre_partida, sistema_despacho.puntuacion.puntos_ganados, consulta.error)
 
 
 func _recibir_denuncia_aleatoria() -> void:
@@ -359,6 +359,8 @@ func _on_computador_despacho_abierto() -> void:
 func _entregar_papel(portador: Player) -> void:
 	if not is_instance_valid(portador):
 		return
+	if _manos_ocupadas_con_cafe():
+		return
 	if is_instance_valid(portador.papel_en_mano):
 		panel_despacho._mostrar_mensaje("Ya llevas una denuncia. Usa E en una estación o lánzala en un espacio libre.", PanelDespacho.CORAL)
 		return
@@ -379,10 +381,20 @@ func _entregar_papel(portador: Player) -> void:
 
 
 func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
+	if _manos_ocupadas_con_cafe():
+		return
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
 	if papel != papel_actual or denuncia == null or denuncia.id != papel.denuncia_id:
 		return
 	portador.ejecutar_gesto(&"recoger", _tomar_papel_si_vigente.bind(portador, papel.get_instance_id()), papel)
+
+
+func _manos_ocupadas_con_cafe() -> bool:
+	var descanso := get_node_or_null("ZonaDescanso")
+	if descanso != null and descanso.tiene_cafe():
+		descanso.mostrar_mensaje("Termina el café con F antes de recoger una denuncia.")
+		return true
+	return false
 
 
 func _tomar_papel_si_vigente(portador: Player, papel_id: int) -> void:
@@ -673,6 +685,12 @@ func _cambiar_bloqueo_temporal() -> void:
 	for destino: Vector2i in GrafoPiso.DESTINOS.values():
 		if libres_al_inicio.has(destino):
 			destinos_protegidos.append(destino)
+	# Mantiene conectada la zona de descanso aunque el jugador esté en el laberinto.
+	for acceso: Node in get_tree().get_nodes_in_group("accesos_navegacion"):
+		if acceso is Node3D and is_ancestor_of(acceso):
+			var destino := grafo_piso.posicion_a_celda((acceso as Node3D).global_position)
+			if libres_al_inicio.has(destino) and not destinos_protegidos.has(destino):
+				destinos_protegidos.append(destino)
 
 	var colision := jugador.get_node("Colision") as CollisionShape3D
 	var limites := colision.global_transform * colision.shape.get_debug_mesh().get_aabb()

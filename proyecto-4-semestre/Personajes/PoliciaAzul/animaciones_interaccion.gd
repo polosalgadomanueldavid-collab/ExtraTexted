@@ -6,8 +6,8 @@ signal contacto
 signal terminada
 signal reposo_terminado
 
-const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95}
-const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46}
+const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8}
+const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56}
 const REPOSOS := {&"idle_despistado": 3.4, &"idle_tambaleo": 3.1}
 var jugador: CharacterBody3D
 var gesto: StringName = &""
@@ -16,6 +16,7 @@ var duracion: float = 1.0
 var tambaleo: float = 1.0
 var mano_izquierda: Node3D
 var mano_derecha: Node3D
+var anclaje_taza: Node3D
 var objetivo: Node3D
 var _reloj: float = 0.0
 var _contacto_emitido: bool = false
@@ -27,6 +28,10 @@ var reposo_especial: StringName = &""
 var tiempo_reposo: float = 0.0
 var _peso_reposo: float = 0.0
 var _saliendo_reposo: bool = false
+var sentado: bool = false
+var lleva_taza: bool = false
+var _peso_sentado: float = 0.0
+var _peso_taza: float = 0.0
 
 
 func _ready() -> void:
@@ -41,6 +46,9 @@ func _ready() -> void:
 	mano_derecha = Node3D.new()
 	mano_derecha.name = "AnclajeManoDerecha"
 	esqueleto.add_child(mano_derecha)
+	anclaje_taza = Node3D.new()
+	anclaje_taza.name = "AnclajeTaza"
+	esqueleto.add_child(anclaje_taza)
 	_crear_llave()
 
 
@@ -71,6 +79,16 @@ func cancelar_reposo() -> void:
 		_saliendo_reposo = true
 
 
+func establecer_sentado(activo: bool, inmediato: bool = false) -> void:
+	sentado = activo
+	if activo:
+		reposo_especial = &""
+		_peso_reposo = 0.0
+		_saliendo_reposo = false
+	if inmediato:
+		_peso_sentado = float(activo)
+
+
 func cancelar() -> void:
 	gesto = &""
 	objetivo = null
@@ -80,6 +98,8 @@ func cancelar() -> void:
 func _process(delta: float) -> void:
 	tambaleo = jugador.intensidad_tambaleo
 	_reloj += delta
+	_peso_sentado = move_toward(_peso_sentado, float(sentado), delta * 5.0)
+	_peso_taza = move_toward(_peso_taza, float(lleva_taza), delta * 7.0)
 	var lleva: bool = is_instance_valid(jugador.papel_en_mano)
 	_peso_papel = move_toward(_peso_papel, 1.0 if lleva else 0.0, delta * 7.0)
 	if reposo_especial != &"":
@@ -123,11 +143,15 @@ func _process_modification() -> void:
 	elif locomocion in [&"jump", &"fall", &"wave"]:
 		ritmo = 5.0
 		amplitud = 0.095
-	var balanceo := sin(_reloj * ritmo) * amplitud * tambaleo
+	var peso_balanceo := 1.0 - _peso_sentado * 0.85
+	var balanceo := sin(_reloj * ritmo) * amplitud * tambaleo * peso_balanceo
 	_sumar("spine", Vector3(0.015 * sin(_reloj * ritmo * 2.0) * tambaleo, 0.0, balanceo))
 	_sumar("chest", Vector3(0.025 * sin(_reloj * ritmo - 0.6) * tambaleo, balanceo * 0.35, -balanceo * 0.3))
 	_sumar("head", Vector3(0.035 * sin(_reloj * ritmo - 0.9) * tambaleo, 0.0, -sin(_reloj * ritmo - 0.7) * amplitud * 1.4 * tambaleo))
+	if _peso_sentado > 0.0:
+		_aplicar_sentado(_peso_sentado)
 	_sostener(_peso_papel)
+	_sostener_taza(_peso_taza)
 	if reposo_especial != &"":
 		_aplicar_reposo(_peso_reposo)
 	_llave.visible = gesto == &"reparar"
@@ -136,6 +160,23 @@ func _process_modification() -> void:
 	var esqueleto := get_skeleton()
 	mano_izquierda.transform = esqueleto.get_bone_global_pose(_huesos["hand.L"])
 	mano_derecha.transform = esqueleto.get_bone_global_pose(_huesos["hand.R"])
+	var inclinacion := 0.0
+	if gesto == &"beber":
+		var t := tiempo / duracion
+		inclinacion = -0.55 * smoothstep(0.22, 0.42, t) * (1.0 - smoothstep(0.66, 0.90, t))
+	anclaje_taza.transform = Transform3D(Basis.from_euler(Vector3(inclinacion, 0.0, 0.0)), mano_derecha.position + Vector3(0.13, -0.15, 0.05))
+
+
+func _aplicar_sentado(peso: float) -> void:
+	for lado: String in ["L", "R"]:
+		_pose("thigh." + lado, Vector3(-1.48, 0.0, -0.06 if lado == "L" else 0.06), peso)
+		_pose("shin." + lado, Vector3(1.52, 0.0, 0.0), peso)
+		_pose("foot." + lado, Vector3(-0.04, 0.0, 0.0), peso)
+		_pose("upper_arm." + lado, Vector3(-0.30, 0.0, 0.06 if lado == "R" else -0.06), peso)
+		_pose("forearm." + lado, Vector3(-0.58, 0.0, 0.0), peso)
+	_sumar("spine", Vector3(-0.045 * peso, 0.0, 0.0))
+	_sumar("chest", Vector3(0.025 * sin(_reloj * 1.6) * peso, 0.0, 0.0))
+	_sumar("head", Vector3(0.025 * sin(_reloj * 1.2 - 0.3) * peso, 0.0, 0.0))
 
 
 func _aplicar_reposo(peso: float) -> void:
@@ -212,12 +253,27 @@ func _aplicar_gesto(t: float) -> void:
 			_pose("upper_arm.L", Vector3(-0.42 + 0.95 * preparar - impulso, 0.0, -0.14), salida)
 			_pose("forearm.L", Vector3(-1.38 + 0.65 * preparar + 1.10 * impulso, 0.0, 0.0), salida)
 			_sumar("chest", Vector3(0.0, (-0.17 * preparar + 0.14 * impulso) * salida, 0.0))
+		&"beber":
+			var sorbo := smoothstep(0.0, 0.30, t) * (1.0 - smoothstep(0.68, 0.96, t))
+			_pose("upper_arm.R", Vector3(-0.90, 0.0, 0.08), sorbo)
+			_pose("forearm.R", Vector3(-1.65, 0.0, 0.0), sorbo)
+			_pose("hand.R", Vector3(0.35, 0.0, -0.05), sorbo)
+			_sumar("head", Vector3(-0.07 * sorbo, 0.0, 0.0))
+			var esqueleto := get_skeleton()
+			var boca := esqueleto.get_bone_global_pose(_huesos["head"]).origin + Vector3(0.0, 0.12, 0.48)
+			_apuntar_mano(esqueleto.to_global(boca), sorbo, "R")
 
 
 func _sostener(peso: float) -> void:
 	_pose("upper_arm.L", Vector3(-0.42, 0.0, -0.12), peso)
 	_pose("forearm.L", Vector3(-1.38, 0.0, 0.0), peso)
 	_pose("hand.L", Vector3.ZERO, peso)
+
+
+func _sostener_taza(peso: float) -> void:
+	_pose("upper_arm.R", Vector3(-0.32, 0.0, 0.06), peso)
+	_pose("forearm.R", Vector3(-1.40, 0.0, 0.0), peso)
+	_pose("hand.R", Vector3.ZERO, peso)
 
 
 func _pose(nombre: String, giro: Vector3, peso: float) -> void:
@@ -233,15 +289,15 @@ func _sumar(nombre: String, giro: Vector3) -> void:
 	esqueleto.set_bone_pose_rotation(i, esqueleto.get_bone_pose_rotation(i) * Quaternion.from_euler(giro))
 
 
-func _apuntar_mano(destino_global: Vector3, peso: float) -> void:
+func _apuntar_mano(destino_global: Vector3, peso: float, lado: String = "L") -> void:
 	var esqueleto := get_skeleton()
 	var destino := esqueleto.to_local(destino_global)
 	# CCD breve: rota hombro y codo, sin mover el cuerpo físico ni estirar huesos.
 	for repeticion: int in range(3):
-		for nombre: String in ["forearm.L", "upper_arm.L"]:
+		for nombre: String in ["forearm." + lado, "upper_arm." + lado]:
 			var i: int = _huesos[nombre]
 			var pose := esqueleto.get_bone_global_pose(i)
-			var mano := esqueleto.get_bone_global_pose(_huesos["hand.L"]).origin
+			var mano := esqueleto.get_bone_global_pose(_huesos["hand." + lado]).origin
 			var desde := (mano - pose.origin).normalized()
 			var hacia := (destino - pose.origin).normalized()
 			if desde.is_zero_approx() or hacia.is_zero_approx():

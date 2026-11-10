@@ -140,6 +140,16 @@ func obtener_denuncias_ordenadas() -> Array[Denuncia]:
 	return arbol.recorrido_inorden()
 
 
+func recuperar_calma(cantidad: int) -> int:
+	# Descansar o beber no puede reactivar una partida que llegó a cero de calma.
+	if cantidad <= 0 or calma_operativa <= 0 or calma_operativa >= CALMA_MAXIMA:
+		return 0
+	var recuperada := mini(cantidad, CALMA_MAXIMA - calma_operativa)
+	calma_operativa += recuperada
+	calma_actualizada.emit(calma_operativa)
+	return recuperada
+
+
 func _notificar_cambios() -> void:
 	denuncias_actualizadas.emit(arbol.recorrido_inorden())
 	calma_actualizada.emit(calma_operativa)
