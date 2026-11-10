@@ -1,0 +1,82 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/MuebleCafe.res" id="1_mnown"]
+[ext_resource type="PackedScene" path="res://Furniture Pack/Cafetera/Cafetera.glb" id="2_tvboh"]
+[ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/TazaAmarilla.res" id="3_tyd3d"]
+[ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/TazaBlanca.res" id="4_16fwx"]
+[ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/SofaTramo.res" id="5_o5alg"]
+[ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/SofaRetorno.res" id="6_24wbo"]
+[ext_resource type="Script" path="res://Objetos/ZonaDescanso/zona_descanso.gd" id="7_control"]
+[ext_resource type="Script" path="res://Objetos/ZonaDescanso/interaccion_descanso.gd" id="8_interaccion"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_v2r1e"]
+size = Vector3(1.0079997, 0.525, 0.525)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6i3xf"]
+size = Vector3(1.125, 0.44853592, 0.56250006)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_fifdd"]
+size = Vector3(1.125, 0.44853592, 0.56250006)
+
+[node name="ZonaDescanso" type="Node3D" unique_id=1080023350]
+script = ExtResource("7_control")
+
+[node name="RinconCafe" type="Node3D" parent="." unique_id=2138324250]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -4.075, 0, 10.5)
+
+[node name="MuebleCafeVisual" type="MeshInstance3D" parent="RinconCafe" unique_id=2141684169]
+transform = Transform3D(1.4, 0, 0, 0, 1.4, 0, 0, 0, 1.4, 0, 0, 0)
+mesh = ExtResource("1_mnown")
+
+[node name="MuebleCafe" type="StaticBody3D" parent="RinconCafe" unique_id=1811925278]
+script = ExtResource("8_interaccion")
+
+[node name="Colision" type="CollisionShape3D" parent="RinconCafe/MuebleCafe" unique_id=460677663 groups=["obstaculos_navegacion"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005707741, 0.26250002, -0.026482373)
+shape = SubResource("BoxShape3D_v2r1e")
+
+[node name="Cafetera" type="Node3D" parent="RinconCafe" unique_id=682276568 instance=ExtResource("2_tvboh")]
+transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -0.16, 0.718375, -0.015)
+
+[node name="TazaAmarilla" type="MeshInstance3D" parent="RinconCafe" unique_id=1188149385]
+transform = Transform3D(0.58778524, 0, -0.809017, 0, 1, 0, 0.809017, 0, 0.58778524, 0.28, 0.525, 0.15)
+mesh = ExtResource("3_tyd3d")
+
+[node name="TazaBlanca" type="MeshInstance3D" parent="RinconCafe" unique_id=1272857951]
+transform = Transform3D(0.58778524, 0, -0.809017, 0, 1, 0, 0.809017, 0, 0.58778524, 0.37, 0.525, -0.03)
+mesh = ExtResource("4_16fwx")
+
+[node name="SofaL" type="Node3D" parent="." unique_id=594629206]
+transform = Transform3D(-5.4639237e-08, 0, 1.25, 0, 1.25, 0, -1.25, 0, -5.4639237e-08, -4.035, 0, 7.35)
+
+[node name="TramoLargo" type="MeshInstance3D" parent="SofaL" unique_id=2001607887]
+mesh = ExtResource("5_o5alg")
+
+[node name="Retorno" type="MeshInstance3D" parent="SofaL" unique_id=1860337020]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0.3312, 0.0004, 0.331)
+mesh = ExtResource("6_24wbo")
+
+[node name="Cuerpo" type="StaticBody3D" parent="SofaL" unique_id=1256711000]
+script = ExtResource("8_interaccion")
+servicio = 1
+
+[node name="ColisionTramo" type="CollisionShape3D" parent="SofaL/Cuerpo" unique_id=1378115146 groups=["obstaculos_navegacion"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00013434887, 0.22426794, 0.049848348)
+shape = SubResource("BoxShape3D_6i3xf")
+
+[node name="ColisionRetorno" type="CollisionShape3D" parent="SofaL/Cuerpo" unique_id=424924589 groups=["obstaculos_navegacion"]]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0.28135166, 0.22466795, 0.33113435)
+shape = SubResource("BoxShape3D_fifdd")
+
+[node name="EspacioExpendedora" type="Marker3D" parent="." unique_id=1105838741]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.05, 0, 9.2)
+
+[node name="AccesoDescanso" type="Marker3D" parent="." groups=["accesos_navegacion"]]
+position = Vector3(-2.5, 0, 8.7)
+
+[node name="AsientoTramo" type="Marker3D" parent="SofaL"]
+position = Vector3(-0.2, 0.002, 0.27)
+
+[node name="AsientoRetorno" type="Marker3D" parent="SofaL"]
+position = Vector3(0.0612, 0.0024, 0.551)
+rotation_degrees = Vector3(0, -90, 0)

@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" path="res://Eventos/Apagon/TacoLuz.tscn" id="13_taco_luz"]
 [ext_resource type="Script" path="res://Eventos/Apagon/evento_apagon.gd" id="14_apagon"]
 [ext_resource type="Script" path="res://Objetos/Computador/silla_computador.gd" id="15_silla_pc"]
+[ext_resource type="PackedScene" path="res://Objetos/ZonaDescanso/ZonaDescanso.tscn" id="16_zona_descanso"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_silla_pc"]
 size = Vector3(0.8, 0.6, 0.65)
@@ -503,3 +504,6 @@ camara = NodePath("../Gameplay/Camera3D")
 taco = NodePath("../TacoLuz")
 luces = [NodePath("../Pared, suelo, techo/OmniLight3D"), NodePath("../Pared, suelo, techo/OmniLight3D2")]
 radio_vision = 1.02
+
+[node name="ZonaDescanso" parent="." instance=ExtResource("16_zona_descanso")]
+position = Vector3(0, 0.3717064, 0)

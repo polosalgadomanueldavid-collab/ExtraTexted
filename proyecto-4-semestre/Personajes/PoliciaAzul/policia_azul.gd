@@ -54,6 +54,8 @@ var _reloj_reposo: float = 0.0
 var _reposo_disponible: bool = false
 var _ultimo_reposo: StringName = &"idle_tambaleo"
 var _azar_reposo := RandomNumberGenerator.new()
+var _descanso_sentado: bool = false
+var _taza_en_mano: bool = false
 
 @onready var visual: Node3D = $Visual
 @onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
@@ -99,6 +101,10 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _descanso_sentado:
+		velocity = Vector3.ZERO
+		sonido_pasos.detener()
+		return
 	_update_emote_hold(delta)
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
@@ -181,7 +187,7 @@ func _play_animation(clip: StringName) -> void:
 
 
 func play_wave() -> void:
-	if input_locked or realizando_gesto() or not is_on_floor():
+	if input_locked or _descanso_sentado or _taza_en_mano or realizando_gesto() or not is_on_floor():
 		return
 	_cancelar_reposo()
 	_wave_remaining = 1.8
@@ -294,6 +300,8 @@ func _buscar_papel_cercano() -> PapelDenuncia:
 
 
 func reset_to_spawn() -> void:
+	terminar_descanso_sentado(true)
+	establecer_taza_en_mano(false)
 	cancelar_gesto()
 	_cancelar_reposo()
 	_reposo_disponible = false
@@ -313,7 +321,8 @@ func realizando_gesto() -> bool:
 
 
 func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: Node3D = null, segundos: float = 0.0) -> bool:
-	if input_locked or realizando_gesto() or not is_on_floor():
+	var beber_sentado := tipo == &"beber" and _descanso_sentado
+	if (input_locked and not beber_sentado) or realizando_gesto() or (not is_on_floor() and not beber_sentado):
 		return false
 	if not is_instance_valid(gestos):
 		# Mantiene funcionales escenas con un modelo alternativo sin esqueleto.
@@ -337,7 +346,7 @@ func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: N
 
 
 func play_idle_variant(tipo: StringName) -> bool:
-	if not is_instance_valid(gestos) or input_locked or realizando_gesto() or not is_on_floor():
+	if not is_instance_valid(gestos) or input_locked or _descanso_sentado or _taza_en_mano or realizando_gesto() or not is_on_floor():
 		return false
 	if current_animation != &"idle" or Vector2(velocity.x, velocity.z).length() > 0.15:
 		return false
@@ -351,7 +360,7 @@ func play_idle_variant(tipo: StringName) -> bool:
 func _update_idle_variants(delta: float) -> void:
 	if not is_instance_valid(gestos):
 		return
-	var disponible := current_animation == &"idle" and is_on_floor() and not input_locked and not realizando_gesto() and not _emote_menu_active
+	var disponible := current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active
 	if not disponible:
 		if _reposo_disponible:
 			_cancelar_reposo()
@@ -400,6 +409,48 @@ func _al_terminar_gesto() -> void:
 
 func anclaje_papel() -> Node3D:
 	return gestos.mano_izquierda if is_instance_valid(gestos) else visual
+
+
+func anclaje_taza() -> Node3D:
+	return gestos.anclaje_taza if is_instance_valid(gestos) else visual
+
+
+func establecer_taza_en_mano(activo: bool) -> void:
+	_taza_en_mano = activo
+	if is_instance_valid(gestos):
+		gestos.lleva_taza = activo
+	if activo:
+		_cancelar_reposo()
+		_finish_emote_menu(true)
+
+
+func esta_sentado() -> bool:
+	return _descanso_sentado
+
+
+func iniciar_descanso_sentado() -> bool:
+	if _descanso_sentado or realizando_gesto() or not is_instance_valid(gestos) or get_tree().paused:
+		return false
+	_descanso_sentado = true
+	_cancelar_reposo()
+	_finish_emote_menu(true)
+	_wave_remaining = 0.0
+	velocity = Vector3.ZERO
+	sonido_pasos.detener()
+	_play_animation(&"idle")
+	gestos.establecer_sentado(true)
+	animation_state_changed.emit(&"sentado")
+	return true
+
+
+func terminar_descanso_sentado(inmediato: bool = false) -> void:
+	var estaba_sentado := _descanso_sentado
+	_descanso_sentado = false
+	if is_instance_valid(gestos):
+		gestos.establecer_sentado(false, inmediato)
+	if estaba_sentado:
+		velocity = Vector3.ZERO
+		animation_state_changed.emit(current_animation)
 
 
 func _register_inputs() -> void:

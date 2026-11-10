@@ -112,6 +112,10 @@ func _probar() -> void:
 	print("CÁMARA: %d errores" % _errores)
 	_oficina.queue_free()
 	await _cuadros(2)
+	# El mezclador libera sus reproducciones en tiempo real, incluso con --fixed-fps.
+	var espera_audio := Time.get_ticks_msec() + 500
+	while Time.get_ticks_msec() < espera_audio:
+		await process_frame
 	quit(0 if _errores == 0 else 1)
 
 

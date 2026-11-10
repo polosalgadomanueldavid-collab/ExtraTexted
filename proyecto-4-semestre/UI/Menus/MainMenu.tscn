@@ -6,9 +6,33 @@
 [ext_resource type="Texture2D" uid="uid://gucbragsn4wx" path="res://UI/Menus/ArtePiloto/jugar.svg" id="6_jugar"]
 [ext_resource type="Texture2D" uid="uid://bd23resump745" path="res://UI/Menus/ArtePiloto/opciones.svg" id="7_opciones"]
 [ext_resource type="Texture2D" uid="uid://d7too7hdm52i" path="res://UI/Menus/ArtePiloto/salir.svg" id="8_salir"]
-[ext_resource type="Theme" uid="uid://da4tnwqev10l7" path="res://UI/Menus/tema_piloto.tres" id="9_tema"]
+[ext_resource type="Theme" path="res://UI/Menus/tema_piloto.tres" id="9_tema"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/tutorial.svg" id="10_tutorial"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/clasificacion.svg" id="12_clasificacion"]
+[ext_resource type="PackedScene" path="res://UI/Menus/FondoMenuOficina.tscn" id="13_fondo"]
+
+[sub_resource type="StyleBoxFlat" id="SinFondo"]
+content_margin_left = 64.0
+content_margin_top = 36.0
+content_margin_right = 64.0
+content_margin_bottom = 44.0
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="PanelDiscusion"]
+content_margin_left = 34.0
+content_margin_top = 26.0
+content_margin_right = 34.0
+content_margin_bottom = 28.0
+bg_color = Color(0.025, 0.09, 0.13, 0.92)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.62, 0.54, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_left = 18
+corner_radius_bottom_right = 18
 
 [node name="MainMenu" type="Control" unique_id=1510664291]
 layout_mode = 3
@@ -18,8 +42,12 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+desplazamiento_horizontal = -480.0
+
+[node name="FondoOficina" parent="." instance=ExtResource("13_fondo")]
 
 [node name="Background" type="ColorRect" parent="." unique_id=901468422]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -39,6 +67,7 @@ mouse_filter = 2
 custom_minimum_size = Vector2(840, 0)
 layout_mode = 2
 theme = ExtResource("9_tema")
+theme_override_styles/panel = SubResource("SinFondo")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/MenuPanel" unique_id=1721025572]
 layout_mode = 2
@@ -121,6 +150,66 @@ mouse_default_cursor_shape = 2
 text = "SALIR"
 script = ExtResource("5_boton")
 simbolo = ExtResource("8_salir")
+
+[node name="PantallaDiscusion" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Dialogo" type="PanelContainer" parent="PantallaDiscusion"]
+layout_mode = 1
+anchor_left = 0.025
+anchor_top = 0.57
+anchor_right = 0.43
+anchor_bottom = 0.96
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("PanelDiscusion")
+mouse_filter = 2
+
+[node name="Contenido" type="VBoxContainer" parent="PantallaDiscusion/Dialogo"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Hablante" type="Label" parent="PantallaDiscusion/Dialogo/Contenido"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.62, 0.54, 1)
+theme_override_font_sizes/font_size = 26
+text = "CONSEJO"
+
+[node name="Frase" type="Label" parent="PantallaDiscusion/Dialogo/Contenido"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(1, 0.945, 0.847, 1)
+theme_override_font_sizes/font_size = 34
+text = "Mira bien qué puedes resolver primero."
+autowrap_mode = 3
+
+[node name="EstadoCarga" type="Label" parent="PantallaDiscusion/Dialogo/Contenido"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.83, 0.85, 1)
+theme_override_font_sizes/font_size = 19
+text = "Preparando el turno..."
+
+[node name="ProgresoCarga" type="ProgressBar" parent="PantallaDiscusion/Dialogo/Contenido"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+show_percentage = false
+
+[node name="EntradaNegra" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 1)
 
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/PlayButton" to="." method="_on_play_button_pressed"]
 [connection signal="pressed" from="CenterContainer/MenuPanel/VBoxContainer/MenuButtons/OptionsButton" to="." method="_on_options_button_pressed"]

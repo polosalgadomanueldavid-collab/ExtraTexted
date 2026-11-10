@@ -56,6 +56,9 @@ func _probar() -> void:
 	_verificar(panel.puntos_valor.text == "600" and panel.puntos_ganancia.text == "+100 PTS", "No muestra una ganancia falsa por ID repetido")
 	panel._process(3.1)
 	_verificar(panel.puntos_ganancia.text.is_empty(), "El aviso de ganancia desaparece")
+	_verificar(sistema.puntuacion.gastar_puntos(50), "El saldo permite comprar un café")
+	_verificar(panel.puntos_valor.text == "550" and panel.puntos_ganancia.text == "-50 PTS", "Comprar muestra el saldo disponible y el costo real en el HUD")
+	_verificar(sistema.puntuacion.puntos_ganados == 600, "El gasto conserva los puntos ganados para la clasificación")
 
 	# Cambiar a un despacho con saldo precargado no debe fingir una nueva ganancia.
 	var otro := SistemaDespacho.new()
@@ -88,6 +91,10 @@ func _probar() -> void:
 	oficina.queue_free()
 	otro.queue_free()
 	await get_tree().process_frame
+	# Da tiempo real al mezclador para liberar las voces de los casos completados.
+	var limite := Time.get_ticks_msec() + 500
+	while Time.get_ticks_msec() < limite:
+		await get_tree().process_frame
 	print("PRUEBA INTERFAZ PUNTUACION: %d errores" % errores)
 	get_tree().quit(0 if errores == 0 else 1)
 

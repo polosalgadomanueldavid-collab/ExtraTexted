@@ -86,6 +86,7 @@ func configurar_sistema(nuevo_sistema: SistemaDespacho) -> void:
 	puntos_ganancia.text = ""
 	_id_activo = ""
 	if not is_instance_valid(sistema_despacho):
+		_puntos_mostrados = 0
 		actualizar_puntos(0)
 		actualizar_calma(100)
 		actualizar_denuncias([])
@@ -123,6 +124,9 @@ func actualizar_puntos(total: int) -> void:
 	_ajustar_tamano_puntos()
 	if ganancia > 0:
 		puntos_ganancia.text = "+%s PTS" % _formatear_puntos(ganancia)
+		segundos_recompensa = 3.0
+	elif ganancia < 0:
+		puntos_ganancia.text = "-%s PTS" % _formatear_puntos(-ganancia)
 		segundos_recompensa = 3.0
 
 

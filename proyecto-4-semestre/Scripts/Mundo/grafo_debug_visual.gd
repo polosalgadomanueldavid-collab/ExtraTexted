@@ -125,7 +125,7 @@ func _sincronizar_mesas_con_grafo() -> void:
 func _hay_mesa_fisica(celda: Vector2i) -> bool:
 	# Las ConcavePolygonShape importadas contienen más geometría de la mesa de
 	# la necesaria. Para no bloquear un borde completo, usamos el AABB visual
-	# de cada Table_* ya transformado al mundo.
+	# de cada Table_* y las formas separadas de los muebles nuevos.
 	var posicion := grafo.celda_a_posicion(celda)
 	for datos: Dictionary in _mesas_fisicas:
 		var caja: AABB = datos["caja"] as AABB
@@ -150,6 +150,14 @@ func _recolectar_geometrias_de_mesas(nodo: Node) -> void:
 		var mesa := nodo as MeshInstance3D
 		var caja := _aabb_en_mundo(mesa)
 		_mesas_fisicas.append({"caja": caja})
+	elif nodo is CollisionShape3D and nodo.is_in_group("obstaculos_navegacion"):
+		var colision := nodo as CollisionShape3D
+		if not colision.disabled and colision.shape is BoxShape3D:
+			var forma := colision.shape as BoxShape3D
+			# Cada tramo aporta su huella; un AABB del sofá completo cerraría el
+			# espacio libre dentro de la L.
+			var local := AABB(-forma.size * 0.5, forma.size)
+			_mesas_fisicas.append({"caja": colision.global_transform * local})
 
 	for hijo: Node in nodo.get_children():
 		_recolectar_geometrias_de_mesas(hijo)
