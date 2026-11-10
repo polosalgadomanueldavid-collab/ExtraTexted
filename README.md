@@ -1,6 +1,6 @@
 # ExtraTexted
 
-Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) para editar o ejecutar el juego. La escena inicial es `UI/Menus/MainMenu.tscn` y la oficina jugable está en `Mundo/Oficina.tscn`.
+Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) para editar o ejecutar el juego. La escena inicial es `UI/Menus/MainMenu.tscn`: presenta la oficina real con perspectiva, dos policías animados y un degradado tras los botones. La oficina jugable está en `Mundo/Oficina.tscn`.
 
 ## Organización
 

@@ -2,7 +2,9 @@
 
 Implementado en `res://UI/Menus/MainMenu.tscn` y en los paneles de `UI/Menus/MenuGlobal.tscn`.
 Paleta: petróleo `#173B50`, crema
-`#FFF1D8` y coral `#FF785F`. El fondo del menú principal queda liso.
+`#FFF1D8` y coral `#FF785F`. El menú principal muestra la oficina
+jugable como fondo 3D con dos policías animados. El logo y los botones quedan
+sobre el escenario, con un degradado oscuro desde el lado izquierdo.
 
 El logo es una imagen RGBA independiente. Los botones son controles `Button`
 de Godot: textos, iconos, áreas de interacción y estados permanecen separados.
@@ -11,8 +13,9 @@ El foco tiene un contorno adicional; el botón se amplía un 2,5 % al selecciona
 y se comprime al pulsarlo. El menú escala de manera uniforme desde 1920×1080
 sin modificar las coordenadas del juego.
 
-`UI/Menus/tema_piloto.tres` comparte el panel y la fuente entre el menú principal,
-la pausa, las opciones y la confirmación de regreso al menú. La pausa conserva el escenario
+`UI/Menus/tema_piloto.tres` comparte la fuente entre el menú principal,
+la pausa, las opciones y la confirmación de regreso al menú. El menú principal
+oculta la superficie del panel conservando su espacio interior. La pausa conserva el escenario
 oscurecido detrás, presenta Reanudar en coral y muestra Salir del computador
 solo cuando corresponde. Los textos largos reducen su fuente automáticamente
 para respetar el espacio del icono y mantener el centrado.

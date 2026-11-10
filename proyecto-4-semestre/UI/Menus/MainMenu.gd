@@ -1,6 +1,9 @@
 extends Control
 
 const TAMANO_DISENO := Vector2(1920, 1080)
+@export var desplazamiento_horizontal: float = 0.0
+@export var desplazamiento_vertical: float = 0.0
+@export var escala_presentacion: float = 1.0
 
 @onready var play_button: Button = %PlayButton
 @onready var presentacion: Control = $CenterContainer
@@ -14,9 +17,9 @@ func _ready() -> void:
 
 func _ajustar_escala() -> void:
 	# Escala solo este menú: las pantallas de juego conservan sus coordenadas.
-	var factor := minf(size.x / TAMANO_DISENO.x, size.y / TAMANO_DISENO.y)
+	var factor := minf(size.x / TAMANO_DISENO.x, size.y / TAMANO_DISENO.y) * escala_presentacion
 	presentacion.scale = Vector2.ONE * factor
-	presentacion.position = (size - TAMANO_DISENO * factor) * 0.5
+	presentacion.position = (size - TAMANO_DISENO * factor) * 0.5 + Vector2(desplazamiento_horizontal, desplazamiento_vertical) * factor
 
 
 func _on_play_button_pressed() -> void:
