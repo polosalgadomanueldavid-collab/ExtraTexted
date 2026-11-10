@@ -26,6 +26,8 @@ const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
 const HerramientaReporte := preload("res://Scripts/Despacho/herramienta_reporte.gd")
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
+const FinalPartidaScript := preload("res://UI/Despacho/final_partida.gd")
+const MODELO_RELEVO := preload("res://Personajes/PoliciaAzul/policia_azul.glb")
 const VER_CLASIFICACION := &"VerClasificacion"
 const ALTURA_INDICADOR_ESTACION: float = 1.25
 const DURACION_DESENCRIPTADO: float = 6.0
@@ -56,6 +58,8 @@ var _celda_ruta := Vector2i(-1, -1)
 var temporizador_bloqueos: Timer
 var bloqueos_iniciados: bool = false
 var bloqueos_visuales: Dictionary = {}
+var _bloqueos_pool: Array[StaticBody3D] = []
+var _bloqueos_disponibles: Array[StaticBody3D] = []
 var depurador_grafo: GrafoDebugVisual
 var indicadores_estaciones: Dictionary = {}
 var guia_estacion: Control
@@ -76,6 +80,12 @@ var _aviso_reporte_atasco: Label3D
 var _reporte_atascado_id: String = ""
 var _reporte_herramienta_recogida: bool = false
 var papel_actual: PapelDenuncia = null
+var partida_finalizada: bool = false
+var final_partida: FinalPartida
+var _duracion_partida: float = 0.0
+var _resueltas: Array[Dictionary] = []
+var _vencidas: Array[Dictionary] = []
+var _ultima_vencida: Dictionary = {}
 
 
 func _ready() -> void:
@@ -106,6 +116,7 @@ func _ready() -> void:
 	sistema_despacho.estacion_completada.connect(_on_estacion_completada)
 	sistema_despacho.denuncia_resuelta.connect(_on_caso_finalizado)
 	sistema_despacho.denuncia_vencida.connect(_on_caso_finalizado)
+	sistema_despacho.partida_terminada.connect(_al_terminar_partida)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
 	indicador_papel = IndicadorPapel.new()
@@ -137,6 +148,11 @@ func _ready() -> void:
 		if estacion_reporte.estacion_id == "reporte":
 			_aviso_reporte_atasco.global_position = estacion_reporte.global_position + Vector3.UP * 2.0
 			break
+	final_partida = FinalPartidaScript.new() as FinalPartida
+	$CanvasLayer.add_child(final_partida)
+	final_partida.relevo_iniciado.connect(_mostrar_companero_relevo)
+	final_partida.reiniciar_solicitado.connect(_reiniciar_despues_del_final)
+	final_partida.menu_solicitado.connect(_volver_al_menu_despues_del_final)
 	temporizador_seguridad = Timer.new()
 	temporizador_seguridad.one_shot = true
 	temporizador_seguridad.wait_time = DURACION_DESENCRIPTADO
@@ -165,9 +181,30 @@ func _ready() -> void:
 	temporizador_bloqueos.wait_time = DURACION_BLOQUEO_SEGUNDOS
 	temporizador_bloqueos.timeout.connect(_on_temporizador_bloqueos_timeout)
 	add_child(temporizador_bloqueos)
+	_preparar_pool_bloqueos.call_deferred()
+
+
+func _preparar_pool_bloqueos() -> void:
+	# Reparte la creación inicial; los temporizadores siguen pausados durante el tutorial.
+	while is_inside_tree() and _bloqueos_pool.size() < BLOQUEOS_SIMULTANEOS:
+		var bloqueo := _crear_bloqueo_pool()
+		_bloqueos_disponibles.append(bloqueo)
+		if _bloqueos_pool.size() % 3 == 0:
+			await get_tree().process_frame
+
+
+func _crear_bloqueo_pool() -> StaticBody3D:
+	var bloqueo := BLOQUEO_TEMPORAL_ESCENA.instantiate() as StaticBody3D
+	bloqueo.call("preparar_para_pool")
+	add_child(bloqueo)
+	_bloqueos_pool.append(bloqueo)
+	return bloqueo
 
 
 func _process(_delta: float) -> void:
+	if partida_finalizada:
+		return
+	_duracion_partida += _delta
 	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
 	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
 		_calcular_ruta_a_proxima_estacion()
@@ -190,6 +227,8 @@ func _process(_delta: float) -> void:
 
 
 func _input(evento: InputEvent) -> void:
+	if partida_finalizada:
+		return
 	if evento.is_action_released(VER_CLASIFICACION) and clasificacion_partida.visible:
 		clasificacion_partida.hide()
 		get_viewport().set_input_as_handled()
@@ -204,6 +243,8 @@ func _input(evento: InputEvent) -> void:
 
 
 func _unhandled_key_input(evento: InputEvent) -> void:
+	if partida_finalizada:
+		return
 	if not OS.is_debug_build():
 		return
 	if not evento is InputEventKey or not evento.pressed or evento.echo:
@@ -302,6 +343,8 @@ func _presentar_clasificacion() -> void:
 
 
 func _recibir_denuncia_aleatoria() -> void:
+	if partida_finalizada:
+		return
 	if sistema_despacho.obtener_denuncias_ordenadas().size() < MAX_DENUNCIAS_PENDIENTES:
 		var plantilla: Denuncia = catalogo_denuncias[
 			generador_aleatorio.randi_range(0, catalogo_denuncias.size() - 1)
@@ -425,6 +468,12 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 
 
 func _on_caso_finalizado(denuncia: Denuncia) -> void:
+	var registro := _resumen_denuncia(denuncia)
+	if denuncia.estado == Denuncia.Estado.RESUELTA:
+		_resueltas.append(registro)
+	elif denuncia.estado == Denuncia.Estado.VENCIDA:
+		_vencidas.append(registro)
+		_ultima_vencida = registro
 	if _denuncia_en_descriptado == denuncia.id:
 		_cancelar_descriptado()
 	if _reporte_atascado_id == denuncia.id:
@@ -439,6 +488,105 @@ func _on_caso_finalizado(denuncia: Denuncia) -> void:
 		papel_actual.queue_free()
 		papel_actual = null
 		_actualizar_indicador_papel()
+
+
+func _resumen_denuncia(denuncia: Denuncia) -> Dictionary:
+	return {
+		"id": denuncia.id,
+		"titulo": denuncia.titulo,
+		"completadas": denuncia.estaciones_completadas.duplicate(),
+		"pendientes": denuncia.obtener_estaciones_pendientes()
+	}
+
+
+func _al_terminar_partida() -> void:
+	if partida_finalizada:
+		return
+	partida_finalizada = true
+	MenuGlobal.final_de_partida_activo = true
+	jugador.input_locked = true
+	temporizador_denuncias.stop()
+	temporizador_bloqueos.stop()
+	var abiertas: Array[Dictionary] = []
+	for denuncia: Denuncia in sistema_despacho.obtener_denuncias_ordenadas():
+		abiertas.append(_resumen_denuncia(denuncia))
+	var datos := {
+		"causa": _ultima_vencida.duplicate(true),
+		"resueltas": _resueltas.duplicate(true),
+		"vencidas": _vencidas.duplicate(true),
+		"pendientes": abiertas,
+		"duracion": _duracion_partida,
+		"puntos_ganados": sistema_despacho.puntuacion.puntos_ganados,
+		"saldo": sistema_despacho.puntuacion.puntos
+	}
+	panel_despacho.hide()
+	depurador_grafo.hide()
+	for indicador: IndicadorProximaEstacion in indicadores_estaciones.values():
+		indicador.hide()
+	indicador_papel.hide()
+	progreso_seguridad.hide()
+	_aviso_apagon.hide()
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	final_partida.presentar(datos)
+
+
+func _mostrar_companero_relevo() -> void:
+	# El modelo existente aparece junto al jugador y se acerca durante el relevo.
+	var celda := grafo_piso.celda_de_acceso(jugador.global_position)
+	var offsets: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	var destino_celda := Vector2i(-1, -1)
+	var inicio_celda := Vector2i(-1, -1)
+	for offset: Vector2i in offsets:
+		if grafo_piso.es_transitable(celda + offset):
+			destino_celda = celda + offset
+			inicio_celda = celda + offset * 2 if grafo_piso.es_transitable(celda + offset * 2) else destino_celda
+			break
+	if destino_celda == Vector2i(-1, -1):
+		return
+	var companero := MODELO_RELEVO.instantiate() as Node3D
+	companero.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(companero)
+	companero.scale = jugador.scale
+	var inicio := grafo_piso.celda_a_posicion(inicio_celda)
+	var destino := grafo_piso.celda_a_posicion(destino_celda)
+	inicio.y = jugador.global_position.y
+	destino.y = inicio.y
+	companero.global_position = inicio
+	var direccion := jugador.global_position - destino
+	companero.rotation.y = atan2(direccion.x, direccion.z)
+	var animador := companero.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if inicio_celda != destino_celda:
+		_reproducir_animacion_relevo(animador, "walk")
+		var movimiento := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		movimiento.tween_property(companero, "global_position", destino, 1.35)
+		movimiento.finished.connect(_reproducir_animacion_relevo.bind(animador, "idle"))
+	else:
+		_reproducir_animacion_relevo(animador, "idle")
+
+
+func _reproducir_animacion_relevo(animador: AnimationPlayer, nombre: String) -> void:
+	if not is_instance_valid(animador):
+		return
+	for clip: StringName in animador.get_animation_list():
+		if String(clip).to_lower().ends_with(nombre):
+			animador.play(clip)
+			return
+
+
+func _reiniciar_despues_del_final() -> void:
+	MenuGlobal.final_de_partida_activo = false
+	MenuGlobal.omitir_tutorial_siguiente_partida = true
+	get_tree().paused = false
+	var error := get_tree().reload_current_scene()
+	if error != OK:
+		MenuGlobal.omitir_tutorial_siguiente_partida = false
+		push_error("No se pudo reiniciar la partida: %s" % error_string(error))
+
+
+func _volver_al_menu_despues_del_final() -> void:
+	MenuGlobal.final_de_partida_activo = false
+	MenuGlobal.volver_al_menu()
 
 
 func interactuar_estacion_con_papel(portador: Player, estacion_id: String, objetivo: Node3D = null) -> void:
@@ -813,18 +961,25 @@ func _depurar_ruta(
 	)
 
 func _mostrar_bloqueo_temporal(celda: Vector2i) -> void:
-	var bloqueo_visual := BLOQUEO_TEMPORAL_ESCENA.instantiate() as Node3D
-	add_child(bloqueo_visual)
+	var bloqueo_visual: StaticBody3D
+	if _bloqueos_disponibles.is_empty():
+		bloqueo_visual = _crear_bloqueo_pool()
+	else:
+		bloqueo_visual = _bloqueos_disponibles.pop_back()
 	bloqueos_visuales[celda] = bloqueo_visual
-	bloqueo_visual.global_position = grafo_piso.celda_a_posicion(celda)
+	bloqueo_visual.call("activar_en", grafo_piso.celda_a_posicion(celda))
 
 
 func _limpiar_bloqueos_temporales() -> void:
 	var habia_bloqueos := not bloqueos_visuales.is_empty()
 	for bloqueo_visual: Node3D in bloqueos_visuales.values():
 		if is_instance_valid(bloqueo_visual):
-			bloqueo_visual.queue_free()
-	# Un RigidBody3D dormido no siempre despierta al retirar el soporte con queue_free.
+			if _bloqueos_pool.has(bloqueo_visual):
+				bloqueo_visual.call("desactivar")
+				_bloqueos_disponibles.append(bloqueo_visual as StaticBody3D)
+			else:
+				bloqueo_visual.queue_free()
+	# Despierta la hoja si perdió el apoyo de un cajón reciclado.
 	if habia_bloqueos and is_instance_valid(papel_actual) and papel_actual.portador == null:
 		papel_actual.sleeping = false
 

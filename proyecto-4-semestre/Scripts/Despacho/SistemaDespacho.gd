@@ -15,6 +15,7 @@ const CALMA_RECUPERADA_AL_RESOLVER: int = 5
 var arbol: ArbolDenunciasAVL = ArbolDenunciasAVL.new()
 var puntuacion: SistemaPuntuacion = SistemaPuntuacion.new()
 var calma_operativa: int = CALMA_MAXIMA
+var terminada: bool = false
 var denuncia_activa_id: String = ""
 # Guarda cuánto tiempo le queda a cada denuncia pendiente.
 var tiempos_restantes: Dictionary = {}
@@ -25,6 +26,8 @@ func _process(delta: float) -> void:
 
 
 func recibir_denuncia(denuncia: Denuncia) -> bool:
+	if terminada:
+		return false
 	if denuncia == null or denuncia.id.is_empty():
 		push_warning("La denuncia no tiene un ID válido.")
 		return false
@@ -43,6 +46,8 @@ func recibir_denuncia(denuncia: Denuncia) -> bool:
 
 
 func iniciar_denuncia_prioritaria() -> Denuncia:
+	if terminada:
+		return null
 	if not denuncia_activa_id.is_empty():
 		return arbol.buscar_por_id(denuncia_activa_id)
 
@@ -65,6 +70,8 @@ func obtener_denuncia_activa() -> Denuncia:
 	return arbol.buscar_por_id(denuncia_activa_id)
 
 func resolver_denuncia(id: String) -> bool:
+	if terminada:
+		return false
 	var denuncia: Denuncia = arbol.buscar_por_id(id)
 
 	if denuncia == null:
@@ -91,6 +98,8 @@ func resolver_denuncia(id: String) -> bool:
 
 
 func vencer_denuncia(id: String) -> bool:
+	if terminada:
+		return false
 	var denuncia: Denuncia = arbol.buscar_por_id(id)
 
 	if denuncia == null:
@@ -112,15 +121,20 @@ func vencer_denuncia(id: String) -> bool:
 	_notificar_cambios()
 
 	if calma_operativa <= 0:
+		terminada = true
 		partida_terminada.emit()
 
 	return true
 
 
 func actualizar_tiempos(delta: float) -> void:
+	if terminada:
+		return
 	var ids: Array = tiempos_restantes.keys()
 
 	for valor_id: Variant in ids:
+		if terminada:
+			break
 		var id: String = str(valor_id)
 		tiempos_restantes[id] = float(tiempos_restantes[id]) - delta
 
@@ -142,7 +156,7 @@ func obtener_denuncias_ordenadas() -> Array[Denuncia]:
 
 func recuperar_calma(cantidad: int) -> int:
 	# Descansar o beber no puede reactivar una partida que llegó a cero de calma.
-	if cantidad <= 0 or calma_operativa <= 0 or calma_operativa >= CALMA_MAXIMA:
+	if terminada or cantidad <= 0 or calma_operativa <= 0 or calma_operativa >= CALMA_MAXIMA:
 		return 0
 	var recuperada := mini(cantidad, CALMA_MAXIMA - calma_operativa)
 	calma_operativa += recuperada
@@ -155,6 +169,8 @@ func _notificar_cambios() -> void:
 	calma_actualizada.emit(calma_operativa)
 
 func interactuar_estacion(estacion_id: String) -> bool:
+	if terminada:
+		return false
 	var denuncia: Denuncia = obtener_denuncia_activa()
 
 	if denuncia == null:

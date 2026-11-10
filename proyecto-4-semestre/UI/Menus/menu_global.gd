@@ -4,6 +4,7 @@ const ESCENA_JUEGO := "res://Mundo/Oficina.tscn"
 const ESCENA_MENU := "res://UI/Menus/MainMenu.tscn"
 const TAMANO_DISENO := Vector2(1920, 1080)
 const ESCALA_PAUSA := 0.8
+const DURACION_MINIMA_DISCUSION := 2.5
 const PanelAyuda = preload("res://UI/Menus/panel_ayuda.gd")
 const PanelClasificacion := preload("res://UI/Menus/panel_clasificacion.gd")
 const ClasificacionLocalScript := preload("res://Scripts/Partida/ClasificacionLocal.gd")
@@ -27,6 +28,8 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
 @onready var margen: MarginContainer = $Interfaz/CapaModal/Margen
 
 var nombre_partida: String = ""
+var final_de_partida_activo: bool = false
+var omitir_tutorial_siguiente_partida: bool = false
 var _ultimo_nombre: String = ""
 var _clasificacion := ClasificacionLocalScript.new()
 var _opciones_desde_pausa: bool = false
@@ -35,6 +38,10 @@ var _raton_anterior: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _cambiando_escena: bool = false
 var _origen_ayuda := OrigenAyuda.MENU
 var _partida_con_tutorial: int = 0
+var _carga_juego_activa := false
+var _oficina_precargada: PackedScene
+var _inicio_confirmado := false
+var _momento_confirmacion := 0.0
 
 
 func _ready() -> void:
@@ -69,6 +76,64 @@ func _ready() -> void:
 	_abrir_tutorial_inicial.call_deferred()
 
 
+func _process(_delta: float) -> void:
+	if _carga_juego_activa:
+		var avance: Array = []
+		var estado := ResourceLoader.load_threaded_get_status(ESCENA_JUEGO, avance)
+		var menu := get_tree().current_scene
+		if is_instance_valid(menu) and menu.has_method("actualizar_carga") and not avance.is_empty():
+			menu.actualizar_carga(float(avance[0]))
+		match estado:
+			ResourceLoader.THREAD_LOAD_LOADED:
+				_carga_juego_activa = false
+				_oficina_precargada = ResourceLoader.load_threaded_get(ESCENA_JUEGO) as PackedScene
+				if _oficina_precargada == null:
+					_fallo_carga("La oficina no está disponible.")
+				elif is_instance_valid(menu) and menu.has_method("oficina_lista"):
+					menu.oficina_lista()
+			ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				_carga_juego_activa = false
+				_fallo_carga("No se pudo preparar la oficina.")
+	if _inicio_confirmado and _oficina_precargada != null:
+		if Time.get_ticks_msec() / 1000.0 - _momento_confirmacion >= DURACION_MINIMA_DISCUSION:
+			_entrar_a_oficina()
+
+
+func preparar_oficina() -> void:
+	if _oficina_precargada != null:
+		var menu := get_tree().current_scene
+		if is_instance_valid(menu) and menu.has_method("oficina_lista"):
+			menu.oficina_lista()
+		return
+	if _carga_juego_activa:
+		return
+	var error := ResourceLoader.load_threaded_request(ESCENA_JUEGO)
+	if error != OK:
+		_fallo_carga("No se pudo preparar la oficina.")
+		push_error("Error al solicitar la oficina: %s" % error_string(error))
+		return
+	_carga_juego_activa = true
+
+
+func _fallo_carga(mensaje: String) -> void:
+	_inicio_confirmado = false
+	_cambiando_escena = false
+	_oficina_precargada = null
+	panel_clasificacion.error_inicio.text = mensaje
+	panel_clasificacion.error_inicio.show()
+	panel_clasificacion.show()
+	capa.show()
+	push_error(mensaje)
+
+
+func _entrar_a_oficina() -> void:
+	_inicio_confirmado = false
+	var error := get_tree().change_scene_to_packed(_oficina_precargada)
+	if error != OK:
+		_fallo_carga("No se pudo abrir la oficina.")
+		push_error("Error al abrir la oficina: %s" % error_string(error))
+
+
 func _ajustar_presentacion() -> void:
 	var escala_panel := ESCALA_PAUSA if panel_pausa.visible or panel_confirmacion.visible else 1.0
 	var factor := minf(capa.size.x / TAMANO_DISENO.x, capa.size.y / TAMANO_DISENO.y)
@@ -84,7 +149,7 @@ func es_escena_de_juego() -> bool:
 
 
 func abrir_pausa() -> void:
-	if not es_escena_de_juego() or capa.visible or _cambiando_escena:
+	if not es_escena_de_juego() or capa.visible or _cambiando_escena or final_de_partida_activo:
 		return
 	_guardar_entrada()
 	get_tree().paused = true
@@ -166,6 +231,10 @@ func _abrir_tutorial_inicial() -> void:
 	if capa.visible or _cambiando_escena or not es_escena_de_juego():
 		return
 	var id_partida := get_tree().current_scene.get_instance_id()
+	if omitir_tutorial_siguiente_partida:
+		omitir_tutorial_siguiente_partida = false
+		_partida_con_tutorial = id_partida
+		return
 	if id_partida == _partida_con_tutorial:
 		return
 	_partida_con_tutorial = id_partida
@@ -250,20 +319,25 @@ func _cerrar_clasificacion() -> void:
 	panel_clasificacion.hide()
 	capa.hide()
 	_restaurar_entrada()
+	var menu := get_tree().current_scene
+	if is_instance_valid(menu) and menu.has_method("cancelar_discusion"):
+		menu.cancelar_discusion()
 
 
 func _iniciar_partida(nombre: String) -> void:
 	if not panel_clasificacion.formulario.is_visible_in_tree() or _cambiando_escena:
 		return
 	_cambiando_escena = true
-	var error := get_tree().change_scene_to_file(ESCENA_JUEGO)
-	if error != OK:
-		_cambiando_escena = false
-		panel_clasificacion.mostrar_error_inicio()
-		push_error("No se pudo abrir la oficina: %s" % error_string(error))
-		return
 	nombre_partida = nombre
 	_ultimo_nombre = nombre
+	_momento_confirmacion = Time.get_ticks_msec() / 1000.0
+	_inicio_confirmado = true
+	panel_clasificacion.hide()
+	capa.hide()
+	var menu := get_tree().current_scene
+	if is_instance_valid(menu) and menu.has_method("confirmar_discusion"):
+		menu.confirmar_discusion()
+	preparar_oficina()
 
 
 func volver_al_menu() -> void:
@@ -290,7 +364,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed("Cancel") or event.is_echo() or _cambiando_escena:
+	if not event.is_action_pressed("Cancel") or event.is_echo() or _cambiando_escena or final_de_partida_activo:
 		return
 	if panel_ayuda.visible:
 		cerrar_ayuda()
@@ -351,6 +425,7 @@ func _restaurar_entrada() -> void:
 
 
 func _al_cambiar_escena() -> void:
+	final_de_partida_activo = false
 	capa.hide()
 	panel_pausa.hide()
 	panel_opciones.hide()
@@ -361,6 +436,8 @@ func _al_cambiar_escena() -> void:
 	_foco_anterior = null
 	_opciones_desde_pausa = false
 	_cambiando_escena = false
+	_inicio_confirmado = false
+	_oficina_precargada = null
 	if not es_escena_de_juego():
 		nombre_partida = ""
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

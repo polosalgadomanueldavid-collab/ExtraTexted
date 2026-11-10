@@ -9,6 +9,8 @@ var degradado: ColorRect
 var _camara: Camera3D
 var _luces: Array[OmniLight3D] = []
 var _animadores: Array[AnimationPlayer] = []
+var _policias: Array[Node3D] = []
+var _discusion_activa := false
 var _tiempo := 0.0
 var _saludo_pendiente := 4.0
 
@@ -29,6 +31,13 @@ func _process(delta: float) -> void:
 	_camara.position.x = -0.3 + sin(_tiempo * 0.24) * 0.025
 	for i in _luces.size():
 		_luces[i].light_energy = 0.48 + sin(_tiempo * (1.4 + i * 0.3)) * 0.045
+	for i in _policias.size():
+		var orientacion := 14.0 if i == 0 else -18.0
+		if _discusion_activa:
+			orientacion = 46.0 if i == 0 else -46.0
+		_policias[i].rotation_degrees.y = lerpf(_policias[i].rotation_degrees.y, orientacion, minf(delta * 3.0, 1.0))
+	if _discusion_activa:
+		return
 	_saludo_pendiente -= delta
 	if _saludo_pendiente <= 0.0:
 		_reproducir(_animadores[0], "wave")
@@ -103,11 +112,23 @@ func _crear_escenario() -> void:
 		policia.rotation_degrees.y = [14.0, -18.0][i]
 		policia.scale = Vector3.ONE * [1.0, 1.05][i]
 		escenario.add_child(policia)
+		_policias.append(policia)
 		var animador := policia.find_child("AnimationPlayer", true, false) as AnimationPlayer
 		_animadores.append(animador)
 		_reproducir(animador, "idle")
 		if animador != null:
 			animador.animation_finished.connect(_al_terminar_animacion.bind(animador))
+
+
+func establecer_discusion(activa: bool) -> void:
+	_discusion_activa = activa
+	if not activa:
+		_saludo_pendiente = 4.0
+
+
+func gesticular(indice: int) -> void:
+	if _discusion_activa and indice >= 0 and indice < _animadores.size():
+		_reproducir(_animadores[indice], "wave")
 
 
 func _quitar_logica(nodo: Node) -> void:
