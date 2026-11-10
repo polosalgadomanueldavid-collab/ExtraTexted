@@ -6,9 +6,12 @@ signal contacto
 signal terminada
 signal reposo_terminado
 
-const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8}
-const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56}
+const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8, &"kamehameha": 3.6}
+const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56, &"kamehameha": 0.55}
 const REPOSOS := {&"idle_despistado": 3.4, &"idle_tambaleo": 3.1}
+const ESCALA_RAYO := 30.0
+const ESCALA_ANCHO_RAYO := 10.0
+const ESCALA_ESFERA_SALIDA := 8.5
 var jugador: CharacterBody3D
 var gesto: StringName = &""
 var tiempo: float = 0.0
@@ -24,6 +27,17 @@ var _peso_papel: float = 0.0
 var _huesos: Dictionary = {}
 var _reposo: Dictionary = {}
 var _llave: Node3D
+var _energia: Node3D
+var _esfera_energia: Node3D
+var _aura: MeshInstance3D
+var _material_aura: ShaderMaterial
+var _luz_aura: OmniLight3D
+var _rayo: Node3D
+var _rayo_halo: MeshInstance3D
+var _rayo_exterior: MeshInstance3D
+var _rayo_nucleo: MeshInstance3D
+var _esfera_origen_rayo: Node3D
+var _cabeza_rayo: Node3D
 var reposo_especial: StringName = &""
 var tiempo_reposo: float = 0.0
 var _peso_reposo: float = 0.0
@@ -50,6 +64,7 @@ func _ready() -> void:
 	anclaje_taza.name = "AnclajeTaza"
 	esqueleto.add_child(anclaje_taza)
 	_crear_llave()
+	_crear_energia(esqueleto)
 
 
 func iniciar(tipo: StringName, destino: Node3D = null, segundos: float = 0.0) -> bool:
@@ -157,6 +172,7 @@ func _process_modification() -> void:
 	_llave.visible = gesto == &"reparar"
 	if gesto != &"":
 		_aplicar_gesto(tiempo / duracion)
+	_actualizar_energia()
 	var esqueleto := get_skeleton()
 	mano_izquierda.transform = esqueleto.get_bone_global_pose(_huesos["hand.L"])
 	mano_derecha.transform = esqueleto.get_bone_global_pose(_huesos["hand.R"])
@@ -262,6 +278,40 @@ func _aplicar_gesto(t: float) -> void:
 			var esqueleto := get_skeleton()
 			var boca := esqueleto.get_bone_global_pose(_huesos["head"]).origin + Vector3(0.0, 0.12, 0.48)
 			_apuntar_mano(esqueleto.to_global(boca), sorbo, "R")
+		&"kamehameha":
+			# Carga de lado: palmas enfrentadas a distintas alturas. Luego gira
+			# al frente y proyecta las manos juntas, una arriba de la otra, dejando
+			# el hueco central de la "C" para el poder.
+			var carga := smoothstep(0.04, 0.22, t) * (1.0 - smoothstep(0.43, 0.58, t))
+			var lanzamiento := smoothstep(0.43, 0.62, t) * (1.0 - smoothstep(0.78, 0.94, t))
+			var volver := smoothstep(0.82, 1.0, t)
+			var temblor := sin(_reloj * 22.0) * carga * 0.025
+			_pose("thigh.L", Vector3(-0.27 * carga, 0.0, 0.0), 1.0)
+			_pose("thigh.R", Vector3(-0.27 * carga, 0.0, 0.0), 1.0)
+			_pose("shin.L", Vector3(0.38 * carga, 0.0, 0.0), 1.0)
+			_pose("shin.R", Vector3(0.38 * carga, 0.0, 0.0), 1.0)
+			# En Godot, Y negativo gira el frente (+Z) hacia el costado -X,
+			# el mismo lado donde se reúnen las manos durante la carga.
+			var giro_lateral := -0.72 * carga * (1.0 - lanzamiento)
+			_sumar("spine", Vector3(0.12 * carga - 0.05 * lanzamiento, giro_lateral, temblor))
+			_sumar("chest", Vector3(-0.08 * carga + 0.10 * lanzamiento, giro_lateral * 0.72, -temblor))
+			_sumar("head", Vector3(-0.04 * carga + 0.02 * lanzamiento, -giro_lateral * 0.55, 0.0))
+			var esqueleto := get_skeleton()
+			# X y Z iguales: las manos quedan apiladas en una sola línea vertical.
+			var carga_superior := Vector3(-0.58, 1.49, 0.62)
+			var carga_inferior := Vector3(-0.58, 1.23, 0.62)
+			var mano_superior := Vector3(-0.13, 1.52, 0.78)
+			var mano_inferior := Vector3(0.13, 1.27, 0.78)
+			var peso_carga := carga * (1.0 - volver)
+			var peso_lanzamiento := maxf(lanzamiento, volver)
+			var peso_brazos := maxf(peso_carga, peso_lanzamiento)
+			var objetivo_L := carga_superior.lerp(mano_superior, smoothstep(0.36, 0.64, t))
+			var objetivo_R := carga_inferior.lerp(mano_inferior, smoothstep(0.36, 0.64, t))
+			if peso_brazos > 0.01:
+				_apuntar_mano(esqueleto.to_global(objetivo_L), peso_brazos, "L")
+				_apuntar_mano(esqueleto.to_global(objetivo_R), peso_brazos, "R")
+			_pose("hand.L", Vector3(0.10, 0.0, -0.22), peso_brazos)
+			_pose("hand.R", Vector3(-0.08, 0.0, 0.22), peso_brazos)
 
 
 func _sostener(peso: float) -> void:
@@ -306,6 +356,232 @@ func _apuntar_mano(destino_global: Vector3, peso: float, lado: String = "L") -> 
 			var padre := esqueleto.get_bone_global_pose(esqueleto.get_bone_parent(i)).basis.get_rotation_quaternion()
 			var local := padre.inverse() * ajuste * padre * esqueleto.get_bone_pose_rotation(i)
 			esqueleto.set_bone_pose_rotation(i, esqueleto.get_bone_pose_rotation(i).slerp(local, peso * 0.65))
+
+
+func _crear_energia(esqueleto: Skeleton3D) -> void:
+	_energia = Node3D.new()
+	_energia.name = "EfectosKamehameha"
+	esqueleto.add_child(_energia)
+	_esfera_energia = Node3D.new()
+	_esfera_energia.name = "EsferaDeEnergia"
+	_energia.add_child(_esfera_energia)
+	var material_exterior := StandardMaterial3D.new()
+	material_exterior.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material_exterior.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material_exterior.albedo_color = Color(0.12, 0.72, 1.0, 0.34)
+	material_exterior.emission_enabled = true
+	material_exterior.emission = Color(0.04, 0.52, 1.0)
+	material_exterior.emission_energy_multiplier = 2.4
+	var exterior := MeshInstance3D.new()
+	var malla_exterior := SphereMesh.new()
+	malla_exterior.radius = 0.19
+	malla_exterior.height = 0.38
+	exterior.mesh = malla_exterior
+	exterior.material_override = material_exterior
+	_esfera_energia.add_child(exterior)
+	var material_nucleo := StandardMaterial3D.new()
+	material_nucleo.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material_nucleo.albedo_color = Color(0.72, 0.96, 1.0)
+	material_nucleo.emission_enabled = true
+	material_nucleo.emission = Color(0.30, 0.82, 1.0)
+	material_nucleo.emission_energy_multiplier = 4.0
+	var nucleo := MeshInstance3D.new()
+	var malla_nucleo := SphereMesh.new()
+	malla_nucleo.radius = 0.105
+	malla_nucleo.height = 0.21
+	nucleo.mesh = malla_nucleo
+	nucleo.material_override = material_nucleo
+	_esfera_energia.add_child(nucleo)
+	var luz := OmniLight3D.new()
+	luz.light_color = Color(0.16, 0.68, 1.0)
+	luz.light_energy = 1.8
+	luz.omni_range = 2.4
+	_esfera_energia.add_child(luz)
+	_aura = MeshInstance3D.new()
+	_aura.name = "AuraAzul"
+	var malla_aura := SphereMesh.new()
+	malla_aura.radius = 1.0
+	malla_aura.height = 2.0
+	malla_aura.radial_segments = 40
+	malla_aura.rings = 28
+	_aura.mesh = malla_aura
+	var shader_aura := Shader.new()
+	shader_aura.code = """
+shader_type spatial;
+render_mode unshaded, cull_front, blend_add, depth_draw_never;
+uniform float aura_strength = 0.0;
+varying vec3 local_position;
+
+void vertex() {
+	local_position = VERTEX;
+	VERTEX += NORMAL * (0.025 * sin(TIME * 8.0 + VERTEX.y * 7.0 + VERTEX.x * 4.0));
+}
+
+void fragment() {
+	float facing = abs(dot(normalize(NORMAL), normalize(VIEW)));
+	float rim = pow(1.0 - facing, 2.0);
+	float flicker = 0.68 + 0.32 * sin(TIME * 13.0 + local_position.y * 10.0 + sin(local_position.x * 8.0));
+	float alpha = clamp(rim * flicker * aura_strength * 0.72, 0.0, 0.56);
+	ALBEDO = vec3(0.025, 0.28, 1.0);
+	EMISSION = vec3(0.015, 0.16, 1.0) * (1.1 + flicker * aura_strength);
+	ALPHA = alpha;
+}
+"""
+	_material_aura = ShaderMaterial.new()
+	_material_aura.shader = shader_aura
+	_material_aura.set_shader_parameter("aura_strength", 0.0)
+	_aura.material_override = _material_aura
+	_aura.position = Vector3(0.0, 1.34, 0.0)
+	_energia.add_child(_aura)
+	_luz_aura = OmniLight3D.new()
+	_luz_aura.name = "LuzAuraAzul"
+	_luz_aura.light_color = Color(0.035, 0.22, 1.0)
+	_luz_aura.light_energy = 1.2
+	_luz_aura.omni_range = 3.8
+	_aura.add_child(_luz_aura)
+	_rayo = Node3D.new()
+	_rayo.name = "RayoDeEnergia"
+	_rayo.rotation.x = PI * 0.5
+	_rayo.position = Vector3(0.0, 1.36, 7.5)
+	_energia.add_child(_rayo)
+	_rayo_halo = _crear_tramo_rayo(0.36, Color(0.015, 0.12, 1.0, 0.12), 2.5)
+	_rayo_exterior = _crear_tramo_rayo(0.22, Color(0.08, 0.48, 1.0, 0.38), 2.4)
+	_rayo_nucleo = _crear_tramo_rayo(0.085, Color(0.82, 0.98, 1.0), 5.0)
+	_rayo.add_child(_rayo_halo)
+	_rayo.add_child(_rayo_exterior)
+	_rayo.add_child(_rayo_nucleo)
+	_esfera_origen_rayo = Node3D.new()
+	_esfera_origen_rayo.name = "EsferaSalidaRayo"
+	_esfera_origen_rayo.position = Vector3(0.0, 1.36, 6.2)
+	_energia.add_child(_esfera_origen_rayo)
+	_esfera_origen_rayo.add_child(_crear_esfera_rayo(0.50, Color(0.04, 0.36, 1.0, 0.42), 3.0))
+	_esfera_origen_rayo.add_child(_crear_esfera_rayo(0.31, Color(0.80, 0.98, 1.0), 5.0))
+	_cabeza_rayo = Node3D.new()
+	_cabeza_rayo.name = "EsferaFrontalConPuntas"
+	_cabeza_rayo.position = Vector3(0.0, 1.36, 6.2)
+	_energia.add_child(_cabeza_rayo)
+	_cabeza_rayo.add_child(_crear_esfera_rayo(0.62, Color(0.015, 0.20, 1.0, 0.38), 3.0))
+	_cabeza_rayo.add_child(_crear_esfera_rayo(0.40, Color(0.88, 0.99, 1.0), 5.0))
+	_crear_puntas_cabeza()
+	_energia.visible = false
+
+
+func _crear_tramo_rayo(radius: float, color: Color, brillo: float) -> MeshInstance3D:
+	var tramo := MeshInstance3D.new()
+	var cilindro := CylinderMesh.new()
+	cilindro.top_radius = radius
+	cilindro.bottom_radius = radius
+	cilindro.height = 14.0
+	cilindro.radial_segments = 96
+	tramo.mesh = cilindro
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if color.a < 1.0:
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = color
+	material.emission_enabled = true
+	material.emission = Color(color.r, color.g, color.b)
+	material.emission_energy_multiplier = brillo
+	tramo.material_override = material
+	return tramo
+
+
+func _crear_esfera_rayo(radio: float, color: Color, brillo: float) -> MeshInstance3D:
+	var esfera := MeshInstance3D.new()
+	var malla := SphereMesh.new()
+	malla.radius = radio
+	malla.height = radio * 2.0
+	malla.radial_segments = 64
+	malla.rings = 40
+	esfera.mesh = malla
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if color.a < 1.0:
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = color
+	material.emission_enabled = true
+	material.emission = Color(color.r, color.g, color.b)
+	material.emission_energy_multiplier = brillo
+	esfera.material_override = material
+	return esfera
+
+
+func _crear_puntas_cabeza() -> void:
+	var cantidad := 16
+	for indice: int in range(cantidad):
+		var angulo := TAU * float(indice) / float(cantidad)
+		var direccion := Vector3(cos(angulo), 0.0, sin(angulo))
+		var punta := MeshInstance3D.new()
+		var cono := CylinderMesh.new()
+		cono.top_radius = 0.0
+		cono.bottom_radius = 0.16
+		cono.height = 0.95
+		cono.radial_segments = 24
+		punta.mesh = cono
+		punta.position = direccion * 0.46
+		punta.quaternion = Quaternion(Vector3.UP, direccion)
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.albedo_color = Color(0.16, 0.62, 1.0, 0.72)
+		material.emission_enabled = true
+		material.emission = Color(0.06, 0.38, 1.0)
+		material.emission_energy_multiplier = 4.2
+		punta.material_override = material
+		_cabeza_rayo.add_child(punta)
+	var punta_frontal := MeshInstance3D.new()
+	var cono_frontal := CylinderMesh.new()
+	cono_frontal.top_radius = 0.0
+	cono_frontal.bottom_radius = 0.22
+	cono_frontal.height = 1.0
+	cono_frontal.radial_segments = 32
+	punta_frontal.mesh = cono_frontal
+	punta_frontal.position.y = 0.70
+	var material_frontal := StandardMaterial3D.new()
+	material_frontal.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material_frontal.albedo_color = Color(0.76, 0.96, 1.0)
+	material_frontal.emission_enabled = true
+	material_frontal.emission = Color(0.42, 0.82, 1.0)
+	material_frontal.emission_energy_multiplier = 5.0
+	punta_frontal.material_override = material_frontal
+	_cabeza_rayo.add_child(punta_frontal)
+
+
+func _actualizar_energia() -> void:
+	if not is_instance_valid(_energia):
+		return
+	if gesto != &"kamehameha":
+		_energia.visible = false
+		return
+	var t := tiempo / duracion
+	var carga := smoothstep(0.08, 0.20, t) * (1.0 - smoothstep(0.48, 0.60, t))
+	var avance := smoothstep(0.59, 0.90, t)
+	var desvanecer_rayo := 1.0 - smoothstep(0.90, 0.99, t)
+	var disparo := smoothstep(0.59, 0.63, t) * desvanecer_rayo
+	var fuerza_aura := smoothstep(0.02, 0.18, t) * (1.0 - smoothstep(0.84, 0.99, t))
+	_energia.visible = true
+	_esfera_energia.visible = t > 0.08 and t < 0.72
+	# Son los puntos medios exactos de las dos manos en carga y lanzamiento.
+	_esfera_energia.position = Vector3(-0.58, 1.36, 0.62).lerp(Vector3(0.0, 1.395, 0.78), smoothstep(0.42, 0.64, t))
+	var pulso := 1.0 + sin(_reloj * 10.0) * (0.08 + carga * 0.14)
+	_esfera_energia.scale = Vector3.ONE * pulso
+	_aura.visible = fuerza_aura > 0.01
+	_aura.scale = Vector3(1.0, 1.55, 0.95) * (1.0 + sin(_reloj * 8.0) * 0.035 * fuerza_aura)
+	_material_aura.set_shader_parameter("aura_strength", fuerza_aura)
+	_luz_aura.light_energy = 0.8 + fuerza_aura * (1.0 + carga * 1.2)
+	_rayo.visible = disparo > 0.01
+	var escala_largo := ESCALA_RAYO * avance * desvanecer_rayo
+	var escala_ancho := ESCALA_ANCHO_RAYO * smoothstep(0.04, 0.32, avance) * desvanecer_rayo
+	_rayo.scale = Vector3(escala_ancho, escala_largo, escala_ancho)
+	_rayo.position = Vector3(0.0, 1.36, 6.2 + 7.0 * escala_largo)
+	_rayo_halo.visible = disparo > 0.01
+	_rayo_exterior.visible = disparo > 0.01
+	_rayo_nucleo.visible = disparo > 0.01
+	_esfera_origen_rayo.visible = disparo > 0.01
+	_esfera_origen_rayo.scale = Vector3.ONE * (ESCALA_ESFERA_SALIDA * desvanecer_rayo)
+	_cabeza_rayo.visible = disparo > 0.01
+	_cabeza_rayo.position.z = 6.2 + 14.0 * escala_largo
+	var crecimiento_cabeza := smoothstep(0.03, 0.24, avance)
+	_cabeza_rayo.scale = Vector3.ONE * ESCALA_ESFERA_SALIDA * crecimiento_cabeza * (0.88 + 0.12 * sin(_reloj * 16.0)) * desvanecer_rayo
 
 
 func _crear_llave() -> void:
