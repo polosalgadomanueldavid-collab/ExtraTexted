@@ -26,6 +26,12 @@ Para usarlo con movimiento e interacciones, instancia [PoliciaRelevo.tscn](../Po
 
 `animaciones_interaccion.gd` añade poses sobre el esqueleto después de los clips importados. El papel sigue la mano izquierda; la derecha pulsa equipos y mueve una llave durante la reparación de la impresora. La tecla E conserva sus acciones habituales: recibir/recoger, usar estaciones y lanzar en un espacio libre. Las acciones breves bloquean movimiento y nuevas interacciones; la pausa conserva su progreso y reiniciar cancela su efecto pendiente.
 
+El gesto `kamehameha` gira el torso para cargar a un costado con las palmas enfrentadas y a distinta altura; luego vuelve al frente y proyecta las manos hacia delante, una arriba de la otra, dejando el hueco en forma de C. Una esfera luminosa de tamaño normal queda centrada entre las manos y un aura azul pulsante envuelve al personaje. Al disparar, aparecen la esfera de salida y el rayo azul procedural de mallas, materiales emisivos y shader. La pose está en la rama `&"kamehameha"` de `_aplicar_gesto()` en `animaciones_interaccion.gd`; el controlador la inicia con `ejecutar_gesto(&"kamehameha")` al presionar **K**. El botón **Pose Kamehameha** también está en el laboratorio `Pruebas/PersonajePolicia/PruebaPoliciaAzul.tscn`.
+
+La **Genkidama** se ejecuta con **H**: el policía alza los brazos rectos hacia una esfera tres veces mayor que la versión inicial, sostenida justo sobre su cabeza; después empuja ambos brazos hacia delante y la lanza. El gesto dura 5 segundos.
+
+El **Rasengan** se activa con **J**. El policía flexiona ligeramente las piernas y el torso, extiende el brazo derecho y forma en su mano una esfera azul luminosa más grande, con dos capas de espinas algo más largas que giran en sentidos opuestos. Después la lanza hacia delante. Dura 3,8 segundos.
+
 La entrega, la recogida y el lanzamiento ocurren al llegar al contacto del gesto. Reparar dura 2,4 segundos y resuelve el atasco al terminar el trabajo de la herramienta. Se vuelve a comprobar el caso al aplicar el efecto para evitar completar una denuncia que venció durante el gesto.
 
 `intensidad_tambaleo` en el controlador ajusta el balanceo caricaturesco (0–2; predeterminado 1). Afecta al torso y a la cabeza tanto en locomoción como en las acciones. Los anclajes reciben la pose final, por lo que la hoja acompaña el movimiento sin deslizarse.

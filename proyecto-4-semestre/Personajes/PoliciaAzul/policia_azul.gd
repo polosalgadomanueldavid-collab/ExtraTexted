@@ -16,6 +16,9 @@ const BACK := &"policia_prueba_atras"
 const RUN := &"policia_prueba_correr"
 const JUMP := &"policia_prueba_saltar"
 const EMOTE_MENU := &"policia_menu_emotes"
+const KAMEHAMEHA := &"policia_kamehameha"
+const GENKIDAMA := &"policia_genkidama"
+const RASENGAN := &"policia_rasengan"
 const EMOTE_HOLD_SECONDS := 0.3
 const AnimacionesInteraccion := preload("res://Personajes/PoliciaAzul/animaciones_interaccion.gd")
 
@@ -206,6 +209,18 @@ func reproducir_expresion(expresion: StringName) -> bool:
 
 func _input(event: InputEvent) -> void:
 	if input_locked or realizando_gesto():
+		return
+	if event.is_action_pressed(KAMEHAMEHA) and not (event is InputEventKey and event.echo):
+		get_viewport().set_input_as_handled()
+		ejecutar_gesto(&"kamehameha")
+		return
+	if event.is_action_pressed(GENKIDAMA) and not (event is InputEventKey and event.echo):
+		get_viewport().set_input_as_handled()
+		ejecutar_gesto(&"genkidama")
+		return
+	if event.is_action_pressed(RASENGAN) and not (event is InputEventKey and event.echo):
+		get_viewport().set_input_as_handled()
+		ejecutar_gesto(&"rasengan")
 		return
 	if event.is_action(EMOTE_MENU):
 		if event.is_action_released(EMOTE_MENU):
@@ -461,6 +476,9 @@ func _register_inputs() -> void:
 	_add_keys(RUN, [KEY_SHIFT])
 	_add_keys(JUMP, [KEY_SPACE])
 	_add_keys(EMOTE_MENU, [KEY_G])
+	_add_keys(KAMEHAMEHA, [KEY_K])
+	_add_keys(GENKIDAMA, [KEY_H])
+	_add_keys(RASENGAN, [KEY_J])
 
 
 func _add_keys(action: StringName, keys: Array) -> void:

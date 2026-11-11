@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" uid="uid://dkumt5d6kqdb" path="res://Personajes/PoliciaAzul/policia_azul.gd" id="1_controlador"]
 [ext_resource type="PackedScene" uid="uid://bergxnx112j2t" path="res://Personajes/PoliciaAzul/policia_azul.glb" id="2_modelo"]
-[ext_resource type="Script" path="res://Personajes/PoliciaAzul/voz_personaje.gd" id="3_voz"]
-[ext_resource type="Script" path="res://Personajes/PoliciaAzul/sonidos_pasos.gd" id="4_pasos"]
+[ext_resource type="Script" uid="uid://c4dyys7ryxy6c" path="res://Personajes/PoliciaAzul/voz_personaje.gd" id="3_voz"]
+[ext_resource type="Script" uid="uid://dvlkcr6fapqk3" path="res://Personajes/PoliciaAzul/sonidos_pasos.gd" id="4_pasos"]
 
 [sub_resource type="BoxShape3D" id="CajaCuerpo"]
 size = Vector3(1.5, 2.66, 1.5)
@@ -17,7 +17,7 @@ floor_snap_length = 0.25
 script = ExtResource("1_controlador")
 
 [node name="Colision" type="CollisionShape3D" parent="." unique_id=1137702699]
-position = Vector3(0, 1.33, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.33, 0)
 shape = SubResource("CajaCuerpo")
 
 [node name="Visual" type="Node3D" parent="." unique_id=1329392925]
@@ -30,15 +30,13 @@ shape = SubResource("FormaInteraccion")
 target_position = Vector3(0, 0, 0.8)
 collision_mask = 5
 
-[node name="SonidosPasos" type="AudioStreamPlayer3D" parent="."]
+[node name="SonidosPasos" type="AudioStreamPlayer3D" parent="." unique_id=78552094]
 volume_db = -9.0
-unit_size = 10.0
 max_distance = 30.0
 script = ExtResource("4_pasos")
 
-[node name="VozPersonaje" type="AudioStreamPlayer3D" parent="."]
-position = Vector3(0, 1.9, 0)
+[node name="VozPersonaje" type="AudioStreamPlayer3D" parent="." unique_id=163916536]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 0)
 volume_db = -5.0
-unit_size = 10.0
 max_distance = 30.0
 script = ExtResource("3_voz")
