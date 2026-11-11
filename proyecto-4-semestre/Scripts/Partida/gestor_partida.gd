@@ -4,6 +4,7 @@ extends Node3D
 @onready var computador: PCStatic = $Computer
 @onready var jugador: Player = $Gameplay/Node3D
 @onready var evento_apagon: EventoApagonScript = $EventoApagon
+@onready var evento_terremoto: EventoTerremoto = $EventoTerremoto
 
 const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
@@ -27,12 +28,13 @@ const HerramientaReporte := preload("res://Scripts/Despacho/herramienta_reporte.
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const FinalPartidaScript := preload("res://UI/Despacho/final_partida.gd")
-const MODELO_RELEVO := preload("res://Personajes/PoliciaAzul/policia_azul.glb")
+const MODELO_RELEVO := preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn")
 const VER_CLASIFICACION := &"VerClasificacion"
 const ALTURA_INDICADOR_ESTACION: float = 1.25
 const DURACION_DESENCRIPTADO: float = 6.0
 @export_range(0.0, 1.0, 0.05) var probabilidad_atasco_reporte: float = 0.35
 const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
+const EventoTerremoto := preload("res://Eventos/Terremoto/evento_terremoto.gd")
 
 
 var sistema_despacho: SistemaDespacho
@@ -102,6 +104,10 @@ func _ready() -> void:
 	sistema_despacho.puntuacion.puntos_actualizados.connect(_al_actualizar_puntaje)
 	evento_apagon.estado_cambiado.connect(_al_cambiar_estado_apagon)
 	evento_apagon.apagon_iniciado.connect(_al_iniciar_apagon)
+	evento_terremoto.inicio_solicitado.connect(_iniciar_terremoto)
+	evento_terremoto.temblor_actualizado.connect($Gameplay/Camera3D.actualizar_temblor)
+	evento_terremoto.suelo_roto.connect(_al_romper_suelo)
+	evento_terremoto.terminado.connect(_al_terminar_terremoto)
 	grafo_piso = GrafoPiso.new()
 	depurador_grafo = GrafoDebugVisual.new()
 	depurador_grafo.name = "DepuradorGrafo"
@@ -245,15 +251,19 @@ func _input(evento: InputEvent) -> void:
 func _unhandled_key_input(evento: InputEvent) -> void:
 	if partida_finalizada:
 		return
-	if not OS.is_debug_build():
+	if not OS.is_debug_build() or not is_instance_valid(depurador_grafo) or not depurador_grafo.visible_debug:
 		return
 	if not evento is InputEventKey or not evento.pressed or evento.echo:
 		return
-	if evento.physical_keycode != KEY_B and evento.keycode != KEY_B:
-		return
 	if get_tree().paused or computador.is_using or jugador.input_locked or clasificacion_partida.visible or MenuGlobal.capa.visible:
 		return
-	evento_apagon.iniciar_apagon()
+	if evento.physical_keycode == KEY_T or evento.keycode == KEY_T:
+		_iniciar_terremoto()
+	elif evento.physical_keycode == KEY_B or evento.keycode == KEY_B:
+		if not evento_terremoto.activo:
+			evento_apagon.iniciar_apagon()
+	else:
+		return
 	get_viewport().set_input_as_handled()
 
 
@@ -306,9 +316,9 @@ func _actualizar_indicador_papel() -> void:
 func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 	if not is_instance_valid(_aviso_apagon):
 		return
-	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible))
+	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible_debug))
 	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
-		_aviso_apagon.text = "LUZ RESTAURADA  ·  [B] PROBAR APAGÓN"
+		_aviso_apagon.text = "[B] PROBAR APAGÓN  ·  [T] PROBAR TERREMOTO"
 	elif objetivo == evento_apagon.taco:
 		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
 	else:
@@ -363,6 +373,7 @@ func _recibir_denuncia_aleatoria() -> void:
 			bloqueos_iniciados = true
 			_cambiar_bloqueo_temporal()
 			temporizador_bloqueos.start()
+			evento_terremoto.programar()
 			
 		print(
 			"Nueva denuncia: ",
@@ -467,6 +478,44 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 	papel.freeze = false
 
 
+func _iniciar_terremoto() -> void:
+	if partida_finalizada or not bloqueos_iniciados or computador.is_using or jugador.input_locked:
+		return
+	if evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO:
+		return
+	if not evento_terremoto.iniciar(grafo_piso, jugador, bloqueos_visuales, _huella_papel_suelto()):
+		return
+	temporizador_bloqueos.paused = true
+	jugador.reproducir_expresion(&"estres")
+	panel_despacho._mostrar_mensaje("El suelo empieza a temblar…", PanelDespacho.CORAL)
+
+
+func _al_romper_suelo() -> void:
+	if is_instance_valid(papel_actual) and papel_actual.portador == null:
+		papel_actual.sleeping = false
+	if not grafo_piso.es_zona_segura(grafo_piso.posicion_a_celda(jugador.global_position)):
+		panel_despacho._mostrar_mensaje("¡Terremoto! Cuida la hoja y rodea la grieta grande.", PanelDespacho.CORAL)
+	depurador_grafo.actualizar_mapa()
+	_calcular_ruta_a_proxima_estacion()
+
+
+func _physics_process(_delta: float) -> void:
+	if partida_finalizada or not evento_terremoto.activo or not is_instance_valid(papel_actual):
+		return
+	if papel_actual.portador == null and evento_terremoto.atrapo_hoja(papel_actual.global_position):
+		sistema_despacho.vencer_denuncia(papel_actual.denuncia_id, Denuncia.MotivoPerdida.TERREMOTO)
+
+
+func _al_terminar_terremoto() -> void:
+	for bloqueo in evento_terremoto.caidos:
+		bloqueo.call("desactivar")
+		_bloqueos_disponibles.append(bloqueo)
+	evento_terremoto.caidos.clear()
+	temporizador_bloqueos.paused = false
+	depurador_grafo.actualizar_mapa()
+	_calcular_ruta_a_proxima_estacion()
+
+
 func _on_caso_finalizado(denuncia: Denuncia) -> void:
 	var registro := _resumen_denuncia(denuncia)
 	if denuncia.estado == Denuncia.Estado.RESUELTA:
@@ -494,6 +543,7 @@ func _resumen_denuncia(denuncia: Denuncia) -> Dictionary:
 	return {
 		"id": denuncia.id,
 		"titulo": denuncia.titulo,
+		"terremoto": denuncia.estado == Denuncia.Estado.VENCIDA and denuncia.motivo_perdida == Denuncia.MotivoPerdida.TERREMOTO,
 		"completadas": denuncia.estaciones_completadas.duplicate(),
 		"pendientes": denuncia.obtener_estaciones_pendientes()
 	}
@@ -821,6 +871,8 @@ func _on_temporizador_bloqueos_timeout() -> void:
 	_cambiar_bloqueo_temporal()
 	
 func _cambiar_bloqueo_temporal() -> void:
+	if evento_terremoto.activo:
+		return
 	_limpiar_bloqueos_temporales()
 
 	var celda_jugador: Vector2i = grafo_piso.celda_de_acceso(

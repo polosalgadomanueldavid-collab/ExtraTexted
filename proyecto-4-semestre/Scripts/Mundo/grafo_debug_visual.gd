@@ -2,7 +2,7 @@ class_name GrafoDebugVisual
 extends Node3D
 
 ## Capa de diagnóstico para comparar el mapa lógico con las colisiones reales.
-## F3 la muestra/oculta. No modifica el grafo ni las colisiones.
+## En desarrollo, F3 la muestra/oculta. No modifica el grafo ni las colisiones.
 
 const ALTURA: float = 0.055
 const ALTURA_ETIQUETA: float = 0.09
@@ -23,23 +23,29 @@ const COLOR_ZONA_SEGURA := Color("2563eb", 0.42)
 var grafo: GrafoPiso
 var jugador: Node3D
 var ruta: Array[Vector2i] = []
-var visible_debug: bool = true
+var visible_debug: bool = false
 var _contenedor: Node3D
 var _materiales: Dictionary = {}
 var _marcador_jugador: MeshInstance3D
 var _mesas_fisicas: Array[Dictionary] = []
 var _casillas: Dictionary = {}
 
+
+func _ready() -> void:
+	hide()
+	set_process(false)
+
+
 func configurar(nuevo_grafo: GrafoPiso, nuevo_jugador: Node3D) -> void:
 	grafo = nuevo_grafo
 	jugador = nuevo_jugador
 	_sincronizar_mesas_con_grafo()
-	_reconstruir()
-	_crear_marcador_jugador()
 
 
 func actualizar_ruta(nueva_ruta: Array[Vector2i]) -> void:
 	ruta = nueva_ruta.duplicate()
+	if not visible_debug:
+		return
 	# Cambiar de estación sugerida al caminar no necesita recrear las 350 mallas.
 	var celdas_ruta: Dictionary = {}
 	for celda: Vector2i in ruta:
@@ -49,13 +55,18 @@ func actualizar_ruta(nueva_ruta: Array[Vector2i]) -> void:
 
 
 func actualizar_mapa() -> void:
-	_reconstruir()
+	if visible_debug:
+		_reconstruir()
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
+	if OS.is_debug_build() and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
 		visible_debug = not visible_debug
 		visible = visible_debug
+		set_process(visible_debug)
+		if visible_debug:
+			_reconstruir()
+			_crear_marcador_jugador()
 		print("[GRAFO DEBUG] Capa visual ", "visible" if visible_debug else "oculta", " (F3).")
 		get_viewport().set_input_as_handled()
 
@@ -96,6 +107,8 @@ func _reconstruir() -> void:
 
 
 func _color_de_celda(celda: Vector2i, ruta_como_diccionario: Dictionary) -> Color:
+	if grafo.grietas.has(celda):
+		return Color("503350", 0.82)
 	if grafo.bloqueos_temporales.has(celda):
 		return COLOR_BLOQUEO_TEMPORAL
 	if grafo.bloqueos_fijos.has(celda) or grafo.bloqueos_mesas.has(celda):
@@ -119,7 +132,8 @@ func _sincronizar_mesas_con_grafo() -> void:
 				celdas_de_mesas.append(celda)
 
 	grafo.establecer_bloqueos_de_mesas(celdas_de_mesas)
-	print("[GRAFO DEBUG] Mesas sincronizadas como bloqueos: ", celdas_de_mesas.size())
+	if visible_debug:
+		print("[GRAFO DEBUG] Mesas sincronizadas como bloqueos: ", celdas_de_mesas.size())
 
 
 func _hay_mesa_fisica(celda: Vector2i) -> bool:

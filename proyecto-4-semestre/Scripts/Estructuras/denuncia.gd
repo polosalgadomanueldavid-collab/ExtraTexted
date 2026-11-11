@@ -9,6 +9,7 @@ enum Estado {
 	RESUELTA,
 	VENCIDA
 }
+enum MotivoPerdida { TIEMPO, TERREMOTO }
 
 @export_group("Identificación")
 @export var id: String = ""
@@ -27,6 +28,7 @@ enum Estado {
 @export var protocolo_estaciones: Array[String] = []
 
 var estado: Estado = Estado.PENDIENTE
+var motivo_perdida := MotivoPerdida.TIEMPO
 var estaciones_completadas: Array[String] = []
 
 

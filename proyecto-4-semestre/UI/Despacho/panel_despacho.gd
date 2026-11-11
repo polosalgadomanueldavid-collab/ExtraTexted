@@ -14,9 +14,7 @@ const CORAL := Color("ff785f")
 @onready var puntos_valor: Label = %ValorPuntos
 @onready var puntos_ganancia: Label = %GananciaPuntos
 @onready var recompensa_caso: Label = %RecompensaCaso
-@onready var calma_texto: Label = $Contenido/Calma/Cabecera/Titulo
-@onready var calma_valor: Label = %ValorCalma
-@onready var calma_barra: ProgressBar = %CalmaBar
+@onready var calma_jugadores: PanelCalmaJugadores = $CalmaJugadores
 @onready var denuncia_activa_detalle: PanelContainer = %TarjetaActiva
 @onready var denuncia_activa_titulo: Label = %TituloCaso
 @onready var denuncia_activa_tiempo: Label = %TiempoActivo
@@ -41,7 +39,7 @@ func _ready() -> void:
 	add_child(efecto_tarea)
 	resized.connect(_ajustar_presentacion)
 	puntos_valor.resized.connect(_ajustar_tamano_puntos)
-	for etiqueta: Label in [calma_texto, calma_valor, %TituloActiva, $Contenido/CabeceraEspera/Titulo, %SinCasoActivo, %SinPendientes, mensaje_estacion]:
+	for etiqueta: Label in [%TituloActiva, $Contenido/CabeceraEspera/Titulo, %SinCasoActivo, %SinPendientes, mensaje_estacion]:
 		_estilo_sobre_escenario(etiqueta)
 	%CantidadEspera.add_theme_stylebox_override("normal", _pastilla(CORAL))
 	%CantidadEspera.add_theme_color_override("font_color", CREMA)
@@ -70,6 +68,8 @@ func _ajustar_presentacion() -> void:
 	contenido.scale = Vector2.ONE * factor
 	contenido.position = Vector2(size.x - (ANCHO_DISENO + MARGEN) * factor, MARGEN * factor)
 	contenido.size = Vector2(ANCHO_DISENO, maxf(0.0, size.y / factor - MARGEN * 2.0))
+	calma_jugadores.scale = Vector2.ONE * factor
+	calma_jugadores.position = Vector2.ONE * MARGEN * factor
 
 
 func configurar_sistema(nuevo_sistema: SistemaDespacho) -> void:
@@ -151,11 +151,7 @@ func _formatear_puntos(valor: int) -> String:
 
 
 func actualizar_calma(nueva_calma: int) -> void:
-	calma_barra.value = nueva_calma
-	calma_valor.text = "%d / 100" % nueva_calma
-	var color := CREMA if nueva_calma >= 30 else CORAL
-	calma_valor.add_theme_color_override("font_color", color)
-	calma_barra.modulate = Color.WHITE if nueva_calma >= 30 else CORAL
+	calma_jugadores.actualizar_jugador(1, nueva_calma)
 
 
 func actualizar_denuncias(denuncias: Array[Denuncia]) -> void:
@@ -341,7 +337,10 @@ func _on_denuncia_resuelta(_denuncia: Denuncia) -> void:
 func _on_denuncia_vencida(denuncia: Denuncia) -> void:
 	if efecto_tarea.caso_id == denuncia.id:
 		efecto_tarea.detener()
-	_mostrar_mensaje("La denuncia '%s' venció." % denuncia.titulo, CORAL)
+	if denuncia.motivo_perdida == Denuncia.MotivoPerdida.TERREMOTO:
+		_mostrar_mensaje("La hoja cayó en una grieta. Denuncia perdida por el terremoto.", CORAL)
+	else:
+		_mostrar_mensaje("La denuncia '%s' venció." % denuncia.titulo, CORAL)
 
 
 func _mostrar_mensaje(texto: String, color: Color) -> void:

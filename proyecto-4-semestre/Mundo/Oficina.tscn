@@ -15,6 +15,7 @@
 [ext_resource type="PackedScene" uid="uid://bk4us66i8bc0o" path="res://Furniture Pack/Mesas_estaciones/Estacion_reportes.glb" id="12_estacion_reportes"]
 [ext_resource type="PackedScene" path="res://Eventos/Apagon/TacoLuz.tscn" id="13_taco_luz"]
 [ext_resource type="Script" path="res://Eventos/Apagon/evento_apagon.gd" id="14_apagon"]
+[ext_resource type="Script" path="res://Eventos/Terremoto/evento_terremoto.gd" id="17_terremoto"]
 [ext_resource type="Script" path="res://Objetos/Computador/silla_computador.gd" id="15_silla_pc"]
 [ext_resource type="PackedScene" path="res://Objetos/ZonaDescanso/ZonaDescanso.tscn" id="16_zona_descanso"]
 [ext_resource type="Script" path="res://Mundo/iluminacion_oficina.gd" id="17_iluminacion"]
@@ -467,9 +468,9 @@ size = Vector3(0.85186005, 29.045013, 0.010009766)
 material = SubResource("StandardMaterial3D_yf2d8")
 
 [node name="Suelo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1030625205]
-transform = Transform3D(15, 0, 0, 0, 0.2, 0, 0, 0, 15, 1.0810453, -0.12169261, 3.2155552)
+position = Vector3(1.0810453, -0.12169261, 3.2155552)
 use_collision = true
-size = Vector3(6.3124695, 4.9339905, 7.6137085)
+size = Vector3(94.68704, 0.9867981, 114.20563)
 material = SubResource("StandardMaterial3D_nwhbu")
 
 [node name="Techo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1880558723]
@@ -695,6 +696,10 @@ camara = NodePath("../Gameplay/Camera3D")
 taco = NodePath("../TacoLuz")
 luces = [NodePath("../Pared, suelo, techo/FocoParpadeante1"), NodePath("../Pared, suelo, techo/FocoParpadeante2"), NodePath("../Pared, suelo, techo/FocoFilaFrontal"), NodePath("../Pared, suelo, techo/FocoFilaTrasera"), NodePath("../Pared, suelo, techo/FocoComputador"), NodePath("../Pared, suelo, techo/FocoDescanso"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq4"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal5"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera4")]
 radio_vision = 1.02
+
+[node name="EventoTerremoto" type="Node3D" parent="." node_paths=PackedStringArray("suelo")]
+script = ExtResource("17_terremoto")
+suelo = NodePath("../Pared, suelo, techo/Suelo")
 
 [node name="ZonaDescanso" parent="." instance=ExtResource("16_zona_descanso")]
 position = Vector3(0, 0.3717064, 0)

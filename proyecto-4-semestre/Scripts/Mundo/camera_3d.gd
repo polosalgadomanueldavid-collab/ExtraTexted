@@ -16,7 +16,7 @@ enum Vista { ACTUAL, FRONTAL, GOD }
 @export_range(0.1, 20.0, 0.1) var suavizado_giro: float = 4.0
 
 @export_group("Balanceo ambiental")
-@export var balanceo_activo: bool = true
+var balanceo_activo: bool = true
 @export var amplitud_balanceo := Vector2(0.12, 0.06)
 @export_range(4.0, 30.0, 0.5) var periodo_balanceo: float = 10.0
 
@@ -39,13 +39,28 @@ var _orientacion: Quaternion
 var _posicion_seguimiento: Vector3
 var _fase_balanceo: float = 0.0
 var _peso_balanceo: float = 1.0
+var _temblor := Vector2.ZERO
+
+
+func actualizar_temblor(tiempo: float, intensidad: float) -> void:
+	# Las tres etapas comparten la misma onda. Solo cambia su amplitud.
+	_temblor = 0.080 * intensidad * Vector2(
+		sin(tiempo * 30.7) + 0.32 * sin(tiempo * 51.3),
+		0.67 * sin(tiempo * 36.1) + 0.19 * sin(tiempo * 48.7)
+	)
 
 
 func _ready() -> void:
 	_orientacion_original = global_basis.orthonormalized().get_rotation_quaternion()
 	_orientacion = _orientacion_original
 	_posicion_seguimiento = global_position
+	_sincronizar_balanceo()
 	_peso_balanceo = 1.0 if balanceo_activo else 0.0
+	get_node("/root/AjustesAccesibilidad").connect("ajustes_cambiados", _sincronizar_balanceo)
+
+
+func _sincronizar_balanceo() -> void:
+	balanceo_activo = bool(get_node("/root/AjustesAccesibilidad").get("balanceo_camara"))
 
 
 func _unhandled_input(evento: InputEvent) -> void:
@@ -61,8 +76,6 @@ func _unhandled_input(evento: InputEvent) -> void:
 		establecer_vista(Vista.FRONTAL)
 	elif evento.is_action_pressed("CamaraGod"):
 		establecer_vista(Vista.GOD)
-	elif evento.is_action_pressed("AlternarBalanceoCamara"):
-		balanceo_activo = not balanceo_activo
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -114,6 +127,8 @@ func _physics_process(delta: float) -> void:
 	_fase_balanceo = fposmod(_fase_balanceo + TAU * delta / periodo_balanceo, TAU)
 	_peso_balanceo = lerpf(_peso_balanceo, 1.0 if balanceo_activo else 0.0, avance)
 	var balanceo := Vector2(sin(_fase_balanceo), sin(2.0 * _fase_balanceo)) * amplitud_balanceo * _peso_balanceo
+	if balanceo_activo:
+		balanceo += _temblor
 	# Limita también cada cuadro intermedio y el balanceo, no solo el destino.
 	_posicion_seguimiento = _limitar_encuadre(_posicion_seguimiento, global_basis)
 	global_position = _limitar_encuadre(_posicion_seguimiento + global_basis.x * balanceo.x + global_basis.y * balanceo.y, global_basis)

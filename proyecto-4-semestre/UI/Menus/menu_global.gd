@@ -22,6 +22,7 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
 @onready var selector_filtro: OptionButton = %SelectorFiltro
 @onready var control_intensidad: HSlider = %Intensidad
 @onready var control_brillo: HSlider = %Brillo
+@onready var selector_balanceo: OptionButton = %SelectorBalanceo
 @onready var valor_intensidad: Label = %ValorIntensidad
 @onready var valor_brillo: Label = %ValorBrillo
 @onready var filtro_pantalla: ColorRect = %FiltroPantalla
@@ -62,6 +63,7 @@ func _ready() -> void:
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.nombre_confirmado.connect(_iniciar_partida)
 	selector_filtro.item_selected.connect(AjustesAccesibilidad.establecer_modo)
+	selector_balanceo.item_selected.connect(_cambiar_balanceo)
 	control_intensidad.value_changed.connect(_cambiar_intensidad)
 	control_brillo.value_changed.connect(_cambiar_brillo)
 	AjustesAccesibilidad.ajustes_cambiados.connect(_sincronizar_ajustes)
@@ -452,16 +454,21 @@ func _cambiar_brillo(valor: float) -> void:
 	AjustesAccesibilidad.establecer_brillo(valor / 100.0)
 
 
+func _cambiar_balanceo(indice: int) -> void:
+	AjustesAccesibilidad.establecer_balanceo_camara(indice == 0)
+
+
 func _sincronizar_ajustes() -> void:
 	selector_filtro.select(AjustesAccesibilidad.modo)
 	control_intensidad.set_value_no_signal(AjustesAccesibilidad.intensidad * 100.0)
 	control_brillo.set_value_no_signal(AjustesAccesibilidad.brillo * 100.0)
+	selector_balanceo.select(0 if AjustesAccesibilidad.balanceo_camara else 1)
 	control_intensidad.editable = AjustesAccesibilidad.modo != 0
 	control_intensidad.focus_mode = Control.FOCUS_ALL if control_intensidad.editable else Control.FOCUS_NONE
 	var controles: Array[Control] = [selector_filtro]
 	if control_intensidad.editable:
 		controles.append(control_intensidad)
-	controles.append_array([control_brillo, %Restablecer, %VolverAccesibilidad])
+	controles.append_array([control_brillo, selector_balanceo, %Restablecer, %VolverAccesibilidad])
 	_confinar_foco(controles)
 	valor_intensidad.text = "%d %%" % roundi(control_intensidad.value)
 	valor_brillo.text = "%d %%" % roundi(control_brillo.value)
