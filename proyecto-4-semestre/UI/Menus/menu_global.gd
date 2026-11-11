@@ -26,6 +26,7 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
 @onready var valor_brillo: Label = %ValorBrillo
 @onready var filtro_pantalla: ColorRect = %FiltroPantalla
 @onready var margen: MarginContainer = $Interfaz/CapaModal/Margen
+@onready var musica_menu: AudioStreamPlayer = $MusicaMenu
 
 var nombre_partida: String = ""
 var final_de_partida_activo: bool = false
@@ -67,13 +68,16 @@ func _ready() -> void:
 	AjustesAccesibilidad.ajustes_cambiados.connect(_sincronizar_ajustes)
 	get_tree().scene_changed.connect(_al_cambiar_escena)
 	capa.resized.connect(_ajustar_presentacion)
+	capa.visibility_changed.connect(_actualizar_musica_menu)
 	panel_pausa.visibility_changed.connect(_ajustar_presentacion)
+	panel_pausa.visibility_changed.connect(_actualizar_musica_menu)
 	panel_opciones.visibility_changed.connect(_ajustar_presentacion)
 	panel_accesibilidad.visibility_changed.connect(_ajustar_presentacion)
 	panel_confirmacion.visibility_changed.connect(_ajustar_presentacion)
 	_sincronizar_ajustes()
 	_ajustar_presentacion()
 	_abrir_tutorial_inicial.call_deferred()
+	_actualizar_musica_menu.call_deferred()
 
 
 func _process(_delta: float) -> void:
@@ -441,7 +445,24 @@ func _al_cambiar_escena() -> void:
 	if not es_escena_de_juego():
 		nombre_partida = ""
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_actualizar_musica_menu()
 	_abrir_tutorial_inicial()
+
+
+func _actualizar_musica_menu() -> void:
+	if not is_instance_valid(musica_menu):
+		return
+	var escena_menu := get_tree().current_scene != null and get_tree().current_scene.scene_file_path == ESCENA_MENU
+	var pausa_visible := es_escena_de_juego() and get_tree().paused and capa.visible
+	if escena_menu or pausa_visible:
+		if not musica_menu.playing:
+			var pista := musica_menu.stream as AudioStreamMP3
+			if pista != null:
+				pista.loop = true
+			musica_menu.play()
+		musica_menu.stream_paused = false
+	elif musica_menu.playing:
+		musica_menu.stream_paused = true
 
 
 func _cambiar_intensidad(valor: float) -> void:

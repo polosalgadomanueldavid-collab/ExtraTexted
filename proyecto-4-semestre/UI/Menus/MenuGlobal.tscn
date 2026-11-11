@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://UI/Menus/menu_global.gd" id="1_script"]
 [ext_resource type="Shader" path="res://UI/Menus/filtro_accesibilidad.gdshader" id="2_shader"]
@@ -22,6 +22,7 @@
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/tutorial.svg" id="20_tutorial"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/teclado.svg" id="21_leyenda"]
 [ext_resource type="PackedScene" path="res://UI/Menus/PanelClasificacion.tscn" id="22_clasificacion"]
+[ext_resource type="AudioStream" path="res://Audios/menu_extratexted.mp3" id="23_musica_menu"]
 
 [sub_resource type="FontVariation" id="Font_aviso"]
 base_font = ExtResource("11_texto")
@@ -143,6 +144,11 @@ shader = ExtResource("2_shader")
 [node name="MenuGlobal" type="Node"]
 process_mode = 3
 script = ExtResource("1_script")
+
+[node name="MusicaMenu" type="AudioStreamPlayer" parent="."]
+process_mode = 3
+stream = ExtResource("23_musica_menu")
+volume_db = -4.0
 
 [node name="Interfaz" type="CanvasLayer" parent="."]
 layer = 80
