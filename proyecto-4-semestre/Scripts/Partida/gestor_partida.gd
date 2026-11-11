@@ -5,6 +5,7 @@ extends Node3D
 @onready var jugador: Player = $Gameplay/Node3D
 @onready var evento_apagon: EventoApagonScript = $EventoApagon
 @onready var evento_terremoto: EventoTerremoto = $EventoTerremoto
+@onready var musica_partida: MusicaPartida = $MusicaPartida
 
 const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
@@ -98,6 +99,7 @@ func _ready() -> void:
 
 	sistema_despacho = SistemaDespacho.new()
 	add_child(sistema_despacho)
+	musica_partida.configurar(sistema_despacho)
 	_nombre_partida = MenuGlobal.nombre_partida
 	clasificacion_partida = CLASIFICACION_PARTIDA_ESCENA.instantiate()
 	panel_despacho.add_child(clasificacion_partida)
