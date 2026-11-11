@@ -2,7 +2,10 @@ extends Control
 ## Decorado del menú: oficina jugable, dos policías y degradado izquierdo.
 
 const ESCENA_OFICINA := preload("res://Mundo/Oficina.tscn")
-const MODELO_POLICIA := preload("res://Personajes/PoliciaAzul/policia_azul.glb")
+const MODELOS_POLICIA: Array[PackedScene] = [
+	preload("res://Personajes/PoliciaAzul/policia_azul.glb"),
+	preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"),
+]
 const DEGRADADO := preload("res://UI/Menus/degradado_oficina_menu.gdshader")
 
 var degradado: ColorRect
@@ -106,8 +109,8 @@ func _crear_escenario() -> void:
 		escenario.add_child(luz)
 		_luces.append(luz)
 
-	for i in 2:
-		var policia: Node3D = MODELO_POLICIA.instantiate()
+	for i in MODELOS_POLICIA.size():
+		var policia: Node3D = MODELOS_POLICIA[i].instantiate()
 		policia.position = [Vector3(0.2, 0.4, 6.65), Vector3(1.5, 0.4, 6.75)][i]
 		policia.rotation_degrees.y = [14.0, -18.0][i]
 		policia.scale = Vector3.ONE * [1.0, 1.05][i]

@@ -37,6 +37,12 @@ func _probar() -> void:
 	var computador: Node = _escena.get("computador")
 	(computador.get("timer_nuevo_problema") as Timer).stop()
 	(_escena.get("depurador_grafo") as Node3D).hide()
+	_verificar(not (_escena.get("depurador_grafo") as GrafoDebugVisual).visible_debug, "La partida comienza sin modo debug")
+	await _pulsar_tecla(KEY_B)
+	_verificar(int(_evento.get("estado")) == 0, "B no activa la prueba antes de F3")
+	await _pulsar_tecla(KEY_F3)
+	_verificar((_escena.get("depurador_grafo") as GrafoDebugVisual).visible_debug, "F3 activa el modo debug en desarrollo")
+	(_escena.get("depurador_grafo") as Node3D).hide()
 	_verificar(bool(_menu.call("es_escena_de_juego")), "MenuGlobal reconoce Oficina como la partida real")
 	_verificar(_jugador.is_on_floor(), "El jugador aterriza en el suelo de Oficina")
 	_altura_pies = _jugador.global_position.y

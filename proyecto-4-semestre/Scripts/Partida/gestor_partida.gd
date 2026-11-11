@@ -27,7 +27,7 @@ const HerramientaReporte := preload("res://Scripts/Despacho/herramienta_reporte.
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const FinalPartidaScript := preload("res://UI/Despacho/final_partida.gd")
-const MODELO_RELEVO := preload("res://Personajes/PoliciaAzul/policia_azul.glb")
+const MODELO_RELEVO := preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn")
 const VER_CLASIFICACION := &"VerClasificacion"
 const ALTURA_INDICADOR_ESTACION: float = 1.25
 const DURACION_DESENCRIPTADO: float = 6.0
@@ -245,7 +245,7 @@ func _input(evento: InputEvent) -> void:
 func _unhandled_key_input(evento: InputEvent) -> void:
 	if partida_finalizada:
 		return
-	if not OS.is_debug_build():
+	if not OS.is_debug_build() or not is_instance_valid(depurador_grafo) or not depurador_grafo.visible_debug:
 		return
 	if not evento is InputEventKey or not evento.pressed or evento.echo:
 		return
@@ -306,7 +306,7 @@ func _actualizar_indicador_papel() -> void:
 func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 	if not is_instance_valid(_aviso_apagon):
 		return
-	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible))
+	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible_debug))
 	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
 		_aviso_apagon.text = "LUZ RESTAURADA  ·  [B] PROBAR APAGÓN"
 	elif objetivo == evento_apagon.taco:

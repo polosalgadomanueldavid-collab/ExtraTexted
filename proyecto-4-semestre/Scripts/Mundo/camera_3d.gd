@@ -16,7 +16,7 @@ enum Vista { ACTUAL, FRONTAL, GOD }
 @export_range(0.1, 20.0, 0.1) var suavizado_giro: float = 4.0
 
 @export_group("Balanceo ambiental")
-@export var balanceo_activo: bool = true
+var balanceo_activo: bool = true
 @export var amplitud_balanceo := Vector2(0.12, 0.06)
 @export_range(4.0, 30.0, 0.5) var periodo_balanceo: float = 10.0
 
@@ -45,7 +45,13 @@ func _ready() -> void:
 	_orientacion_original = global_basis.orthonormalized().get_rotation_quaternion()
 	_orientacion = _orientacion_original
 	_posicion_seguimiento = global_position
+	_sincronizar_balanceo()
 	_peso_balanceo = 1.0 if balanceo_activo else 0.0
+	get_node("/root/AjustesAccesibilidad").connect("ajustes_cambiados", _sincronizar_balanceo)
+
+
+func _sincronizar_balanceo() -> void:
+	balanceo_activo = bool(get_node("/root/AjustesAccesibilidad").get("balanceo_camara"))
 
 
 func _unhandled_input(evento: InputEvent) -> void:
@@ -61,8 +67,6 @@ func _unhandled_input(evento: InputEvent) -> void:
 		establecer_vista(Vista.FRONTAL)
 	elif evento.is_action_pressed("CamaraGod"):
 		establecer_vista(Vista.GOD)
-	elif evento.is_action_pressed("AlternarBalanceoCamara"):
-		balanceo_activo = not balanceo_activo
 	else:
 		return
 	get_viewport().set_input_as_handled()

@@ -2,7 +2,10 @@ extends Control
 ## Galería interactiva de cuatro composiciones. No sustituye el menú principal.
 
 const ESCENA_MENU := preload("res://UI/Menus/MainMenu.tscn")
-const MODELO_POLICIA := preload("res://Personajes/PoliciaAzul/policia_azul.glb")
+const MODELOS_POLICIA: Array[PackedScene] = [
+	preload("res://Personajes/PoliciaAzul/policia_azul.glb"),
+	preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"),
+]
 const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 const NOMBRES := ["01  Escolta", "02  Compañeros", "03  Expediente", "04  Primer plano"]
 const DESCRIPCIONES := [
@@ -121,8 +124,8 @@ func _crear_escenario() -> void:
 	_crear_escritorio(-4.8, -1.9)
 	_crear_escritorio(4.8, -1.9)
 	_crear_tablero()
-	for i in 2:
-		var policia: Node3D = MODELO_POLICIA.instantiate()
+	for modelo: PackedScene in MODELOS_POLICIA:
+		var policia: Node3D = modelo.instantiate()
 		_escena_3d.add_child(policia)
 		_policias.append(policia)
 		var animador := policia.find_child("AnimationPlayer", true, false) as AnimationPlayer

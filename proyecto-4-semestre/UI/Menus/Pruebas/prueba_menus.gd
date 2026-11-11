@@ -55,6 +55,7 @@ func _probar() -> void:
 	_clic_control(accesibilidad_opciones)
 	await get_tree().process_frame
 	_verificar(MenuGlobal.panel_accesibilidad.is_visible_in_tree() and not MenuGlobal.panel_opciones.visible and MenuGlobal.selector_filtro.has_focus(), "Accesibilidad abre sus ajustes desde el menú principal")
+	_verificar(MenuGlobal.selector_balanceo.selected == (0 if AjustesAccesibilidad.balanceo_camara else 1), "El selector muestra el balanceo guardado")
 	await _capturar("01_accesibilidad_menu")
 	var volver_accesibilidad := MenuGlobal.get_node("%VolverAccesibilidad") as Button
 	volver_accesibilidad.grab_focus()
@@ -89,7 +90,10 @@ func _probar() -> void:
 	MenuGlobal.selector_filtro.select(2)
 	MenuGlobal.selector_filtro.item_selected.emit(2)
 	MenuGlobal.control_intensidad.value = 65.0
+	MenuGlobal.selector_balanceo.select(1)
+	MenuGlobal.selector_balanceo.item_selected.emit(1)
 	_verificar(is_equal_approx(AjustesAccesibilidad.brillo, 1.13), "El control de brillo actualiza el estado compartido")
+	_verificar(not AjustesAccesibilidad.balanceo_camara, "Accesibilidad desactiva el balanceo")
 	_verificar(AjustesAccesibilidad.modo == 2 and MenuGlobal.filtro_pantalla.visible, "El filtro queda activado")
 	_clic_control(volver_accesibilidad)
 	await get_tree().process_frame
@@ -100,10 +104,13 @@ func _probar() -> void:
 	var config := ConfigFile.new()
 	_verificar(config.load(AjustesAccesibilidad.ARCHIVO) == OK, "Se guardan los ajustes")
 	_verificar(config.get_value("accesibilidad", "modo", -1) == 2, "Se conserva el modo elegido")
+	_verificar(config.get_value("accesibilidad", "balanceo_camara", true) == false, "Se guarda el balanceo desactivado")
 	AjustesAccesibilidad.modo = 0
 	AjustesAccesibilidad.brillo = 1.0
+	AjustesAccesibilidad.balanceo_camara = true
 	AjustesAccesibilidad.cargar()
 	_verificar(AjustesAccesibilidad.modo == 2 and is_equal_approx(AjustesAccesibilidad.brillo, 1.13), "Se recuperan los ajustes del disco")
+	_verificar(not AjustesAccesibilidad.balanceo_camara, "Se recupera el balanceo del disco")
 	menu.get_node("%PlayButton").pressed.emit()
 	var panel_nombre := MenuGlobal.panel_clasificacion
 	_verificar(panel_nombre.nombre_jugador.has_focus() and panel_nombre.boton_continuar.disabled, "Jugar pide el nombre y espera un valor válido")
@@ -118,6 +125,8 @@ func _probar() -> void:
 	await get_tree().process_frame
 	var oficina := get_tree().current_scene
 	var jugador := oficina.get_node("Gameplay/Node3D") as Player
+	_verificar(not (oficina.get_node("Gameplay/Camera3D") as Camera3D).balanceo_activo, "La cámara usa el balanceo guardado al iniciar")
+	_verificar(not oficina.depurador_grafo.visible_debug and not oficina.depurador_grafo.visible, "El modo debug comienza desactivado")
 	var pc := oficina.get_node("Computer") as PCStatic
 	var sistema: SistemaDespacho = oficina.sistema_despacho
 	var boton_inicio := MenuGlobal.panel_ayuda.boton_cerrar
@@ -181,6 +190,10 @@ func _probar() -> void:
 	_verificar(MenuGlobal.panel_accesibilidad.is_visible_in_tree() and get_tree().paused, "Enter abre Accesibilidad desde Opciones en pausa")
 	await _capturar("03_accesibilidad_pausa")
 	_verificar(is_equal_approx(MenuGlobal.control_brillo.value, 113.0) and MenuGlobal.selector_filtro.selected == 2, "La pausa comparte los ajustes del menu")
+	_verificar(MenuGlobal.selector_balanceo.selected == 1, "La pausa conserva el balanceo desactivado")
+	MenuGlobal.selector_balanceo.select(0)
+	MenuGlobal.selector_balanceo.item_selected.emit(0)
+	_verificar((oficina.get_node("Gameplay/Camera3D") as Camera3D).balanceo_activo, "Cambiar el balanceo en pausa actualiza la cámara")
 	MenuGlobal.control_brillo.value = 92.0
 	_pulsar_escape()
 	await get_tree().process_frame
@@ -262,6 +275,7 @@ func _probar() -> void:
 	_clic_control(MenuGlobal.get_node("%Restablecer"))
 	await get_tree().process_frame
 	_verificar(not MenuGlobal.filtro_pantalla.visible and is_equal_approx(MenuGlobal.control_brillo.value, 100.0), "Restablecer deja la imagen neutra")
+	_verificar(AjustesAccesibilidad.balanceo_camara and MenuGlobal.selector_balanceo.selected == 0, "Restablecer reactiva el balanceo")
 	for modo: int in range(1, 4):
 		AjustesAccesibilidad.establecer_modo(modo)
 		_verificar(MenuGlobal.filtro_pantalla.visible, "Modo de filtro %d" % modo)

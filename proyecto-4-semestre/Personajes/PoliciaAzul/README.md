@@ -16,6 +16,12 @@ La voz provisional es **Gomosa (opción 4)**. Saluda con `play_wave()` y hace un
 
 Los pasos usan **Suela de goma (opción 3)**, con seis variaciones y dos cadencias para caminar y correr. Solo suenan con desplazamiento real sobre el suelo. Los ajustes están en el hijo `SonidosPasos`; detalles en `Audios/Pasos/README.md`.
 
+## Policía de relevo
+
+El segundo policía aparece en el menú y al tomar el relevo en la oficina. Su [uniforme](../PoliciaRelevo/ModeloRelevo.tscn) se edita en Godot sobre el mismo modelo animado. La gorra marfil lleva la insignia II y los galones dorados siguen ambos antebrazos.
+
+Para usarlo con movimiento e interacciones, instancia [PoliciaRelevo.tscn](../PoliciaRelevo/PoliciaRelevo.tscn). Los dos policías de la oficina heredan de `PoliciaBase.tscn`, donde comparten colisión, velocidades, pasos y voz.
+
 ## Gestos e interacción
 
 `animaciones_interaccion.gd` añade poses sobre el esqueleto después de los clips importados. El papel sigue la mano izquierda; la derecha pulsa equipos y mueve una llave durante la reparación de la impresora. La tecla E conserva sus acciones habituales: recibir/recoger, usar estaciones y lanzar en un espacio libre. Las acciones breves bloquean movimiento y nuevas interacciones; la pausa conserva su progreso y reiniciar cancela su efecto pendiente.

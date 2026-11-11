@@ -4,6 +4,10 @@ HUD exclusivo de `res://UI/Despacho/PanelDespacho.tscn`: fondo general transpare
 tarjetas crema compactas, acentos laterales por riesgo y fuente Luckiest Guy
 reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los menús.
 
+- La calma operativa aparece en la esquina superior izquierda, con el policía
+  centrado en un retrato circular y una barra segmentada a su lado. Cada jugador
+  tiene su propia fila; las filas nuevas se apilan debajo sin mover el panel de
+  denuncias de la derecha.
 - La tarjeta **PUNTOS** permanece visible aunque no haya casos. Muestra el saldo
   de la partida, separadores de miles y un aviso `+N PTS` durante tres segundos
   después de obtener una recompensa; el aviso se congela con la pausa.
@@ -85,7 +89,8 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   escáner junto con la partida.
 - El aviso «Luz restaurada» solo se muestra durante una ejecución de depuración
   con la capa F3 visible. En juego normal desaparece. La tecla B de prueba del
-  apagón solo está disponible en ejecuciones de depuración.
+  apagón solo está disponible después de activar el modo debug con F3 en una
+  ejecución de desarrollo.
 - El HUD escala desde 1920×1080 sin alterar el mundo; la cola permite desplazamiento
   cuando no cabe y no captura el foco del teclado.
 

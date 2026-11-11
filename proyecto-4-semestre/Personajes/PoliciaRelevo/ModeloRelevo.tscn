@@ -1,0 +1,145 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Personajes/PoliciaAzul/policia_azul.glb" id="1_modelo"]
+
+[sub_resource type="StandardMaterial3D" id="Sarga"]
+resource_name = "Sarga verde petróleo"
+albedo_color = Color(0.085, 0.38, 0.375, 1)
+roughness = 0.63
+
+[sub_resource type="StandardMaterial3D" id="Marfil"]
+resource_name = "Marfil de gala"
+albedo_color = Color(0.89, 0.795, 0.62, 1)
+roughness = 0.55
+
+[sub_resource type="StandardMaterial3D" id="Petroleo"]
+resource_name = "Petróleo oscuro"
+albedo_color = Color(0.065, 0.205, 0.235, 1)
+roughness = 0.48
+
+[sub_resource type="StandardMaterial3D" id="Coral"]
+resource_name = "Cordón coral"
+albedo_color = Color(0.96, 0.42, 0.30, 1)
+roughness = 0.48
+
+[sub_resource type="StandardMaterial3D" id="Laton"]
+resource_name = "Galón de latón"
+albedo_color = Color(1.0, 0.79, 0.37, 1)
+metallic = 0.18
+roughness = 0.43
+
+[sub_resource type="TorusMesh" id="Cordon"]
+material = SubResource("Coral")
+inner_radius = 0.415
+outer_radius = 0.441
+rings = 56
+ring_segments = 10
+
+[sub_resource type="TorusMesh" id="Galon"]
+material = SubResource("Laton")
+inner_radius = 0.147
+outer_radius = 0.171
+rings = 40
+ring_segments = 8
+
+[sub_resource type="CapsuleMesh" id="BarraIdentificacion"]
+material = SubResource("Laton")
+radius = 0.024
+height = 0.185
+radial_segments = 16
+rings = 4
+
+[sub_resource type="CapsuleMesh" id="TrazoInsignia"]
+material = SubResource("Laton")
+radius = 0.011
+height = 0.096
+radial_segments = 12
+rings = 4
+
+[node name="ModeloRelevo" instance=ExtResource("1_modelo")]
+
+[node name="Banda de la gorra" parent="Rig/Skeleton3D"]
+material_override = SubResource("Petroleo")
+
+[node name="Chaqueta" parent="Rig/Skeleton3D"]
+material_override = SubResource("Sarga")
+
+[node name="Cuello derecho" parent="Rig/Skeleton3D"]
+material_override = SubResource("Marfil")
+
+[node name="Cuello izquierdo" parent="Rig/Skeleton3D"]
+material_override = SubResource("Marfil")
+
+[node name="Cuello trasero" parent="Rig/Skeleton3D"]
+material_override = SubResource("Marfil")
+
+[node name="Gorra de plato" parent="Rig/Skeleton3D"]
+material_override = SubResource("Marfil")
+
+[node name="Manga L" parent="Rig/Skeleton3D"]
+material_override = SubResource("Sarga")
+
+[node name="Manga R" parent="Rig/Skeleton3D"]
+material_override = SubResource("Sarga")
+
+[node name="Pantalón continuo" parent="Rig/Skeleton3D"]
+material_override = SubResource("Petroleo")
+
+[node name="Placa de la gorra" parent="Rig/Skeleton3D"]
+material_override = SubResource("Petroleo")
+
+[node name="Visera" parent="Rig/Skeleton3D"]
+material_override = SubResource("Petroleo")
+
+[node name="AdornoGorra" type="BoneAttachment3D" parent="Rig/Skeleton3D"]
+bone_name = "head"
+
+[node name="Cordon" type="MeshInstance3D" parent="Rig/Skeleton3D/AdornoGorra"]
+position = Vector3(0, 0.5596, -0.015)
+rotation = Vector3(-0.257, 0, 0)
+scale = Vector3(1, 1.25, 1.031)
+mesh = SubResource("Cordon")
+
+[node name="TrazoIzquierdo" type="MeshInstance3D" parent="Rig/Skeleton3D/AdornoGorra"]
+position = Vector3(0.024, 0.816, 0.442)
+rotation = Vector3(0.16, 0, 0)
+mesh = SubResource("TrazoInsignia")
+
+[node name="TrazoDerecho" type="MeshInstance3D" parent="Rig/Skeleton3D/AdornoGorra"]
+position = Vector3(-0.024, 0.816, 0.442)
+rotation = Vector3(0.16, 0, 0)
+mesh = SubResource("TrazoInsignia")
+
+[node name="PlacaIdentificacion" type="BoneAttachment3D" parent="Rig/Skeleton3D"]
+bone_name = "chest"
+
+[node name="Barra" type="MeshInstance3D" parent="Rig/Skeleton3D/PlacaIdentificacion"]
+position = Vector3(-0.198, 0.068, 0.346)
+rotation = Vector3(0, -0.47, 1.57)
+mesh = SubResource("BarraIdentificacion")
+
+[node name="PunoIzquierdo" type="BoneAttachment3D" parent="Rig/Skeleton3D"]
+bone_name = "forearm.L"
+
+[node name="GalonSuperior" type="MeshInstance3D" parent="Rig/Skeleton3D/PunoIzquierdo"]
+position = Vector3(-0.0065, 0.26, -0.002)
+scale = Vector3(1, 1.35, 1.13)
+mesh = SubResource("Galon")
+
+[node name="GalonInferior" type="MeshInstance3D" parent="Rig/Skeleton3D/PunoIzquierdo"]
+position = Vector3(-0.0044, 0.32, -0.0025)
+scale = Vector3(1.044, 1.35, 1.12)
+mesh = SubResource("Galon")
+
+[node name="PunoDerecho" type="BoneAttachment3D" parent="Rig/Skeleton3D"]
+bone_name = "forearm.R"
+
+[node name="GalonSuperior" type="MeshInstance3D" parent="Rig/Skeleton3D/PunoDerecho"]
+position = Vector3(0.0065, 0.26, -0.002)
+scale = Vector3(1, 1.35, 1.13)
+mesh = SubResource("Galon")
+
+[node name="GalonInferior" type="MeshInstance3D" parent="Rig/Skeleton3D/PunoDerecho"]
+position = Vector3(0.0044, 0.32, -0.0025)
+scale = Vector3(1.044, 1.35, 1.12)
+mesh = SubResource("Galon")
