@@ -36,6 +36,8 @@ const DURACION_DESENCRIPTADO: float = 6.0
 @export_range(0.0, 1.0, 0.05) var probabilidad_atasco_reporte: float = 0.35
 const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
 const EventoTerremoto := preload("res://Eventos/Terremoto/evento_terremoto.gd")
+const AnuncioPartida := preload("res://UI/Despacho/anuncio_partida.gd")
+const IndicadorDenunciaPC := preload("res://UI/Computador/indicador_denuncia_pc.gd")
 
 
 var sistema_despacho: SistemaDespacho
@@ -89,10 +91,17 @@ var _duracion_partida: float = 0.0
 var _resueltas: Array[Dictionary] = []
 var _vencidas: Array[Dictionary] = []
 var _ultima_vencida: Dictionary = {}
+var anuncios: AnuncioPartida
+var indicador_denuncia_pc: IndicadorDenunciaPC
+var _turno_anunciado := false
 
 
 func _ready() -> void:
 	add_to_group("gestor_partida")
+	anuncios = AnuncioPartida.new()
+	$CanvasLayer.add_child(anuncios)
+	indicador_denuncia_pc = IndicadorDenunciaPC.new()
+	$CanvasLayer.add_child(indicador_denuncia_pc)
 	sonidos_mesas = SonidosMesas.new()
 	add_child(sonidos_mesas)
 	generador_aleatorio.randomize()
@@ -106,6 +115,7 @@ func _ready() -> void:
 	sistema_despacho.puntuacion.puntos_actualizados.connect(_al_actualizar_puntaje)
 	evento_apagon.estado_cambiado.connect(_al_cambiar_estado_apagon)
 	evento_apagon.apagon_iniciado.connect(_al_iniciar_apagon)
+	evento_apagon.luz_restaurada.connect(_al_restaurar_luz)
 	evento_terremoto.inicio_solicitado.connect(_iniciar_terremoto)
 	evento_terremoto.temblor_actualizado.connect($Gameplay/Camera3D.actualizar_temblor)
 	evento_terremoto.suelo_roto.connect(_al_romper_suelo)
@@ -193,12 +203,16 @@ func _ready() -> void:
 
 
 func _preparar_pool_bloqueos() -> void:
-	# Reparte la creación inicial; los temporizadores siguen pausados durante el tutorial.
-	while is_inside_tree() and _bloqueos_pool.size() < BLOQUEOS_SIMULTANEOS:
-		var bloqueo := _crear_bloqueo_pool()
-		_bloqueos_disponibles.append(bloqueo)
-		if _bloqueos_pool.size() % 3 == 0:
-			await get_tree().process_frame
+	# Al abrir la escena directamente, termina aquí los lotes pendientes.
+	while is_inside_tree() and not preparar_lote_de_cajones():
+		await get_tree().process_frame
+
+
+func preparar_lote_de_cajones() -> bool:
+	# También se puede llamar desde la pantalla de carga, con la oficina fuera del árbol.
+	for i in mini(3, BLOQUEOS_SIMULTANEOS - _bloqueos_pool.size()):
+		_bloqueos_disponibles.append(_crear_bloqueo_pool())
+	return _bloqueos_pool.size() >= BLOQUEOS_SIMULTANEOS
 
 
 func _crear_bloqueo_pool() -> StaticBody3D:
@@ -212,6 +226,9 @@ func _crear_bloqueo_pool() -> StaticBody3D:
 func _process(_delta: float) -> void:
 	if partida_finalizada:
 		return
+	if not _turno_anunciado and get_tree().current_scene == self and not MenuGlobal.capa.visible:
+		_turno_anunciado = true
+		anuncios.mostrar_inicio()
 	_duracion_partida += _delta
 	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
 	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
@@ -229,6 +246,7 @@ func _process(_delta: float) -> void:
 		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO)
 	_actualizar_indicador_papel()
 	_actualizar_aviso_apagon(objetivo)
+	_actualizar_indicador_denuncia_pc(objetivo)
 	if not _denuncia_en_descriptado.is_empty() and is_instance_valid(_mesa_seguridad):
 		var avance := 1.0 if _seguridad_lista else 1.0 - temporizador_seguridad.time_left / DURACION_DESENCRIPTADO
 		progreso_seguridad.actualizar(avance, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * 2.05)
@@ -334,6 +352,25 @@ func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
 
 func _al_iniciar_apagon(_tipo: int) -> void:
 	jugador.reproducir_expresion(&"sorpresa")
+	anuncios.mostrar_evento("¡APAGÓN!", "", "Busca el taco de luz")
+
+
+func _al_restaurar_luz() -> void:
+	if not partida_finalizada:
+		anuncios.mostrar_evento("LUZ", "RESTABLECIDA")
+
+
+func _actualizar_indicador_denuncia_pc(objetivo: Node3D) -> void:
+	if not is_instance_valid(escaner_verificacion):
+		return
+	var descanso := get_node_or_null("ZonaDescanso")
+	var cafe: bool = descanso != null and descanso.tiene_cafe()
+	var disponible := sistema_despacho.obtener_denuncia_activa() == null and not is_instance_valid(papel_actual) and not cafe
+	var oculto := anuncios.visible or computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or clasificacion_partida.visible or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO
+	indicador_denuncia_pc.actualizar(
+		get_viewport().get_camera_3d(), computador.global_position + Vector3.UP * 0.38,
+		disponible, objetivo == computador or objetivo is SillaComputador, oculto
+	)
 
 
 func _notification(what: int) -> void:
@@ -489,6 +526,7 @@ func _iniciar_terremoto() -> void:
 		return
 	temporizador_bloqueos.paused = true
 	jugador.reproducir_expresion(&"estres")
+	anuncios.mostrar_evento("¡TERREMOTO!", "", "Cuida la hoja y rodea las grietas")
 	panel_despacho._mostrar_mensaje("El suelo empieza a temblar…", PanelDespacho.CORAL)
 
 
@@ -516,6 +554,8 @@ func _al_terminar_terremoto() -> void:
 	temporizador_bloqueos.paused = false
 	depurador_grafo.actualizar_mapa()
 	_calcular_ruta_a_proxima_estacion()
+	if not partida_finalizada:
+		anuncios.mostrar_evento("FIN DEL", "TERREMOTO")
 
 
 func _on_caso_finalizado(denuncia: Denuncia) -> void:
@@ -578,6 +618,8 @@ func _al_terminar_partida() -> void:
 	indicador_papel.hide()
 	progreso_seguridad.hide()
 	_aviso_apagon.hide()
+	anuncios.detener()
+	indicador_denuncia_pc.hide()
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	final_partida.presentar(datos)
@@ -707,6 +749,7 @@ func _interactuar_reporte() -> bool:
 		herramienta_reporte.establecer_activa(true)
 		_aviso_reporte_atasco.visible = true
 		sonidos_mesas.atascar_impresora()
+		anuncios.mostrar_evento("IMPRESORA", "ATASCADA", "Busca la herramienta para repararla")
 		panel_despacho._mostrar_mensaje("Impresora atascada. Busca la herramienta junto a la zona de descanso y vuelve.", PanelDespacho.CORAL)
 		return true
 	sonidos_mesas.imprimir()
@@ -849,6 +892,7 @@ func _actualizar_indicadores_estaciones() -> void:
 
 
 func _on_denuncias_actualizadas(_denuncias: Array[Denuncia]) -> void:
+	indicador_denuncia_pc.establecer_denuncias(_denuncias)
 	# Esta señal llega después de limpiar el caso activo al resolver o vencer.
 	# Los cambios en otros casos de la cola no alteran la orientación del activo.
 	_sincronizar_indicador_con_despacho()
@@ -881,18 +925,15 @@ func _cambiar_bloqueo_temporal() -> void:
 		jugador.global_position
 	)
 
-	var destinos_protegidos: Array[Vector2i] = []
 	var libres_al_inicio := grafo_piso.celdas_alcanzables(celda_jugador)
-	var minimo_libres := mini(2, libres_al_inicio.size())
-	for destino: Vector2i in GrafoPiso.DESTINOS.values():
-		if libres_al_inicio.has(destino):
-			destinos_protegidos.append(destino)
+	var necesita_salida := libres_al_inicio.size() > 1
+	var estaciones := GrafoPiso.DESTINOS.values()
+	var destinos := estaciones.duplicate()
 	# Mantiene conectada la zona de descanso aunque el jugador esté en el laberinto.
 	for acceso: Node in get_tree().get_nodes_in_group("accesos_navegacion"):
 		if acceso is Node3D and is_ancestor_of(acceso):
 			var destino := grafo_piso.posicion_a_celda((acceso as Node3D).global_position)
-			if libres_al_inicio.has(destino) and not destinos_protegidos.has(destino):
-				destinos_protegidos.append(destino)
+			destinos.append(destino)
 
 	var colision := jugador.get_node("Colision") as CollisionShape3D
 	var limites := colision.global_transform * colision.shape.get_debug_mesh().get_aabb()
@@ -904,12 +945,17 @@ func _cambiar_bloqueo_temporal() -> void:
 	var huella_papel := _huella_papel_suelto()
 
 	var candidatos: Array[Vector2i] = []
+	var ensayo := AStarGrid2D.new()
+	ensayo.region = Rect2i(0, 0, GrafoPiso.COLUMNAS, GrafoPiso.FILAS)
+	ensayo.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+	ensayo.update()
 
 	for fila: int in range(GrafoPiso.FILAS):
 		for columna: int in range(GrafoPiso.COLUMNAS):
 			var celda: Vector2i = Vector2i(columna, fila)
 
 			if not grafo_piso.es_transitable(celda):
+				ensayo.set_point_solid(celda)
 				continue
 
 			if celda == celda_jugador:
@@ -918,7 +964,7 @@ func _cambiar_bloqueo_temporal() -> void:
 			if grafo_piso.es_zona_segura(celda):
 				continue
 
-			if GrafoPiso.DESTINOS.values().has(celda):
+			if estaciones.has(celda):
 				continue
 			# El cajón ocupa toda su celda. El jugador puede estar apoyado
 			# sobre el borde de la celda vecina al cambiar la distribución.
@@ -931,6 +977,11 @@ func _cambiar_bloqueo_temporal() -> void:
 
 			candidatos.append(celda)
 
+	var rutas_protegidas: Dictionary[Vector2i, Array] = {}
+	for destino: Vector2i in destinos:
+		if libres_al_inicio.has(destino):
+			rutas_protegidas[destino] = ensayo.get_id_path(celda_jugador, destino)
+
 	var bloqueos_colocados: int = 0
 	while not candidatos.is_empty() and bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
 		var indice: int = generador_aleatorio.randi_range(
@@ -941,20 +992,13 @@ func _cambiar_bloqueo_temporal() -> void:
 		var candidata: Vector2i = candidatos[indice]
 		candidatos.remove_at(indice)
 
-		grafo_piso.bloqueos_temporales[candidata] = true
-		var libres := grafo_piso.celdas_alcanzables(celda_jugador)
-		var hay_ruta := libres.size() >= minimo_libres
-		for destino: Vector2i in destinos_protegidos:
-			if not libres.has(destino):
-				hay_ruta = false
-				break
-
-		if hay_ruta:
+		ensayo.set_point_solid(candidata)
+		if _conserva_accesos(ensayo, celda_jugador, candidata, rutas_protegidas, necesita_salida):
+			grafo_piso.bloqueos_temporales[candidata] = true
 			_mostrar_bloqueo_temporal(candidata)
 			bloqueos_colocados += 1
-			continue
-
-		grafo_piso.bloqueos_temporales.erase(candidata)
+		else:
+			ensayo.set_point_solid(candidata, false)
 
 	grafo_piso.construir_adyacencia()
 	depurador_grafo.actualizar_mapa()
@@ -967,6 +1011,29 @@ func _cambiar_bloqueo_temporal() -> void:
 		)
 	else:
 		print("Bloqueos temporales activos: ", bloqueos_colocados)
+
+
+func _conserva_accesos(
+	ensayo: AStarGrid2D,
+	origen: Vector2i,
+	candidata: Vector2i,
+	rutas: Dictionary[Vector2i, Array],
+	necesita_salida: bool
+) -> bool:
+	# Solo hay que buscar otro camino si este cajón corta uno de los conocidos.
+	for destino in rutas:
+		if not rutas[destino].has(candidata):
+			continue
+		var alternativa := ensayo.get_id_path(origen, destino)
+		if alternativa.is_empty():
+			return false
+		rutas[destino] = alternativa
+	if necesita_salida:
+		for vecina: Vector2i in grafo_piso.adyacencia[origen]:
+			if not ensayo.is_point_solid(vecina):
+				return true
+		return false
+	return true
 
 
 func _huella_papel_suelto() -> Rect2:

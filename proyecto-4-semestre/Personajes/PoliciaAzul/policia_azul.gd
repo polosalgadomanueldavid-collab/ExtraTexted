@@ -15,6 +15,7 @@ const FORWARD := &"policia_prueba_adelante"
 const BACK := &"policia_prueba_atras"
 const RUN := &"policia_prueba_correr"
 const JUMP := &"policia_prueba_saltar"
+const ALTURA_SALTO_DE_GRIETA := 0.25
 const EMOTE_MENU := &"policia_menu_emotes"
 const KAMEHAMEHA := &"policia_kamehameha"
 const GENKIDAMA := &"policia_genkidama"
@@ -124,6 +125,10 @@ func _physics_process(delta: float) -> void:
 	if not input_locked and not realizando_gesto() and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
+		for borde in get_tree().get_nodes_in_group(&"bordes_grietas_saltables"):
+			if borde.frente_a_los_pies(global_position, direction):
+				velocity.y = maxf(jump_velocity, sqrt(2.0 * _gravity * ALTURA_SALTO_DE_GRIETA))
+				break
 		reproducir_expresion(&"esfuerzo")
 	if moving or input_locked or realizando_gesto() or not is_on_floor():
 		_wave_remaining = 0.0

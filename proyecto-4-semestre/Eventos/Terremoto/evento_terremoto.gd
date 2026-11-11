@@ -12,7 +12,8 @@ const ZONA_MESAS := Rect2(-3.72, 1.04, 5.42, 4.72)
 const SEGUNDOS_POR_ETAPA := 8.0
 const DURACION := 3.0 * SEGUNDOS_POR_ETAPA
 const TIEMPO_CIERRE := 0.60
-const ANCHOS: Array[float] = [1.33, 0.52, 0.39, 0.36]
+# La base del policía mide 0.45 × 0.31 m y proyecta hasta 0.55 m en diagonal.
+const ANCHOS: Array[float] = [1.33, 0.79, 0.73, 0.69]
 const LARGOS: Array[float] = [2.18, 1.70, 1.42, 1.15]
 
 @export var suelo: CSGBox3D
@@ -31,17 +32,19 @@ var _trazado: Array[Grieta] = []
 var _celdas_rotas: Dictionary[Vector2i, bool] = {}
 var _celdas_caidas: Dictionary[Vector2i, Grieta] = {}
 var _azar := RandomNumberGenerator.new()
-var _reloj := Timer.new()
+var _reloj: Timer
 var _cerrando := false
 var _grafo: GrafoPiso
 var _jugador: Player
 var _bloqueos: Dictionary
 var _altura: float
-var _ultima_celda_segura: Vector2i
+var _ultimo_apoyo: Vector3
+var _solto_gravilla := false
 var _huella_hoja: Rect2
 
 
 func _ready() -> void:
+	_reloj = Timer.new()
 	_reloj.one_shot = true
 	_reloj.process_callback = Timer.TIMER_PROCESS_PHYSICS
 	add_child(_reloj)
@@ -101,7 +104,6 @@ func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoj
 	_reloj.stop()
 	etapa = Etapa.AVISO
 	tiempo = 0.0
-	_ultima_celda_segura = origen
 	_cerrando = false
 	set_physics_process(true)
 	return true
@@ -123,7 +125,9 @@ func _abrir_suelo() -> void:
 		_grafo.bloqueos_temporales.erase(celda)
 	_celdas_caidas.clear()
 	_grafo.construir_adyacencia()
-	_ultima_celda_segura = _grafo.celda_de_acceso(_jugador.global_position)
+	# Si el suelo se abre justo debajo del jugador, empezar en tierra firme.
+	_ultimo_apoyo = _grafo.celda_a_posicion(_grafo.celda_de_acceso(_jugador.global_position))
+	_ultimo_apoyo.y = _altura
 	suelo_roto.emit()
 
 
@@ -147,6 +151,7 @@ func _elegir_grieta(indice: int, origen: Vector2i, destinos: Array[Vector2i], en
 				var candidata := Grieta.new()
 				candidata.trazar(centro, LARGOS[indice] * escala, ANCHOS[indice], _azar.randf_range(-PI, PI), _azar)
 				if ZONA_MESAS.encloses(candidata.limites) and _validar_trazado(candidata, origen, destinos, ensayo):
+					candidata.saltable = indice > 0
 					_trazado.append(candidata)
 					return true
 				candidata.free()
@@ -160,7 +165,7 @@ func _validar_trazado(candidata: Grieta, origen: Vector2i, destinos: Array[Vecto
 	if _huella_hoja.has_area() and candidata.limites.intersects(_huella_hoja):
 		return false
 	for otra in _trazado:
-		if candidata.limites.grow(0.14).intersects(otra.limites):
+		if otra.invade_borde(candidata.contorno, candidata.limites):
 			return false
 	var peligros: Array[Vector2i] = []
 	var colindantes: Array[Vector2i] = []
@@ -176,7 +181,9 @@ func _validar_trazado(candidata: Grieta, origen: Vector2i, destinos: Array[Vecto
 				return false
 			if _bloqueos.has(celda) and not _celdas_caidas.has(celda) and candidata.toca_cuadro(punto, 0.31):
 				colindantes.append(celda)
-			if not _celdas_rotas.has(celda) and candidata.toca_cuadro(punto, 0.25):
+			# El grafo guía los pies entre centros de celda. Una punta que
+			# apenas toca una esquina todavía deja una orilla transitable.
+			if not _celdas_rotas.has(celda) and candidata.toca_cuadro(punto, 0.15):
 				if celda == origen or destinos.has(celda):
 					return false
 				peligros.append(celda)
@@ -231,10 +238,20 @@ func _physics_process(delta: float) -> void:
 		return
 	if _jugador.global_position.y < _altura - 0.55:
 		_devolver_a_tierra()
-	elif _jugador.is_on_floor():
-		var celda := _grafo.posicion_a_celda(_jugador.global_position)
-		if _grafo.es_transitable(celda):
-			_ultima_celda_segura = celda
+	elif not _solto_gravilla and _jugador.velocity.y < 0.0 and _jugador.global_position.y < _altura - 0.10:
+		var pies := Vector2(_jugador.global_position.x, _jugador.global_position.z)
+		for grieta in grietas:
+			if grieta.saltable and grieta.contiene(pies):
+				grieta.desprender_gravilla(pies)
+				_solto_gravilla = true
+				break
+	elif _jugador.is_on_floor() and absf(_jugador.global_position.y - _altura) < 0.025:
+		var pies := _jugador.global_position
+		for grieta in grietas:
+			if grieta.toca_cuadro(Vector2(pies.x, pies.z), 0.14):
+				return
+		_ultimo_apoyo = pies
+		_solto_gravilla = false
 
 
 func _peso_en_zona_de_juego() -> float:
@@ -253,8 +270,8 @@ func _peso_en_zona_de_juego() -> float:
 
 
 func _devolver_a_tierra() -> void:
-	var destino := _grafo.celda_a_posicion(_ultima_celda_segura)
-	_jugador.global_position = Vector3(destino.x, _altura + 0.04, destino.z)
+	_solto_gravilla = false
+	_jugador.global_position = _ultimo_apoyo + Vector3.UP * 0.04
 	_jugador.velocity = Vector3.ZERO
 	_jugador.reset_physics_interpolation()
 

@@ -29,6 +29,8 @@ vertex_color_use_as_albedo = true
 material = SubResource("StandardMaterial3D_x2utp")
 radius = 0.2
 height = 0.4
+radial_segments = 10
+rings = 4
 
 [node name="BloqueoTemporal" type="StaticBody3D" unique_id=1931248298]
 script = ExtResource("2_script")

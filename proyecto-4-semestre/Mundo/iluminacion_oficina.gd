@@ -25,7 +25,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	for foco: Dictionary in _focos:
 		var luz := foco["luz"] as SpotLight3D
-		if not is_instance_valid(luz):
+		# El apagón suspende el parpadeo hasta que el foco vuelva a verse.
+		if not is_instance_valid(luz) or not luz.is_visible_in_tree():
 			continue
 		if foco["fase"] == "espera":
 			foco["espera"] = float(foco["espera"]) - delta

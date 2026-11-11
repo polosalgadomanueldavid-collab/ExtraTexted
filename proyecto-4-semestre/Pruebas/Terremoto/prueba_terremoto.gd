@@ -180,25 +180,41 @@ func _borde_sur(grieta: Grieta) -> float:
 
 
 func _intentar_salto(grieta: Grieta, saltable: bool) -> void:
-	var borde := _borde_sur(grieta)
-	jugador.global_position = Vector3(grieta.centro.x, evento._altura + 0.02, borde + 0.31)
+	# Cruzar el ancho real de esta boca, aunque el terremoto la haya girado.
+	var mitad := Grieta.TRAMOS >> 1
+	var borde := grieta._izquierda[mitad]
+	var destino := grieta._derecha[mitad]
+	var direccion := borde.direction_to(destino)
+	var pies := borde - direccion * 0.21
+	jugador.global_position = Vector3(pies.x, evento._altura + 0.02, pies.y)
 	jugador.velocity = Vector3.ZERO
 	await _fisicas(8)
-	jugador.global_position.z = borde - 0.06
+	pies = borde - direccion * 0.04
+	jugador.global_position = Vector3(pies.x, evento._altura + 0.002, pies.y)
 	await _fisicas(2)
 	_verificar(jugador.is_on_floor(), "El salto parte con los pies apoyados en el borde")
-	Input.action_press(&"policia_prueba_adelante")
+	var horizontal := &"policia_prueba_derecha" if direccion.x >= 0 else &"policia_prueba_izquierda"
+	var vertical := &"policia_prueba_atras" if direccion.y >= 0 else &"policia_prueba_adelante"
+	Input.action_press(horizontal, absf(direccion.x))
+	Input.action_press(vertical, absf(direccion.y))
 	Input.action_press(&"policia_prueba_correr")
-	jugador.velocity = Vector3.FORWARD * jugador.run_speed
+	jugador.velocity = Vector3(direccion.x, 0, direccion.y) * jugador.run_speed
 	Input.action_press(&"policia_prueba_saltar")
 	await _fisicas(3)
 	_verificar(jugador.global_position.y > evento._altura + 0.014, "El personaje despega a velocidad de carrera")
 	Input.action_release(&"policia_prueba_saltar")
-	await _fisicas(19 if saltable else 47)
-	Input.action_release(&"policia_prueba_adelante")
+	var cayo := false
+	for i in range(32 if saltable else 47):
+		await physics_frame
+		if jugador.global_position.y < evento._altura - 0.20:
+			cayo = true
+	Input.action_release(horizontal)
+	Input.action_release(vertical)
 	Input.action_release(&"policia_prueba_correr")
-	var cruzo := jugador.global_position.z < grieta.centro.y and jugador.is_on_floor()
-	_verificar(cruzo == saltable, "Se cruza la pequeña de un salto" if saltable else "El salto en carrera no cruza la grieta grande")
+	var llegada := Vector2(jugador.global_position.x, jugador.global_position.z)
+	var cruzo := llegada.distance_to(destino) < 0.65 and (llegada - destino).dot(direccion) >= -0.10 and jugador.is_on_floor()
+	_verificar((cruzo and not cayo) if saltable else (cayo and not cruzo),
+		"Se cruza la pequeña de un salto" if saltable else "El salto en carrera no cruza la grieta grande")
 
 
 func _fisicas(cantidad: int) -> void:
