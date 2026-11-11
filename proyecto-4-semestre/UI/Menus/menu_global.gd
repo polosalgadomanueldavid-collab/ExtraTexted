@@ -63,6 +63,7 @@ func _ready() -> void:
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
 	_confinar_foco([panel_ayuda.boton_cerrar])
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
+	panel_clasificacion.volver_expediente.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.nombre_confirmado.connect(_iniciar_partida)
 	selector_filtro.item_selected.connect(AjustesAccesibilidad.establecer_modo)
 	selector_balanceo.item_selected.connect(_cambiar_balanceo)
@@ -313,12 +314,12 @@ func abrir_clasificacion() -> void:
 	if not _abrir_panel_clasificacion():
 		return
 	var clasificacion := consultar_clasificacion()
-	panel_clasificacion.presentar_tabla(clasificacion.entradas, clasificacion.error)
-	var controles: Array[Control] = [panel_clasificacion.boton_volver]
+	panel_clasificacion.presentar_tabla(clasificacion.entradas, clasificacion.error, _ultimo_nombre)
+	var controles: Array[Control] = [panel_clasificacion.volver_expediente]
 	if panel_clasificacion.tabla.visible:
 		controles.append(panel_clasificacion.lista)
 	_confinar_foco(controles)
-	panel_clasificacion.boton_volver.grab_focus()
+	panel_clasificacion.volver_expediente.grab_focus()
 
 
 func consultar_clasificacion() -> Dictionary:
@@ -352,7 +353,7 @@ func _cerrar_clasificacion() -> void:
 		menu.cancelar_discusion()
 
 
-func _iniciar_partida(nombre: String) -> void:
+func _iniciar_partida(nombre: String, nombre_companero: String = "") -> void:
 	if not panel_clasificacion.formulario.is_visible_in_tree() or _cambiando_escena:
 		return
 	_cambiando_escena = true
@@ -364,7 +365,7 @@ func _iniciar_partida(nombre: String) -> void:
 	capa.hide()
 	var menu := get_tree().current_scene
 	if is_instance_valid(menu) and menu.has_method("confirmar_discusion"):
-		menu.confirmar_discusion()
+		menu.confirmar_discusion(nombre, nombre_companero)
 	preparar_oficina()
 
 

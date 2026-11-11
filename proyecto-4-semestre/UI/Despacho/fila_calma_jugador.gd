@@ -14,6 +14,7 @@ const MASCARA: Shader = preload("res://UI/Despacho/retrato_circular.gdshader")
 const FUENTE: Font = preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 
 var indice_jugador: int = 1
+var nombre_jugador: String = ""
 var calma: int = 100
 var _retrato: TextureRect
 var _nombre: Label
@@ -51,6 +52,8 @@ func _ready() -> void:
 	_retrato.material = material
 	add_child(_retrato)
 	_nombre = _crear_etiqueta(Vector2(87, 3), Vector2(110, 31), HORIZONTAL_ALIGNMENT_LEFT, 26)
+	_nombre.clip_text = true
+	_nombre.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_valor = _crear_etiqueta(Vector2(218, 3), Vector2(139, 31), HORIZONTAL_ALIGNMENT_RIGHT, 23)
 	_subtitulo = _crear_etiqueta(Vector2(88, 31), Vector2(172, 15), HORIZONTAL_ALIGNMENT_LEFT, 12)
 	_subtitulo.text = "CALMA OPERATIVA"
@@ -73,9 +76,25 @@ func actualizar(indice: int, nueva_calma: int) -> void:
 		_calma_mostrada = float(objetivo)
 	calma = objetivo
 	if is_instance_valid(_nombre):
-		_nombre.text = "J%d" % indice_jugador
+		_actualizar_nombre()
 		_actualizar_etiquetas()
 	queue_redraw()
+
+
+func establecer_nombre(nombre: String) -> void:
+	nombre_jugador = nombre.strip_edges()
+	if is_instance_valid(_nombre):
+		_actualizar_nombre()
+
+
+func _actualizar_nombre() -> void:
+	_nombre.text = nombre_jugador if not nombre_jugador.is_empty() else "Jugador"
+	_nombre.tooltip_text = _nombre.text
+	# El nombre se adapta a su hueco; retrato, valor y segmentos no se desplazan.
+	var tamano := 26
+	while tamano > 18 and FUENTE.get_string_size(_nombre.text, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano).x > 110:
+		tamano -= 1
+	_nombre.add_theme_font_size_override("font_size", tamano)
 
 
 func _process(delta: float) -> void:

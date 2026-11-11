@@ -2,23 +2,26 @@ extends Control
 
 const TAMANO_DISENO := Vector2(1920, 1080)
 const DURACION_REVELADO := 0.85
+enum Voz { CONSEJO, OFICIAL_1, OFICIAL_2 }
+const FUENTE_CONSEJO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
+const COLORES_VOZ := [Color("ffd28e"), Color("83e0ed"), Color("95ead0")]
 const DIALOGO := [
-	["CONSEJO", "Mira bien qué puedes resolver primero."],
-	["OFICIAL 1", "¿El piso es lava?"],
-	["OFICIAL 2", "Qué frío que hace, hermano."],
-	["OFICIAL 1", "Wiiiiji ji."],
-	["OFICIAL 2", "¡Aún no sabemos cómo se llama el policía!"],
-	["OFICIAL 1", "¿Cristian, eres tú?"],
-	["CONSEJO", "Pulsa E en el computador para recibir la denuncia más urgente."],
-	["CONSEJO", "Lleva la hoja a las estaciones marcadas. Puedes completarlas en cualquier orden."],
-	["CONSEJO", "La flecha señala la estación pendiente más cercana."],
-	["CONSEJO", "Si sueltas la hoja con E, acércate y pulsa E para recogerla."],
-	["CONSEJO", "En Seguridad, espera a que termine el desencriptado y vuelve a pulsar E."],
-	["CONSEJO", "Si la impresora se atasca, busca la herramienta en la zona de descanso."],
-	["CONSEJO", "En Evidencias, usa A y D para cambiar de hoja y E para elegir."],
-	["CONSEJO", "En Verificación, pulsa E cuando la luz cruce la franja verde."],
-	["CONSEJO", "Vigila el tiempo de cada denuncia: las que esperan también pueden vencer."],
-	["CONSEJO", "Descansar o beber en la zona de descanso recupera la calma."],
+	[Voz.CONSEJO, "Mira bien qué puedes resolver primero."],
+	[Voz.OFICIAL_1, "¿El piso es lava?"],
+	[Voz.OFICIAL_2, "Qué frío que hace, hermano."],
+	[Voz.OFICIAL_1, "Wiiiiji ji."],
+	[Voz.OFICIAL_2, "¡Aún no sabemos cómo se llama el policía!"],
+	[Voz.OFICIAL_1, "¿{compañero}, eres tú?"],
+	[Voz.CONSEJO, "Pulsa E en el computador para recibir la denuncia más urgente."],
+	[Voz.CONSEJO, "Lleva la hoja a las estaciones marcadas. Puedes completarlas en cualquier orden."],
+	[Voz.CONSEJO, "La flecha señala la estación pendiente más cercana."],
+	[Voz.CONSEJO, "Si sueltas la hoja con E, acércate y pulsa E para recogerla."],
+	[Voz.CONSEJO, "En Seguridad, espera a que termine el desencriptado y vuelve a pulsar E."],
+	[Voz.CONSEJO, "Si la impresora se atasca, busca la herramienta en la zona de descanso."],
+	[Voz.CONSEJO, "En Evidencias, usa A y D para cambiar de hoja y E para elegir."],
+	[Voz.CONSEJO, "En Verificación, pulsa E cuando la luz cruce la franja verde."],
+	[Voz.CONSEJO, "Vigila el tiempo de cada denuncia: las que esperan también pueden vencer."],
+	[Voz.CONSEJO, "Descansar o beber en la zona de descanso recupera la calma."],
 ]
 const SEGUNDOS_POR_FRASE := 2.8
 @export var desplazamiento_horizontal: float = 0.0
@@ -29,16 +32,20 @@ const SEGUNDOS_POR_FRASE := 2.8
 @onready var presentacion: Control = $CenterContainer
 @onready var fondo: Control = $FondoOficina
 @onready var pantalla_discusion: Control = $PantallaDiscusion
+@onready var dialogo: VBoxContainer = $PantallaDiscusion/Dialogo
+@onready var contenido: VBoxContainer = $PantallaDiscusion/Dialogo/Contenido
+@onready var fila_carga: HBoxContainer = $PantallaDiscusion/Dialogo/Carga
 @onready var hablante: Label = $PantallaDiscusion/Dialogo/Contenido/Hablante
 @onready var frase: Label = $PantallaDiscusion/Dialogo/Contenido/Frase
-@onready var estado_carga: Label = $PantallaDiscusion/Dialogo/Contenido/EstadoCarga
-@onready var progreso_carga: ProgressBar = $PantallaDiscusion/Dialogo/Contenido/ProgresoCarga
+@onready var estado_carga: Label = $PantallaDiscusion/Dialogo/Carga/EstadoCarga
+@onready var progreso_carga: ProgressBar = $PantallaDiscusion/Dialogo/Carga/ProgresoCarga
 @onready var entrada_negra: ColorRect = $EntradaNegra
 
 var _dialogo_activo := false
 var _tiempo_dialogo := 0.0
-var _linea := -1
-var _primera_linea := 0
+var _nombres := PackedStringArray()
+var _lineas_activas := PackedInt32Array()
+var _indice_activo := 0
 
 
 func _ready() -> void:
@@ -63,27 +70,60 @@ func _process(delta: float) -> void:
 	if not _dialogo_activo:
 		return
 	_tiempo_dialogo += delta
-	var linea := (_primera_linea + floori(_tiempo_dialogo / SEGUNDOS_POR_FRASE)) % DIALOGO.size()
-	if linea != _linea:
-		_linea = linea
-		hablante.text = DIALOGO[linea][0]
-		frase.text = DIALOGO[linea][1]
-		fondo.call("gesticular", linea % 2)
+	if _tiempo_dialogo >= SEGUNDOS_POR_FRASE:
+		var pasos := floori(_tiempo_dialogo / SEGUNDOS_POR_FRASE)
+		_tiempo_dialogo = fmod(_tiempo_dialogo, SEGUNDOS_POR_FRASE)
+		_indice_activo = (_indice_activo + pasos) % _lineas_activas.size()
+		_mostrar_frase()
+
+
+func _preparar_frases(nombre_1: String = "", nombre_2: String = "") -> void:
+	_nombres = PackedStringArray(["Consejo", nombre_1.strip_edges(), nombre_2.strip_edges()])
+	_lineas_activas.clear()
+	var intervenciones: Array[int] = []
+	for i in range(DIALOGO.size()):
+		var voz: Voz = DIALOGO[i][0]
+		if _nombres[voz].is_empty():
+			continue
+		var texto: String = DIALOGO[i][1]
+		if _nombres[Voz.OFICIAL_2].is_empty() and texto.contains("{compañero}"):
+			continue
+		if voz != Voz.CONSEJO:
+			intervenciones.append(_lineas_activas.size())
+		_lineas_activas.append(i)
+	# La oficina puede estar lista en menos de una frase: muestra el alias al confirmar.
+	if intervenciones.is_empty():
+		_indice_activo = randi_range(0, _lineas_activas.size() - 1)
+	else:
+		_indice_activo = intervenciones.pick_random()
+	_tiempo_dialogo = 0.0
+	_mostrar_frase()
+
+
+func _mostrar_frase() -> void:
+	var linea: Array = DIALOGO[_lineas_activas[_indice_activo]]
+	var voz: Voz = linea[0]
+	hablante.text = _nombres[voz]
+	hablante.add_theme_color_override("font_color", COLORES_VOZ[voz])
+	var texto: String = linea[1]
+	frase.text = texto.replace("{compañero}", _nombres[Voz.OFICIAL_2])
+	if voz == Voz.CONSEJO:
+		hablante.add_theme_font_override("font", FUENTE_CONSEJO)
+	else:
+		hablante.remove_theme_font_override("font")
+		fondo.gesticular(voz - 1)
 
 
 func iniciar_discusion() -> void:
 	if _dialogo_activo:
 		return
 	_dialogo_activo = true
-	_tiempo_dialogo = 0.0
-	_linea = -1
-	_primera_linea = randi_range(0, DIALOGO.size() - 1)
 	presentacion.hide()
 	pantalla_discusion.show()
 	estado_carga.text = "Preparando el turno..."
 	progreso_carga.value = 0.0
 	fondo.call("establecer_discusion", true)
-	_process(0.0)
+	_preparar_frases()
 
 
 func cancelar_discusion() -> void:
@@ -96,7 +136,8 @@ func cancelar_discusion() -> void:
 	play_button.grab_focus()
 
 
-func confirmar_discusion() -> void:
+func confirmar_discusion(nombre_1: String, nombre_2: String = "") -> void:
+	_preparar_frases(nombre_1, nombre_2)
 	estado_carga.text = "Abriendo la oficina..."
 
 
@@ -114,10 +155,15 @@ func _ajustar_escala() -> void:
 	var factor := minf(size.x / TAMANO_DISENO.x, size.y / TAMANO_DISENO.y) * escala_presentacion
 	presentacion.scale = Vector2.ONE * factor
 	presentacion.position = (size - TAMANO_DISENO * factor) * 0.5 + Vector2(desplazamiento_horizontal, desplazamiento_vertical) * factor
-	var factor_texto := clampf(factor, 0.5, 1.0)
-	hablante.add_theme_font_size_override("font_size", roundi(26.0 * factor_texto))
-	frase.add_theme_font_size_override("font_size", roundi(34.0 * factor_texto))
-	estado_carga.add_theme_font_size_override("font_size", roundi(19.0 * factor_texto))
+	var escala := minf(size.x / TAMANO_DISENO.x, size.y / TAMANO_DISENO.y)
+	dialogo.anchor_right = 0.77 if size.x < 600 else 0.476
+	hablante.add_theme_font_size_override("font_size", maxi(14, roundi(40 * escala)))
+	frase.add_theme_font_size_override("font_size", maxi(18, roundi(57 * escala)))
+	estado_carga.add_theme_font_size_override("font_size", maxi(11, roundi(27 * escala)))
+	contenido.add_theme_constant_override("separation", roundi(6 * escala))
+	dialogo.add_theme_constant_override("separation", roundi(30 * escala))
+	fila_carga.add_theme_constant_override("separation", roundi(20 * escala))
+	progreso_carga.custom_minimum_size.y = maxi(3, roundi(7 * escala))
 
 
 func _on_play_button_pressed() -> void:

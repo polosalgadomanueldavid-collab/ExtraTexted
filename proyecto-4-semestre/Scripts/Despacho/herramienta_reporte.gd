@@ -6,6 +6,12 @@ const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
 
 var activa: bool = false
+var mostrar_indicador: bool = true:
+	set(valor):
+		mostrar_indicador = valor
+		if is_instance_valid(_indicador):
+			_indicador.visible = valor
+var _indicador: Label3D
 
 
 func _ready() -> void:
@@ -39,6 +45,8 @@ func _ready() -> void:
 	texto.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	texto.position.y = 0.95
 	add_child(texto)
+	_indicador = texto
+	_indicador.visible = mostrar_indicador
 	establecer_activa(false)
 
 

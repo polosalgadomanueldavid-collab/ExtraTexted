@@ -10,6 +10,10 @@ var proporcion: float = 0.0
 var ancla_pantalla := Vector2.ZERO
 var barra_visible: bool = false
 var listo_para_recoger: bool = false
+var mostrar_indicador: bool = true:
+	set(valor):
+		mostrar_indicador = valor
+		queue_redraw()
 
 
 func _ready() -> void:
@@ -29,7 +33,7 @@ func actualizar(valor: float, camara: Camera3D, ancla_mundo: Vector3) -> void:
 
 func _draw() -> void:
 	var factor := minf(size.x / 1280.0, size.y / 720.0)
-	if barra_visible:
+	if barra_visible and mostrar_indicador:
 		var ancho := 188.0 * factor
 		var alto := 20.0 * factor
 		var margen := 24.0 * factor

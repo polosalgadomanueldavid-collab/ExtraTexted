@@ -110,10 +110,10 @@ func _ready() -> void:
 	add_child(sistema_despacho)
 	musica_partida.configurar(sistema_despacho)
 	_nombre_partida = MenuGlobal.nombre_partida
+	panel_despacho.calma_jugadores.establecer_nombre(1, _nombre_partida)
 	clasificacion_partida = CLASIFICACION_PARTIDA_ESCENA.instantiate()
 	panel_despacho.add_child(clasificacion_partida)
 	sistema_despacho.puntuacion.puntos_actualizados.connect(_al_actualizar_puntaje)
-	evento_apagon.estado_cambiado.connect(_al_cambiar_estado_apagon)
 	evento_apagon.apagon_iniciado.connect(_al_iniciar_apagon)
 	evento_apagon.luz_restaurada.connect(_al_restaurar_luz)
 	evento_terremoto.inicio_solicitado.connect(_iniciar_terremoto)
@@ -182,6 +182,8 @@ func _ready() -> void:
 			_mesa_seguridad = estacion
 			break
 	_crear_aviso_apagon()
+	evento_apagon.estado_cambiado.connect(_al_cambiar_estado_apagon)
+	_al_cambiar_estado_apagon(evento_apagon.estado)
 	# Desactiva el flujo antiguo de preguntas del computador.
 	computador.lista_problemas.clear()
 	computador.entregar_papel = true
@@ -243,7 +245,7 @@ func _process(_delta: float) -> void:
 			var disponible := indicador.visible and objetivo is Estacion and (objetivo as Estacion).estacion_id == estacion_id
 			indicador.establecer_interactuable(disponible)
 	if is_instance_valid(guia_estacion):
-		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO)
+		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO)
 	_actualizar_indicador_papel()
 	_actualizar_aviso_apagon(objetivo)
 	_actualizar_indicador_denuncia_pc(objetivo)
@@ -346,6 +348,16 @@ func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 
 
 func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
+	var mostrar := nuevo_estado == EventoApagonScript.Estado.RESTAURADO and not partida_finalizada
+	_actualizar_indicadores_estaciones()
+	progreso_seguridad.mostrar_indicador = mostrar
+	herramienta_reporte.mostrar_indicador = mostrar
+	_aviso_reporte_atasco.visible = mostrar and not _reporte_atascado_id.is_empty()
+	if is_instance_valid(papel_actual):
+		papel_actual.mostrar_indicador = mostrar
+	if not mostrar:
+		guia_estacion.hide()
+		indicador_denuncia_pc.hide()
 	if nuevo_estado == EventoApagonScript.Estado.REPARANDO:
 		clasificacion_partida.hide()
 
@@ -366,7 +378,7 @@ func _actualizar_indicador_denuncia_pc(objetivo: Node3D) -> void:
 	var descanso := get_node_or_null("ZonaDescanso")
 	var cafe: bool = descanso != null and descanso.tiene_cafe()
 	var disponible := sistema_despacho.obtener_denuncia_activa() == null and not is_instance_valid(papel_actual) and not cafe
-	var oculto := anuncios.visible or computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or clasificacion_partida.visible or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO
+	var oculto := anuncios.visible or computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or clasificacion_partida.visible or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO
 	indicador_denuncia_pc.actualizar(
 		get_viewport().get_camera_3d(), computador.global_position + Vector3.UP * 0.38,
 		disponible, objetivo == computador or objetivo is SillaComputador, oculto
@@ -466,6 +478,7 @@ func _entregar_papel(portador: Player) -> void:
 		return
 	papel_actual = PAPEL_DENUNCIA_SCRIPT.new() as PapelDenuncia
 	papel_actual.denuncia_id = denuncia.id
+	papel_actual.mostrar_indicador = evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO
 	add_child(papel_actual)
 	papel_actual.global_position = computador.global_position + Vector3.UP * 0.7
 	papel_actual.freeze = true
@@ -747,7 +760,7 @@ func _interactuar_reporte() -> bool:
 		_reporte_atascado_id = denuncia.id
 		_reporte_herramienta_recogida = false
 		herramienta_reporte.establecer_activa(true)
-		_aviso_reporte_atasco.visible = true
+		_aviso_reporte_atasco.visible = evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO
 		sonidos_mesas.atascar_impresora()
 		anuncios.mostrar_evento("IMPRESORA", "ATASCADA", "Busca la herramienta para repararla")
 		panel_despacho._mostrar_mensaje("Impresora atascada. Busca la herramienta junto a la zona de descanso y vuelve.", PanelDespacho.CORAL)
@@ -885,7 +898,7 @@ func _actualizar_indicadores_estaciones() -> void:
 	for estacion_id: String in indicadores_estaciones:
 		var indicador := indicadores_estaciones[estacion_id] as IndicadorProximaEstacion
 		if is_instance_valid(indicador):
-			var activo := _estaciones_pendientes.has(estacion_id)
+			var activo := _estaciones_pendientes.has(estacion_id) and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and not partida_finalizada
 			if indicador.visible != activo or indicador.is_processing() != activo:
 				indicador.establecer_activo(activo)
 	guia_estacion.establecer_objetivo(indicadores_estaciones.get(estacion_sugerida) as IndicadorProximaEstacion)

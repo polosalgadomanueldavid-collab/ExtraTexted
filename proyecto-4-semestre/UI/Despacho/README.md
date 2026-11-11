@@ -8,6 +8,18 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   centrado en un retrato circular y una barra segmentada a su lado. Cada jugador
   tiene su propia fila; las filas nuevas se apilan debajo sin mover el panel de
   denuncias de la derecha.
+- La fila de calma muestra el nombre elegido al iniciar la partida. Los nombres
+  largos reducen su tamaño y se recortan con puntos suspensivos dentro del mismo
+  hueco, sin desplazar el retrato, la cifra ni los segmentos. Para el futuro
+  compañero, `PanelCalmaJugadores.actualizar_jugador(2, calma, nombre)` permite
+  asignar su identidad; las actualizaciones de calma conservan el nombre.
+- Mantener Tab abre una hoja de la libreta de turnos. El título lleva una pasada
+  de rotulador coral y un círculo a lápiz identifica el puesto del jugador. Se reserva el espacio de dos filas de calma más
+  una separación de 24 unidades de diseño, incluso con un único jugador.
+  Conserva los cinco mejores récords y el resumen del puntaje de la partida.
+  La clasificación del menú usa una carpeta de expedientes con una ficha para el
+  puesto, alias y mejor marca local. Su lista completa permite desplazamiento.
+  Ambas tablas usan marcos ilustrados y controles nativos para sus datos.
 - La tarjeta **PUNTOS** permanece visible aunque no haya casos. Muestra el saldo
   de la partida, separadores de miles y un aviso `+N PTS` durante tres segundos
   después de obtener una recompensa; el aviso se congela con la pausa.
@@ -99,6 +111,14 @@ dejar vencer un caso no concede puntos. El canje y los efectos sobre el mapa
 se incorporarán en una etapa posterior.
 
 ## Comprobación
+
+`Godot --headless --path proyecto-4-semestre --script res://Pruebas/Puntuacion/prueba_diseno_clasificacion.gd`
+comprueba los nombres, la reserva para dos barras, cuatro resoluciones, estados
+vacíos, errores y listas largas. Con renderizado, `-- --capturas` guarda ambos
+diseños en `.godot/clasificacion_qa/`. La prueba de puntuación existente verifica
+además Tab, actualización de récords y navegación entre menú y partida; para
+ejecutarla sin ventana usar `--max-fps 30`, pues su espera de 120 cuadros debe
+abarcar la duración mínima de la pantalla de carga.
 
 `UI/Despacho/Pruebas/PruebaSonidosMesas.tscn` prueba las acciones de las cinco
 mesas dentro de la oficina real: entrada del panel, cambio de hojas, variantes,
