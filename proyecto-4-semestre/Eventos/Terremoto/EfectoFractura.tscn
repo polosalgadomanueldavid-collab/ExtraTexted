@@ -1,0 +1,63 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="Piedra"]
+vertex_color_use_as_albedo = true
+
+[sub_resource type="SphereMesh" id="Esquirla"]
+material = SubResource("Piedra")
+radius = 0.042
+height = 0.044
+radial_segments = 4
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="Polvo"]
+transparency = 1
+vertex_color_use_as_albedo = true
+shading_mode = 0
+
+[sub_resource type="SphereMesh" id="Mota"]
+material = SubResource("Polvo")
+radius = 0.11
+height = 0.15
+radial_segments = 6
+rings = 2
+
+[sub_resource type="Gradient" id="Disipacion"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(0.72, 0.49, 0.31, 0.52, 0.77, 0.64, 0.48, 0.42, 0.81, 0.73, 0.62, 0)
+
+[node name="EfectoFractura" type="Node3D"]
+
+[node name="Esquirlas" type="CPUParticles3D" parent="."]
+emitting = false
+amount = 13
+lifetime = 0.67
+one_shot = true
+explosiveness = 0.91
+mesh = SubResource("Esquirla")
+direction = Vector3(0, 1, 0)
+spread = 65.0
+gravity = Vector3(0, -6, 0)
+initial_velocity_min = 0.85
+initial_velocity_max = 2.15
+angular_velocity_min = -155.0
+angular_velocity_max = 210.0
+scale_amount_min = 0.5
+scale_amount_max = 1.4
+color = Color(0.62, 0.39, 0.25, 1)
+
+[node name="Polvareda" type="CPUParticles3D" parent="."]
+emitting = false
+amount = 9
+lifetime = 1.05
+one_shot = true
+explosiveness = 0.83
+mesh = SubResource("Mota")
+direction = Vector3(0, 1, 0)
+spread = 77.0
+gravity = Vector3(0, 0.12, 0)
+initial_velocity_min = 0.27
+initial_velocity_max = 0.65
+scale_amount_min = 0.5
+scale_amount_max = 1.45
+color_ramp = SubResource("Disipacion")

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Personajes/PoliciaAzul/PoliciaBase.tscn" id="1_base"]
+[ext_resource type="PackedScene" path="res://Personajes/PoliciaRelevo/ModeloRelevo.tscn" id="2_modelo"]
+
+[node name="PoliciaRelevo" instance=ExtResource("1_base")]
+
+[node name="Modelo" parent="Visual" index="0" instance=ExtResource("2_modelo")]

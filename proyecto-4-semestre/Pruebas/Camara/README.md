@@ -2,12 +2,13 @@
 
 - **C:** alterna entre la cámara actual, una vista más frontal y la vista God desde arriba.
 - **1 / 2 / 3:** elige directamente cada vista.
-- **M:** activa o desactiva el balanceo ambiental. Empieza activado.
+- **Opciones → Accesibilidad:** activa o desactiva el balanceo ambiental. Empieza activado y se guarda entre partidas.
 
 Las transiciones de posición y ángulo son suaves. El balanceo dibuja un infinito
 en el plano de la pantalla cada 10 segundos, con amplitudes de 12 cm y 6 cm.
-Se pueden ajustar vistas, velocidades y balanceo en el Inspector de
-`Oficina/Gameplay/Camera3D`. La vista original conserva el ángulo de la escena.
+Se pueden ajustar vistas, velocidades y amplitud del balanceo en el Inspector de
+`Oficina/Gameplay/Camera3D`. El estado del balanceo se controla desde Accesibilidad.
+La vista original conserva el ángulo de la escena.
 Los atajos se suspenden durante la pausa, las interacciones que bloquean al
 personaje y mientras otra cámara esté activa.
 

@@ -4,6 +4,7 @@
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf" id="2_fuente"]
 [ext_resource type="Script" path="res://UI/Despacho/icono_despacho.gd" id="3_icono"]
 [ext_resource type="Script" path="res://UI/Despacho/protocolo_denuncia.gd" id="4_protocolo"]
+[ext_resource type="Script" path="res://UI/Despacho/panel_calma_jugadores.gd" id="5_calma"]
 
 [sub_resource type="FontVariation" id="FuenteHUD"]
 base_font = ExtResource("2_fuente")
@@ -13,20 +14,6 @@ baseline_offset = 0.14
 default_font = SubResource("FuenteHUD")
 default_font_size = 22
 Label/colors/font_color = Color(0.09, 0.231, 0.314, 1)
-
-[sub_resource type="StyleBoxFlat" id="CalmaFondo"]
-bg_color = Color(0.09, 0.231, 0.314, 0.9)
-corner_radius_top_left = 14
-corner_radius_top_right = 14
-corner_radius_bottom_left = 14
-corner_radius_bottom_right = 14
-
-[sub_resource type="StyleBoxFlat" id="CalmaRelleno"]
-bg_color = Color(1, 0.945, 0.847, 1)
-corner_radius_top_left = 14
-corner_radius_top_right = 14
-corner_radius_bottom_left = 14
-corner_radius_bottom_right = 14
 
 [sub_resource type="StyleBoxFlat" id="TarjetaPuntos"]
 content_margin_left = 20.0
@@ -67,6 +54,13 @@ grow_vertical = 2
 mouse_filter = 2
 theme = SubResource("TemaHUD")
 script = ExtResource("1_panel")
+
+[node name="CalmaJugadores" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 365.0
+offset_bottom = 72.0
+mouse_filter = 2
+script = ExtResource("5_calma")
 
 [node name="Contenido" type="VBoxContainer" parent="."]
 layout_mode = 0
@@ -115,44 +109,6 @@ mouse_filter = 2
 theme_override_font_sizes/font_size = 42
 text = "0"
 clip_text = true
-
-[node name="Calma" type="VBoxContainer" parent="Contenido"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 8
-
-[node name="Cabecera" type="HBoxContainer" parent="Contenido/Calma"]
-layout_mode = 2
-mouse_filter = 2
-
-[node name="Titulo" type="Label" parent="Contenido/Calma/Cabecera"]
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 2
-text = "CALMA OPERATIVA"
-theme_override_font_sizes/font_size = 26
-
-[node name="ValorCalma" type="Label" parent="Contenido/Calma/Cabecera"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-text = "100 / 100"
-theme_override_font_sizes/font_size = 26
-
-[node name="CalmaBar" type="ProgressBar" parent="Contenido/Calma"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 26)
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/background = SubResource("CalmaFondo")
-theme_override_styles/fill = SubResource("CalmaRelleno")
-value = 100.0
-show_percentage = false
-
-[node name="EspacioCalma" type="Control" parent="Contenido"]
-custom_minimum_size = Vector2(0, 8)
-layout_mode = 2
-mouse_filter = 2
 
 [node name="TituloActiva" type="Label" parent="Contenido"]
 unique_name_in_owner = true

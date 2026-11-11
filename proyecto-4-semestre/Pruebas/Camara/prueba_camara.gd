@@ -190,8 +190,15 @@ func _rayos_dentro_de_oficina() -> bool:
 
 
 func _probar_balanceo() -> void:
+	var ajustes := root.get_node("AjustesAccesibilidad")
+	var ajuste_original: bool = ajustes.get("balanceo_camara")
+	ajustes.set("balanceo_camara", false)
+	ajustes.emit_signal("ajustes_cambiados")
 	await _pulsar(KEY_M)
-	_verificar(_camara.balanceo_activo, "M activa el balanceo")
+	_verificar(not _camara.balanceo_activo, "M ya no modifica el balanceo")
+	ajustes.set("balanceo_camara", true)
+	ajustes.emit_signal("ajustes_cambiados")
+	_verificar(_camara.balanceo_activo, "Accesibilidad activa el balanceo")
 	_avanzar(6.0)
 	var centro := _camara._posicion_seguimiento
 	var maximo := 0.0
@@ -205,12 +212,15 @@ func _probar_balanceo() -> void:
 	_verificar(maximo > 0.11 and maximo < 0.14, "El balanceo es visible y mantiene una amplitud moderada")
 	_verificar(cuadrantes.size() == 4, "El infinito recorre los dos lóbulos por arriba y por abajo")
 	_verificar(_camara._posicion_seguimiento.distance_to(centro) < 0.0001, "Tres ciclos de balanceo no acumulan deriva")
-	await _pulsar(KEY_M)
+	ajustes.set("balanceo_camara", false)
+	ajustes.emit_signal("ajustes_cambiados")
 	var antes := _camara.global_position
 	_camara._physics_process(1.0 / 60.0)
 	_verificar(_camara.global_position.distance_to(antes) < 0.015, "Desactivar el balanceo lo desvanece suavemente")
 	_avanzar(6.0)
-	_verificar(not _camara.balanceo_activo and _camara.global_position.distance_to(centro) < 0.0001, "M permite dejar la cámara completamente estable")
+	_verificar(not _camara.balanceo_activo and _camara.global_position.distance_to(centro) < 0.0001, "Accesibilidad permite dejar la cámara completamente estable")
+	ajustes.set("balanceo_camara", ajuste_original)
+	ajustes.emit_signal("ajustes_cambiados")
 
 
 func _probar_apagon() -> void:

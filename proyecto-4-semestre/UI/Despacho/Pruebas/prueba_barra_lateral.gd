@@ -25,6 +25,23 @@ func _probar() -> void:
 	sistema.set_process(false)
 	panel = oficina.panel_despacho
 	_verificar(panel.tarjetas.is_empty() and not panel.denuncia_activa_detalle.visible, "Estado inicial sin denuncias")
+	var calma := panel.calma_jugadores
+	_verificar(not panel.has_node("Contenido/Calma") and calma.filas.size() == 1 and calma.filas[1].calma == 100, "La calma solo aparece a la izquierda para el jugador actual")
+	calma.actualizar_jugador(2, 24)
+	await _esperar()
+	var primera := calma.filas[1] as FilaCalmaJugador
+	var segunda := calma.filas[2] as FilaCalmaJugador
+	_verificar(segunda.global_position.y >= primera.get_global_rect().end.y and segunda.calma == 24, "La barra del segundo jugador se apila debajo")
+	await get_tree().create_timer(0.7).timeout
+	_verificar(segunda._valor.text == "24 / 100" and not segunda.is_processing(), "La transición de calma termina en el valor correcto")
+	await _capturar("00_dos_jugadores")
+	sistema.calma_operativa = 72
+	sistema.calma_actualizada.emit(72)
+	_verificar(primera.calma == 72 and segunda.calma == 24, "Actualizar la calma local no altera la del compañero")
+	calma.quitar_jugador(2)
+	sistema.calma_operativa = 100
+	sistema.calma_actualizada.emit(100)
+	await _esperar()
 	var plantillas: Array[String] = ["amenaza_critica", "acoso_persistente", "suplantacion", "enlace_sospechoso", "uso_excesivo"]
 	for plantilla: String in plantillas:
 		var denuncia := (load("res://Casos/Despacho/denuncia_%s.tres" % plantilla) as Denuncia).duplicate(true) as Denuncia
@@ -106,6 +123,7 @@ func _probar() -> void:
 		await _esperar()
 		var pantalla := Rect2(Vector2.ZERO, panel.size)
 		_verificar(pantalla.encloses(panel.contenido.get_global_rect()), "HUD dentro de pantalla en %s" % dimensiones)
+		_verificar(pantalla.encloses(calma.get_global_rect()), "Calma dentro de pantalla en %s" % dimensiones)
 		_verificar(is_equal_approx(panel.contenido.size.x, panel.ANCHO_DISENO), "Ancho compacto independiente del contenido")
 		for tarjeta: PanelContainer in panel.tarjetas.values():
 			_verificar(tarjeta.size.x <= panel.ANCHO_DISENO + 1, "Nombre largo respeta el ancho disponible")
