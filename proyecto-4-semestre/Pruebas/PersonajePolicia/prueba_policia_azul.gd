@@ -141,6 +141,8 @@ func _animation_changed(animation: StringName) -> void:
 		&"jump": "Saltando", &"fall": "En el aire", &"wave": "Saludando",
 		&"idle_despistado": "Mirando y rascándose la gorra",
 		&"idle_tambaleo": "Perdiendo el equilibrio",
-		&"kamehameha": "Cargando y lanzando energía"
+		&"kamehameha": "Cargando y lanzando energía",
+		&"genkidama": "Levantando y lanzando la Genkidama",
+		&"rasengan": "Extendiendo el brazo con el Rasengan"
 	}
 	animation_label.text = str(names.get(animation, animation))

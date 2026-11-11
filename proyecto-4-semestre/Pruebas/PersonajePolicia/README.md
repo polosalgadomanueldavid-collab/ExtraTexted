@@ -5,7 +5,10 @@ Abre `PruebaPoliciaAzul.tscn` en Godot y ejecuta **F6** (escena actual). El jueg
 - **WASD o flechas:** caminar según la cámara.
 - **Shift:** correr.
 - **Espacio:** saltar.
-- **E:** saludar.
+- **G:** saludar.
+- **K:** Kamehameha.
+- **H:** Genkidama (elevar y lanzar la esfera).
+- **J:** Rasengan (extender el brazo con la esfera giratoria).
 - **R / Volver al centro:** restablecer personaje y cámara.
 - **Botón derecho + arrastrar:** orbitar la cámara; **rueda:** acercar/alejar.
 - Los botones **Frente / Perfil / Espalda** muestran el modelo desde su orientación actual.

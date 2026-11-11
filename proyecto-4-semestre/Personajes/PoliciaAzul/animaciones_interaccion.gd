@@ -6,12 +6,15 @@ signal contacto
 signal terminada
 signal reposo_terminado
 
-const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8, &"kamehameha": 3.6}
-const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56, &"kamehameha": 0.55}
+const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8, &"kamehameha": 3.6, &"genkidama": 5.0, &"rasengan": 3.8}
+const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56, &"kamehameha": 0.55, &"genkidama": 0.72, &"rasengan": 0.5}
 const REPOSOS := {&"idle_despistado": 3.4, &"idle_tambaleo": 3.1}
 const ESCALA_RAYO := 30.0
 const ESCALA_ANCHO_RAYO := 10.0
 const ESCALA_ESFERA_SALIDA := 8.5
+const ESCALA_GENKIDAMA := 3.0
+const RADIO_GENKIDAMA := 2.38
+const ALTURA_MODELO_POLICIA := 2.66
 var jugador: CharacterBody3D
 var gesto: StringName = &""
 var tiempo: float = 0.0
@@ -38,6 +41,13 @@ var _rayo_exterior: MeshInstance3D
 var _rayo_nucleo: MeshInstance3D
 var _esfera_origen_rayo: Node3D
 var _cabeza_rayo: Node3D
+var _esfera_genkidama: Node3D
+var _luz_genkidama: OmniLight3D
+var _rasengan: Node3D
+var _rasengan_espinas: Node3D
+var _rasengan_espinas_inversas: Node3D
+var _rasengan_lanzado: bool = false
+var _origen_lanzamiento_rasengan := Vector3.ZERO
 var reposo_especial: StringName = &""
 var tiempo_reposo: float = 0.0
 var _peso_reposo: float = 0.0
@@ -74,6 +84,8 @@ func iniciar(tipo: StringName, destino: Node3D = null, segundos: float = 0.0) ->
 	tiempo = 0.0
 	duracion = segundos if segundos > 0.0 else float(DURACIONES[tipo])
 	_contacto_emitido = false
+	if tipo == &"rasengan":
+		_rasengan_lanzado = false
 	objetivo = destino
 	cancelar_reposo()
 	return true
@@ -312,6 +324,47 @@ func _aplicar_gesto(t: float) -> void:
 				_apuntar_mano(esqueleto.to_global(objetivo_R), peso_brazos, "R")
 			_pose("hand.L", Vector3(0.10, 0.0, -0.22), peso_brazos)
 			_pose("hand.R", Vector3(-0.08, 0.0, 0.22), peso_brazos)
+		&"genkidama":
+			var levantar := smoothstep(0.02, 0.24, t) * (1.0 - smoothstep(0.56, 0.69, t))
+			var empujar := smoothstep(0.57, 0.72, t) * (1.0 - smoothstep(0.82, 0.96, t))
+			var recuperar := smoothstep(0.84, 1.0, t)
+			var temblor_esfera := sin(_reloj * 12.0) * levantar * 0.025
+			_sumar("spine", Vector3(-0.04 * levantar + 0.12 * empujar, 0.0, temblor_esfera))
+			_sumar("chest", Vector3(0.04 * levantar + 0.16 * empujar, 0.0, -temblor_esfera))
+			_sumar("head", Vector3(-0.12 * levantar + 0.02 * empujar, 0.0, 0.0))
+			var esqueleto := get_skeleton()
+			# Manos sobre los hombros y un poco fuera del alcance para estirar los codos.
+			var manos_arriba_L := Vector3(0.42, ALTURA_MODELO_POLICIA - 0.10, 0.20)
+			var manos_arriba_R := Vector3(-0.42, ALTURA_MODELO_POLICIA - 0.10, 0.20)
+			var manos_frente_L := Vector3(0.46, 1.68, 1.02)
+			var manos_frente_R := Vector3(-0.46, 1.52, 1.02)
+			var transicion_lanzamiento := smoothstep(0.56, 0.73, t)
+			var peso_brazos := maxf(levantar, empujar) * (1.0 - recuperar)
+			var objetivo_L := manos_arriba_L.lerp(manos_frente_L, transicion_lanzamiento)
+			var objetivo_R := manos_arriba_R.lerp(manos_frente_R, transicion_lanzamiento)
+			if peso_brazos > 0.01:
+				_apuntar_mano(esqueleto.to_global(objetivo_L), peso_brazos, "L")
+				_apuntar_mano(esqueleto.to_global(objetivo_R), peso_brazos, "R")
+			_pose("hand.L", Vector3(-0.12, 0.0, -0.08), peso_brazos)
+			_pose("hand.R", Vector3(0.12, 0.0, 0.08), peso_brazos)
+		&"rasengan":
+			var agacharse := smoothstep(0.0, 0.20, t) * (1.0 - smoothstep(0.78, 0.96, t))
+			var extender := smoothstep(0.10, 0.40, t) * (1.0 - smoothstep(0.86, 0.99, t))
+			var impulso := smoothstep(0.62, 0.72, t)
+			var vibracion := sin(_reloj * 13.0) * agacharse * 0.018
+			_pose("thigh.L", Vector3(-0.16 * agacharse, 0.0, 0.0), 1.0)
+			_pose("thigh.R", Vector3(-0.16 * agacharse, 0.0, 0.0), 1.0)
+			_pose("shin.L", Vector3(0.20 * agacharse, 0.0, 0.0), 1.0)
+			_pose("shin.R", Vector3(0.20 * agacharse, 0.0, 0.0), 1.0)
+			_sumar("spine", Vector3(0.14 * agacharse, 0.0, vibracion))
+			_sumar("chest", Vector3(0.08 * agacharse + 0.12 * impulso, 0.0, -vibracion))
+			_sumar("head", Vector3(-0.06 * agacharse, 0.0, 0.0))
+			var esqueleto := get_skeleton()
+			# El blanco queda más allá del alcance cómodo para que el brazo se estire.
+			var mano_objetivo := Vector3(-0.58, 1.50, 1.18)
+			if extender > 0.01:
+				_apuntar_mano(esqueleto.to_global(mano_objetivo), extender, "R")
+			_pose("hand.R", Vector3(0.0, 0.0, 0.08), extender)
 
 
 func _sostener(peso: float) -> void:
@@ -439,6 +492,8 @@ void fragment() {
 	_luz_aura.light_energy = 1.2
 	_luz_aura.omni_range = 3.8
 	_aura.add_child(_luz_aura)
+	_crear_genkidama()
+	_crear_rasengan()
 	_rayo = Node3D.new()
 	_rayo.name = "RayoDeEnergia"
 	_rayo.rotation.x = PI * 0.5
@@ -484,6 +539,69 @@ func _crear_tramo_rayo(radius: float, color: Color, brillo: float) -> MeshInstan
 	material.emission_energy_multiplier = brillo
 	tramo.material_override = material
 	return tramo
+
+
+func _crear_genkidama() -> void:
+	_esfera_genkidama = Node3D.new()
+	_esfera_genkidama.name = "Genkidama"
+	_esfera_genkidama.position = Vector3(0.0, ALTURA_MODELO_POLICIA + RADIO_GENKIDAMA * ESCALA_GENKIDAMA, 0.25)
+	_energia.add_child(_esfera_genkidama)
+	_esfera_genkidama.add_child(_crear_esfera_rayo(RADIO_GENKIDAMA, Color(0.035, 0.34, 1.0, 0.12), 2.0))
+	_esfera_genkidama.add_child(_crear_esfera_rayo(2.12, Color(0.08, 0.55, 1.0, 0.30), 3.0))
+	_esfera_genkidama.add_child(_crear_esfera_rayo(1.55, Color(0.65, 0.91, 1.0), 4.2))
+	_luz_genkidama = OmniLight3D.new()
+	_luz_genkidama.name = "LuzGenkidama"
+	_luz_genkidama.light_color = Color(0.12, 0.52, 1.0)
+	_luz_genkidama.light_energy = 3.0
+	_luz_genkidama.omni_range = 5.0
+	_esfera_genkidama.add_child(_luz_genkidama)
+	_esfera_genkidama.visible = false
+
+
+func _crear_rasengan() -> void:
+	_rasengan = Node3D.new()
+	_rasengan.name = "RasenganEnMano"
+	_rasengan.add_child(_crear_esfera_rayo(0.50, Color(0.04, 0.48, 1.0, 0.40), 3.0))
+	_rasengan.add_child(_crear_esfera_rayo(0.31, Color(0.76, 0.98, 1.0), 5.0))
+	_energia.add_child(_rasengan)
+	_rasengan_espinas = Node3D.new()
+	_rasengan_espinas.name = "EspinasAzules"
+	_rasengan.add_child(_rasengan_espinas)
+	_crear_espinas_rasengan(_rasengan_espinas, 10, 0.45, 0.11, 0.36, Color(0.12, 0.62, 1.0), 4.5)
+	_rasengan_espinas_inversas = Node3D.new()
+	_rasengan_espinas_inversas.name = "EspinasClaras"
+	_rasengan.add_child(_rasengan_espinas_inversas)
+	_crear_espinas_rasengan(_rasengan_espinas_inversas, 8, 0.35, 0.08, 0.27, Color(0.62, 0.92, 1.0), 5.0, PI / 8.0)
+	var luz := OmniLight3D.new()
+	luz.name = "LuzRasengan"
+	luz.light_color = Color(0.05, 0.48, 1.0)
+	luz.light_energy = 1.8
+	luz.omni_range = 3.4
+	_rasengan.add_child(luz)
+	_rasengan.visible = false
+
+
+func _crear_espinas_rasengan(grupo: Node3D, cantidad: int, radio: float, radio_base: float, alto: float, color: Color, brillo: float, desfase: float = 0.0) -> void:
+	for indice: int in range(cantidad):
+		var angulo := TAU * float(indice) / float(cantidad) + desfase
+		var direccion := Vector3(cos(angulo), sin(angulo), 0.0)
+		var punta := MeshInstance3D.new()
+		var cono := CylinderMesh.new()
+		cono.top_radius = 0.0
+		cono.bottom_radius = radio_base
+		cono.height = alto
+		cono.radial_segments = 20
+		punta.mesh = cono
+		punta.position = direccion * radio
+		punta.quaternion = Quaternion(Vector3.UP, direccion)
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.albedo_color = color
+		material.emission_enabled = true
+		material.emission = Color(color.r, color.g, color.b)
+		material.emission_energy_multiplier = brillo
+		punta.material_override = material
+		grupo.add_child(punta)
 
 
 func _crear_esfera_rayo(radio: float, color: Color, brillo: float) -> MeshInstance3D:
@@ -549,24 +667,66 @@ func _crear_puntas_cabeza() -> void:
 func _actualizar_energia() -> void:
 	if not is_instance_valid(_energia):
 		return
-	if gesto != &"kamehameha":
+	var es_kamehameha := gesto == &"kamehameha"
+	var es_genkidama := gesto == &"genkidama"
+	var es_rasengan := gesto == &"rasengan"
+	if not es_kamehameha and not es_genkidama and not es_rasengan:
 		_energia.visible = false
 		return
+	_energia.visible = true
 	var t := tiempo / duracion
+	var fuerza_aura := 0.0 if es_rasengan else smoothstep(0.02, 0.18, t) * (1.0 - smoothstep(0.84, 0.99, t))
+	_aura.visible = fuerza_aura > 0.01
+	_aura.scale = Vector3(1.0, 1.55, 0.95) * (1.0 + sin(_reloj * 8.0) * 0.035 * fuerza_aura)
+	_material_aura.set_shader_parameter("aura_strength", fuerza_aura)
+	_luz_aura.light_energy = 0.8 + fuerza_aura * 1.8
+	if es_rasengan:
+		_rayo.visible = false
+		_esfera_origen_rayo.visible = false
+		_cabeza_rayo.visible = false
+		_esfera_genkidama.visible = false
+		_esfera_energia.visible = false
+		var aparicion := smoothstep(0.30, 0.48, t) * (1.0 - smoothstep(0.97, 1.0, t))
+		var mano := get_skeleton().get_bone_global_pose(_huesos["hand.R"]).origin
+		var posicion_en_mano := mano + Vector3(-0.28, 0.02, 1.15)
+		if t >= 0.68 and not _rasengan_lanzado:
+			_origen_lanzamiento_rasengan = posicion_en_mano
+			_rasengan_lanzado = true
+		if _rasengan_lanzado:
+			var recorrido := smoothstep(0.68, 0.96, t)
+			_rasengan.position = _origen_lanzamiento_rasengan.lerp(_origen_lanzamiento_rasengan + Vector3(0.0, 0.0, 24.0), recorrido)
+		else:
+			_rasengan.position = posicion_en_mano
+		_rasengan.visible = aparicion > 0.01
+		_rasengan.scale = Vector3.ONE * 2.1 * aparicion * (1.0 + sin(_reloj * 9.0) * 0.035)
+		_rasengan_espinas.rotation.z = _reloj * 8.0
+		_rasengan_espinas_inversas.rotation.z = -_reloj * 10.5
+		return
+	_rasengan.visible = false
+	if es_genkidama:
+		_rayo.visible = false
+		_esfera_energia.visible = false
+		_esfera_origen_rayo.visible = false
+		_cabeza_rayo.visible = false
+		_esfera_genkidama.visible = t > 0.14 and t < 0.995
+		var crecimiento := smoothstep(0.14, 0.34, t)
+		var vuelo := smoothstep(0.66, 0.97, t)
+		var pulso_genki := 1.0 + sin(_reloj * 7.0) * 0.035
+		var altura_genkidama := ALTURA_MODELO_POLICIA + RADIO_GENKIDAMA * ESCALA_GENKIDAMA
+		_esfera_genkidama.position = Vector3(0.0, altura_genkidama, 0.25).lerp(Vector3(0.0, altura_genkidama, 26.0), vuelo)
+		_esfera_genkidama.scale = Vector3.ONE * ESCALA_GENKIDAMA * crecimiento * pulso_genki
+		_luz_genkidama.light_energy = 1.5 + crecimiento * (1.5 + 1.0 * (1.0 - vuelo))
+		return
+	_esfera_genkidama.visible = false
 	var carga := smoothstep(0.08, 0.20, t) * (1.0 - smoothstep(0.48, 0.60, t))
 	var avance := smoothstep(0.59, 0.90, t)
 	var desvanecer_rayo := 1.0 - smoothstep(0.90, 0.99, t)
 	var disparo := smoothstep(0.59, 0.63, t) * desvanecer_rayo
-	var fuerza_aura := smoothstep(0.02, 0.18, t) * (1.0 - smoothstep(0.84, 0.99, t))
-	_energia.visible = true
 	_esfera_energia.visible = t > 0.08 and t < 0.72
 	# Son los puntos medios exactos de las dos manos en carga y lanzamiento.
 	_esfera_energia.position = Vector3(-0.58, 1.36, 0.62).lerp(Vector3(0.0, 1.395, 0.78), smoothstep(0.42, 0.64, t))
 	var pulso := 1.0 + sin(_reloj * 10.0) * (0.08 + carga * 0.14)
 	_esfera_energia.scale = Vector3.ONE * pulso
-	_aura.visible = fuerza_aura > 0.01
-	_aura.scale = Vector3(1.0, 1.55, 0.95) * (1.0 + sin(_reloj * 8.0) * 0.035 * fuerza_aura)
-	_material_aura.set_shader_parameter("aura_strength", fuerza_aura)
 	_luz_aura.light_energy = 0.8 + fuerza_aura * (1.0 + carga * 1.2)
 	_rayo.visible = disparo > 0.01
 	var escala_largo := ESCALA_RAYO * avance * desvanecer_rayo
