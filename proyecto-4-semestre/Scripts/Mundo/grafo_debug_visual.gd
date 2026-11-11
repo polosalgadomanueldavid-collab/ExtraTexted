@@ -107,6 +107,8 @@ func _reconstruir() -> void:
 
 
 func _color_de_celda(celda: Vector2i, ruta_como_diccionario: Dictionary) -> Color:
+	if grafo.grietas.has(celda):
+		return Color("503350", 0.82)
 	if grafo.bloqueos_temporales.has(celda):
 		return COLOR_BLOQUEO_TEMPORAL
 	if grafo.bloqueos_fijos.has(celda) or grafo.bloqueos_mesas.has(celda):

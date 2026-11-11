@@ -39,6 +39,15 @@ var _orientacion: Quaternion
 var _posicion_seguimiento: Vector3
 var _fase_balanceo: float = 0.0
 var _peso_balanceo: float = 1.0
+var _temblor := Vector2.ZERO
+
+
+func actualizar_temblor(tiempo: float, intensidad: float) -> void:
+	# Las tres etapas comparten la misma onda. Solo cambia su amplitud.
+	_temblor = 0.080 * intensidad * Vector2(
+		sin(tiempo * 30.7) + 0.32 * sin(tiempo * 51.3),
+		0.67 * sin(tiempo * 36.1) + 0.19 * sin(tiempo * 48.7)
+	)
 
 
 func _ready() -> void:
@@ -118,6 +127,8 @@ func _physics_process(delta: float) -> void:
 	_fase_balanceo = fposmod(_fase_balanceo + TAU * delta / periodo_balanceo, TAU)
 	_peso_balanceo = lerpf(_peso_balanceo, 1.0 if balanceo_activo else 0.0, avance)
 	var balanceo := Vector2(sin(_fase_balanceo), sin(2.0 * _fase_balanceo)) * amplitud_balanceo * _peso_balanceo
+	if balanceo_activo:
+		balanceo += _temblor
 	# Limita también cada cuadro intermedio y el balanceo, no solo el destino.
 	_posicion_seguimiento = _limitar_encuadre(_posicion_seguimiento, global_basis)
 	global_position = _limitar_encuadre(_posicion_seguimiento + global_basis.x * balanceo.x + global_basis.y * balanceo.y, global_basis)

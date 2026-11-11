@@ -337,7 +337,10 @@ func _on_denuncia_resuelta(_denuncia: Denuncia) -> void:
 func _on_denuncia_vencida(denuncia: Denuncia) -> void:
 	if efecto_tarea.caso_id == denuncia.id:
 		efecto_tarea.detener()
-	_mostrar_mensaje("La denuncia '%s' venció." % denuncia.titulo, CORAL)
+	if denuncia.motivo_perdida == Denuncia.MotivoPerdida.TERREMOTO:
+		_mostrar_mensaje("La hoja cayó en una grieta. Denuncia perdida por el terremoto.", CORAL)
+	else:
+		_mostrar_mensaje("La denuncia '%s' venció." % denuncia.titulo, CORAL)
 
 
 func _mostrar_mensaje(texto: String, color: Color) -> void:

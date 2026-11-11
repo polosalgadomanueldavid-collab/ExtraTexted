@@ -20,8 +20,6 @@ var _nombre: Label
 var _valor: Label
 var _subtitulo: Label
 var _estado: Label
-var _fondo: StyleBoxFlat
-var _riel: StyleBoxFlat
 var _segmento_vacio: StyleBoxFlat
 var _segmento_lleno: StyleBoxFlat
 var _segmento_critico: StyleBoxFlat
@@ -38,10 +36,6 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	_fondo = _estilo_segmento(Color("0b2634ed"), 15)
-	_fondo.border_color = Color("a5d1d2a6")
-	_fondo.set_border_width_all(1)
-	_riel = _estilo_segmento(Color("061a28d9"), 7)
 	_segmento_vacio = _estilo_segmento(Color("3d6070ca"))
 	_segmento_lleno = _estilo_segmento(CREMA)
 	_segmento_critico = _estilo_segmento(CORAL)
@@ -110,13 +104,8 @@ func establecer_retrato(textura: Texture2D) -> void:
 
 func _draw() -> void:
 	var centro := Vector2(ALTO * 0.5, ALTO * 0.5)
-	if _fondo == null:
+	if _segmento_vacio == null:
 		return
-	# La base sigue siendo pequeña y deja espacio para una segunda fila debajo.
-	draw_style_box(_fondo, Rect2(58, 4, 307, 64))
-	draw_line(Vector2(84, 7), Vector2(347, 7), Color("d6f3ef24"), 1.0)
-	draw_rect(Rect2(81, 65, 50, 2), CORAL if calma < 30 else CELESTE)
-	draw_style_box(_riel, Rect2(83, 45, 276, 20))
 	# El retrato conserva el centro del círculo y gana un aro doble.
 	draw_circle(centro + Vector2(1, 2), 37.0, Color("04121bb0"))
 	draw_circle(centro, 36.0, CORAL if indice_jugador > 1 or calma < 30 else CREMA)
@@ -133,9 +122,8 @@ func _draw() -> void:
 			rectangulo.size.x *= proporcion
 			draw_style_box(estilo_activo, rectangulo)
 			var luz := Color("ffffff8c") if calma >= 30 else Color("ffd2c28c")
+			luz.a = minf(1.0, luz.a + _destello * 0.4)
 			draw_line(rectangulo.position + Vector2(3, 2), rectangulo.position + Vector2(maxf(3.0, rectangulo.size.x - 3.0), 2), luz, 1.0)
-	if _destello > 0.0:
-		draw_rect(Rect2(83, 45, 276, 20), Color(1, 1, 1, _destello * 0.10))
 
 
 func _crear_etiqueta(posicion: Vector2, tamano: Vector2, alineacion: HorizontalAlignment, fuente_tamano: int) -> Label:
