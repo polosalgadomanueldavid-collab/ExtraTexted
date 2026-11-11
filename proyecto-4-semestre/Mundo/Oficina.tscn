@@ -484,8 +484,8 @@ size = Vector3(6.76, 0.045, 0.09)
 material = SubResource("MaterialMoldura")
 
 [node name="ZocaloPosterior" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1556589684]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.083, 0.475, 12.36)
-size = Vector3(6.72, 0.22, 0.075)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0584102, 0.475, 12.36)
+size = Vector3(6.7691793, 0.22, 0.075)
 material = SubResource("MaterialZocalo")
 
 [node name="MolduraPosterior" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=244044556]
@@ -494,23 +494,23 @@ size = Vector3(6.76, 0.045, 0.09)
 material = SubResource("MaterialMoldura")
 
 [node name="ZocaloIzquierdo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1696046989]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.35, 0.475, 6.11)
-size = Vector3(0.075, 0.22, 12.3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.35, 0.475, 6.1711693)
+size = Vector3(0.075, 0.22, 12.4223385)
 material = SubResource("MaterialZocalo")
 
 [node name="MolduraIzquierda" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=195899179]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.35, 0.58, 6.11)
-size = Vector3(0.09, 0.045, 12.34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.35, 0.58, 6.1580567)
+size = Vector3(0.09, 0.045, 12.436113)
 material = SubResource("MaterialMoldura")
 
 [node name="ZocaloDerecho" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=210248880]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.33, 0.475, 6.16)
-size = Vector3(0.075, 0.22, 12.3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.33, 0.475, 6.1997457)
+size = Vector3(0.075, 0.22, 12.379492)
 material = SubResource("MaterialZocalo")
 
 [node name="MolduraDerecha" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1292897087]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.33, 0.58, 6.16)
-size = Vector3(0.09, 0.045, 12.34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.33, 0.58, 6.1927366)
+size = Vector3(0.09, 0.045, 12.405474)
 material = SubResource("MaterialMoldura")
 
 [node name="Techo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1880558723]
