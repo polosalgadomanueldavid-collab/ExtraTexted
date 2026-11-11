@@ -33,6 +33,7 @@ func _ready() -> void:
 	%VistaEspalda.pressed.connect(_set_view.bind(PI))
 	%Centrar.pressed.connect(reset_scene)
 	%Saludar.pressed.connect(_wave)
+	%Kamehameha.pressed.connect(_kamehameha)
 	%Despistado.pressed.connect(_mostrar_reposo.bind(&"idle_despistado"))
 	%Tambaleo.pressed.connect(_mostrar_reposo.bind(&"idle_tambaleo"))
 	policia.connect("animation_state_changed", _animation_changed)
@@ -116,6 +117,10 @@ func _wave() -> void:
 	policia.call("play_wave")
 
 
+func _kamehameha() -> void:
+	policia.call("ejecutar_gesto", &"kamehameha")
+
+
 func _mostrar_reposo(tipo: StringName) -> void:
 	policia.call("play_idle_variant", tipo)
 
@@ -135,6 +140,9 @@ func _animation_changed(animation: StringName) -> void:
 		&"idle": "En reposo", &"walk": "Caminando", &"run": "Corriendo",
 		&"jump": "Saltando", &"fall": "En el aire", &"wave": "Saludando",
 		&"idle_despistado": "Mirando y rascándose la gorra",
-		&"idle_tambaleo": "Perdiendo el equilibrio"
+		&"idle_tambaleo": "Perdiendo el equilibrio",
+		&"kamehameha": "Cargando y lanzando energía",
+		&"genkidama": "Levantando y lanzando la Genkidama",
+		&"rasengan": "Extendiendo el brazo con el Rasengan"
 	}
 	animation_label.text = str(names.get(animation, animation))
