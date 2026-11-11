@@ -3,12 +3,15 @@ extends Node3D
 
 const EFECTO := preload("res://Eventos/Terremoto/EfectoFractura.tscn")
 const TRAMOS := 8
+const SEPARACION_ENTRE_BORDES := 0.25
 var centro: Vector2
 var contorno := PackedVector2Array()
 var limites: Rect2
+var saltable := false
 var _izquierda := PackedVector2Array()
 var _derecha := PackedVector2Array()
 var _corte: CSGPolygon3D
+var _margen_entre_bordes: Array[PackedVector2Array] = []
 var _losas: Array[MeshInstance3D] = []
 var _origenes: Array[Vector3] = []
 var _piedra: StandardMaterial3D
@@ -17,13 +20,14 @@ var _piedra: StandardMaterial3D
 func trazar(origen: Vector2, largo: float, ancho: float, angulo: float, azar: RandomNumberGenerator) -> void:
 	centro = origen
 	limites = Rect2(centro, Vector2.ZERO)
+	var desvio := minf(0.14, ancho * 0.11)
 	for i in range(TRAMOS + 1):
 		var t := float(i) / TRAMOS
-		var eje := Vector2(azar.randf_range(-0.14, 0.14), (t - 0.5) * largo)
+		var eje := Vector2(azar.randf_range(-desvio, desvio), (t - 0.5) * largo)
 		# Las puntas terminan en cuña y el tramo central conserva su anchura.
-		var radio := ancho * 0.5 * minf(1.0, minf(t, 1.0 - t) * 4.3)
-		var izq := centro + (eje - Vector2.RIGHT * radio * azar.randf_range(0.86, 1.08)).rotated(angulo)
-		var der := centro + (eje + Vector2.RIGHT * radio * azar.randf_range(0.86, 1.08)).rotated(angulo)
+		var radio := ancho * 0.5 * minf(1.0, minf(t, 1.0 - t) * 6.8)
+		var izq := centro + (eje - Vector2.RIGHT * radio * azar.randf_range(0.96, 1.08)).rotated(angulo)
+		var der := centro + (eje + Vector2.RIGHT * radio * azar.randf_range(0.96, 1.08)).rotated(angulo)
 		_izquierda.append(izq)
 		_derecha.append(der)
 		limites = limites.expand(izq).expand(der)
@@ -36,6 +40,31 @@ func contiene(punto: Vector2) -> bool:
 	return limites.has_point(punto) and Geometry2D.is_point_in_polygon(punto, contorno)
 
 
+func frente_a_los_pies(pies: Vector3, direccion: Vector3) -> bool:
+	if direccion.is_zero_approx() or absf(pies.y - global_position.y) > 0.12:
+		return false
+	var punto := Vector2(pies.x, pies.z)
+	var adelante := punto + Vector2(direccion.x, direccion.z) * 0.27
+	return contiene(adelante)
+
+
+func desprender_gravilla(pies: Vector2) -> void:
+	var apoyo := contorno[0]
+	for i in range(contorno.size()):
+		var sobre_canto := Geometry2D.get_closest_point_to_segment(pies, contorno[i - 1], contorno[i])
+		if pies.distance_squared_to(sobre_canto) < pies.distance_squared_to(apoyo):
+			apoyo = sobre_canto
+	var gravilla := EFECTO.instantiate() as Node3D
+	gravilla.position = _punto(apoyo, 0.012)
+	gravilla.scale = Vector3.ONE * 0.47
+	add_child(gravilla)
+	for emisor: CPUParticles3D in gravilla.get_children():
+		emisor.amount = 4
+		emisor.lifetime = 0.44
+		emisor.restart()
+	gravilla.create_tween().tween_callback(gravilla.queue_free).set_delay(0.50)
+
+
 func toca_cuadro(punto: Vector2, radio: float) -> bool:
 	var caja := Rect2(punto - Vector2.ONE * radio, Vector2.ONE * radio * 2.0)
 	if not limites.intersects(caja):
@@ -45,6 +74,17 @@ func toca_cuadro(punto: Vector2, radio: float) -> bool:
 	return not Geometry2D.intersect_polygons(contorno, cuadro).is_empty()
 
 
+func invade_borde(poligono: PackedVector2Array, caja: Rect2) -> bool:
+	if not limites.grow(SEPARACION_ENTRE_BORDES).intersects(caja):
+		return false
+	if _margen_entre_bordes.is_empty():
+		_margen_entre_bordes = Geometry2D.offset_polygon(contorno, SEPARACION_ENTRE_BORDES)
+	for margen in _margen_entre_bordes:
+		if not Geometry2D.intersect_polygons(poligono, margen).is_empty():
+			return true
+	return false
+
+
 func abrir(suelo: CSGBox3D) -> void:
 	global_position.y = suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y
 	_corte = CSGPolygon3D.new()
@@ -52,7 +92,8 @@ func abrir(suelo: CSGBox3D) -> void:
 	var subsuelo := StandardMaterial3D.new()
 	subsuelo.albedo_color = Color("322933")
 	_corte.material = subsuelo
-	_corte.polygon = contorno
+	var exterior := _contorno_exterior()
+	_corte.polygon = exterior
 	_corte.depth = suelo.size.y + 0.4
 	suelo.add_child(_corte)
 	_corte.global_transform = Transform3D(Basis(Vector3.RIGHT, PI / 2.0),
@@ -60,7 +101,9 @@ func abrir(suelo: CSGBox3D) -> void:
 	_piedra = StandardMaterial3D.new()
 	_piedra.vertex_color_use_as_albedo = true
 	_piedra.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_modelar_paredes()
+	_modelar_paredes(exterior)
+	if saltable:
+		add_to_group(&"bordes_grietas_saltables")
 	var superficie := (suelo.material as StandardMaterial3D).albedo_color
 	for i in range(TRAMOS):
 		var mitad_a := _izquierda[i].lerp(_derecha[i], 0.46 + 0.09 * sin(i * 3.0))
@@ -75,29 +118,57 @@ func abrir(suelo: CSGBox3D) -> void:
 				create_tween().tween_callback(emisor.restart).set_delay(i * 0.041)
 
 
-func _modelar_paredes() -> void:
+func _contorno_exterior() -> PackedVector2Array:
+	var exterior := PackedVector2Array()
+	for i in range(contorno.size()):
+		var a := contorno[i]
+		var entrada := contorno[i - 1].direction_to(a)
+		var salida := a.direction_to(contorno[(i + 1) % contorno.size()])
+		var tangente := (entrada + salida).normalized()
+		var normal := Vector2(-tangente.y, tangente.x)
+		var ancho_bisel := 0.082 + 0.020 * sin(2.27 * i)
+		exterior.append(a + normal * ancho_bisel / maxf(0.65, tangente.dot(salida)))
+	return exterior
+
+
+func _modelar_paredes(exterior: PackedVector2Array) -> void:
 	var malla := SurfaceTool.new()
 	malla.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var detalles := SurfaceTool.new()
+	detalles.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in range(contorno.size()):
 		var j := (i + 1) % contorno.size()
 		var a := contorno[i]
 		var b := contorno[j]
-		# Labio levantado, veta de subsuelo y talud en sombra.
-		var labio_a := _punto(a + centro.direction_to(a) * 0.033, 0.008)
-		var labio_b := _punto(b + centro.direction_to(b) * 0.033, 0.008)
-		var borde_a := _punto(a, 0.018 + 0.009 * sin(i * 2.7))
-		var borde_b := _punto(b, 0.018 + 0.009 * sin(j * 2.7))
-		var veta_a := _punto(a.lerp(centro, 0.06), -0.12 + 0.036 * sin(i * 3.6))
-		var veta_b := _punto(b.lerp(centro, 0.06), -0.12 + 0.036 * sin(j * 3.6))
-		var fondo_a := _punto(a.lerp(centro, 0.29), -0.94)
-		var fondo_b := _punto(b.lerp(centro, 0.29), -0.94)
-		_cara(malla, labio_a, labio_b, borde_b, borde_a, Color("bb8961"))
-		_cara(malla, borde_a, borde_b, veta_b, veta_a, Color("94694e").darkened(0.12 * (i % 3)))
-		_cara(malla, veta_a, veta_b, fondo_b, fondo_a, Color("42383d").darkened(0.13 * (i % 4)))
-		_triangulo(malla, fondo_a, fondo_b, _punto(centro, -1.18), Color("211d29"))
+		# El primer anillo queda a ras del piso, el segundo se desmorona
+		# hacia la boca y el tercero cae por debajo de los pies.
+		var labio_a := _punto(exterior[i], 0)
+		var labio_b := _punto(exterior[j], 0)
+		var canto_a := _punto(exterior[i].lerp(a, 0.48), -0.010 - 0.006 * sin(i * 2.7))
+		var canto_b := _punto(exterior[j].lerp(b, 0.48), -0.010 - 0.006 * sin(j * 2.7))
+		var borde_a := _punto(a, -0.070 + 0.012 * sin(i * 2.7))
+		var borde_b := _punto(b, -0.070 + 0.012 * sin(j * 2.7))
+		var veta_a := _punto(a.lerp(centro, 0.025), -0.20 + 0.031 * sin(i * 3.6))
+		var veta_b := _punto(b.lerp(centro, 0.025), -0.20 + 0.031 * sin(j * 3.6))
+		var fondo_a := _punto(a.lerp(centro, 0.07), -0.94)
+		var fondo_b := _punto(b.lerp(centro, 0.07), -0.94)
+		_cara(malla, labio_a, canto_a, canto_b, labio_b, Color("a77a57").darkened(0.06 * (i % 3)))
+		_cara(malla, canto_a, borde_a, borde_b, canto_b, Color("bb906d").darkened(0.10 * (i % 3)))
+		_cara(malla, borde_a, veta_a, veta_b, borde_b, Color("87654d").darkened(0.12 * (i % 3)))
+		_cara(malla, veta_a, fondo_a, fondo_b, veta_b, Color("42383d").darkened(0.13 * (i % 4)))
+		_triangulo(detalles, fondo_a, fondo_b, _punto(centro, -1.18), Color("211d29"))
 		if i % 3 != 1:
-			_modelar_fisura_lateral(malla, a, b, i)
-	_instanciar_malla(malla)
+			_modelar_fisura_lateral(detalles, exterior[i], exterior[j], i)
+	var pared := _instanciar_malla(malla)
+	_instanciar_malla(detalles)
+	# Las caras transitables y la roca de las paredes comparten vértices
+	# con su colisión. El fondo oscuro es solo visual.
+	var colision := CollisionShape3D.new()
+	colision.shape = pared.mesh.create_trimesh_shape()
+	var cuerpo := StaticBody3D.new()
+	cuerpo.name = "BordeFracturado"
+	cuerpo.add_child(colision)
+	add_child(cuerpo)
 
 
 func _modelar_fisura_lateral(malla: SurfaceTool, a: Vector2, b: Vector2, indice: int) -> void:
@@ -158,6 +229,8 @@ func animar_cierre() -> void:
 
 
 func cerrar() -> void:
+	if saltable:
+		remove_from_group(&"bordes_grietas_saltables")
 	_corte.get_parent().remove_child(_corte)
 	_corte.queue_free()
 	queue_free()

@@ -50,8 +50,7 @@ func _probar() -> void:
 		return
 	_verificar(menu_global.get("nombre_partida") == "Prueba de carga", "El nombre llega a la partida")
 	_verificar(menu_global.get_node("%PanelAyuda").visible and paused, "El tutorial inicial se conserva")
-	await create_timer(0.25).timeout
-	_verificar((current_scene.get("_bloqueos_pool") as Array).size() == 30, "El pool termina de prepararse durante el tutorial en pausa")
+	_verificar((current_scene.get("_bloqueos_disponibles") as Array).size() == 30, "Los 30 cajones ya están preparados al entrar en la oficina")
 	_terminar()
 
 
@@ -76,5 +75,11 @@ func _verificar(condicion: bool, mensaje: String) -> void:
 
 func _terminar() -> void:
 	paused = false
+	# Permite terminar el _ready de la oficina antes de retirarla del árbol.
+	await physics_frame
+	await process_frame
+	if is_instance_valid(current_scene):
+		current_scene.queue_free()
+	await process_frame
 	print("Resultado: %d fallo(s)" % _fallos)
 	quit(0 if _fallos == 0 else 1)

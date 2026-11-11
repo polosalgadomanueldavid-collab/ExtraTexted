@@ -42,6 +42,7 @@ var _origen_ayuda := OrigenAyuda.MENU
 var _partida_con_tutorial: int = 0
 var _carga_juego_activa := false
 var _oficina_precargada: PackedScene
+var _oficina_en_preparacion: Node
 var _inicio_confirmado := false
 var _momento_confirmacion := 0.0
 
@@ -101,8 +102,7 @@ func _process(_delta: float) -> void:
 				_carga_juego_activa = false
 				_fallo_carga("No se pudo preparar la oficina.")
 	if _inicio_confirmado and _oficina_precargada != null:
-		if Time.get_ticks_msec() / 1000.0 - _momento_confirmacion >= DURACION_MINIMA_DISCUSION:
-			_entrar_a_oficina()
+		_preparar_entrada()
 
 
 func preparar_oficina() -> void:
@@ -125,6 +125,7 @@ func _fallo_carga(mensaje: String) -> void:
 	_inicio_confirmado = false
 	_cambiando_escena = false
 	_oficina_precargada = null
+	_descartar_oficina_en_preparacion()
 	panel_clasificacion.error_inicio.text = mensaje
 	panel_clasificacion.error_inicio.show()
 	panel_clasificacion.show()
@@ -132,12 +133,33 @@ func _fallo_carga(mensaje: String) -> void:
 	push_error(mensaje)
 
 
-func _entrar_a_oficina() -> void:
+func _preparar_entrada() -> void:
+	if _oficina_en_preparacion == null:
+		_oficina_en_preparacion = _oficina_precargada.instantiate()
+		if _oficina_en_preparacion == null:
+			_fallo_carga("No se pudo crear la oficina.")
+		return
+	if not _oficina_en_preparacion.preparar_lote_de_cajones():
+		return
+	if Time.get_ticks_msec() / 1000.0 - _momento_confirmacion < DURACION_MINIMA_DISCUSION:
+		return
 	_inicio_confirmado = false
-	var error := get_tree().change_scene_to_packed(_oficina_precargada)
-	if error != OK:
+	var error := get_tree().change_scene_to_node(_oficina_en_preparacion)
+	if error == OK:
+		_oficina_en_preparacion = null
+	else:
 		_fallo_carga("No se pudo abrir la oficina.")
 		push_error("Error al abrir la oficina: %s" % error_string(error))
+
+
+func _descartar_oficina_en_preparacion() -> void:
+	if _oficina_en_preparacion != null:
+		_oficina_en_preparacion.free()
+		_oficina_en_preparacion = null
+
+
+func _exit_tree() -> void:
+	_descartar_oficina_en_preparacion()
 
 
 func _ajustar_presentacion() -> void:
@@ -444,6 +466,7 @@ func _al_cambiar_escena() -> void:
 	_cambiando_escena = false
 	_inicio_confirmado = false
 	_oficina_precargada = null
+	_descartar_oficina_en_preparacion()
 	if not es_escena_de_juego():
 		nombre_partida = ""
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
