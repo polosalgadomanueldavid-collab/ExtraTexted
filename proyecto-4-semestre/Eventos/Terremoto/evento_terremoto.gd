@@ -3,6 +3,7 @@ extends Node3D
 signal iniciado
 signal temblor_actualizado(tiempo: float, intensidad: float)
 signal suelo_roto
+signal jugador_caido(jugador: Player)
 signal terminado
 
 enum Etapa { INACTIVO, AVISO, RUPTURA, RECUPERACION }
@@ -42,6 +43,7 @@ var _altura: float
 var _ultimo_apoyo: Vector3
 var _solto_gravilla := false
 var _huella_hoja: Rect2
+var _jugador_en_grieta := false
 
 
 func _ready() -> void:
@@ -94,6 +96,7 @@ func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoj
 	etapa = Etapa.AVISO
 	tiempo = 0.0
 	_cerrando = false
+	_jugador_en_grieta = false
 	set_physics_process(true)
 	sonidos.iniciar_terremoto()
 	iniciado.emit()
@@ -222,6 +225,12 @@ func _physics_process(delta: float) -> void:
 			sonidos.cerrar_suelo()
 			for grieta in grietas:
 				grieta.animar_cierre()
+	# Detectar la entrada antes del rescate o del cierre del suelo.
+	var en_grieta := not _jugador.is_on_floor() and _jugador.velocity.y < 0.0 and atrapo_hoja(_jugador.global_position)
+	var acaba_de_caer := en_grieta and not _jugador_en_grieta
+	_jugador_en_grieta = en_grieta
+	if acaba_de_caer:
+		jugador_caido.emit(_jugador)
 	if tiempo + 0.00001 >= DURACION:
 		temblor_actualizado.emit(DURACION, 0.0)
 		_cerrar()
@@ -266,6 +275,7 @@ func _peso_en_zona_de_juego() -> float:
 
 func _devolver_a_tierra() -> void:
 	_solto_gravilla = false
+	_jugador_en_grieta = false
 	_jugador.global_position = _ultimo_apoyo + Vector3.UP * 0.04
 	_jugador.velocity = Vector3.ZERO
 	_jugador.reset_physics_interpolation()

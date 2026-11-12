@@ -9,7 +9,7 @@ const PanelAyuda = preload("res://UI/Menus/panel_ayuda.gd")
 const PanelClasificacion := preload("res://UI/Menus/panel_clasificacion.gd")
 const ClasificacionLocalScript := preload("res://Scripts/Partida/ClasificacionLocal.gd")
 
-enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
+enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES, APAGON }
 
 @onready var capa: Control = %CapaModal
 @onready var panel_pausa: PanelContainer = %PanelPausa
@@ -27,6 +27,7 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
 @onready var valor_brillo: Label = %ValorBrillo
 @onready var filtro_pantalla: ColorRect = %FiltroPantalla
 @onready var margen: MarginContainer = $Interfaz/CapaModal/Margen
+@onready var fondo_modal: ColorRect = $Interfaz/CapaModal/Fondo
 @onready var musica_menu: AudioStreamPlayer = $MusicaMenu
 
 var nombre_partida: String = ""
@@ -61,6 +62,7 @@ func _ready() -> void:
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
+	_confinar_foco([panel_ayuda.boton_cerrar])
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.volver_expediente.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.nombre_confirmado.connect(_iniciar_partida)
@@ -72,6 +74,9 @@ func _ready() -> void:
 	get_tree().scene_changed.connect(_al_cambiar_escena)
 	capa.resized.connect(_ajustar_presentacion)
 	capa.visibility_changed.connect(_actualizar_musica_menu)
+	capa.visibility_changed.connect(_ajustar_presentacion)
+	panel_ayuda.visibility_changed.connect(_actualizar_musica_menu)
+	panel_ayuda.visibility_changed.connect(_ajustar_presentacion)
 	panel_pausa.visibility_changed.connect(_ajustar_presentacion)
 	panel_pausa.visibility_changed.connect(_actualizar_musica_menu)
 	panel_opciones.visibility_changed.connect(_ajustar_presentacion)
@@ -163,12 +168,16 @@ func _exit_tree() -> void:
 
 
 func _ajustar_presentacion() -> void:
+	var tutorial_evento := panel_ayuda.is_visible_in_tree() and _origen_ayuda == OrigenAyuda.APAGON
+	fondo_modal.visible = not tutorial_evento
 	var escala_panel := ESCALA_PAUSA if panel_pausa.visible or panel_confirmacion.visible else 1.0
 	var factor := minf(capa.size.x / TAMANO_DISENO.x, capa.size.y / TAMANO_DISENO.y)
 	margen.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	margen.size = TAMANO_DISENO / escala_panel
 	margen.scale = Vector2.ONE * factor * escala_panel
 	margen.position = (capa.size - margen.size * margen.scale) * 0.5
+	# El expediente usa el ancho completo para sus tres pasos. Durante el apagón
+	# conserva la cámara de la partida y deja el escenario visible alrededor.
 
 
 func es_escena_de_juego() -> bool:
@@ -248,6 +257,19 @@ func abrir_tutorial() -> void:
 		_mostrar_ayuda(false, OrigenAyuda.MENU)
 
 
+func mostrar_tutorial_apagon() -> void:
+	if not es_escena_de_juego() or capa.visible or _cambiando_escena or final_de_partida_activo:
+		return
+	_guardar_entrada()
+	get_tree().paused = true
+	_origen_ayuda = OrigenAyuda.APAGON
+	panel_pausa.hide()
+	panel_ayuda.presentar_tutorial_apagon()
+	panel_ayuda.show()
+	capa.show()
+	panel_ayuda.boton_cerrar.grab_focus()
+
+
 func abrir_controles() -> void:
 	if not panel_opciones.is_visible_in_tree() or _cambiando_escena:
 		return
@@ -275,16 +297,17 @@ func _mostrar_ayuda(es_leyenda: bool, origen: OrigenAyuda) -> void:
 	_origen_ayuda = origen
 	panel_pausa.hide()
 	panel_ayuda.presentar(es_leyenda, origen == OrigenAyuda.INICIO)
-	capa.show()
 	panel_ayuda.show()
-	var controles := panel_ayuda.controles_foco()
-	_confinar_foco(controles)
-	controles[0].grab_focus()
+	capa.show()
+	panel_ayuda.boton_cerrar.grab_focus()
 
 
 func cerrar_ayuda() -> void:
 	if not panel_ayuda.visible:
 		return
+	if _origen_ayuda in [OrigenAyuda.INICIO, OrigenAyuda.APAGON]:
+		get_tree().paused = false
+		capa.hide()
 	panel_ayuda.hide()
 	if _origen_ayuda == OrigenAyuda.OPCIONES:
 		panel_opciones.show()
@@ -294,8 +317,6 @@ func cerrar_ayuda() -> void:
 		%TutorialPausa.grab_focus()
 	else:
 		capa.hide()
-		if _origen_ayuda == OrigenAyuda.INICIO:
-			get_tree().paused = false
 		_restaurar_entrada()
 
 
@@ -356,6 +377,9 @@ func _cerrar_clasificacion() -> void:
 
 func _iniciar_partida(nombre: String, nombre_companero: String = "") -> void:
 	if not panel_clasificacion.formulario.is_visible_in_tree() or _cambiando_escena:
+		return
+	nombre = ClasificacionLocalScript.limpiar_nombre(nombre)
+	if nombre.is_empty() or nombre.length() > ClasificacionLocalScript.MAX_CARACTERES_NOMBRE:
 		return
 	_cambiando_escena = true
 	nombre_partida = nombre
@@ -480,7 +504,12 @@ func _actualizar_musica_menu() -> void:
 	if not is_instance_valid(musica_menu):
 		return
 	var escena_menu := get_tree().current_scene != null and get_tree().current_scene.scene_file_path == ESCENA_MENU
-	var pausa_visible := es_escena_de_juego() and get_tree().paused and capa.visible
+	var tutorial_automatico := panel_ayuda.is_visible_in_tree() and _origen_ayuda in [OrigenAyuda.INICIO, OrigenAyuda.APAGON]
+	var pausa_visible := es_escena_de_juego() and get_tree().paused and capa.visible and not tutorial_automatico
+	if es_escena_de_juego():
+		var musica_partida := get_tree().current_scene.get_node("MusicaPartida") as AudioStreamPlayer
+		# El tutorial congela casos y movimiento, pero la pista de la partida continúa.
+		musica_partida.process_mode = Node.PROCESS_MODE_ALWAYS if tutorial_automatico else Node.PROCESS_MODE_INHERIT
 	if escena_menu or pausa_visible:
 		if not musica_menu.playing:
 			var pista := musica_menu.stream as AudioStreamMP3

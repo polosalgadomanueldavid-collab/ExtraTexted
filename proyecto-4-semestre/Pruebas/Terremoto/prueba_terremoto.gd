@@ -106,11 +106,22 @@ func _probar() -> void:
 	oficina.add_child(papel)
 	oficina.papel_actual = papel
 	papel.tomar(jugador)
-	# El jugador cae en el agujero con el caso en la mano y reaparece sobre piso firme.
+	# La denuncia se pierde al entrar en la grieta, antes del rescate del personaje.
 	jugador.global_position = centro + Vector3.UP * 0.03
+	for i in range(20):
+		await _fisicas(1)
+		if caso.estado == Denuncia.Estado.VENCIDA:
+			break
+	_verificar(caso.motivo_perdida == Denuncia.MotivoPerdida.TERREMOTO and jugador.global_position.y < evento._altura - 0.025 and jugador.global_position.y > evento._altura - 0.55,
+		"Caer con la hoja pierde el caso en cuanto entra en la grieta, antes de regresar a tierra")
+	_verificar(jugador.papel_en_mano == null and oficina.papel_actual == null and despacho.obtener_denuncia_activa() == null,
+		"La caída retira la hoja de la mano y cierra la denuncia activa")
 	await _fisicas(43)
-	_verificar(jugador.is_on_floor() and jugador.papel_en_mano == papel and despacho.obtener_denuncia_activa() == caso,
-		"Caer llevando la hoja conserva la denuncia y devuelve al jugador a tierra")
+	_verificar(jugador.is_on_floor() and despacho.calma_operativa == calma - caso.penalidad_calma,
+		"El rescate devuelve al jugador a tierra y aplica una sola penalización por el caso perdido")
+	caso = _recibir_caso_con_hoja("TERREMOTO-HOJA-LANZADA")
+	papel = oficina.papel_actual
+	calma = despacho.calma_operativa
 	jugador.global_position = Vector3(centro.x, evento._altura + 0.01, _borde_sur(grande) + 0.09)
 	jugador.visual.rotation.y = PI
 	await _fisicas(3)
@@ -153,8 +164,16 @@ func _probar() -> void:
 		_verificar(intensidad == 0.0 and evento.grietas.size() >= 4, "La zona segura queda tranquila mientras se rompe el suelo de juego")
 		_verificar(camara._temblor.is_zero_approx() and not _suelo_bajo(jugador.global_position).is_empty(),
 			"El jugador conserva suelo firme y cámara sin sacudidas en la zona segura")
+		var caso_seguro := _recibir_caso_con_hoja("TERREMOTO-HOJA-A-SALVO")
+		var hoja_segura: RigidBody3D = oficina.papel_actual
+		hoja_segura.lanzar()
 		await _intentar_salto(evento.grietas[0], false)
+		_verificar(despacho.obtener_denuncia_activa() == caso_seguro and is_instance_valid(hoja_segura),
+			"Caer con las manos vacías conserva la hoja que quedó en tierra firme")
+		hoja_segura.tomar(jugador)
 		await _intentar_salto(evento.grietas[2], true)
+		_verificar(despacho.obtener_denuncia_activa() == caso_seguro and jugador.papel_en_mano == hoja_segura,
+			"Saltar por encima de una grieta con la hoja conserva el caso")
 	oficina.queue_free()
 	await process_frame
 	# El mezclador libera las voces de pasos y salto en tiempo real con --fixed-fps.
@@ -164,6 +183,22 @@ func _probar() -> void:
 		await process_frame
 	print("[TERREMOTO] %d errores" % errores)
 	quit(1 if errores else 0)
+
+
+func _recibir_caso_con_hoja(id: String) -> Denuncia:
+	var caso := Denuncia.new()
+	caso.id = id
+	caso.tiempo_limite_segundos = 300.0
+	caso.protocolo_estaciones = ["bienestar"]
+	var despacho: SistemaDespacho = oficina.sistema_despacho
+	_verificar(despacho.recibir_denuncia(caso) and despacho.iniciar_denuncia_prioritaria() == caso,
+		"Se activa el caso " + id)
+	var papel := load("res://Scripts/Despacho/papel_denuncia.gd").new() as RigidBody3D
+	papel.denuncia_id = caso.id
+	oficina.add_child(papel)
+	oficina.papel_actual = papel
+	papel.tomar(jugador)
+	return caso
 
 
 func _suelo_bajo(posicion: Vector3) -> Dictionary:

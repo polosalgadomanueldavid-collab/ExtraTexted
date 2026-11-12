@@ -693,11 +693,12 @@ rotation_degrees = Vector3(0, -90, 0)
 scale = Vector3(0.52, 0.52, 0.52)
 montado_en_pared = true
 
-[node name="EventoApagon" type="Node" parent="." node_paths=PackedStringArray("jugador", "camara", "taco", "luces")]
+[node name="EventoApagon" type="Node" parent="." node_paths=PackedStringArray("jugador", "camara", "taco", "luces", "barra_despacho")]
 script = ExtResource("14_apagon")
 jugador = NodePath("../Gameplay/Node3D")
 camara = NodePath("../Gameplay/Camera3D")
 taco = NodePath("../TacoLuz")
+barra_despacho = NodePath("../CanvasLayer/PanelDespacho/Contenido")
 luces = [NodePath("../Pared, suelo, techo/FocoParpadeante1"), NodePath("../Pared, suelo, techo/FocoParpadeante2"), NodePath("../Pared, suelo, techo/FocoFilaFrontal"), NodePath("../Pared, suelo, techo/FocoFilaTrasera"), NodePath("../Pared, suelo, techo/FocoComputador"), NodePath("../Pared, suelo, techo/FocoDescanso"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq4"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal5"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera4")]
 radio_vision = 1.02
 

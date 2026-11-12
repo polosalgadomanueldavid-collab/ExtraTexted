@@ -135,7 +135,7 @@ func _probar() -> void:
 	await get_tree().process_frame
 	_verificar(not panel_nombre.visible, "ESC cierra el formulario de nombre mientras se edita")
 	menu.get_node("%PlayButton").pressed.emit()
-	panel_nombre.nombre_jugador.text = "Prueba de menús"
+	panel_nombre.nombre_jugador.text = "PruebaMenú"
 	panel_nombre.nombre_jugador.text_submitted.emit(panel_nombre.nombre_jugador.text)
 	await get_tree().scene_changed
 	await get_tree().process_frame
@@ -302,7 +302,7 @@ func _probar() -> void:
 	MenuGlobal.cerrar_accesibilidad()
 	MenuGlobal.cerrar_opciones()
 	get_tree().current_scene.get_node("%PlayButton").pressed.emit()
-	_verificar(panel_nombre.nombre_jugador.text == "Prueba de menús", "Una nueva partida permite reutilizar el nombre anterior")
+	_verificar(panel_nombre.nombre_jugador.text == "PruebaMenú", "Una nueva partida permite reutilizar el nombre anterior")
 	panel_nombre.boton_continuar.pressed.emit()
 	await get_tree().scene_changed
 	await get_tree().process_frame
