@@ -11,6 +11,9 @@ func _initialize() -> void:
 
 
 func _probar() -> void:
+	# También en headless: el indicador se oculta si no cabe en el viewport mínimo.
+	root.mode = Window.MODE_WINDOWED
+	root.size = Vector2i(1280, 720)
 	var menu := root.get_node("MenuGlobal")
 	menu.omitir_tutorial_siguiente_partida = true
 	oficina = load("res://Mundo/Oficina.tscn").instantiate()

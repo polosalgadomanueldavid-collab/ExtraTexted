@@ -39,6 +39,7 @@ const DURACION_DESENCRIPTADO: float = 6.0
 const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
 const EventoTerremoto := preload("res://Eventos/Terremoto/evento_terremoto.gd")
 const EventoIncendio := preload("res://Eventos/Incendio/evento_incendio.gd")
+const EventoInundacion := preload("res://Eventos/Inundacion/evento_inundacion.gd")
 const AnuncioPartida := preload("res://UI/Despacho/anuncio_partida.gd")
 const IndicadorDenunciaPC := preload("res://UI/Computador/indicador_denuncia_pc.gd")
 
@@ -100,6 +101,7 @@ var _turno_anunciado := false
 var temporizador_eventos: Timer
 var _evento_aleatorio_pendiente := -1
 var evento_incendio: EventoIncendio
+var evento_inundacion: EventoInundacion
 var _tutorial_apagon_mostrado := false
 
 
@@ -138,6 +140,16 @@ func _ready() -> void:
 	evento_incendio.iniciado.connect(_al_iniciar_incendio)
 	evento_incendio.terminado.connect(_al_terminar_incendio)
 	evento_incendio.mesa_recuperada.connect(_al_recuperar_mesa_incendiada)
+	evento_inundacion = EventoInundacion.new()
+	evento_inundacion.name = "EventoInundacion"
+	add_child(evento_inundacion)
+	evento_inundacion.configurar(self, jugador)
+	evento_inundacion.permiso_inicio = _puede_iniciar_evento
+	evento_inundacion.iniciado.connect(_al_iniciar_inundacion)
+	evento_inundacion.terminado.connect(_al_terminar_inundacion)
+	jugador.emote_rechazado.connect(func(mensaje: String) -> void:
+		panel_despacho._mostrar_mensaje(mensaje, PanelDespacho.CORAL)
+	)
 	grafo_piso = GrafoPiso.new()
 	depurador_grafo = GrafoDebugVisual.new()
 	depurador_grafo.name = "DepuradorGrafo"
@@ -285,7 +297,7 @@ func _input(evento: InputEvent) -> void:
 		clasificacion_partida.hide()
 		get_viewport().set_input_as_handled()
 		return
-	if evento_apagon.estado == EventoApagonScript.Estado.REPARANDO:
+	if evento_apagon.estado == EventoApagonScript.Estado.REPARANDO or evento_inundacion.reparando:
 		return
 	if evento.is_action_pressed(VER_CLASIFICACION, true, true):
 		if not evento.is_echo() and not clasificacion_partida.visible:
@@ -310,6 +322,8 @@ func _unhandled_key_input(evento: InputEvent) -> void:
 			evento_apagon.iniciar_apagon()
 	elif evento.physical_keycode == KEY_I or evento.keycode == KEY_I:
 		_iniciar_incendio()
+	elif evento.physical_keycode == KEY_U or evento.keycode == KEY_U:
+		_iniciar_inundacion()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -366,7 +380,7 @@ func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 		return
 	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible_debug))
 	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
-		_aviso_apagon.text = "[B] APAGÓN  ·  [T] TERREMOTO  ·  [I] INCENDIO"
+		_aviso_apagon.text = "[B] APAGÓN · [T] TERREMOTO · [I] INCENDIO · [U] INUNDACIÓN"
 	elif objetivo == evento_apagon.taco:
 		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
 	else:
@@ -566,7 +580,7 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 
 
 func _puede_iniciar_evento() -> bool:
-	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo)
+	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo)
 
 
 func _programar_evento_aleatorio() -> void:
@@ -586,7 +600,7 @@ func _intentar_evento_aleatorio() -> void:
 	if not _puede_iniciar_evento():
 		return
 	if _evento_aleatorio_pendiente < 0:
-		_evento_aleatorio_pendiente = generador_aleatorio.randi_range(0, 2)
+		_evento_aleatorio_pendiente = generador_aleatorio.randi_range(0, 3)
 	# Conservar la elección hasta poder iniciarla: no favorecer al apagón
 	# mientras el jugador está en la zona segura o atendiendo una mesa.
 	if not get_tree().paused and not computador.is_using and not jugador.input_locked and not clasificacion_partida.visible and not MenuGlobal.capa.visible:
@@ -594,10 +608,34 @@ func _intentar_evento_aleatorio() -> void:
 			_iniciar_terremoto()
 		elif _evento_aleatorio_pendiente == 1:
 			evento_apagon.iniciar_apagon()
-		else:
+		elif _evento_aleatorio_pendiente == 2:
 			_iniciar_incendio()
+		else:
+			_iniciar_inundacion()
 	if _puede_iniciar_evento():
 		temporizador_eventos.start(2.0)
+
+
+func _iniciar_inundacion() -> bool:
+	if not bloqueos_iniciados or computador.is_using or jugador.input_locked or jugador.realizando_gesto():
+		return false
+	return evento_inundacion.iniciar()
+
+
+func _al_iniciar_inundacion() -> void:
+	_al_iniciar_evento()
+	anuncios.mostrar_evento("¡INUNDACIÓN!", "", "Repara las tuberías en la zona de descanso")
+	panel_despacho._mostrar_mensaje("El agua te ralentiza. Puedes seguir resolviendo casos mientras nadas.", Color("76d7e7"))
+
+
+func _al_terminar_inundacion() -> void:
+	_programar_evento_aleatorio()
+	anuncios.mostrar_evento("OFICINA", "DRENADA", "Movimiento normal restablecido")
+
+
+func _al_caer_bloqueo_en_agua(punto: Vector3) -> void:
+	if is_instance_valid(evento_inundacion):
+		evento_inundacion.salpicar(punto)
 
 
 func _iniciar_incendio() -> bool:
@@ -729,6 +767,7 @@ func _al_terminar_partida() -> void:
 		return
 	partida_finalizada = true
 	evento_incendio.detener()
+	evento_inundacion.detener()
 	MenuGlobal.final_de_partida_activo = true
 	jugador.input_locked = true
 	temporizador_denuncias.stop()
@@ -1228,6 +1267,10 @@ func _mostrar_bloqueo_temporal(celda: Vector2i) -> void:
 		bloqueo_visual = _bloqueos_disponibles.pop_back()
 	bloqueos_visuales[celda] = bloqueo_visual
 	bloqueo_visual.call("activar_en", grafo_piso.celda_a_posicion(celda))
+	if not bloqueo_visual.is_connected("impacto_agua", _al_caer_bloqueo_en_agua):
+		bloqueo_visual.connect("impacto_agua", _al_caer_bloqueo_en_agua)
+	if evento_inundacion.activo:
+		bloqueo_visual.actualizar_agua(evento_inundacion.nivel, evento_inundacion.tiempo)
 
 
 func _limpiar_bloqueos_temporales() -> void:

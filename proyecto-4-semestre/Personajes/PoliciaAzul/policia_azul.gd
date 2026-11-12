@@ -8,6 +8,7 @@ signal reset_performed
 # El futuro panel puede abrirse al mantener G y elegir el emote al soltarla.
 signal emote_menu_requested
 signal emote_menu_finished(cancelled: bool)
+signal emote_rechazado(mensaje: String)
 
 const LEFT := &"policia_prueba_izquierda"
 const RIGHT := &"policia_prueba_derecha"
@@ -54,6 +55,12 @@ var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_grav
 var papel_en_mano: PapelDenuncia = null
 var gestos: AnimacionesInteraccion
 var control_incendio: Node
+var control_inundacion: Node
+var nadando := false
+var nivel_agua := -INF
+const FACTOR_NADO := 0.55
+var _reloj_nado := 0.0
+var _pose_modelo := Transform3D.IDENTITY
 var usando_extintor := false
 var _efecto_gesto: Callable
 var _reloj_reposo: float = 0.0
@@ -78,6 +85,7 @@ func _ready() -> void:
 	scale = Vector3.ONE * character_scale
 	_spawn_transform = global_transform
 	_spawn_visual_rotation = visual.rotation
+	_pose_modelo = $Visual/Modelo.transform
 	_register_inputs()
 	animation_player = $Visual/Modelo.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if animation_player == null:
@@ -101,6 +109,10 @@ func _ready() -> void:
 		gestos.terminada.connect(_al_terminar_gesto)
 		gestos.reposo_terminado.connect(_al_terminar_reposo)
 	_azar_reposo.randomize()
+	# Las poses de nado se construyen sobre el reposo mediante el modificador.
+	if _animation_names.has(&"idle"):
+		_animation_names[&"swim"] = _animation_names[&"idle"]
+		_animation_names[&"swim_idle"] = _animation_names[&"idle"]
 	_play_animation(&"idle")
 	if not is_in_group("player"):
 		add_to_group("player")
@@ -124,7 +136,7 @@ func _physics_process(delta: float) -> void:
 	var moving := direction.length_squared() > 0.001
 	var running := not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_pressed(RUN)
 
-	if not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
+	if not nadando and not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
 		for borde in get_tree().get_nodes_in_group(&"bordes_grietas_saltables"):
@@ -138,8 +150,12 @@ func _physics_process(delta: float) -> void:
 		_wave_remaining = maxf(0.0, _wave_remaining - delta)
 
 	var target_speed := run_speed if running else walk_speed
+	if nadando:
+		target_speed = walk_speed * FACTOR_NADO
 	var desired_velocity := direction * target_speed
 	var change_rate := acceleration if moving else braking
+	if nadando:
+		change_rate *= 0.42
 	velocity.x = move_toward(velocity.x, desired_velocity.x, change_rate * delta)
 	velocity.z = move_toward(velocity.z, desired_velocity.z, change_rate * delta)
 	if moving:
@@ -149,10 +165,11 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	var desplazamiento := Vector2(global_position.x - posicion_anterior.x, global_position.z - posicion_anterior.z).length()
 	# El desplazamiento real evita seguir pisando al empujar una pared.
-	var caminando := is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
+	var caminando := not nadando and is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
 	sonido_pasos.actualizar(delta, caminando, running)
 	_update_animation(moving, running)
 	_update_idle_variants(delta)
+	_actualizar_pose_nado(delta)
 	# Una caída fuera de la plataforma siempre vuelve al punto inicial.
 	if global_position.y < -12.0:
 		reset_to_spawn()
@@ -176,7 +193,9 @@ func _camera_relative_direction(input_direction: Vector2) -> Vector3:
 
 
 func _update_animation(moving: bool, running: bool) -> void:
-	if not is_on_floor():
+	if nadando:
+		_play_animation(&"swim" if moving and not realizando_gesto() else &"swim_idle")
+	elif not is_on_floor():
 		_play_animation(&"jump" if velocity.y > 0.0 else &"fall")
 	elif _wave_remaining > 0.0:
 		_play_animation(&"wave")
@@ -197,6 +216,8 @@ func _play_animation(clip: StringName) -> void:
 
 
 func play_wave() -> void:
+	if _rechazar_emote_nadando():
+		return
 	if input_locked or _descanso_sentado or _taza_en_mano or realizando_gesto() or not is_on_floor():
 		return
 	_cancelar_reposo()
@@ -220,6 +241,11 @@ func _input(event: InputEvent) -> void:
 	if usando_extintor:
 		return
 	if input_locked or realizando_gesto():
+		return
+	if nadando and (event.is_action_pressed(EMOTE_MENU) or event.is_action_pressed(KAMEHAMEHA) or event.is_action_pressed(GENKIDAMA) or event.is_action_pressed(RASENGAN)):
+		if not event.is_echo():
+			_rechazar_emote_nadando()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed(KAMEHAMEHA) and not (event is InputEventKey and event.echo):
 		get_viewport().set_input_as_handled()
@@ -287,6 +313,10 @@ func obtener_objetivo_interaccion() -> Node3D:
 		return null
 	if get_tree().paused:
 		return null
+	if is_instance_valid(control_inundacion):
+		var tuberia: Node3D = control_inundacion.obtener_objetivo(self)
+		if tuberia != null:
+			return tuberia
 	if is_instance_valid(control_incendio):
 		var fuego: Node3D = control_incendio.obtener_objetivo(self)
 		if fuego != null:
@@ -351,6 +381,8 @@ func realizando_gesto() -> bool:
 
 
 func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: Node3D = null, segundos: float = 0.0) -> bool:
+	if tipo in [&"kamehameha", &"genkidama", &"rasengan"] and _rechazar_emote_nadando():
+		return false
 	if usando_extintor:
 		return false
 	var beber_sentado := tipo == &"beber" and _descanso_sentado
@@ -378,6 +410,8 @@ func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: N
 
 
 func play_idle_variant(tipo: StringName) -> bool:
+	if _rechazar_emote_nadando():
+		return false
 	if not is_instance_valid(gestos) or input_locked or _descanso_sentado or _taza_en_mano or realizando_gesto() or not is_on_floor():
 		return false
 	if current_animation != &"idle" or Vector2(velocity.x, velocity.z).length() > 0.15:
@@ -392,7 +426,7 @@ func play_idle_variant(tipo: StringName) -> bool:
 func _update_idle_variants(delta: float) -> void:
 	if not is_instance_valid(gestos):
 		return
-	var disponible := current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not usando_extintor
+	var disponible := not nadando and current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not usando_extintor
 	if not disponible:
 		if _reposo_disponible:
 			_cancelar_reposo()
@@ -461,6 +495,8 @@ func esta_sentado() -> bool:
 
 
 func iniciar_descanso_sentado() -> bool:
+	if nadando:
+		return false
 	if _descanso_sentado or realizando_gesto() or not is_instance_valid(gestos) or get_tree().paused:
 		return false
 	_descanso_sentado = true
@@ -483,6 +519,42 @@ func terminar_descanso_sentado(inmediato: bool = false) -> void:
 	if estaba_sentado:
 		velocity = Vector3.ZERO
 		animation_state_changed.emit(current_animation)
+
+
+func establecer_nivel_agua(altura: float) -> void:
+	nivel_agua = altura
+	if altura == -INF:
+		$Visual/Modelo.transform = _pose_modelo
+	var entrando := altura > 0.75
+	if entrando == nadando:
+		return
+	nadando = entrando
+	if nadando:
+		_wave_remaining = 0.0
+		_finish_emote_menu(true)
+		_cancelar_reposo()
+		if realizando_gesto() and gestos.gesto in [&"kamehameha", &"genkidama", &"rasengan"]:
+			cancelar_gesto()
+		sonido_pasos.detener()
+
+
+func _rechazar_emote_nadando() -> bool:
+	if not nadando:
+		return false
+	emote_rechazado.emit("No se pueden usar emotes en este momento")
+	return true
+
+
+func _actualizar_pose_nado(delta: float) -> void:
+	_reloj_nado += delta
+	var modelo := $Visual/Modelo as Node3D
+	var destino := _pose_modelo
+	if nadando:
+		var avanzando := Vector2(velocity.x, velocity.z).length() > 0.15 and not realizando_gesto()
+		var elevacion := maxf(0.0, nivel_agua - global_position.y - 0.43)
+		destino.origin.y += (elevacion + sin(_reloj_nado * 3.0) * 0.018) / character_scale
+		destino.basis = destino.basis * Basis.from_euler(Vector3(0.52 if avanzando else 0.10, 0, sin(_reloj_nado * 3) * 0.035))
+	modelo.transform = modelo.transform.interpolate_with(destino, 1.0 - exp(-delta * 6.0))
 
 
 func _register_inputs() -> void:

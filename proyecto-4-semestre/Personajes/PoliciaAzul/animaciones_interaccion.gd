@@ -58,6 +58,7 @@ var rociando_extintor := false
 var _peso_extintor := 0.0
 var _peso_sentado: float = 0.0
 var _peso_taza: float = 0.0
+var _peso_nado := 0.0
 
 
 func _ready() -> void:
@@ -127,6 +128,7 @@ func cancelar() -> void:
 func _process(delta: float) -> void:
 	tambaleo = jugador.intensidad_tambaleo
 	_reloj += delta
+	_peso_nado = move_toward(_peso_nado, float(jugador.nadando), delta * 5.0)
 	_peso_sentado = move_toward(_peso_sentado, float(sentado), delta * 5.0)
 	_peso_taza = move_toward(_peso_taza, float(lleva_taza), delta * 7.0)
 	_peso_extintor = move_toward(_peso_extintor, float(rociando_extintor), delta * 8.0)
@@ -180,6 +182,8 @@ func _process_modification() -> void:
 	_sumar("head", Vector3(0.035 * sin(_reloj * ritmo - 0.9) * tambaleo, 0.0, -sin(_reloj * ritmo - 0.7) * amplitud * 1.4 * tambaleo))
 	if _peso_sentado > 0.0:
 		_aplicar_sentado(_peso_sentado)
+	if _peso_nado > 0.0:
+		_aplicar_nado(_peso_nado)
 	_sostener(_peso_papel)
 	_sostener_taza(_peso_taza)
 	if reposo_especial != &"":
@@ -198,6 +202,27 @@ func _process_modification() -> void:
 		var t := tiempo / duracion
 		inclinacion = -0.55 * smoothstep(0.22, 0.42, t) * (1.0 - smoothstep(0.66, 0.90, t))
 	anclaje_taza.transform = Transform3D(Basis.from_euler(Vector3(inclinacion, 0.0, 0.0)), mano_derecha.position + Vector3(0.13, -0.15, 0.05))
+
+
+func _aplicar_nado(peso: float) -> void:
+	var avanzando: bool = jugador.current_animation == &"swim"
+	var ciclo := _reloj * (4.4 if avanzando else 2.5)
+	# Brazadas alternas y patada continua. Al detenerse, remadas laterales cortas.
+	for lado: String in ["L", "R"]:
+		var signo := -1.0 if lado == "L" else 1.0
+		var fase := ciclo + (PI if lado == "R" else 0.0)
+		var brazada := sin(fase)
+		var brazo := Vector3(-0.75 + brazada * 0.85, 0.12 * cos(fase), signo * (0.45 + 0.23 * cos(fase))) if avanzando else Vector3(-0.45 + brazada * 0.22, 0, signo * (0.62 + cos(fase) * 0.20))
+		_pose("upper_arm." + lado, brazo, peso)
+		_pose("forearm." + lado, Vector3(-0.65 - maxf(0, brazada) * 0.65, 0, 0), peso)
+		_pose("hand." + lado, Vector3(-0.18, 0, signo * 0.12), peso)
+		_pose("thigh." + lado, Vector3(0.25 + sin(fase * 1.5) * 0.32, 0, signo * 0.10), peso)
+		_pose("shin." + lado, Vector3(0.42 + maxf(0, -sin(fase * 1.5)) * 0.48, 0, 0), peso)
+		_pose("foot." + lado, Vector3(0.22, 0, 0), peso)
+	_pose("spine", Vector3(0.12, sin(ciclo) * 0.05, sin(ciclo) * 0.05), peso)
+	_pose("chest", Vector3(-0.06, sin(ciclo) * 0.08, 0), peso)
+	_pose("head", Vector3(-0.25 if avanzando else -0.08, 0, 0), peso)
+	# Las poses de sostener papel/taza y de trabajo se aplican después, por brazo.
 
 
 func _aplicar_sentado(peso: float) -> void:

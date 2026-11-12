@@ -1,5 +1,7 @@
 extends StaticBody3D
 
+signal impacto_agua(posicion: Vector3)
+
 @export_range(0.5, 5.0, 0.1) var altura_caida: float = 2.5
 @export_range(0.1, 2.0, 0.05) var duracion_caida: float = 0.55
 @export_range(0.0, 0.3, 0.01) var altura_rebote: float = 0.08
@@ -10,6 +12,8 @@ var _activa := true
 var _altura_final := 0.0
 var _animacion: Tween
 var _reposo: Transform3D
+var _flotacion: Node3D
+var _nivel_agua := -INF
 var es_ceniza := false
 var _cenizas: Node3D
 var _polvo_ceniza: CPUParticles3D
@@ -20,6 +24,10 @@ const DURACION_CARBONIZACION := 1.1
 
 
 func _ready() -> void:
+	_flotacion = Node3D.new()
+	_flotacion.name = "FlotacionVisual"
+	add_child(_flotacion)
+	diseño_cajon.reparent(_flotacion, false)
 	_reposo = diseño_cajon.transform
 	_altura_final = diseño_cajon.position.y
 	if _activa:
@@ -44,6 +52,7 @@ func activar_en(posicion: Vector3) -> void:
 
 
 func desactivar() -> void:
+	actualizar_agua(-INF, 0)
 	_activa = false
 	if _animacion != null and _animacion.is_valid():
 		_animacion.kill()
@@ -103,8 +112,25 @@ func _animar_caida() -> void:
 
 func _activar_polvo() -> void:
 	if _activa:
-		$Polvo.emitting = true
-		$Polvo.restart()
+		if _nivel_agua > 0.422:
+			impacto_agua.emit(global_position)
+		else:
+			$Polvo.emitting = true
+			$Polvo.restart()
+
+
+func actualizar_agua(altura: float, reloj: float) -> void:
+	_nivel_agua = altura
+	if not is_instance_valid(_flotacion):
+		return
+	if altura == -INF:
+		_flotacion.transform = Transform3D.IDENTITY
+		return
+	$Polvo.emitting = false
+	var peso := smoothstep(0.4, 0.9, altura)
+	var fase := reloj * 1.8 + global_position.x * 1.3 + global_position.z * 0.8
+	_flotacion.position.y = maxf(0.0, altura - 0.60) + sin(fase) * 0.018 * peso
+	_flotacion.rotation = Vector3(cos(fase * 0.78) * 0.025, 0, sin(fase) * 0.03) * peso
 
 
 func convertir_en_ceniza() -> void:

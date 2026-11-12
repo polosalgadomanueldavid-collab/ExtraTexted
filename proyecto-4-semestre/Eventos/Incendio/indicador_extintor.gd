@@ -9,6 +9,7 @@ const CORAL := Color("ff785f")
 const ORO := Color("ffce67")
 
 var distancia := 0.0
+var rotulo := "EXTINTOR"
 var interactuable := false
 var fuera_de_pantalla := false
 var ancla := Vector2.ZERO
@@ -72,7 +73,7 @@ func _draw() -> void:
 	draw_arc(Vector2.ZERO, 45, 3.4 + giro, 5.6 + giro, 40, CORAL, 3.0, true)
 	_dibujar_extintor()
 	_caja(Rect2(-65, 49, 130, 29), CREMA, TINTA, 7)
-	_texto("EXTINTOR", Vector2(0, 70), FUENTE, 17, TINTA)
+	_texto(rotulo, Vector2(0, 70), FUENTE, 17, TINTA)
 	if fuera_de_pantalla:
 		var punta := direccion * 74.0
 		var lado := direccion.orthogonal() * 8.0
