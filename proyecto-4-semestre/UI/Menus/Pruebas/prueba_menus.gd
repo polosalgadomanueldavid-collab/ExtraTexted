@@ -45,9 +45,26 @@ func _probar() -> void:
 	_pulsar_tecla(KEY_ENTER)
 	await get_tree().process_frame
 	_verificar(MenuGlobal.panel_ayuda.leyenda.is_visible_in_tree() and not MenuGlobal.panel_opciones.visible and not get_tree().paused, "Controles abre la leyenda desde Opciones antes de jugar")
+	var manual := MenuGlobal.panel_ayuda.leyenda
+	_verificar(manual.pagina_actual == 0 and manual.pestanas[0].has_focus(), "El manual abre en Movimiento con el foco en su pestaña")
+	await _capturar("00_manual_movimiento")
+	_pulsar_tecla(KEY_RIGHT)
+	await get_tree().process_frame
+	_verificar(manual.pagina_actual == 1 and manual.paginas[1].is_visible_in_tree() and not manual.paginas[0].visible, "Flecha derecha abre únicamente Acciones")
+	await _capturar("00_manual_acciones")
+	_clic_control(manual.pestanas[2])
+	await get_tree().process_frame
+	_verificar(manual.pagina_actual == 2 and manual.paginas[2].is_visible_in_tree() and MenuGlobal.panel_ayuda.pagina_manual.text == "MENÚS · 3 / 3", "El ratón abre Menús y actualiza el número de página")
+	await _capturar("00_manual_menus")
 	_pulsar_tecla(KEY_TAB)
 	await get_tree().process_frame
-	_verificar(MenuGlobal.panel_ayuda.boton_cerrar.has_focus(), "Tab mantiene el foco dentro de la leyenda")
+	_verificar(MenuGlobal.panel_ayuda.boton_cerrar.has_focus(), "Tab recorre las pestañas y llega a Volver dentro del manual")
+	_pulsar_tecla(KEY_TAB)
+	await get_tree().process_frame
+	_verificar(manual.pestanas[0].has_focus() and manual.pagina_actual == 0, "Tab desde Volver cierra el ciclo en Movimiento")
+	_pulsar_tecla(KEY_TAB, true)
+	await get_tree().process_frame
+	_verificar(MenuGlobal.panel_ayuda.boton_cerrar.has_focus(), "Mayús + Tab vuelve al botón de cierre")
 	await _capturar("00_leyenda_menu")
 	_pulsar_tecla(KEY_ENTER)
 	await get_tree().process_frame

@@ -4,6 +4,7 @@
 [ext_resource type="Theme" path="res://UI/Menus/tema_piloto.tres" id="2_tema"]
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="3_texto"]
 [ext_resource type="Script" path="res://UI/Menus/boton_piloto.gd" id="4_boton"]
+[ext_resource type="Script" path="res://UI/Menus/manual_controles.gd" id="5_manual"]
 
 [sub_resource type="FontVariation" id="Font_enfasis"]
 base_font = ExtResource("3_texto")
@@ -29,17 +30,6 @@ corner_radius_top_right = 15
 corner_radius_bottom_left = 15
 corner_radius_bottom_right = 15
 
-[sub_resource type="StyleBoxFlat" id="Style_tecla"]
-content_margin_top = 2.0
-content_margin_bottom = 7.0
-bg_color = Color(1, 0.945, 0.847, 1)
-border_width_bottom = 4
-border_color = Color(0.84, 0.72, 0.55, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_left = 10
-corner_radius_bottom_right = 10
-
 [node name="PanelAyuda" type="PanelContainer"]
 custom_minimum_size = Vector2(1200, 0)
 theme = ExtResource("2_tema")
@@ -48,7 +38,6 @@ fuente_texto = ExtResource("3_texto")
 fuente_enfasis = SubResource("Font_enfasis")
 estilo_fila = SubResource("Style_fila")
 estilo_numero = SubResource("Style_numero")
-estilo_tecla = SubResource("Style_tecla")
 
 [node name="Contenido" type="VBoxContainer" parent="."]
 layout_mode = 2
@@ -81,8 +70,24 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 8
+script = ExtResource("5_manual")
 
-[node name="CerrarAyuda" type="Button" parent="Contenido"]
+[node name="Pie" type="HBoxContainer" parent="Contenido"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 24
+
+[node name="PaginaManual" type="Label" parent="Contenido/Pie"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = SubResource("Font_enfasis")
+theme_override_font_sizes/font_size = 22
+text = "MOVIMIENTO · 1 / 3"
+vertical_alignment = 1
+
+[node name="CerrarAyuda" type="Button" parent="Contenido/Pie"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(514.42, 92)
 layout_mode = 2

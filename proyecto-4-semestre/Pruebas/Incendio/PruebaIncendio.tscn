@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Pruebas/Incendio/prueba_manual_incendio.gd" id="2"]
+
+[node name="PruebaIncendio" type="Node"]
+script = ExtResource("2")

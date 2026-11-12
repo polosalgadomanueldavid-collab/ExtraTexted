@@ -61,7 +61,6 @@ func _ready() -> void:
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
-	_confinar_foco([panel_ayuda.boton_cerrar])
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.volver_expediente.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.nombre_confirmado.connect(_iniciar_partida)
@@ -278,7 +277,9 @@ func _mostrar_ayuda(es_leyenda: bool, origen: OrigenAyuda) -> void:
 	panel_ayuda.presentar(es_leyenda, origen == OrigenAyuda.INICIO)
 	capa.show()
 	panel_ayuda.show()
-	panel_ayuda.boton_cerrar.grab_focus()
+	var controles := panel_ayuda.controles_foco()
+	_confinar_foco(controles)
+	controles[0].grab_focus()
 
 
 func cerrar_ayuda() -> void:

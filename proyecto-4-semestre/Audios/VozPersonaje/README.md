@@ -13,7 +13,7 @@ jadeos cortos y una exhalación temblorosa. Las cinco pistas son mono a
 | Esfuerzo | Al iniciar un salto válido desde el suelo. |
 | Sorpresa | Una vez al empezar un apagón; cerrar su panel no la repite. |
 | Alegría | Al completar una estación válida del protocolo de denuncia. |
-| Estrés | Una vez al comenzar el aviso de terremoto, ocho segundos antes de la rotura. |
+| Estrés | Al comenzar el aviso de terremoto o el evento de incendio. |
 
 Las escenas `Personajes/PoliciaAzul/Policia.tscn` y `Personajes/PoliciaAzul/PoliciaAzul.tscn` incorporan
 un hijo `VozPersonaje`. Selecciónalo en el Inspector para cambiar las cinco

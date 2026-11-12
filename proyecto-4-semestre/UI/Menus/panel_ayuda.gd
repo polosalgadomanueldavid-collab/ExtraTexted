@@ -21,32 +21,23 @@ const PASOS := [
 		preload("res://UI/Menus/ArtePiloto/tutorial_protocolo.webp"),
 	],
 ]
-const CONTROLES := [
-	["W A S D  /  ↑ ← ↓ →", "Moverse por la oficina"],
-	["Mayús", "Correr mientras te mueves"],
-	["Espacio", "Saltar"],
-	["C  /  1 · 2 · 3", "Cámara: actual, frontal o God (desde arriba)"],
-	["E", "Imprimir, usar estación, lanzar o recoger la hoja"],
-	["Mantener Tab", "Ver la clasificación durante la partida"],
-	["Esc", "Pausar o volver a la pantalla anterior"],
-	["Tab  /  Mayús + Tab", "Recorrer las opciones del menú"],
-	["Enter  /  Espacio", "Confirmar una opción del menú"],
-	["Mantener G", "Menú de emotes (en desarrollo)"],
-]
+const ManualControles := preload("res://UI/Menus/manual_controles.gd")
 
 @export var fuente_texto: Font
 @export var fuente_enfasis: Font
 @export var estilo_fila: StyleBox
 @export var estilo_numero: StyleBox
-@export var estilo_tecla: StyleBox
 
 @onready var titulo: Label = %Titulo
 @onready var tutorial: VBoxContainer = %Tutorial
-@onready var leyenda: VBoxContainer = %Leyenda
+@onready var leyenda: ManualControles = %Leyenda
 @onready var boton_cerrar: Button = %CerrarAyuda
+@onready var pagina_manual: Label = %PaginaManual
+@onready var seccion: Label = $Contenido/Encabezado/Seccion
 
 
 func _ready() -> void:
+	leyenda.pagina_cambiada.connect(_actualizar_pagina)
 	for indice: int in range(PASOS.size()):
 		var paso: Array = PASOS[indice]
 		var tarjeta := PanelContainer.new()
@@ -79,23 +70,40 @@ func _ready() -> void:
 		captura.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		fila.add_child(captura)
 
-	for control: Array in CONTROLES:
-		var fila := HBoxContainer.new()
-		fila.add_theme_constant_override("separation", 20)
-		leyenda.add_child(fila)
-		fila.add_child(_crear_distintivo(control[0], estilo_tecla, Vector2(265, 45)))
-		var accion := _crear_texto(control[1], fuente_texto, 27, CREMA)
-		accion.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		accion.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fila.add_child(accion)
-
 
 func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 	custom_minimum_size.x = 1040.0 if es_leyenda else 1200.0
 	titulo.text = "CONTROLES" if es_leyenda else "TUTORIAL"
+	seccion.text = "MANUAL DEL AGENTE" if es_leyenda else "GUÍA DE DESPACHO"
 	tutorial.visible = not es_leyenda
 	leyenda.visible = es_leyenda
+	pagina_manual.visible = es_leyenda
 	boton_cerrar.text = "EMPEZAR TURNO" if es_inicio else "VOLVER"
+	boton_cerrar.custom_minimum_size = Vector2(350, 80) if es_leyenda else Vector2(514.42, 92)
+	if es_leyenda:
+		var panel := StyleBoxFlat.new()
+		panel.bg_color = PETROLEO
+		panel.set_corner_radius_all(24)
+		panel.content_margin_left = 32
+		panel.content_margin_right = 32
+		panel.content_margin_top = 32
+		panel.content_margin_bottom = 24
+		add_theme_stylebox_override("panel", panel)
+		leyenda.seleccionar(0)
+	else:
+		remove_theme_stylebox_override("panel")
+
+
+func controles_foco() -> Array[Control]:
+	var controles: Array[Control] = []
+	if leyenda.visible:
+		controles.append_array(leyenda.pestanas)
+	controles.append(boton_cerrar)
+	return controles
+
+
+func _actualizar_pagina(indice: int) -> void:
+	pagina_manual.text = "%s · %d / 3" % [ManualControles.CATEGORIAS[indice].to_upper(), indice + 1]
 
 
 func _crear_distintivo(texto: String, estilo: StyleBox, minimo: Vector2) -> PanelContainer:

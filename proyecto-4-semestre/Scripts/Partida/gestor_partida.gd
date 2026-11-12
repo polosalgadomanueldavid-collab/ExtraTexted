@@ -11,6 +11,8 @@ const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
 const MAX_DENUNCIAS_PENDIENTES: int = 5
 const DURACION_BLOQUEO_SEGUNDOS: float = 10.0
+const ESPERA_MINIMA_EVENTOS: float = 40.0
+const ESPERA_MAXIMA_EVENTOS: float = 65.0
 const BLOQUEOS_SIMULTANEOS: int = 30
 const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
 	"res://Eventos/Bloqueos/BloqueoTemporal.tscn"
@@ -36,6 +38,7 @@ const DURACION_DESENCRIPTADO: float = 6.0
 @export_range(0.0, 1.0, 0.05) var probabilidad_atasco_reporte: float = 0.35
 const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
 const EventoTerremoto := preload("res://Eventos/Terremoto/evento_terremoto.gd")
+const EventoIncendio := preload("res://Eventos/Incendio/evento_incendio.gd")
 const AnuncioPartida := preload("res://UI/Despacho/anuncio_partida.gd")
 const IndicadorDenunciaPC := preload("res://UI/Computador/indicador_denuncia_pc.gd")
 
@@ -94,6 +97,9 @@ var _ultima_vencida: Dictionary = {}
 var anuncios: AnuncioPartida
 var indicador_denuncia_pc: IndicadorDenunciaPC
 var _turno_anunciado := false
+var temporizador_eventos: Timer
+var _evento_aleatorio_pendiente := -1
+var evento_incendio: EventoIncendio
 
 
 func _ready() -> void:
@@ -116,10 +122,20 @@ func _ready() -> void:
 	sistema_despacho.puntuacion.puntos_actualizados.connect(_al_actualizar_puntaje)
 	evento_apagon.apagon_iniciado.connect(_al_iniciar_apagon)
 	evento_apagon.luz_restaurada.connect(_al_restaurar_luz)
-	evento_terremoto.inicio_solicitado.connect(_iniciar_terremoto)
+	evento_apagon.permiso_inicio = _puede_iniciar_evento
+	evento_terremoto.permiso_inicio = _puede_iniciar_evento
+	evento_terremoto.iniciado.connect(_al_iniciar_evento)
 	evento_terremoto.temblor_actualizado.connect($Gameplay/Camera3D.actualizar_temblor)
 	evento_terremoto.suelo_roto.connect(_al_romper_suelo)
 	evento_terremoto.terminado.connect(_al_terminar_terremoto)
+	evento_incendio = EventoIncendio.new()
+	evento_incendio.name = "EventoIncendio"
+	add_child(evento_incendio)
+	evento_incendio.configurar(self, jugador)
+	evento_incendio.permiso_inicio = _puede_iniciar_evento
+	evento_incendio.iniciado.connect(_al_iniciar_incendio)
+	evento_incendio.terminado.connect(_al_terminar_incendio)
+	evento_incendio.mesa_recuperada.connect(_al_recuperar_mesa_incendiada)
 	grafo_piso = GrafoPiso.new()
 	depurador_grafo = GrafoDebugVisual.new()
 	depurador_grafo.name = "DepuradorGrafo"
@@ -127,6 +143,7 @@ func _ready() -> void:
 	# Espera a que las colisiones de las mesas entren al espacio físico.
 	await get_tree().physics_frame
 	depurador_grafo.configurar(grafo_piso, jugador)
+	evento_incendio.ajustar_accesos(grafo_piso)
 	_crear_indicadores_estaciones()
 	guia_estacion = GUIA_ESTACION_ESCENA.instantiate()
 	panel_despacho.add_child(guia_estacion)
@@ -201,6 +218,11 @@ func _ready() -> void:
 	temporizador_bloqueos.wait_time = DURACION_BLOQUEO_SEGUNDOS
 	temporizador_bloqueos.timeout.connect(_on_temporizador_bloqueos_timeout)
 	add_child(temporizador_bloqueos)
+	temporizador_eventos = Timer.new()
+	temporizador_eventos.one_shot = true
+	temporizador_eventos.process_callback = Timer.TIMER_PROCESS_PHYSICS
+	temporizador_eventos.timeout.connect(_intentar_evento_aleatorio)
+	add_child(temporizador_eventos)
 	_preparar_pool_bloqueos.call_deferred()
 
 
@@ -284,6 +306,8 @@ func _unhandled_key_input(evento: InputEvent) -> void:
 	elif evento.physical_keycode == KEY_B or evento.keycode == KEY_B:
 		if not evento_terremoto.activo:
 			evento_apagon.iniciar_apagon()
+	elif evento.physical_keycode == KEY_I or evento.keycode == KEY_I:
+		_iniciar_incendio()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -329,7 +353,7 @@ func _actualizar_indicador_papel() -> void:
 		return
 	var papel := jugador.papel_en_mano
 	var llevando := is_instance_valid(papel) and not papel.is_queued_for_deletion() and papel.portador == jugador
-	var disponible := llevando and not computador.is_using and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO
+	var disponible := llevando and not computador.is_using and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and not evento_incendio.equipado
 	if indicador_papel.visible != disponible:
 		indicador_papel.visible = disponible
 		_ajustar_aviso_apagon()
@@ -340,7 +364,7 @@ func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 		return
 	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible_debug))
 	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
-		_aviso_apagon.text = "[B] PROBAR APAGÓN  ·  [T] PROBAR TERREMOTO"
+		_aviso_apagon.text = "[B] APAGÓN  ·  [T] TERREMOTO  ·  [I] INCENDIO"
 	elif objetivo == evento_apagon.taco:
 		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
 	else:
@@ -363,11 +387,13 @@ func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
 
 
 func _al_iniciar_apagon(_tipo: int) -> void:
+	_al_iniciar_evento()
 	jugador.reproducir_expresion(&"sorpresa")
 	anuncios.mostrar_evento("¡APAGÓN!", "", "Busca el taco de luz")
 
 
 func _al_restaurar_luz() -> void:
+	_programar_evento_aleatorio()
 	if not partida_finalizada:
 		anuncios.mostrar_evento("LUZ", "RESTABLECIDA")
 
@@ -378,7 +404,7 @@ func _actualizar_indicador_denuncia_pc(objetivo: Node3D) -> void:
 	var descanso := get_node_or_null("ZonaDescanso")
 	var cafe: bool = descanso != null and descanso.tiene_cafe()
 	var disponible := sistema_despacho.obtener_denuncia_activa() == null and not is_instance_valid(papel_actual) and not cafe
-	var oculto := anuncios.visible or computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or clasificacion_partida.visible or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO
+	var oculto := anuncios.visible or computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or clasificacion_partida.visible or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or evento_incendio.arde_estacion("computador")
 	indicador_denuncia_pc.actualizar(
 		get_viewport().get_camera_3d(), computador.global_position + Vector3.UP * 0.38,
 		disponible, objetivo == computador or objetivo is SillaComputador, oculto
@@ -424,7 +450,7 @@ func _recibir_denuncia_aleatoria() -> void:
 			bloqueos_iniciados = true
 			_cambiar_bloqueo_temporal()
 			temporizador_bloqueos.start()
-			evento_terremoto.programar()
+			_programar_evento_aleatorio()
 			
 		print(
 			"Nueva denuncia: ",
@@ -462,6 +488,8 @@ func _on_computador_despacho_abierto() -> void:
 
 
 func _entregar_papel(portador: Player) -> void:
+	if _rechazar_estacion_incendiada("computador"):
+		return
 	if not is_instance_valid(portador):
 		return
 	if _manos_ocupadas_con_cafe():
@@ -530,6 +558,84 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 	papel.freeze = false
 
 
+func _puede_iniciar_evento() -> bool:
+	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo)
+
+
+func _programar_evento_aleatorio() -> void:
+	if partida_finalizada or not bloqueos_iniciados or not _puede_iniciar_evento():
+		return
+	_evento_aleatorio_pendiente = -1
+	# El descanso se cuenta desde el final, nunca desde el inicio del evento.
+	temporizador_eventos.start(generador_aleatorio.randf_range(ESPERA_MINIMA_EVENTOS, ESPERA_MAXIMA_EVENTOS))
+
+
+func _al_iniciar_evento() -> void:
+	temporizador_eventos.stop()
+	_evento_aleatorio_pendiente = -1
+
+
+func _intentar_evento_aleatorio() -> void:
+	if not _puede_iniciar_evento():
+		return
+	if _evento_aleatorio_pendiente < 0:
+		_evento_aleatorio_pendiente = generador_aleatorio.randi_range(0, 2)
+	# Conservar la elección hasta poder iniciarla: no favorecer al apagón
+	# mientras el jugador está en la zona segura o atendiendo una mesa.
+	if not get_tree().paused and not computador.is_using and not jugador.input_locked and not clasificacion_partida.visible and not MenuGlobal.capa.visible:
+		if _evento_aleatorio_pendiente == 0:
+			_iniciar_terremoto()
+		elif _evento_aleatorio_pendiente == 1:
+			evento_apagon.iniciar_apagon()
+		else:
+			_iniciar_incendio()
+	if _puede_iniciar_evento():
+		temporizador_eventos.start(2.0)
+
+
+func _iniciar_incendio() -> bool:
+	if not bloqueos_iniciados or computador.is_using or jugador.input_locked or jugador.realizando_gesto():
+		return false
+	return evento_incendio.iniciar(bloqueos_visuales)
+
+
+func _al_iniciar_incendio() -> void:
+	_al_iniciar_evento()
+	temporizador_bloqueos.paused = true
+	temporizador_seguridad.paused = evento_incendio.arde_estacion("privacidad")
+	if temporizador_seguridad.paused:
+		sonidos_mesas.cancelar_seguridad()
+		progreso_seguridad.hide()
+	anuncios.mostrar_evento("¡INCENDIO!", "", "Busca el extintor · Mantén E para apagar")
+	panel_despacho._mostrar_mensaje("¡La oficina arde! Apaga las estaciones y las mesas del perímetro.", PanelDespacho.CORAL)
+	_actualizar_indicadores_estaciones()
+
+
+func _al_recuperar_mesa_incendiada(estacion_id: String) -> void:
+	if estacion_id == "privacidad":
+		temporizador_seguridad.paused = false
+		progreso_seguridad.visible = not _denuncia_en_descriptado.is_empty()
+		if not _denuncia_en_descriptado.is_empty() and not _seguridad_lista:
+			sonidos_mesas.iniciar_seguridad()
+	_actualizar_indicadores_estaciones()
+
+
+func _al_terminar_incendio() -> void:
+	# Recicla las cenizas, preserva al jugador/la hoja y genera cajones normales.
+	temporizador_bloqueos.paused = false
+	_cambiar_bloqueo_temporal()
+	temporizador_bloqueos.start(DURACION_BLOQUEO_SEGUNDOS)
+	_programar_evento_aleatorio()
+	anuncios.mostrar_evento("INCENDIO", "APAGADO", "Mesas disponibles · vuelven los bloqueos normales")
+
+
+func _rechazar_estacion_incendiada(estacion_id: String) -> bool:
+	if is_instance_valid(evento_incendio) and evento_incendio.arde_estacion(estacion_id):
+		panel_despacho._mostrar_mensaje("Esta mesa está en llamas. Usa el extintor manteniendo E.", PanelDespacho.CORAL)
+		return true
+	return false
+
+
 func _iniciar_terremoto() -> void:
 	if partida_finalizada or not bloqueos_iniciados or computador.is_using or jugador.input_locked:
 		return
@@ -560,6 +666,7 @@ func _physics_process(_delta: float) -> void:
 
 
 func _al_terminar_terremoto() -> void:
+	_programar_evento_aleatorio()
 	for bloqueo in evento_terremoto.caidos:
 		bloqueo.call("desactivar")
 		_bloqueos_disponibles.append(bloqueo)
@@ -608,10 +715,12 @@ func _al_terminar_partida() -> void:
 	if partida_finalizada:
 		return
 	partida_finalizada = true
+	evento_incendio.detener()
 	MenuGlobal.final_de_partida_activo = true
 	jugador.input_locked = true
 	temporizador_denuncias.stop()
 	temporizador_bloqueos.stop()
+	temporizador_eventos.stop()
 	var abiertas: Array[Dictionary] = []
 	for denuncia: Denuncia in sistema_despacho.obtener_denuncias_ordenadas():
 		abiertas.append(_resumen_denuncia(denuncia))
@@ -697,6 +806,8 @@ func _volver_al_menu_despues_del_final() -> void:
 
 
 func interactuar_estacion_con_papel(portador: Player, estacion_id: String, objetivo: Node3D = null) -> void:
+	if _rechazar_estacion_incendiada(estacion_id):
+		return
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
 	if denuncia == null or not is_instance_valid(portador.papel_en_mano) or portador.papel_en_mano != papel_actual or portador.papel_en_mano.denuncia_id != denuncia.id:
 		panel_despacho._mostrar_mensaje("Necesitas llevar la hoja de la denuncia para usar esta estación.", PanelDespacho.CORAL)
@@ -717,6 +828,8 @@ func _resolver_gesto_estacion(portador: Player, estacion_id: String, caso_id: St
 	interactuar_estacion(estacion_id)
 
 func interactuar_estacion(estacion_id: String) -> void:
+	if _rechazar_estacion_incendiada(estacion_id):
+		return
 	if estacion_id == "reporte" and _interactuar_reporte():
 		return
 	if estacion_id == "evidencias" and _interactuar_evidencias():
@@ -898,7 +1011,7 @@ func _actualizar_indicadores_estaciones() -> void:
 	for estacion_id: String in indicadores_estaciones:
 		var indicador := indicadores_estaciones[estacion_id] as IndicadorProximaEstacion
 		if is_instance_valid(indicador):
-			var activo := _estaciones_pendientes.has(estacion_id) and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and not partida_finalizada
+			var activo := _estaciones_pendientes.has(estacion_id) and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and not partida_finalizada and not evento_incendio.arde_estacion(estacion_id)
 			if indicador.visible != activo or indicador.is_processing() != activo:
 				indicador.establecer_activo(activo)
 	guia_estacion.establecer_objetivo(indicadores_estaciones.get(estacion_sugerida) as IndicadorProximaEstacion)
@@ -930,7 +1043,7 @@ func _on_temporizador_bloqueos_timeout() -> void:
 	_cambiar_bloqueo_temporal()
 	
 func _cambiar_bloqueo_temporal() -> void:
-	if evento_terremoto.activo:
+	if evento_terremoto.activo or evento_incendio.activo or evento_incendio.bloqueos_fijos:
 		return
 	_limpiar_bloqueos_temporales()
 

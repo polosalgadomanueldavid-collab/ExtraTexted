@@ -27,6 +27,14 @@ selector crema, selección coral y deslizadores con indicadores de foco y
 estado inactivo. Brillo, filtros, intensidad y guardado mantienen la lógica
 compartida entre la pantalla inicial y la pausa.
 
+Controles usa un manual con las pestañas Movimiento, Acciones y Menús:
+cabecera petróleo, hoja crema, contador de página y teclas individuales con
+fondo petróleo y borde crema, como Evidencias y Verificación. Las combinaciones
+separan cada tecla y «Mantener» aparece fuera de su contorno. Se consulta desde
+Opciones antes de jugar o durante la pausa. Ratón, flechas izquierda/derecha,
+Tab y Mayús+Tab recorren las categorías y Volver sin salir del modal; Escape
+regresa a Opciones. El tutorial de inicio conserva sus pasos y capturas.
+
 Los botones se redujeron un 15 % en ambos ejes y luego otro 15 % respecto al
 tamaño resultante: de 712×132 a 605,2×112,2 y finalmente a 514,42×95,37
 unidades. Fuente, iconos, márgenes y superficies acompañan estas reducciones.
@@ -64,6 +72,10 @@ los ajustes y termina la aplicación.
 
 Escenas de comprobación:
 
+- `UI/Menus/Pruebas/PruebaManualControles.tscn`: comprueba las tres páginas
+  en 1280×720, 960×540, 1024×768 y 1920×1080, su regreso a Opciones y
+  la presentación del tutorial. `-- --capturas` guarda imágenes en
+  `.godot/manual_qa/`.
 - `UI/Menus/Pruebas/PruebaMenuPiloto.tscn`: foco, navegación, clic real,
   retorno de opciones y visibilidad en varias resoluciones. Añadir
   `-- --capturas` a la ejecución por CLI para guardar capturas renderizadas
