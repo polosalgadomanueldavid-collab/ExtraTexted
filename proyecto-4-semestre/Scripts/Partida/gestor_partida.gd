@@ -94,6 +94,7 @@ var _ultima_vencida: Dictionary = {}
 var anuncios: AnuncioPartida
 var indicador_denuncia_pc: IndicadorDenunciaPC
 var _turno_anunciado := false
+var _tutorial_apagon_mostrado := false
 
 
 func _ready() -> void:
@@ -119,6 +120,7 @@ func _ready() -> void:
 	evento_terremoto.inicio_solicitado.connect(_iniciar_terremoto)
 	evento_terremoto.temblor_actualizado.connect($Gameplay/Camera3D.actualizar_temblor)
 	evento_terremoto.suelo_roto.connect(_al_romper_suelo)
+	evento_terremoto.jugador_caido.connect(_al_caer_jugador_en_grieta)
 	evento_terremoto.terminado.connect(_al_terminar_terremoto)
 	grafo_piso = GrafoPiso.new()
 	depurador_grafo = GrafoDebugVisual.new()
@@ -364,7 +366,12 @@ func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
 
 func _al_iniciar_apagon(_tipo: int) -> void:
 	jugador.reproducir_expresion(&"sorpresa")
-	anuncios.mostrar_evento("¡APAGÓN!", "", "Busca el taco de luz")
+	if not _tutorial_apagon_mostrado:
+		_tutorial_apagon_mostrado = true
+		anuncios.detener()
+		MenuGlobal.mostrar_tutorial_apagon()
+	else:
+		anuncios.mostrar_evento("¡APAGÓN!", "", "Busca el taco de luz")
 
 
 func _al_restaurar_luz() -> void:
@@ -557,6 +564,12 @@ func _physics_process(_delta: float) -> void:
 		return
 	if papel_actual.portador == null and evento_terremoto.atrapo_hoja(papel_actual.global_position):
 		sistema_despacho.vencer_denuncia(papel_actual.denuncia_id, Denuncia.MotivoPerdida.TERREMOTO)
+
+
+func _al_caer_jugador_en_grieta(portador: Player) -> void:
+	if partida_finalizada or not is_instance_valid(papel_actual) or papel_actual.portador != portador:
+		return
+	sistema_despacho.vencer_denuncia(papel_actual.denuncia_id, Denuncia.MotivoPerdida.TERREMOTO)
 
 
 func _al_terminar_terremoto() -> void:
