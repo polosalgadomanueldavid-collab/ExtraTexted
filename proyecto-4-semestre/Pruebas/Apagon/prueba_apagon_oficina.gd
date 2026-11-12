@@ -37,6 +37,12 @@ func _probar() -> void:
 	var computador: Node = _escena.get("computador")
 	(computador.get("timer_nuevo_problema") as Timer).stop()
 	(_escena.get("depurador_grafo") as Node3D).hide()
+	_verificar(not (_escena.get("depurador_grafo") as GrafoDebugVisual).visible_debug, "La partida comienza sin modo debug")
+	await _pulsar_tecla(KEY_B)
+	_verificar(int(_evento.get("estado")) == 0, "B no activa la prueba antes de F3")
+	await _pulsar_tecla(KEY_F3)
+	_verificar((_escena.get("depurador_grafo") as GrafoDebugVisual).visible_debug, "F3 activa el modo debug en desarrollo")
+	(_escena.get("depurador_grafo") as Node3D).hide()
 	_verificar(bool(_menu.call("es_escena_de_juego")), "MenuGlobal reconoce Oficina como la partida real")
 	_verificar(_jugador.is_on_floor(), "El jugador aterriza en el suelo de Oficina")
 	_altura_pies = _jugador.global_position.y
@@ -145,6 +151,8 @@ func _probar_cajones() -> void:
 
 func _probar_circuito(tipo: int) -> void:
 	_colocar(_postura["cerca"], float(_postura["giro"]))
+	_guardar_energia_actual()
+	_evento.connect("luz_restaurada", _comprobar_luces, CONNECT_ONE_SHOT)
 	await _pulsar_tecla(KEY_B)
 	_verificar(int(_evento.get("estado")) == 1, "B inicia el apagón %d dentro de Oficina" % tipo)
 	var semilla: int = _evento.get("semilla_circuito")
@@ -180,9 +188,19 @@ func _probar_circuito(tipo: int) -> void:
 	_verificar(_despacho.puntuacion.puntos == _saldo_inicial, "El circuito %d conserva los puntos reales de la partida" % tipo)
 	_verificar(_despacho.calma_operativa == _calma_inicial, "El circuito %d conserva la calma de la partida" % tipo)
 	_verificar((_hud.get("puntos_valor") as Label).text == "300", "El HUD conserva el saldo al reparar")
-	_comprobar_luces()
 	if tipo == 3:
 		await _capturar("03_oficina_restaurada")
+
+
+func _guardar_energia_actual() -> void:
+	# Los focos pueden parpadear entre dos apagones.
+	for luz: Light3D in _luces_iniciales:
+		_luces_iniciales[luz]["energia"] = luz.light_energy
+
+
+func _probar_salida_durante_apagon() -> void:
+	_guardar_energia_actual()
+	await super._probar_salida_durante_apagon()
 
 
 func _comprobar_clasificacion() -> void:

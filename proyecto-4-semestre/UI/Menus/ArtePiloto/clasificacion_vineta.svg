@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="584" viewBox="0 0 720 584">
+  <!-- El borde izquierdo conserva dos desgarros de la libreta de turnos. -->
+  <path d="M20 19 705 13 709 560 690 578 17 580Z" fill="#192d38" opacity=".43"/>
+  <path d="m13 14 687-4 5 548-19 16-670 1z" fill="#d5c3a0" stroke="#39464a" stroke-width="2.6"/>
+  <path d="M11 13Q303 15 697 8l3 289-1 241-28 28q-347-2-658 5l-1-63 10-2q6-1 5-6-1-4-6-4l-9 1-1-220 1-192 9-1q6-1 5-6-1-4-5-4l-9 1z"
+        fill="#e5cfb3" stroke="#283b43" stroke-width="3" stroke-linejoin="round"/>
+  <path d="m11 85 9-1q6-1 6-5m-14 429 11-2" fill="none" stroke="#b6a48c" stroke-width="1.4"/>
+  <!-- Una pasada de rotulador. El pigmento se agota en el extremo derecho. -->
+  <path d="M48 45q154-5 312-10 80-1 160-4l-4 5 11-1-5 7 2 2-8 10 3 1-7 12 2 3-11 14-3 5q-217 1-456 14l3-11-3-1 4-14-2-3 4-15-2-2z" fill="#e89171"/>
+  <path d="M58 101q183-9 334-12l-112 6-214 10zM492 92l18-1 7-4-4 5z" fill="#d97c64" opacity=".7"/>
+  <!-- Cinta de papel doblada sobre el borde superior. -->
+  <g transform="rotate(11 638 27)">
+    <path d="m581 17 8 1 96-2-3 6 3 4-4 5 2 4-4 5-99 1 3-6-3-4 4-6z" fill="#836849" opacity=".22"/>
+    <path d="m581 14 8 1 96-2-3 6 3 4-4 5 2 4-4 5-99 1 3-6-3-4 4-6z" fill="#d4b780" fill-opacity=".85"/>
+    <path d="m589 17 82-1m-77 18 35-1" fill="none" stroke="#f1dfb5" stroke-width="1.4" opacity=".76"/>
+  </g>
+  <!-- Pie de imprenta con espacio para el doblez de la hoja. -->
+  <path d="M41 473q271 1 631-3l-1 39 1 37q-326 4-632 3z" fill="#203b49"/>
+  <path d="m41 552 244-2-192 4-52 1z" fill="#52646a" opacity=".7"/>
+  <path d="m670 566 2-27 27-1z" fill="#d4bd95" stroke="#48504d" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="m672 540 23-1-20 3z" fill="#faf0d2"/>
+</svg>

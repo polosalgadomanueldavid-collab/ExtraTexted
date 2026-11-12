@@ -14,6 +14,11 @@ var _contorno: ShaderMaterial
 var _material_hoja: StandardMaterial3D
 var _tiempo_resaltado: float = 0.0
 var _marcador_recoger: Node3D
+var mostrar_indicador: bool = true:
+	set(valor):
+		mostrar_indicador = valor
+		_actualizar_marcador()
+		_actualizar_resaltado()
 
 
 func _ready() -> void:
@@ -73,8 +78,8 @@ func _process(delta: float) -> void:
 func _actualizar_marcador() -> void:
 	if not is_instance_valid(_marcador_recoger):
 		return
-	_marcador_recoger.visible = portador == null
-	if portador == null:
+	_marcador_recoger.visible = portador == null and mostrar_indicador
+	if _marcador_recoger.visible:
 		_marcador_recoger.global_position = global_position + Vector3.UP * (0.34 + sin(_tiempo_resaltado * 3.0) * 0.015)
 		var camara := get_viewport().get_camera_3d()
 		if is_instance_valid(camara):
@@ -84,7 +89,7 @@ func _actualizar_marcador() -> void:
 func _actualizar_resaltado() -> void:
 	if not is_instance_valid(_malla_hoja):
 		return
-	var suelta := portador == null
+	var suelta := portador == null and mostrar_indicador
 	var pulso := 0.5 + 0.5 * sin(_tiempo_resaltado * 4.5)
 	_malla_hoja.material_overlay = _contorno if suelta else null
 	_contorno.set_shader_parameter("grosor", lerpf(0.007, 0.012, pulso) if suelta else 0.0)

@@ -97,7 +97,7 @@ func resolver_denuncia(id: String) -> bool:
 	return true
 
 
-func vencer_denuncia(id: String) -> bool:
+func vencer_denuncia(id: String, motivo := Denuncia.MotivoPerdida.TIEMPO) -> bool:
 	if terminada:
 		return false
 	var denuncia: Denuncia = arbol.buscar_por_id(id)
@@ -106,6 +106,7 @@ func vencer_denuncia(id: String) -> bool:
 		return false
 
 	denuncia.estado = Denuncia.Estado.VENCIDA
+	denuncia.motivo_perdida = motivo
 	arbol.eliminar_por_id(id)
 	tiempos_restantes.erase(id)
 

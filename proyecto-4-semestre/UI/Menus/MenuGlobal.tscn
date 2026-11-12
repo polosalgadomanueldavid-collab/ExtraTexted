@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://UI/Menus/menu_global.gd" id="1_script"]
 [ext_resource type="Shader" path="res://UI/Menus/filtro_accesibilidad.gdshader" id="2_shader"]
@@ -22,6 +22,7 @@
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/tutorial.svg" id="20_tutorial"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/teclado.svg" id="21_leyenda"]
 [ext_resource type="PackedScene" path="res://UI/Menus/PanelClasificacion.tscn" id="22_clasificacion"]
+[ext_resource type="AudioStream" path="res://Audios/menu_extratexted.mp3" id="23_musica_menu"]
 
 [sub_resource type="FontVariation" id="Font_aviso"]
 base_font = ExtResource("11_texto")
@@ -143,6 +144,11 @@ shader = ExtResource("2_shader")
 [node name="MenuGlobal" type="Node"]
 process_mode = 3
 script = ExtResource("1_script")
+
+[node name="MusicaMenu" type="AudioStreamPlayer" parent="."]
+process_mode = 3
+stream = ExtResource("23_musica_menu")
+volume_db = -4.0
 
 [node name="Interfaz" type="CanvasLayer" parent="."]
 layer = 80
@@ -404,6 +410,25 @@ focus_mode = 2
 min_value = 80.0
 max_value = 120.0
 value = 100.0
+
+[node name="EtiquetaBalanceo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_font_sizes/font_size = 34
+text = "Balanceo de cámara"
+
+[node name="SelectorBalanceo" type="OptionButton" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 95.37)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme = SubResource("Theme_controles")
+item_count = 2
+selected = 0
+popup/item_0/text = "Activado"
+popup/item_0/id = 0
+popup/item_1/text = "Desactivado"
+popup/item_1/id = 1
 
 [node name="Botones" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 custom_minimum_size = Vector2(514.42, 0)

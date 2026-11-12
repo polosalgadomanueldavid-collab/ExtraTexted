@@ -218,7 +218,7 @@ func _probar_pausa_y_nueva_partida(ruta_clasificacion: String) -> void:
 		get_tree().current_scene.get_node("%RankingButton").pressed.emit()
 		var panel := MenuGlobal.panel_clasificacion
 		_verificar(panel.tabla.is_visible_in_tree() and panel.filas.get_child_count() == 2, "La clasificación del menú muestra ambos récords")
-		panel.boton_volver.pressed.emit()
+		panel.volver_expediente.pressed.emit()
 
 
 func _jugar_desde_menu(nombre: String) -> bool:

@@ -5,20 +5,40 @@
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="3_texto"]
 [ext_resource type="Script" path="res://UI/Menus/boton_piloto.gd" id="4_boton"]
 
+[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/volver.svg" id="5_volver"]
+
+[sub_resource type="StyleBoxFlat" id="BotonFicha"]
+content_margin_left = 14.0
+content_margin_right = 14.0
+bg_color = Color(0.91, 0.79, 0.63, 1)
+corner_radius_top_left = 12
+corner_radius_bottom_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+
+[sub_resource type="StyleBoxEmpty" id="FichaReposo"]
+content_margin_left = 14.0
+content_margin_right = 14.0
+
+[sub_resource type="StyleBoxFlat" id="FichaFoco"]
+draw_center = false
+border_color = Color(0.55, 0.30, 0.20, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 12
+corner_radius_bottom_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+
 [sub_resource type="FontVariation" id="Font_tabla"]
 base_font = ExtResource("3_texto")
 variation_opentype = {2003265652: 750.0}
 
-[sub_resource type="StyleBoxFlat" id="Style_fila"]
-content_margin_left = 12.0
-content_margin_top = 6.0
-content_margin_right = 14.0
-content_margin_bottom = 6.0
-bg_color = Color(0.075, 0.225, 0.3, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_left = 12
-corner_radius_bottom_right = 12
+[sub_resource type="FontVariation" id="Font_records"]
+base_font = ExtResource("3_texto")
+variation_opentype = {2003265652: 1000.0}
 
 [sub_resource type="StyleBoxFlat" id="Style_entrada"]
 content_margin_left = 22.0
@@ -47,8 +67,7 @@ corner_radius_bottom_right = 16
 custom_minimum_size = Vector2(1040, 0)
 theme = ExtResource("2_tema")
 script = ExtResource("1_panel")
-fuente_tabla = SubResource("Font_tabla")
-estilo_fila = SubResource("Style_fila")
+fuente_tabla = SubResource("Font_records")
 
 [node name="Contenido" type="VBoxContainer" parent="."]
 layout_mode = 2
@@ -117,7 +136,7 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="Posicion" type="Label" parent="Contenido/Tabla/Cabecera"]
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(165, 0)
 layout_mode = 2
 theme_override_fonts/font = SubResource("Font_tabla")
 theme_override_font_sizes/font_size = 23
@@ -141,7 +160,7 @@ horizontal_alignment = 2
 
 [node name="Lista" type="ScrollContainer" parent="Contenido/Tabla"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 306)
+custom_minimum_size = Vector2(0, 312)
 layout_mode = 2
 focus_mode = 2
 horizontal_scroll_mode = 0
@@ -160,10 +179,83 @@ theme_override_fonts/font = ExtResource("3_texto")
 theme_override_font_sizes/font_size = 30
 autowrap_mode = 3
 
+[node name="ResumenExpediente" type="HBoxContainer" parent="Contenido"]
+visible = false
+custom_minimum_size = Vector2(0, 76)
+theme_override_constants/separation = 22
+
+[node name="FichaPersonal" type="HBoxContainer" parent="Contenido/ResumenExpediente"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 22
+
+[node name="Rotulo" type="Label" parent="Contenido/ResumenExpediente/FichaPersonal"]
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 32
+
+[node name="Separador" type="ColorRect" parent="Contenido/ResumenExpediente/FichaPersonal"]
+custom_minimum_size = Vector2(3, 43)
+size_flags_vertical = 4
+mouse_filter = 2
+color = Color(0.61, 0.54, 0.40, 1)
+
+[node name="Valor" type="Label" parent="Contenido/ResumenExpediente/FichaPersonal"]
+size_flags_horizontal = 3
+theme_override_fonts/font = SubResource("Font_records")
+theme_override_font_sizes/font_size = 36
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="MejorMarca" type="HBoxContainer" parent="Contenido/ResumenExpediente"]
+visible = false
+theme_override_constants/separation = 25
+
+[node name="Separador" type="ColorRect" parent="Contenido/ResumenExpediente/MejorMarca"]
+custom_minimum_size = Vector2(3, 43)
+size_flags_vertical = 4
+mouse_filter = 2
+color = Color(0.61, 0.54, 0.40, 1)
+
+[node name="Rotulo" type="Label" parent="Contenido/ResumenExpediente/MejorMarca"]
+theme_override_font_sizes/font_size = 32
+text = "MEJOR PUNTAJE"
+
+[node name="Valor" type="Label" parent="Contenido/ResumenExpediente/MejorMarca"]
+theme_override_fonts/font = SubResource("Font_records")
+theme_override_font_sizes/font_size = 39
+
+[node name="EspacioPliegue" type="Control" parent="Contenido/ResumenExpediente"]
+custom_minimum_size = Vector2(10, 0)
+mouse_filter = 2
+
 [node name="Botones" type="HBoxContainer" parent="Contenido"]
 layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 20
+
+[node name="VolverExpediente" type="Button" parent="Contenido/Botones"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(188, 40)
+size_flags_vertical = 4
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("FichaReposo")
+theme_override_styles/hover = SubResource("BotonFicha")
+theme_override_styles/pressed = SubResource("BotonFicha")
+theme_override_styles/focus = SubResource("FichaFoco")
+theme_override_colors/font_color = Color(0.05, 0.16, 0.24, 1)
+theme_override_colors/font_hover_color = Color(0.05, 0.16, 0.24, 1)
+theme_override_colors/font_focus_color = Color(0.05, 0.16, 0.24, 1)
+theme_override_colors/font_pressed_color = Color(0.05, 0.16, 0.24, 1)
+theme_override_colors/icon_normal_color = Color(0.05, 0.16, 0.24, 1)
+theme_override_colors/icon_focus_color = Color(0.05, 0.16, 0.24, 1)
+theme_override_colors/icon_hover_color = Color(0.05, 0.16, 0.24, 1)
+theme_override_colors/icon_pressed_color = Color(0.05, 0.16, 0.24, 1)
+theme_override_constants/icon_max_width = 24
+theme_override_constants/h_separation = 12
+theme_override_font_sizes/font_size = 30
+text = "VOLVER"
+icon = ExtResource("5_volver")
+icon_alignment = 0
 
 [node name="Volver" type="Button" parent="Contenido/Botones"]
 unique_name_in_owner = true

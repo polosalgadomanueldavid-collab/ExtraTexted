@@ -12,6 +12,8 @@ func _initialize() -> void:
 
 
 func _probar() -> void:
+	root.mode = Window.MODE_WINDOWED
+	root.size = Vector2i(1280, 720)
 	_verificar(change_scene_to_file(ESCENA_CARGA) == OK, "Abre la pantalla inicial")
 	await scene_changed
 	var pantalla_inicial := current_scene
@@ -34,25 +36,41 @@ func _probar() -> void:
 	menu.get_node("%PlayButton").pressed.emit()
 	_verificar(menu.get_node("PantallaDiscusion").visible, "Jugar muestra a los policías discutiendo")
 	_verificar(panel.get_node("%Formulario").is_visible_in_tree(), "El formulario permite ingresar el nombre")
+	_verificar(_leer_turno(menu).values().all(func(voz): return voz == "Consejo"), "Antes de confirmar el nombre sólo aparecen consejos")
+	menu.confirmar_discusion("Álex", "Lina")
+	var pareja := _leer_turno(menu)
+	_verificar(pareja.get("¿El piso es lava?") == "Álex" and pareja.get("Qué frío que hace, hermano.") == "Lina", "Cada oficial usa el alias que le corresponde")
+	_verificar(pareja.get("¿Lina, eres tú?") == "Álex", "Al hablarle al compañero se usa su alias")
 	(panel.get_node("%Volver") as Button).pressed.emit()
 	_verificar(not menu.get_node("PantallaDiscusion").visible, "Cancelar restaura el menú")
 	menu.get_node("%PlayButton").pressed.emit()
+	_verificar(menu.hablante.text == "Consejo", "Reabrir la carga descarta los alias anteriores")
 	var nombre := panel.get_node("%NombreJugador") as LineEdit
-	nombre.text = "Prueba de carga"
-	nombre.text_submitted.emit("Prueba de carga")
+	nombre.text = "María José"
+	nombre.text_submitted.emit(nombre.text)
 	_verificar(menu.get_node("PantallaDiscusion").visible and not menu_global.get_node("%CapaModal").visible, "La discusión permanece visible durante la carga")
+	_verificar(menu.hablante.text == nombre.text, "El primer subtítulo muestra el alias confirmado")
 	if "--capturas" in OS.get_cmdline_user_args() and DisplayServer.get_name() != "headless":
 		await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://.godot/carga_discusion_qa.png")
+	var solo := _leer_turno(menu)
+	_verificar(solo.get("¿El piso es lava?") == nombre.text and not solo.has("Qué frío que hace, hermano.") and not solo.values().has("Lina"), "En solitario se omiten las intervenciones del segundo oficial")
 	if not await _esperar_escena(ESCENA_JUEGO):
 		_terminar()
 		return
-	_verificar(menu_global.get("nombre_partida") == "Prueba de carga", "El nombre llega a la partida")
+	_verificar(menu_global.get("nombre_partida") == "María José", "El nombre llega a la partida")
 	_verificar(menu_global.get_node("%PanelAyuda").visible and paused, "El tutorial inicial se conserva")
-	await create_timer(0.25).timeout
-	_verificar((current_scene.get("_bloqueos_pool") as Array).size() == 30, "El pool termina de prepararse durante el tutorial en pausa")
+	_verificar((current_scene.get("_bloqueos_disponibles") as Array).size() == 30, "Los 30 cajones ya están preparados al entrar en la oficina")
 	_terminar()
+
+
+func _leer_turno(menu: Node) -> Dictionary:
+	var voces := {}
+	for i in range(menu.DIALOGO.size()):
+		voces[menu.frase.text] = menu.hablante.text
+		menu._process(menu.SEGUNDOS_POR_FRASE)
+	return voces
 
 
 func _esperar_escena(ruta: String) -> bool:
@@ -76,5 +94,11 @@ func _verificar(condicion: bool, mensaje: String) -> void:
 
 func _terminar() -> void:
 	paused = false
+	# Permite terminar el _ready de la oficina antes de retirarla del árbol.
+	await physics_frame
+	await process_frame
+	if is_instance_valid(current_scene):
+		current_scene.queue_free()
+	await process_frame
 	print("Resultado: %d fallo(s)" % _fallos)
 	quit(0 if _fallos == 0 else 1)

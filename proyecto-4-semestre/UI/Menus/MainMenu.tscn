@@ -10,6 +10,8 @@
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/tutorial.svg" id="10_tutorial"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/clasificacion.svg" id="12_clasificacion"]
 [ext_resource type="PackedScene" path="res://UI/Menus/FondoMenuOficina.tscn" id="13_fondo"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="14_texto"]
+[ext_resource type="Shader" path="res://UI/Menus/fundido_subtitulos.gdshader" id="15_fundido"]
 
 [sub_resource type="StyleBoxFlat" id="SinFondo"]
 content_margin_left = 64.0
@@ -18,21 +20,33 @@ content_margin_right = 64.0
 content_margin_bottom = 44.0
 bg_color = Color(0, 0, 0, 0)
 
-[sub_resource type="StyleBoxFlat" id="PanelDiscusion"]
-content_margin_left = 34.0
-content_margin_top = 26.0
-content_margin_right = 34.0
-content_margin_bottom = 28.0
-bg_color = Color(0.025, 0.09, 0.13, 0.92)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(1, 0.62, 0.54, 1)
-corner_radius_top_left = 18
-corner_radius_top_right = 18
-corner_radius_bottom_left = 18
-corner_radius_bottom_right = 18
+[sub_resource type="ShaderMaterial" id="Fundido"]
+shader = ExtResource("15_fundido")
+
+[sub_resource type="FontVariation" id="NunitoAlias"]
+base_font = ExtResource("14_texto")
+variation_opentype = {2003265652: 920.0}
+
+[sub_resource type="FontVariation" id="NunitoDialogo"]
+base_font = ExtResource("14_texto")
+variation_opentype = {2003265652: 800.0}
+
+[sub_resource type="Theme" id="TemaSubtitulos"]
+default_font = SubResource("NunitoAlias")
+
+[sub_resource type="StyleBoxFlat" id="PistaCarga"]
+bg_color = Color(0.51, 0.58, 0.58, 0.46)
+corner_radius_top_left = 3
+corner_radius_bottom_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+
+[sub_resource type="StyleBoxFlat" id="AvanceCarga"]
+bg_color = Color(0.97, 0.91, 0.8, 1)
+corner_radius_top_left = 3
+corner_radius_bottom_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
 
 [node name="MainMenu" type="Control" unique_id=1510664291]
 layout_mode = 3
@@ -161,44 +175,71 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Dialogo" type="PanelContainer" parent="PantallaDiscusion"]
+[node name="FundidoInferior" type="ColorRect" parent="PantallaDiscusion"]
 layout_mode = 1
-anchor_left = 0.025
-anchor_top = 0.57
-anchor_right = 0.43
-anchor_bottom = 0.96
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("PanelDiscusion")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 mouse_filter = 2
+material = SubResource("Fundido")
+color = Color(0.039, 0.098, 0.137, 0.93)
+
+[node name="Dialogo" type="VBoxContainer" parent="PantallaDiscusion"]
+layout_mode = 1
+anchor_left = 0.036
+anchor_top = 0.25
+anchor_right = 0.476
+anchor_bottom = 0.947
+grow_vertical = 0
+mouse_filter = 2
+theme = SubResource("TemaSubtitulos")
+theme_override_constants/separation = 30
+alignment = 2
 
 [node name="Contenido" type="VBoxContainer" parent="PantallaDiscusion/Dialogo"]
 layout_mode = 2
-theme_override_constants/separation = 12
+mouse_filter = 2
+theme_override_constants/separation = 6
 
 [node name="Hablante" type="Label" parent="PantallaDiscusion/Dialogo/Contenido"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.62, 0.54, 1)
-theme_override_font_sizes/font_size = 26
-text = "CONSEJO"
+theme_override_colors/font_color = Color(1, 0.82, 0.56, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.10, 0.14, 0.7)
+theme_override_font_sizes/font_size = 40
+text = "Consejo"
+text_overrun_behavior = 3
+clip_text = true
 
 [node name="Frase" type="Label" parent="PantallaDiscusion/Dialogo/Contenido"]
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(1, 0.945, 0.847, 1)
-theme_override_font_sizes/font_size = 34
+theme_override_fonts/font = SubResource("NunitoDialogo")
+theme_override_colors/font_color = Color(1, 0.957, 0.875, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.10, 0.14, 0.8)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 57
 text = "Mira bien qué puedes resolver primero."
 autowrap_mode = 3
 
-[node name="EstadoCarga" type="Label" parent="PantallaDiscusion/Dialogo/Contenido"]
+[node name="Carga" type="HBoxContainer" parent="PantallaDiscusion/Dialogo"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.83, 0.85, 1)
-theme_override_font_sizes/font_size = 19
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="EstadoCarga" type="Label" parent="PantallaDiscusion/Dialogo/Carga"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("NunitoDialogo")
+theme_override_colors/font_color = Color(0.96, 0.91, 0.8, 1)
+theme_override_font_sizes/font_size = 27
 text = "Preparando el turno..."
 
-[node name="ProgresoCarga" type="ProgressBar" parent="PantallaDiscusion/Dialogo/Contenido"]
-custom_minimum_size = Vector2(0, 10)
+[node name="ProgresoCarga" type="ProgressBar" parent="PantallaDiscusion/Dialogo/Carga"]
+custom_minimum_size = Vector2(0, 7)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/background = SubResource("PistaCarga")
+theme_override_styles/fill = SubResource("AvanceCarga")
 show_percentage = false
 
 [node name="EntradaNegra" type="ColorRect" parent="."]

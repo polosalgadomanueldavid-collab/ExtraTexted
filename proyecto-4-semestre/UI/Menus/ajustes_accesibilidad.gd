@@ -9,6 +9,7 @@ const BRILLO_MAXIMO := 1.2
 var modo: int = 0
 var intensidad: float = 1.0
 var brillo: float = 1.0
+var balanceo_camara: bool = true
 
 var _pendiente: bool = false
 var _temporizador_guardado: Timer
@@ -36,6 +37,8 @@ func cargar() -> void:
 	modo = clampi(modo_guardado, 0, 3) if modo_guardado is int else 0
 	intensidad = _numero_valido(config.get_value("accesibilidad", "intensidad", 1.0), 0.0, 1.0)
 	brillo = _numero_valido(config.get_value("accesibilidad", "brillo", 1.0), BRILLO_MINIMO, BRILLO_MAXIMO)
+	var balanceo_guardado: Variant = config.get_value("accesibilidad", "balanceo_camara", true)
+	balanceo_camara = balanceo_guardado if balanceo_guardado is bool else true
 	ajustes_cambiados.emit()
 
 
@@ -63,10 +66,18 @@ func establecer_brillo(valor: float) -> void:
 	_notificar_cambio()
 
 
+func establecer_balanceo_camara(valor: bool) -> void:
+	if balanceo_camara == valor:
+		return
+	balanceo_camara = valor
+	_notificar_cambio()
+
+
 func restablecer() -> void:
 	modo = 0
 	intensidad = 1.0
 	brillo = 1.0
+	balanceo_camara = true
 	_notificar_cambio()
 	guardar()
 
@@ -79,6 +90,7 @@ func guardar() -> void:
 	config.set_value("accesibilidad", "modo", modo)
 	config.set_value("accesibilidad", "intensidad", intensidad)
 	config.set_value("accesibilidad", "brillo", brillo)
+	config.set_value("accesibilidad", "balanceo_camara", balanceo_camara)
 	if config.save(ARCHIVO) == OK:
 		_pendiente = false
 	else:

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1100" height="800" viewBox="0 0 1100 800">
+  <defs>
+    <linearGradient id="carton" x2=".13" y2="1"><stop stop-color="#e5ac6a"/><stop offset=".55" stop-color="#e0a15b"/><stop offset="1" stop-color="#ca8c47"/></linearGradient>
+    <radialGradient id="papel" cx=".43" cy=".38" r=".83"><stop stop-color="#f0d5b3"/><stop offset=".74" stop-color="#e5caa8"/><stop offset="1" stop-color="#d9bc97"/></radialGradient>
+    <linearGradient id="bolsillo" x2="0" y2="1"><stop stop-color="#e0a45a"/><stop offset="1" stop-color="#cb8c45"/></linearGradient>
+    <linearGradient id="metal" x2="1" y2=".22"><stop stop-color="#7e949b"/><stop offset=".28" stop-color="#fff8e9"/><stop offset=".55" stop-color="#c1d0d1"/><stop offset="1" stop-color="#748c97"/></linearGradient>
+    <path id="fondo" d="M12 91Q12 61 32 57L46 24Q51 11 71 10L258 8Q276 8 286 23L308 54Q712 49 1054 52 1082 53 1084 82L1087 752Q1087 784 1062 786L38 787Q12 787 12 760Z"/>
+    <path id="clip" d="M999 83l12-44q4-15 18-11 14 4 10 19l-16 60q-4 15-18 12-15-4-11-19l14-52"/>
+  </defs>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <use xlink:href="#fondo" transform="translate(3 6)" fill="#132435" stroke="#132435" stroke-width="10"/>
+    <use xlink:href="#fondo" fill="url(#carton)" stroke="#102b40" stroke-width="6"/>
+    <path d="m32 59 7 0q5 11 17 11l219-2q11 0 15-8l15-5" fill="none" stroke="#b48450" stroke-width="4"/>
+    <path d="m41 55 14-29q4-10 19-10l180-2M315 60q405-5 738-2 17 0 22 18" fill="none" stroke="#ffe0a0" stroke-width="4"/>
+    <path d="M47 103Q201 88 484 87 788 79 1048 86L1059 732 41 733Z" fill="#b18a57"/>
+    <path d="M44 98Q204 84 484 83 793 76 1047 83Q1061 391 1053 724L42 728Q36 416 44 98Z" fill="url(#papel)" stroke="#102d42" stroke-width="3.5"/>
+    <path d="M110 203Q360 191 684 194" fill="none" stroke="#e96e53" stroke-width="12"/>
+    <path d="M16 679h35q16 0 24 24l12 29 929-1 9-28q5-18 21-21l36-2v75q0 27-25 28H39q-24 0-23-25z" fill="url(#bolsillo)" stroke="#a57d4c" stroke-width="3"/>
+    <path d="M19 685h27q14 0 20 15M1047 689l30-2M24 760q4 16 21 16h1011" fill="none" stroke="#f7c67e" stroke-width="4"/>
+    <!-- Ficha de resumen metida en el bolsillo. -->
+    <path d="M83 643H987l36 33v59H84q-11 0-11-13v-66q0-13 10-13Z" fill="#a98c62"/>
+    <path d="M81 638q442 2 906-1l35 32v62H81q-11 0-11-12v-67q0-13 11-14Z" fill="url(#papel)" stroke="#133146" stroke-width="3.5"/>
+    <path d="m986 638 36 32-36-1z" fill="#e6cfa6" stroke="#133146" stroke-width="2.7"/>
+    <!-- Matasellos del despacho. -->
+    <g transform="translate(895 151) rotate(7)" stroke="#e88769" fill="none">
+      <circle r="39" stroke-width="4"/><circle r="33" stroke-width="2"/>
+      <path d="m-17-14 8 2 8-7 8 6 9-2 4 7-3 10q3 10-15 19-18-7-18-17l2-9z" fill="#ed8d6d" stroke="none"/>
+      <path d="M38-9q17 11 37 1t39-2M39 2q19 11 38 2t39-1M38 14q19 10 39 1t39-1" stroke-width="3.5"/>
+    </g>
+    <use xlink:href="#clip" transform="translate(2 4)" fill="none" stroke="#9a8467" stroke-width="12"/>
+    <use xlink:href="#clip" fill="none" stroke="#102d40" stroke-width="12"/>
+    <use xlink:href="#clip" fill="none" stroke="url(#metal)" stroke-width="7"/>
+    <path d="m1016 40q2-8 9-7m-27 72 12-46" fill="none" stroke="#fff5e5" stroke-width="2"/>
+  </g>
+</svg>

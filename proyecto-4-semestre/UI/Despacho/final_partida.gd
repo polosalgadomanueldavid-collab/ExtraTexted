@@ -70,6 +70,8 @@ func presentar(datos: Dictionary) -> void:
 	_cuaderno.hide()
 	_rotulo.text = "DENUNCIA VENCIDA · CALMA 0"
 	var causa: Dictionary = _datos.get("causa", {})
+	if causa.get("terremoto", false):
+		_rotulo.text = "DENUNCIA PERDIDA EN EL TERREMOTO · CALMA 0"
 	_titulo_caso.text = str(causa.get("titulo", "Denuncia sin resolver"))
 	_detalle.text = "Quedó pendiente: %s" % _estaciones(causa.get("pendientes", []))
 	_dialogo.text = ""
@@ -262,7 +264,7 @@ func _llenar_balance() -> void:
 	tarjetas.add_theme_constant_override("v_separation", 10)
 	izq.add_child(tarjetas)
 	_agregar_metrica(tarjetas, str(resueltas.size()), "RESUELTAS", Color("5b9d82"))
-	_agregar_metrica(tarjetas, str(vencidas.size()), "VENCIDAS", CORAL)
+	_agregar_metrica(tarjetas, str(vencidas.size()), "PERDIDAS", CORAL)
 	_agregar_metrica(tarjetas, str(pendientes.size()), "SIN CERRAR", Color("e4ae44"))
 	_agregar_metrica(tarjetas, "%02d:%02d" % [segundos / 60, segundos % 60], "EN TURNO", PETROLEO)
 	izq.add_child(_etiqueta("PUNTOS GANADOS  %d\nSALDO FINAL  %d" % [int(_datos.get("puntos_ganados", 0)), int(_datos.get("saldo", 0))], 19, TINTA, FUENTE_TEXTO))
@@ -283,9 +285,9 @@ func _llenar_balance() -> void:
 
 func _llenar_casos() -> void:
 	_encabezado(0, "Lo que hiciste", "Denuncias resueltas")
-	_encabezado(1, "Lo que venció", "Denuncias sin cerrar a tiempo")
+	_encabezado(1, "Lo que se perdió", "Denuncias vencidas o perdidas en el terremoto")
 	_agregar_casos(_cuerpo(0), _casos("resueltas"), Color("5b9d82"), "No se alcanzó a resolver ninguna denuncia.")
-	_agregar_casos(_cuerpo(1), _casos("vencidas"), CORAL, "Ninguna denuncia venció.")
+	_agregar_casos(_cuerpo(1), _casos("vencidas"), CORAL, "Ninguna denuncia perdida.")
 
 
 func _llenar_estadisticas() -> void:
@@ -296,7 +298,7 @@ func _llenar_estadisticas() -> void:
 	der.add_child(_etiqueta("DENUNCIAS", 20, PETROLEO, FUENTE_TITULOS))
 	var resultados := [
 		{"nombre": "Resueltas", "valor": _casos("resueltas").size(), "color": Color("5b9d82")},
-		{"nombre": "Vencidas", "valor": _casos("vencidas").size(), "color": CORAL},
+		{"nombre": "Perdidas", "valor": _casos("vencidas").size(), "color": CORAL},
 		{"nombre": "Abiertas", "valor": _casos("pendientes").size(), "color": Color("e4ae44")}
 	]
 	var maximo := maxi(1, maxi(_casos("resueltas").size(), maxi(_casos("vencidas").size(), _casos("pendientes").size())))
@@ -345,6 +347,8 @@ func _agregar_casos(padre: VBoxContainer, casos: Array, color: Color, vacio: Str
 		texto.add_theme_constant_override("separation", 3)
 		tarjeta.add_child(texto)
 		texto.add_child(_etiqueta(str(caso.get("titulo", "Denuncia")), 21, PETROLEO, FUENTE_TITULOS))
+		if caso.get("terremoto", false):
+			texto.add_child(_etiqueta("La hoja cayó en una grieta.", 17, CORAL, FUENTE_TEXTO))
 		var hechas: Array = caso.get("completadas", [])
 		var faltantes: Array = caso.get("pendientes", [])
 		if not hechas.is_empty():

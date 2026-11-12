@@ -294,7 +294,7 @@ func _probar_salida_durante_apagon() -> void:
 		_colocar(_postura["cerca"], float(_postura["giro"]))
 		await _pulsar_tecla(KEY_E)
 		_verificar(_jugador.input_locked, "La salida del evento se prueba con una interacción abierta")
-	_escena.set_process(false)
+	_escena.process_mode = Node.PROCESS_MODE_DISABLED
 	_escena.remove_child(_evento)
 	_comprobar_luces()
 	_verificar(not _jugador.input_locked, "Retirar el evento devuelve el control del jugador")

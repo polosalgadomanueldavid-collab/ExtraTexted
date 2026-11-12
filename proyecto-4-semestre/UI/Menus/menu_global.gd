@@ -22,10 +22,12 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES }
 @onready var selector_filtro: OptionButton = %SelectorFiltro
 @onready var control_intensidad: HSlider = %Intensidad
 @onready var control_brillo: HSlider = %Brillo
+@onready var selector_balanceo: OptionButton = %SelectorBalanceo
 @onready var valor_intensidad: Label = %ValorIntensidad
 @onready var valor_brillo: Label = %ValorBrillo
 @onready var filtro_pantalla: ColorRect = %FiltroPantalla
 @onready var margen: MarginContainer = $Interfaz/CapaModal/Margen
+@onready var musica_menu: AudioStreamPlayer = $MusicaMenu
 
 var nombre_partida: String = ""
 var final_de_partida_activo: bool = false
@@ -40,6 +42,7 @@ var _origen_ayuda := OrigenAyuda.MENU
 var _partida_con_tutorial: int = 0
 var _carga_juego_activa := false
 var _oficina_precargada: PackedScene
+var _oficina_en_preparacion: Node
 var _inicio_confirmado := false
 var _momento_confirmacion := 0.0
 
@@ -60,20 +63,25 @@ func _ready() -> void:
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
 	_confinar_foco([panel_ayuda.boton_cerrar])
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
+	panel_clasificacion.volver_expediente.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.nombre_confirmado.connect(_iniciar_partida)
 	selector_filtro.item_selected.connect(AjustesAccesibilidad.establecer_modo)
+	selector_balanceo.item_selected.connect(_cambiar_balanceo)
 	control_intensidad.value_changed.connect(_cambiar_intensidad)
 	control_brillo.value_changed.connect(_cambiar_brillo)
 	AjustesAccesibilidad.ajustes_cambiados.connect(_sincronizar_ajustes)
 	get_tree().scene_changed.connect(_al_cambiar_escena)
 	capa.resized.connect(_ajustar_presentacion)
+	capa.visibility_changed.connect(_actualizar_musica_menu)
 	panel_pausa.visibility_changed.connect(_ajustar_presentacion)
+	panel_pausa.visibility_changed.connect(_actualizar_musica_menu)
 	panel_opciones.visibility_changed.connect(_ajustar_presentacion)
 	panel_accesibilidad.visibility_changed.connect(_ajustar_presentacion)
 	panel_confirmacion.visibility_changed.connect(_ajustar_presentacion)
 	_sincronizar_ajustes()
 	_ajustar_presentacion()
 	_abrir_tutorial_inicial.call_deferred()
+	_actualizar_musica_menu.call_deferred()
 
 
 func _process(_delta: float) -> void:
@@ -95,8 +103,7 @@ func _process(_delta: float) -> void:
 				_carga_juego_activa = false
 				_fallo_carga("No se pudo preparar la oficina.")
 	if _inicio_confirmado and _oficina_precargada != null:
-		if Time.get_ticks_msec() / 1000.0 - _momento_confirmacion >= DURACION_MINIMA_DISCUSION:
-			_entrar_a_oficina()
+		_preparar_entrada()
 
 
 func preparar_oficina() -> void:
@@ -119,6 +126,7 @@ func _fallo_carga(mensaje: String) -> void:
 	_inicio_confirmado = false
 	_cambiando_escena = false
 	_oficina_precargada = null
+	_descartar_oficina_en_preparacion()
 	panel_clasificacion.error_inicio.text = mensaje
 	panel_clasificacion.error_inicio.show()
 	panel_clasificacion.show()
@@ -126,12 +134,33 @@ func _fallo_carga(mensaje: String) -> void:
 	push_error(mensaje)
 
 
-func _entrar_a_oficina() -> void:
+func _preparar_entrada() -> void:
+	if _oficina_en_preparacion == null:
+		_oficina_en_preparacion = _oficina_precargada.instantiate()
+		if _oficina_en_preparacion == null:
+			_fallo_carga("No se pudo crear la oficina.")
+		return
+	if not _oficina_en_preparacion.preparar_lote_de_cajones():
+		return
+	if Time.get_ticks_msec() / 1000.0 - _momento_confirmacion < DURACION_MINIMA_DISCUSION:
+		return
 	_inicio_confirmado = false
-	var error := get_tree().change_scene_to_packed(_oficina_precargada)
-	if error != OK:
+	var error := get_tree().change_scene_to_node(_oficina_en_preparacion)
+	if error == OK:
+		_oficina_en_preparacion = null
+	else:
 		_fallo_carga("No se pudo abrir la oficina.")
 		push_error("Error al abrir la oficina: %s" % error_string(error))
+
+
+func _descartar_oficina_en_preparacion() -> void:
+	if _oficina_en_preparacion != null:
+		_oficina_en_preparacion.free()
+		_oficina_en_preparacion = null
+
+
+func _exit_tree() -> void:
+	_descartar_oficina_en_preparacion()
 
 
 func _ajustar_presentacion() -> void:
@@ -285,12 +314,12 @@ func abrir_clasificacion() -> void:
 	if not _abrir_panel_clasificacion():
 		return
 	var clasificacion := consultar_clasificacion()
-	panel_clasificacion.presentar_tabla(clasificacion.entradas, clasificacion.error)
-	var controles: Array[Control] = [panel_clasificacion.boton_volver]
+	panel_clasificacion.presentar_tabla(clasificacion.entradas, clasificacion.error, _ultimo_nombre)
+	var controles: Array[Control] = [panel_clasificacion.volver_expediente]
 	if panel_clasificacion.tabla.visible:
 		controles.append(panel_clasificacion.lista)
 	_confinar_foco(controles)
-	panel_clasificacion.boton_volver.grab_focus()
+	panel_clasificacion.volver_expediente.grab_focus()
 
 
 func consultar_clasificacion() -> Dictionary:
@@ -324,7 +353,7 @@ func _cerrar_clasificacion() -> void:
 		menu.cancelar_discusion()
 
 
-func _iniciar_partida(nombre: String) -> void:
+func _iniciar_partida(nombre: String, nombre_companero: String = "") -> void:
 	if not panel_clasificacion.formulario.is_visible_in_tree() or _cambiando_escena:
 		return
 	_cambiando_escena = true
@@ -336,7 +365,7 @@ func _iniciar_partida(nombre: String) -> void:
 	capa.hide()
 	var menu := get_tree().current_scene
 	if is_instance_valid(menu) and menu.has_method("confirmar_discusion"):
-		menu.confirmar_discusion()
+		menu.confirmar_discusion(nombre, nombre_companero)
 	preparar_oficina()
 
 
@@ -438,10 +467,28 @@ func _al_cambiar_escena() -> void:
 	_cambiando_escena = false
 	_inicio_confirmado = false
 	_oficina_precargada = null
+	_descartar_oficina_en_preparacion()
 	if not es_escena_de_juego():
 		nombre_partida = ""
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_actualizar_musica_menu()
 	_abrir_tutorial_inicial()
+
+
+func _actualizar_musica_menu() -> void:
+	if not is_instance_valid(musica_menu):
+		return
+	var escena_menu := get_tree().current_scene != null and get_tree().current_scene.scene_file_path == ESCENA_MENU
+	var pausa_visible := es_escena_de_juego() and get_tree().paused and capa.visible
+	if escena_menu or pausa_visible:
+		if not musica_menu.playing:
+			var pista := musica_menu.stream as AudioStreamMP3
+			if pista != null:
+				pista.loop = true
+			musica_menu.play()
+		musica_menu.stream_paused = false
+	elif musica_menu.playing:
+		musica_menu.stream_paused = true
 
 
 func _cambiar_intensidad(valor: float) -> void:
@@ -452,16 +499,21 @@ func _cambiar_brillo(valor: float) -> void:
 	AjustesAccesibilidad.establecer_brillo(valor / 100.0)
 
 
+func _cambiar_balanceo(indice: int) -> void:
+	AjustesAccesibilidad.establecer_balanceo_camara(indice == 0)
+
+
 func _sincronizar_ajustes() -> void:
 	selector_filtro.select(AjustesAccesibilidad.modo)
 	control_intensidad.set_value_no_signal(AjustesAccesibilidad.intensidad * 100.0)
 	control_brillo.set_value_no_signal(AjustesAccesibilidad.brillo * 100.0)
+	selector_balanceo.select(0 if AjustesAccesibilidad.balanceo_camara else 1)
 	control_intensidad.editable = AjustesAccesibilidad.modo != 0
 	control_intensidad.focus_mode = Control.FOCUS_ALL if control_intensidad.editable else Control.FOCUS_NONE
 	var controles: Array[Control] = [selector_filtro]
 	if control_intensidad.editable:
 		controles.append(control_intensidad)
-	controles.append_array([control_brillo, %Restablecer, %VolverAccesibilidad])
+	controles.append_array([control_brillo, selector_balanceo, %Restablecer, %VolverAccesibilidad])
 	_confinar_foco(controles)
 	valor_intensidad.text = "%d %%" % roundi(control_intensidad.value)
 	valor_brillo.text = "%d %%" % roundi(control_brillo.value)
