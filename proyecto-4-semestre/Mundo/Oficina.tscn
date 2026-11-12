@@ -214,7 +214,7 @@ script = ExtResource("18_musica_partida")
 
 [node name="Mesas verticales IZQ" type="Node3D" parent="." unique_id=2135345679]
 
-[node name="Table_017" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=701138884]
+[node name="Table_017" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=701138884 groups=["mesas_incendiables"]]
 transform = Transform3D(-4.3711392e-08, 0, 1.0000001, 0, 1, 0, -1.0000001, 0, -4.3711392e-08, -4.0763245, 0.244, 1.1865406)
 
 [node name="Diseno_Bienestar" parent="Mesas verticales IZQ/Table_017" unique_id=570853907 instance=ExtResource("10_estacion_bienestar")]
@@ -229,7 +229,7 @@ nombre_visible = "Mesa de bienestar"
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales IZQ/Table_017/StaticBody3D" unique_id=1852612389]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_018" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=1166800068]
+[node name="Table_018" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=1166800068 groups=["mesas_incendiables"]]
 transform = Transform3D(0.00076796487, 0, 0.9999999, 0, 1, 0, -0.9999999, 0, 0.00076796487, -4.08377, 0.24400298, 2.5233717)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -238,7 +238,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales IZQ/Table_018/StaticBody3D" unique_id=468194084]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_020" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=1759725993]
+[node name="Table_020" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=1759725993 groups=["mesas_incendiables"]]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -4.0789995, 0.244, 5.2099566)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -247,7 +247,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales IZQ/Table_020/StaticBody3D" unique_id=199367562]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_021" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=1202094656]
+[node name="Table_021" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=1202094656 groups=["mesas_incendiables"]]
 transform = Transform3D(-4.3711392e-08, 0, 1.0000001, 0, 1, 0, -1.0000001, 0, -4.3711392e-08, -4.076304, 0.244, 3.865511)
 
 [node name="Diseno_Verificacion" parent="Mesas verticales IZQ/Table_021" unique_id=371950846 instance=ExtResource("8_estacion1")]
@@ -264,7 +264,7 @@ shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Mesas verticales DER" type="Node3D" parent="." unique_id=163803121]
 
-[node name="Table_016" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=1648485470]
+[node name="Table_016" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=1648485470 groups=["mesas_incendiables"]]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.0526068, 0.244, 1.2132361)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -273,7 +273,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales DER/Table_016/StaticBody3D" unique_id=1482732297]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_019" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=530999587]
+[node name="Table_019" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=530999587 groups=["mesas_incendiables"]]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.072803, 0.2488944, 2.5638404)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -282,7 +282,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales DER/Table_019/StaticBody3D" unique_id=509133263]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_022" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=151028562]
+[node name="Table_022" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=151028562 groups=["mesas_incendiables"]]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.074593, 0.24185519, 5.232287)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -291,7 +291,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas verticales DER/Table_022/StaticBody3D" unique_id=1133376914]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_023" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=313106044]
+[node name="Table_023" type="MeshInstance3D" parent="Mesas verticales DER" unique_id=313106044 groups=["mesas_incendiables"]]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.0343943, 0.244, 3.8741162)
 
 [node name="Diseno_Evidencias_Carpetas" parent="Mesas verticales DER/Table_023" unique_id=1990260373 instance=ExtResource("9_estacion_carpetas")]
@@ -309,7 +309,7 @@ shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Mesas Horizontales UP" type="Node3D" parent="." unique_id=168140342]
 
-[node name="Table_010" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=958608902]
+[node name="Table_010" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=958608902 groups=["mesas_incendiables"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.028, 0.244, 0.243)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -355,7 +355,7 @@ mesh = SubResource("ArrayMesh_edh1j")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales UP/Table_010/Keyboard/StaticBody3D" unique_id=1108295919]
 shape = SubResource("ConcavePolygonShape3D_2jrvt")
 
-[node name="Table_011" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=1115402852]
+[node name="Table_011" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=1115402852 groups=["mesas_incendiables"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3156399, 0.244, 0.24562952)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -364,7 +364,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales UP/Table_011/StaticBody3D" unique_id=1783429937]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_014" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=183828636]
+[node name="Table_014" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=183828636 groups=["mesas_incendiables"]]
 transform = Transform3D(1.2, 0, 0, 0, 1, 0, 0, 0, 1, 1.7947761, 0.24519761, 0.2473183)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -373,7 +373,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales UP/Table_014/StaticBody3D" unique_id=1136179050]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_013" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=2135049942]
+[node name="Table_013" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=2135049942 groups=["mesas_incendiables"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.720399, 0.244, 0.243)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -382,7 +382,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales UP/Table_013/StaticBody3D" unique_id=2111289890]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_012" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=1371234954]
+[node name="Table_012" type="MeshInstance3D" parent="Mesas Horizontales UP" unique_id=1371234954 groups=["mesas_incendiables"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.3769207, 0.244, 0.243)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -393,7 +393,7 @@ shape = SubResource("ConcavePolygonShape3D_11o5b")
 
 [node name="Mesas Horizontales DOWN" type="Node3D" parent="." unique_id=125850846]
 
-[node name="Table_024" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1664126771]
+[node name="Table_024" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1664126771 groups=["mesas_incendiables"]]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -3.720399, 0.244, 6.155522)
 mesh = SubResource("ArrayMesh_qtenm")
 
@@ -402,7 +402,7 @@ mesh = SubResource("ArrayMesh_qtenm")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales DOWN/Table_024/StaticBody3D" unique_id=1276497718]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_025" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1865660780]
+[node name="Table_025" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1865660780 groups=["mesas_incendiables"]]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -2.3803768, 0.244, 6.155522)
 
 [node name="Diseno_Seguridad_Privacidad" parent="Mesas Horizontales DOWN/Table_025" unique_id=2139551146 instance=ExtResource("11_estacion_seguridad")]
@@ -417,7 +417,7 @@ nombre_visible = "Mesa de privacidad"
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Mesas Horizontales DOWN/Table_025/StaticBody3D" unique_id=2057007624]
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_027" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1238765765]
+[node name="Table_027" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1238765765 groups=["mesas_incendiables"]]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.325778, 0.244, 6.155522)
 
 [node name="Diseno_Reportes" parent="Mesas Horizontales DOWN/Table_027" unique_id=776399735 instance=ExtResource("12_estacion_reportes")]
@@ -433,7 +433,7 @@ nombre_visible = "Mesa de reporte"
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06397742, 0.0055775642, -0.01768303)
 shape = SubResource("ConcavePolygonShape3D_11o5b")
 
-[node name="Table_028" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1612726864]
+[node name="Table_028" type="MeshInstance3D" parent="Mesas Horizontales DOWN" unique_id=1612726864 groups=["mesas_incendiables"]]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 1.7090293, 0.24399976, 6.1781178)
 mesh = SubResource("ArrayMesh_qtenm")
 

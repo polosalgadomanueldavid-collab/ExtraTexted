@@ -26,13 +26,14 @@ func _probar() -> void:
 	jugador = oficina.jugador
 	evento = oficina.evento_terremoto
 	grafo = oficina.grafo_piso
-	evento.espera_minima = 1.0
-	evento.espera_maxima = 1.0
 	evento.temblor_actualizado.connect(func(_t: float, valor: float) -> void: intensidad = valor)
 	evento.suelo_roto.connect(func() -> void: instante_rotura = evento.tiempo)
 	evento._azar.seed = 8762
 	oficina.generador_aleatorio.seed = 1414
 	oficina._recibir_denuncia_aleatoria()
+	# Acortar solo la espera de esta prueba; el reloj compartido se cubre aparte.
+	oficina._evento_aleatorio_pendiente = 0
+	oficina.temporizador_eventos.start(1.0)
 	oficina.temporizador_denuncias.stop()
 	oficina.computador.timer_nuevo_problema.stop()
 	var antes: Dictionary = oficina.bloqueos_visuales.duplicate()
@@ -131,8 +132,6 @@ func _probar() -> void:
 		"La hoja suelta que cae pierde su caso por terremoto")
 	_verificar(oficina.papel_actual == null and despacho.calma_operativa == calma - caso.penalidad_calma,
 		"Se descarta la hoja y se aplica una sola pérdida de calma")
-	evento.espera_minima = 120.0
-	evento.espera_maxima = 120.0
 	await _hasta(15.95)
 	_verificar(intensidad == 1.0 and evento.etapa == evento.Etapa.RUPTURA, "La segunda etapa mantiene el temblor fuerte")
 	await _hasta(16.04)

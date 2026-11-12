@@ -1,6 +1,6 @@
 class_name EventoApagon
 extends Node
-## Evento optativo. La escena que lo instancia decide cuándo iniciar el apagón.
+## La partida coordina el apagón con los demás eventos aleatorios.
 
 signal estado_cambiado(nuevo_estado: Estado)
 signal apagon_iniciado(tipo: int)
@@ -12,6 +12,7 @@ const PANEL_CIRCUITOS := preload("res://UI/Apagon/panel_circuitos.gd")
 const TIPOS_DISPONIBLES := PANEL_CIRCUITOS.TIPOS_DISPONIBLES
 const TACO_LUZ := preload("res://Eventos/Apagon/taco_luz.gd")
 const VISION_APAGON := preload("res://Eventos/Apagon/vision_apagon.gdshader")
+const SonidosEventos := preload("res://Eventos/sonidos_eventos.gd")
 const INDICADOR_LUZ := preload("res://UI/Apagon/indicador_luz.gd")
 
 @export var jugador: Player
@@ -27,6 +28,8 @@ var semilla_circuito: int = 0
 var panel: PANEL_CIRCUITOS
 var mascara: ColorRect
 var luz_jugador: OmniLight3D
+var permiso_inicio: Callable
+var sonidos: SonidosEventos
 var indicador_luz: INDICADOR_LUZ
 
 var _azar := RandomNumberGenerator.new()
@@ -42,6 +45,8 @@ func _ready() -> void:
 		set_process(false)
 		return
 	_azar.randomize()
+	sonidos = SonidosEventos.new()
+	add_child(sonidos)
 	_crear_vision()
 	var capa_indicador := CanvasLayer.new()
 	capa_indicador.layer = 25
@@ -82,6 +87,8 @@ func _crear_vision() -> void:
 
 
 func iniciar_apagon() -> bool:
+	if permiso_inicio.is_valid() and not permiso_inicio.call():
+		return false
 	if not is_node_ready() or mascara == null or estado != Estado.RESTAURADO:
 		return false
 	if get_tree().paused or jugador.input_locked:
@@ -97,6 +104,7 @@ func iniciar_apagon() -> bool:
 	luz_jugador.show()
 	_actualizar_vision()
 	_cambiar_estado(Estado.APAGADO)
+	sonidos.iniciar_apagon()
 	apagon_iniciado.emit(tipo_circuito)
 	return true
 
@@ -163,6 +171,7 @@ func _al_resolver_circuito() -> void:
 	mascara.hide()
 	luz_jugador.hide()
 	taco.establecer_apagon(false)
+	sonidos.detener()
 	_cambiar_estado(Estado.RESTAURADO)
 	panel.cerrar()
 	luz_restaurada.emit()

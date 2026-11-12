@@ -10,7 +10,7 @@ Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) p
 | `proyecto-4-semestre/UI` | Menú, computador, despacho y sus interfaces. |
 | `proyecto-4-semestre/Objetos` | Objetos interactivos del mundo, incluido el computador activo. |
 | `proyecto-4-semestre/Personajes` | Escenas, scripts y modelos de personajes. |
-| `proyecto-4-semestre/Eventos` | Apagón y bloqueos temporales. |
+| `proyecto-4-semestre/Eventos` | Apagón, terremoto, incendio y bloqueos temporales. |
 | `proyecto-4-semestre/Scripts` | Lógica agrupada por computador, despacho, estructuras, mundo y partida. |
 | `proyecto-4-semestre/Casos` | Datos de las denuncias y los casos. |
 | `proyecto-4-semestre/MarcadoresEstaciones` | Marcadores visuales de las estaciones. |
@@ -20,3 +20,5 @@ Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) p
 | `arte-fuente`, `muestras_audio`, `herramientas` | Archivos editables, muestras y herramientas fuera del proyecto de Godot. |
 
 Las rutas `res://` empiezan en `proyecto-4-semestre`. Al mover un recurso, actualiza sus referencias y conserva su archivo `.uid` o `.import` cuando exista.
+
+El evento [INCENDIO](proyecto-4-semestre/Eventos/Incendio/README.md) inutiliza las estaciones y las mesas del perímetro hasta apagarlas. Recoge el extintor con **E** en descanso y mantén **E** mirando cada fuego. A los diez segundos, los cajones se carbonizan con una animación y quedan como bloqueos de ceniza durante el evento. Al apagar la última mesa, se retiran las cenizas y vuelven los cajones normales y sus cambios periódicos. Para probarlo directamente, abre `Pruebas/Incendio/PruebaIncendio.tscn` y pulsa **F6**.

@@ -1,6 +1,6 @@
 extends Node3D
 
-signal inicio_solicitado
+signal iniciado
 signal temblor_actualizado(tiempo: float, intensidad: float)
 signal suelo_roto
 signal jugador_caido(jugador: Player)
@@ -9,6 +9,7 @@ signal terminado
 enum Etapa { INACTIVO, AVISO, RUPTURA, RECUPERACION }
 
 const Grieta := preload("res://Eventos/Terremoto/grieta.gd")
+const SonidosEventos := preload("res://Eventos/sonidos_eventos.gd")
 const ZONA_MESAS := Rect2(-3.72, 1.04, 5.42, 4.72)
 const SEGUNDOS_POR_ETAPA := 8.0
 const DURACION := 3.0 * SEGUNDOS_POR_ETAPA
@@ -18,8 +19,9 @@ const ANCHOS: Array[float] = [1.33, 0.79, 0.73, 0.69]
 const LARGOS: Array[float] = [2.18, 1.70, 1.42, 1.15]
 
 @export var suelo: CSGBox3D
-@export_range(5.0, 120.0, 1.0) var espera_minima := 25.0
-@export_range(5.0, 120.0, 1.0) var espera_maxima := 40.0
+
+var permiso_inicio: Callable
+var sonidos: SonidosEventos
 
 var etapa := Etapa.INACTIVO
 var activo: bool:
@@ -33,7 +35,6 @@ var _trazado: Array[Grieta] = []
 var _celdas_rotas: Dictionary[Vector2i, bool] = {}
 var _celdas_caidas: Dictionary[Vector2i, Grieta] = {}
 var _azar := RandomNumberGenerator.new()
-var _reloj: Timer
 var _cerrando := false
 var _grafo: GrafoPiso
 var _jugador: Player
@@ -46,26 +47,15 @@ var _jugador_en_grieta := false
 
 
 func _ready() -> void:
-	_reloj = Timer.new()
-	_reloj.one_shot = true
-	_reloj.process_callback = Timer.TIMER_PROCESS_PHYSICS
-	add_child(_reloj)
-	_reloj.timeout.connect(_solicitar_inicio)
+	sonidos = SonidosEventos.new()
+	add_child(sonidos)
 	_altura = suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y
 	set_physics_process(false)
 
 
-func programar() -> void:
-	_reloj.start(_azar.randf_range(espera_minima, maxf(espera_maxima, espera_minima)))
-
-
-func _solicitar_inicio() -> void:
-	# Si sigue en la zona segura o en una interacción, consultar de nuevo.
-	_reloj.start(2.0)
-	inicio_solicitado.emit()
-
-
 func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoja: Rect2) -> bool:
+	if permiso_inicio.is_valid() and not permiso_inicio.call():
+		return false
 	var celda_jugador := grafo.posicion_a_celda(jugador.global_position)
 	if activo or get_tree().paused or not grafo.es_celda_valida(celda_jugador) or grafo.es_zona_segura(celda_jugador):
 		return false
@@ -103,17 +93,19 @@ func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoj
 			return false
 	for grieta in _trazado:
 		add_child(grieta)
-	_reloj.stop()
 	etapa = Etapa.AVISO
 	tiempo = 0.0
 	_cerrando = false
 	_jugador_en_grieta = false
 	set_physics_process(true)
+	sonidos.iniciar_terremoto()
+	iniciado.emit()
 	return true
 
 
 func _abrir_suelo() -> void:
 	etapa = Etapa.RUPTURA
+	sonidos.romper_suelo()
 	grietas.assign(_trazado)
 	_trazado.clear()
 	_grafo.grietas.assign(_celdas_rotas)
@@ -230,6 +222,7 @@ func _physics_process(delta: float) -> void:
 		intensidad = 1.0 - smoothstep(SEGUNDOS_POR_ETAPA * 2.0, DURACION, tiempo)
 		if not _cerrando and tiempo + 0.00001 >= DURACION - TIEMPO_CIERRE:
 			_cerrando = true
+			sonidos.cerrar_suelo()
 			for grieta in grietas:
 				grieta.animar_cierre()
 	# Detectar la entrada antes del rescate o del cierre del suelo.
@@ -242,7 +235,9 @@ func _physics_process(delta: float) -> void:
 		temblor_actualizado.emit(DURACION, 0.0)
 		_cerrar()
 		return
-	temblor_actualizado.emit(tiempo, intensidad * _peso_en_zona_de_juego())
+	var intensidad_local := intensidad * _peso_en_zona_de_juego()
+	sonidos.actualizar_terremoto(intensidad, intensidad_local)
+	temblor_actualizado.emit(tiempo, intensidad_local)
 	if etapa == Etapa.AVISO:
 		return
 	if _jugador.global_position.y < _altura - 0.55:
@@ -295,6 +290,6 @@ func _cerrar() -> void:
 	_grafo.grietas.clear()
 	_grafo.construir_adyacencia()
 	set_physics_process(false)
+	sonidos.detener()
 	etapa = Etapa.INACTIVO
 	terminado.emit()
-	programar()

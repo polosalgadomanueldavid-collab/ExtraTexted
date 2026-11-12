@@ -53,6 +53,8 @@ var _animation_names: Dictionary = {}
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 var papel_en_mano: PapelDenuncia = null
 var gestos: AnimacionesInteraccion
+var control_incendio: Node
+var usando_extintor := false
 var _efecto_gesto: Callable
 var _reloj_reposo: float = 0.0
 var _reposo_disponible: bool = false
@@ -116,13 +118,13 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 
 	var input_direction := Vector2.ZERO
-	if not input_locked and not realizando_gesto():
+	if not input_locked and not realizando_gesto() and not usando_extintor:
 		input_direction = Input.get_vector(LEFT, RIGHT, FORWARD, BACK)
 	var direction := _camera_relative_direction(input_direction)
 	var moving := direction.length_squared() > 0.001
-	var running := not input_locked and not realizando_gesto() and Input.is_action_pressed(RUN)
+	var running := not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_pressed(RUN)
 
-	if not input_locked and not realizando_gesto() and Input.is_action_just_pressed(JUMP) and is_on_floor():
+	if not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
 		for borde in get_tree().get_nodes_in_group(&"bordes_grietas_saltables"):
@@ -213,6 +215,10 @@ func reproducir_expresion(expresion: StringName) -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	if event.is_action_released(interaction_action) and is_instance_valid(control_incendio):
+		control_incendio.soltar()
+	if usando_extintor:
+		return
 	if input_locked or realizando_gesto():
 		return
 	if event.is_action_pressed(KAMEHAMEHA) and not (event is InputEventKey and event.echo):
@@ -281,6 +287,10 @@ func obtener_objetivo_interaccion() -> Node3D:
 		return null
 	if get_tree().paused:
 		return null
+	if is_instance_valid(control_incendio):
+		var fuego: Node3D = control_incendio.obtener_objetivo(self)
+		if fuego != null:
+			return fuego
 	if papel_en_mano == null:
 		var papel_cercano := _buscar_papel_cercano()
 		if papel_cercano != null:
@@ -341,6 +351,8 @@ func realizando_gesto() -> bool:
 
 
 func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: Node3D = null, segundos: float = 0.0) -> bool:
+	if usando_extintor:
+		return false
 	var beber_sentado := tipo == &"beber" and _descanso_sentado
 	if (input_locked and not beber_sentado) or realizando_gesto() or (not is_on_floor() and not beber_sentado):
 		return false
@@ -380,7 +392,7 @@ func play_idle_variant(tipo: StringName) -> bool:
 func _update_idle_variants(delta: float) -> void:
 	if not is_instance_valid(gestos):
 		return
-	var disponible := current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active
+	var disponible := current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not usando_extintor
 	if not disponible:
 		if _reposo_disponible:
 			_cancelar_reposo()

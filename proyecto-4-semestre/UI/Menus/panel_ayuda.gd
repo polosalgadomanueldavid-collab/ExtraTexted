@@ -4,6 +4,7 @@ const CREMA := Color("fff1d8")
 const PETROLEO := Color("173b50")
 const TAMANO_EXPEDIENTE := 1560.0
 const DemostracionCircuitos := preload("res://UI/Apagon/demostracion_circuitos.gd")
+const ManualControles := preload("res://UI/Menus/manual_controles.gd")
 const PASOS_APAGON := [
 	["Sigue el rayo", "Busca «Activar luz» en la zona de descanso.",
 		preload("res://UI/Menus/ArtePiloto/apagon_rayo.webp")],
@@ -32,18 +33,6 @@ const PASOS := [
 		preload("res://UI/Menus/ArtePiloto/tutorial_protocolo.webp"),
 	],
 ]
-const CONTROLES := [
-	["W A S D  /  ↑ ← ↓ →", "Moverse por la oficina"],
-	["Mayús", "Correr mientras te mueves"],
-	["Espacio", "Saltar"],
-	["C  /  1 · 2 · 3", "Cámara: actual, frontal o God (desde arriba)"],
-	["E", "Imprimir, usar estación, lanzar o recoger la hoja"],
-	["Mantener Tab", "Ver la clasificación durante la partida"],
-	["Esc", "Pausar o volver a la pantalla anterior"],
-	["Tab  /  Mayús + Tab", "Recorrer las opciones del menú"],
-	["Enter  /  Espacio", "Confirmar una opción del menú"],
-	["Mantener G", "Menú de emotes (en desarrollo)"],
-]
 
 @export var fuente_texto: Font
 @export var fuente_enfasis: Font
@@ -56,7 +45,8 @@ const CONTROLES := [
 @onready var titulo: Label = %Titulo
 @onready var seccion: Label = %Seccion
 @onready var tutorial: HBoxContainer = %Tutorial
-@onready var leyenda: VBoxContainer = %Leyenda
+@onready var leyenda: ManualControles = %Leyenda
+@onready var pagina_manual: Label = %PaginaManual
 @onready var tutorial_apagon: HBoxContainer = %TutorialApagon
 @onready var boton_cerrar: Button = %CerrarAyuda
 @onready var pista: Label = %Pista
@@ -68,7 +58,7 @@ func _ready() -> void:
 	_crear_pasos(tutorial, PASOS)
 	_crear_pasos(tutorial_apagon, PASOS_APAGON)
 	_crear_demostracion_circuitos()
-	_crear_controles()
+	leyenda.pagina_cambiada.connect(_actualizar_pagina)
 
 
 func _draw() -> void:
@@ -120,16 +110,16 @@ func _crear_encabezado_paso(columna: VBoxContainer, numero: int, texto: String) 
 	encabezado.add_child(etiqueta)
 
 
-func _crear_controles() -> void:
-	for control: Array in CONTROLES:
-		var fila := HBoxContainer.new()
-		fila.add_theme_constant_override("separation", 20)
-		leyenda.add_child(fila)
-		fila.add_child(_crear_distintivo(control[0], estilo_tecla, Vector2(265, 45)))
-		var accion := _crear_texto(control[1], fuente_texto, 27, CREMA)
-		accion.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		accion.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fila.add_child(accion)
+func controles_foco() -> Array[Control]:
+	var controles: Array[Control] = []
+	if leyenda.visible:
+		controles.append_array(leyenda.pestanas)
+	controles.append(boton_cerrar)
+	return controles
+
+
+func _actualizar_pagina(indice: int) -> void:
+	pagina_manual.text = "%s · %d / 3" % [ManualControles.CATEGORIAS[indice].to_upper(), indice + 1]
 
 
 func presentar(es_leyenda: bool, es_inicio: bool) -> void:
@@ -140,9 +130,22 @@ func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 	titulo.text = "CONTROLES" if es_leyenda else "TU PRIMER TURNO"
 	tutorial.visible = not es_leyenda
 	leyenda.visible = es_leyenda
+	pagina_manual.visible = es_leyenda
 	tutorial_apagon.hide()
 	boton_cerrar.text = "EMPEZAR TURNO" if es_inicio else "VOLVER"
 	pista.text = "E · Interactuar, recoger o lanzar la hoja"
+	boton_cerrar.custom_minimum_size = Vector2(350, 80) if es_leyenda else Vector2(340, 76)
+	if es_leyenda:
+		seccion.text = "MANUAL DEL AGENTE"
+		var panel := StyleBoxFlat.new()
+		panel.bg_color = PETROLEO
+		panel.set_corner_radius_all(24)
+		panel.content_margin_left = 32
+		panel.content_margin_right = 32
+		panel.content_margin_top = 32
+		panel.content_margin_bottom = 24
+		add_theme_stylebox_override("panel", panel)
+		leyenda.seleccionar(0)
 
 
 func presentar_tutorial_apagon() -> void:
@@ -153,7 +156,9 @@ func presentar_tutorial_apagon() -> void:
 	titulo.text = "RESTABLECE LA LUZ"
 	tutorial.hide()
 	leyenda.hide()
+	pagina_manual.hide()
 	tutorial_apagon.show()
+	boton_cerrar.custom_minimum_size = Vector2(340, 76)
 	boton_cerrar.text = "ENTENDIDO"
 	pista.text = "Repara el circuito para recuperar la luz."
 

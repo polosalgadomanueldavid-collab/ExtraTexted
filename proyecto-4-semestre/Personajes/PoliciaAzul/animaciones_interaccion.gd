@@ -54,6 +54,8 @@ var _peso_reposo: float = 0.0
 var _saliendo_reposo: bool = false
 var sentado: bool = false
 var lleva_taza: bool = false
+var rociando_extintor := false
+var _peso_extintor := 0.0
 var _peso_sentado: float = 0.0
 var _peso_taza: float = 0.0
 
@@ -127,6 +129,7 @@ func _process(delta: float) -> void:
 	_reloj += delta
 	_peso_sentado = move_toward(_peso_sentado, float(sentado), delta * 5.0)
 	_peso_taza = move_toward(_peso_taza, float(lleva_taza), delta * 7.0)
+	_peso_extintor = move_toward(_peso_extintor, float(rociando_extintor), delta * 8.0)
 	var lleva: bool = is_instance_valid(jugador.papel_en_mano)
 	_peso_papel = move_toward(_peso_papel, 1.0 if lleva else 0.0, delta * 7.0)
 	if reposo_especial != &"":
@@ -184,6 +187,8 @@ func _process_modification() -> void:
 	_llave.visible = gesto == &"reparar"
 	if gesto != &"":
 		_aplicar_gesto(tiempo / duracion)
+	if _peso_extintor > 0.0:
+		_aplicar_extintor(_peso_extintor)
 	_actualizar_energia()
 	var esqueleto := get_skeleton()
 	mano_izquierda.transform = esqueleto.get_bone_global_pose(_huesos["hand.L"])
@@ -365,6 +370,22 @@ func _aplicar_gesto(t: float) -> void:
 			if extender > 0.01:
 				_apuntar_mano(esqueleto.to_global(mano_objetivo), extender, "R")
 			_pose("hand.R", Vector3(0.0, 0.0, 0.08), extender)
+
+
+func _aplicar_extintor(peso: float) -> void:
+	# Izquierda en el asa; derecha dirige la boquilla con un barrido corto.
+	var barrido := sin(_reloj * 3.8) * 0.10
+	_pose("upper_arm.L", Vector3(-0.48, 0.0, -0.16), peso)
+	_pose("forearm.L", Vector3(-1.12, 0.0, 0.0), peso)
+	_pose("hand.L", Vector3.ZERO, peso)
+	_pose("upper_arm.R", Vector3(-1.0, barrido, 0.12), peso)
+	_pose("forearm.R", Vector3(-0.48, 0.0, 0.0), peso)
+	_pose("hand.R", Vector3(0.0, barrido, 0.0), peso)
+	_pose("thigh.L", Vector3(-0.14, 0.0, -0.05), peso)
+	_pose("shin.L", Vector3(0.22, 0.0, 0.0), peso)
+	_pose("thigh.R", Vector3(0.10, 0.0, 0.05), peso)
+	_sumar("spine", Vector3(-0.09 + sin(_reloj * 19.0) * 0.012, barrido * 0.3, 0.0) * peso)
+	_sumar("head", Vector3(0.10, -barrido * 0.3, 0.0) * peso)
 
 
 func _sostener(peso: float) -> void:
