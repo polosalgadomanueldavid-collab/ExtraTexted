@@ -17,6 +17,8 @@ func _probar() -> void:
 	current_scene = oficina
 	await _fisicas(6)
 	menu.cerrar_ayuda()
+	# El tutorial automático se comprueba en la integración; aquí medir el reloj.
+	oficina._tutorial_apagon_mostrado = true
 	oficina.generador_aleatorio.seed = 1414
 	oficina.evento_terremoto._azar.seed = 8762
 	oficina._recibir_denuncia_aleatoria()
