@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="200" viewBox="0 0 160 200">
+<path d="M24 8 136 8 151 22 145 178 133 192 27 192 14 178 9 22Z" fill="#4c211b" stroke="#281713" stroke-width="5"/>
+<path d="M24 12 136 12 144 22 139 39 21 39 16 22Z" fill="#d7a65e"/>
+<path d="M20 44H140L136 158H24Z" fill="#713124"/>
+<path d="M20 44H140L136 67H24Z" fill="#b96a3e"/>
+<path d="M24 151H136L140 173 133 188H27L20 173Z" fill="#d7a65e"/>
+<path d="M35 83 51 64 68 79 83 59 103 82 119 68 132 86 124 122 106 136 51 132 34 112Z" fill="#3b1b19"/>
+<path d="M48 107 63 91 77 105 94 83 111 107 101 123 72 128Z" fill="#e2b875"/>
+<text x="80" y="58" text-anchor="middle" font-family="Verdana,sans-serif" font-size="13" font-weight="700" fill="#fff0cf">CACAO</text>
+<text x="80" y="171" text-anchor="middle" font-family="Verdana,sans-serif" font-size="18" font-weight="700" fill="#4c211b">CHOCOLATE</text>
+</svg>

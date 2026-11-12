@@ -1,0 +1,37 @@
+[gd_scene format=3 uid="uid://b7fptcwvw2hdj"]
+
+[ext_resource type="PackedScene" uid="uid://bteu563oq6aey" path="res://Furniture Pack/Maquina expendedora/MaquinaExpendedora.glb" id="1_modelo"]
+[ext_resource type="Texture2D" uid="uid://c6f8pttxu4k14" path="res://Objetos/ZonaDescanso/Arte/barra_chocolate.svg" id="3_chocolate"]
+[ext_resource type="PackedScene" path="res://Objetos/ZonaDescanso/Arte/bolsa_papas_curva.glb" id="4_papas_curva"]
+
+[sub_resource type="StandardMaterial3D" id="MaterialChocolate"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_texture = ExtResource("3_chocolate")
+texture_filter = 2
+
+[sub_resource type="QuadMesh" id="FrenteChocolateMesh"]
+size = Vector2(0.18, 0.225)
+
+[sub_resource type="BoxShape3D" id="CajaMaquina"]
+size = Vector3(1.05, 1.9, 0.84)
+
+[node name="MaquinaExpendedora" type="StaticBody3D" unique_id=542444370]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0, 0)
+
+[node name="Modelo" parent="." unique_id=2072050100 instance=ExtResource("1_modelo")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+
+[node name="FrentePapasCurvo" parent="Modelo" unique_id=423600484 instance=ExtResource("4_papas_curva")]
+transform = Transform3D(1, 1.3596379e-08, 2.1683526e-09, -1.3596379e-08, 0.9503939, 0.3110489, 2.168349e-09, -0.3110489, 0.9503939, -0.24, -0.045914233, 0.18352078)
+
+[node name="FrenteChocolate" type="MeshInstance3D" parent="Modelo" unique_id=1361929379]
+transform = Transform3D(1, 2.118217e-08, 2.9016256e-09, -1.4572336e-08, 1.3704337, 0.38684666, 2.5005562e-09, -0.48459157, 1.0940093, 0.07116442, 0.5507011, 0.11231983)
+material_override = SubResource("MaterialChocolate")
+cast_shadow = 0
+mesh = SubResource("FrenteChocolateMesh")
+
+[node name="Colision" type="CollisionShape3D" parent="." unique_id=2136807008 groups=["obstaculos_navegacion"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("CajaMaquina")

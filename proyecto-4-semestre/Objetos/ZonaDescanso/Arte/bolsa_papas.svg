@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<defs><linearGradient id="bolsa" x1="0" y1="0" x2="0.9" y2="1"><stop stop-color="#ffe27a"/><stop offset=".48" stop-color="#f4b932"/><stop offset="1" stop-color="#dc7a21"/></linearGradient></defs>
+<path d="M47 18C70 8 186 8 209 18C235 37 219 62 231 91C243 122 220 152 232 181C243 218 221 247 225 275C204 302 53 302 31 275C37 246 13 217 23 185C33 153 13 123 26 92C38 62 15 39 47 18Z" fill="#9e4a1d"/>
+<path d="M48 19C73 12 183 12 208 19C229 38 216 61 226 92C238 122 216 151 227 182C237 217 217 245 220 271C200 293 57 293 36 271C40 245 19 218 29 185C38 153 19 124 31 93C42 63 23 41 48 19Z" fill="url(#bolsa)" stroke="#ffe39a" stroke-width="4"/>
+<path d="M34 48C83 58 173 58 222 48L224 73C174 83 82 83 32 73Z" fill="#d9432e"/>
+<path d="M30 242C82 230 174 230 225 242L221 270C171 281 83 281 35 269Z" fill="#c93228"/>
+<path d="M51 94C88 105 168 104 207 94L203 211C163 222 91 223 53 211Z" fill="#f8e6ae" stroke="#cf8b2a" stroke-width="3"/>
+<path d="M67 144 88 112 108 145 99 190 79 199Z" fill="#e4a83e" stroke="#9a5a22" stroke-width="4"/>
+<path d="M107 132 130 106 151 139 142 190 119 197Z" fill="#f0c65e" stroke="#9a5a22" stroke-width="4"/>
+<path d="M145 147 168 116 188 148 180 195 157 201Z" fill="#e6ad43" stroke="#9a5a22" stroke-width="4"/>
+</svg>

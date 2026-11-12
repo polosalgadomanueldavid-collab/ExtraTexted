@@ -8,6 +8,7 @@
 [ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/SofaRetorno.res" id="6_24wbo"]
 [ext_resource type="Script" path="res://Objetos/ZonaDescanso/zona_descanso.gd" id="7_control"]
 [ext_resource type="Script" path="res://Objetos/ZonaDescanso/interaccion_descanso.gd" id="8_interaccion"]
+[ext_resource type="PackedScene" path="res://Objetos/ZonaDescanso/MaquinaExpendedora.tscn" id="9_expendedora"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_v2r1e"]
 size = Vector3(1.0079997, 0.525, 0.525)
@@ -70,6 +71,8 @@ shape = SubResource("BoxShape3D_fifdd")
 
 [node name="EspacioExpendedora" type="Marker3D" parent="." unique_id=1105838741]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.05, 0, 9.2)
+
+[node name="MaquinaExpendedora" parent="EspacioExpendedora" instance=ExtResource("9_expendedora")]
 
 [node name="AccesoDescanso" type="Marker3D" parent="." groups=["accesos_navegacion"]]
 position = Vector3(-2.5, 0, 8.7)
