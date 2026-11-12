@@ -5,7 +5,7 @@ class_name Player
 
 signal animation_state_changed(animation: StringName)
 signal reset_performed
-# El futuro panel puede abrirse al mantener G y elegir el emote al soltarla.
+# Ruleta accesible con G; la selección del poder cierra el panel y dispara el gesto.
 signal emote_menu_requested
 signal emote_menu_finished(cancelled: bool)
 
@@ -19,8 +19,8 @@ const EMOTE_MENU := &"policia_menu_emotes"
 const KAMEHAMEHA := &"policia_kamehameha"
 const GENKIDAMA := &"policia_genkidama"
 const RASENGAN := &"policia_rasengan"
-const EMOTE_HOLD_SECONDS := 0.3
 const AnimacionesInteraccion := preload("res://Personajes/PoliciaAzul/animaciones_interaccion.gd")
+const EscenaRuletaEmotes := preload("res://UI/Menus/ruleta_emotes.gd")
 
 @export_category("Movimiento")
 @export var walk_speed: float = 2.0
@@ -46,8 +46,8 @@ var current_animation: StringName = &""
 var _spawn_transform: Transform3D
 var _spawn_visual_rotation: Vector3
 var _wave_remaining: float = 0.0
-var _emote_hold_remaining: float = 0.0
 var _emote_menu_active: bool = false
+var _ruleta_emotes: RuletaEmotes
 var _animation_names: Dictionary = {}
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 var papel_en_mano: PapelDenuncia = null
@@ -76,6 +76,7 @@ func _ready() -> void:
 	_spawn_transform = global_transform
 	_spawn_visual_rotation = visual.rotation
 	_register_inputs()
+	_crear_ruleta_emotes()
 	animation_player = $Visual/Modelo.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if animation_player == null:
 		push_warning("PoliciaAzul: el modelo necesita un AnimationPlayer.")
@@ -108,20 +109,19 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		sonido_pasos.detener()
 		return
-	_update_emote_hold(delta)
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	elif velocity.y < 0.0:
 		velocity.y = 0.0
 
 	var input_direction := Vector2.ZERO
-	if not input_locked and not realizando_gesto():
+	if not input_locked and not realizando_gesto() and not _emote_menu_active:
 		input_direction = Input.get_vector(LEFT, RIGHT, FORWARD, BACK)
 	var direction := _camera_relative_direction(input_direction)
 	var moving := direction.length_squared() > 0.001
-	var running := not input_locked and not realizando_gesto() and Input.is_action_pressed(RUN)
+	var running := not input_locked and not realizando_gesto() and not _emote_menu_active and Input.is_action_pressed(RUN)
 
-	if not input_locked and not realizando_gesto() and Input.is_action_just_pressed(JUMP) and is_on_floor():
+	if not input_locked and not realizando_gesto() and not _emote_menu_active and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
 		reproducir_expresion(&"esfuerzo")
@@ -208,7 +208,21 @@ func reproducir_expresion(expresion: StringName) -> bool:
 
 
 func _input(event: InputEvent) -> void:
-	if input_locked or realizando_gesto():
+	if event.is_action(EMOTE_MENU):
+		if event.is_action_pressed(EMOTE_MENU) and not (event is InputEventKey and event.echo):
+			if _emote_menu_active:
+				_finish_emote_menu(true)
+			elif not input_locked and not realizando_gesto() and not get_tree().paused:
+				_emote_menu_active = true
+				_ruleta_emotes.abrir(is_instance_valid(gestos) and gestos.aura_persistente_activada)
+				emote_menu_requested.emit()
+			get_viewport().set_input_as_handled()
+		return
+	if _emote_menu_active and event.is_action_pressed("ui_cancel"):
+		_finish_emote_menu(true)
+		get_viewport().set_input_as_handled()
+		return
+	if input_locked or realizando_gesto() or _emote_menu_active:
 		return
 	if event.is_action_pressed(KAMEHAMEHA) and not (event is InputEventKey and event.echo):
 		get_viewport().set_input_as_handled()
@@ -221,12 +235,6 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(RASENGAN) and not (event is InputEventKey and event.echo):
 		get_viewport().set_input_as_handled()
 		ejecutar_gesto(&"rasengan")
-		return
-	if event.is_action(EMOTE_MENU):
-		if event.is_action_released(EMOTE_MENU):
-			_finish_emote_menu(false)
-		elif event.is_action_pressed(EMOTE_MENU) and not input_locked and not _emote_menu_active:
-			_emote_hold_remaining = EMOTE_HOLD_SECONDS
 		return
 	if not event.is_action_pressed(interaction_action):
 		return
@@ -253,21 +261,33 @@ func _notification(what: int) -> void:
 		_finish_emote_menu(true)
 
 
-func _update_emote_hold(delta: float) -> void:
-	if _emote_hold_remaining <= 0.0:
-		return
-	_emote_hold_remaining = maxf(0.0, _emote_hold_remaining - delta)
-	if is_zero_approx(_emote_hold_remaining):
-		_emote_hold_remaining = 0.0
-		_emote_menu_active = true
-		emote_menu_requested.emit()
-
-
 func _finish_emote_menu(cancelled: bool) -> void:
-	_emote_hold_remaining = 0.0
 	if _emote_menu_active:
 		_emote_menu_active = false
+		_ruleta_emotes.cerrar()
 		emote_menu_finished.emit(cancelled)
+
+
+func _crear_ruleta_emotes() -> void:
+	var capa := CanvasLayer.new()
+	capa.name = "CapaRuletaEmotes"
+	capa.layer = 90
+	add_child(capa)
+	_ruleta_emotes = EscenaRuletaEmotes.new() as RuletaEmotes
+	_ruleta_emotes.name = "RuletaEmotes"
+	capa.add_child(_ruleta_emotes)
+	_ruleta_emotes.emote_seleccionado.connect(_seleccionar_emote)
+
+
+func _seleccionar_emote(tipo: StringName) -> void:
+	if not _emote_menu_active:
+		return
+	_finish_emote_menu(false)
+	if tipo == &"aura_persistente":
+		if is_instance_valid(gestos):
+			gestos.alternar_aura_persistente()
+	elif tipo in [&"kamehameha", &"genkidama", &"rasengan", &"explosion_final"]:
+		ejecutar_gesto(tipo)
 
 
 func obtener_objetivo_interaccion() -> Node3D:

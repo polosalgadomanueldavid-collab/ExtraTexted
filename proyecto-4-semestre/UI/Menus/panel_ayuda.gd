@@ -26,12 +26,13 @@ const CONTROLES := [
 	["Mayús", "Correr mientras te mueves"],
 	["Espacio", "Saltar"],
 	["C  /  1 · 2 · 3", "Cámara: actual, frontal o God (desde arriba)"],
+	["F5", "Alternar cámara libre; ratón mira, WASD mueve, Espacio/Ctrl sube o baja"],
 	["E", "Imprimir, usar estación, lanzar o recoger la hoja"],
 	["Mantener Tab", "Ver la clasificación durante la partida"],
 	["Esc", "Pausar o volver a la pantalla anterior"],
 	["Tab  /  Mayús + Tab", "Recorrer las opciones del menú"],
 	["Enter  /  Espacio", "Confirmar una opción del menú"],
-	["Mantener G", "Menú de emotes (en desarrollo)"],
+	["G", "Abrir la ruleta; el emote AURA alterna las llamas y el giro de cámara"],
 ]
 
 @export var fuente_texto: Font
