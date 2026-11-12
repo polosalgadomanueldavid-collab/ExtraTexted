@@ -9,6 +9,7 @@ signal reset_performed
 signal emote_menu_requested
 signal emote_menu_finished(cancelled: bool)
 signal emote_rechazado(mensaje: String)
+signal brazada_agua(lado: String)
 
 const LEFT := &"policia_prueba_izquierda"
 const RIGHT := &"policia_prueba_derecha"
@@ -59,7 +60,11 @@ var control_inundacion: Node
 var nadando := false
 var nivel_agua := -INF
 const FACTOR_NADO := 0.55
-var _reloj_nado := 0.0
+var fase_nado := 0.0
+var peso_nado := 0.0
+var avance_nado := 0.0
+var giro_nado := 0.0
+var _rapidez_real := 0.0
 var _pose_modelo := Transform3D.IDENTITY
 var usando_extintor := false
 var _efecto_gesto: Callable
@@ -164,6 +169,7 @@ func _physics_process(delta: float) -> void:
 	var posicion_anterior := global_position
 	move_and_slide()
 	var desplazamiento := Vector2(global_position.x - posicion_anterior.x, global_position.z - posicion_anterior.z).length()
+	_rapidez_real = desplazamiento / maxf(delta, 0.0001)
 	# El desplazamiento real evita seguir pisando al empujar una pared.
 	var caminando := not nadando and is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
 	sonido_pasos.actualizar(delta, caminando, running)
@@ -194,7 +200,7 @@ func _camera_relative_direction(input_direction: Vector2) -> Vector3:
 
 func _update_animation(moving: bool, running: bool) -> void:
 	if nadando:
-		_play_animation(&"swim" if moving and not realizando_gesto() else &"swim_idle")
+		_play_animation(&"swim" if _rapidez_real > 0.1 and not realizando_gesto() else &"swim_idle")
 	elif not is_on_floor():
 		_play_animation(&"jump" if velocity.y > 0.0 else &"fall")
 	elif _wave_remaining > 0.0:
@@ -208,10 +214,13 @@ func _update_animation(moving: bool, running: bool) -> void:
 func _play_animation(clip: StringName) -> void:
 	if clip == current_animation:
 		return
+	var pista_anterior: StringName = _animation_names.get(current_animation, &"")
 	current_animation = clip
 	if animation_player != null and _animation_names.has(clip):
 		animation_player.speed_scale = 1.0
-		animation_player.play(_animation_names[clip], blend_time)
+		# Swim y swim_idle comparten base; mantener la fase del clip importado.
+		if pista_anterior != _animation_names[clip]:
+			animation_player.play(_animation_names[clip], blend_time)
 	animation_state_changed.emit(clip)
 
 
@@ -523,9 +532,8 @@ func terminar_descanso_sentado(inmediato: bool = false) -> void:
 
 func establecer_nivel_agua(altura: float) -> void:
 	nivel_agua = altura
-	if altura == -INF:
-		$Visual/Modelo.transform = _pose_modelo
-	var entrando := altura > 0.75
+	# Histéresis al subir/bajar: el límite no alterna entre dos poses.
+	var entrando := altura > (0.69 if nadando else 0.75)
 	if entrando == nadando:
 		return
 	nadando = entrando
@@ -546,15 +554,37 @@ func _rechazar_emote_nadando() -> bool:
 
 
 func _actualizar_pose_nado(delta: float) -> void:
-	_reloj_nado += delta
+	peso_nado = move_toward(peso_nado, float(nadando), delta / 0.65)
+	var avance_objetivo := clampf(_rapidez_real / (walk_speed * FACTOR_NADO), 0.0, 1.0) if nadando and not realizando_gesto() and not input_locked else 0.0
+	avance_nado = lerpf(avance_nado, avance_objetivo, 1.0 - exp(-delta * 4.5))
+	# Integrar la fase evita el salto que producía multiplicar el tiempo por
+	# una frecuencia distinta cada vez que se arrancaba o frenaba.
+	var anterior := fase_nado
+	if peso_nado > 0.0:
+		fase_nado += delta * lerpf(2.6, 4.5, avance_nado)
+	if nadando and peso_nado > 0.65 and avance_nado > 0.25 and not realizando_gesto():
+		for lado: String in ["L", "R"]:
+			var desfase := 0.0 if lado == "L" else PI
+			if floori((anterior + desfase) / TAU) != floori((fase_nado + desfase) / TAU):
+				if (lado == "L" and not is_instance_valid(papel_en_mano)) or (lado == "R" and not _taza_en_mano):
+					brazada_agua.emit(lado)
 	var modelo := $Visual/Modelo as Node3D
 	var destino := _pose_modelo
-	if nadando:
-		var avanzando := Vector2(velocity.x, velocity.z).length() > 0.15 and not realizando_gesto()
-		var elevacion := maxf(0.0, nivel_agua - global_position.y - 0.43)
-		destino.origin.y += (elevacion + sin(_reloj_nado * 3.0) * 0.018) / character_scale
-		destino.basis = destino.basis * Basis.from_euler(Vector3(0.52 if avanzando else 0.10, 0, sin(_reloj_nado * 3) * 0.035))
-	modelo.transform = modelo.transform.interpolate_with(destino, 1.0 - exp(-delta * 6.0))
+	if peso_nado > 0.0:
+		var rumbo := atan2(velocity.x, velocity.z) if _rapidez_real > 0.1 else visual.rotation.y
+		var curva := clampf(angle_difference(visual.rotation.y, rumbo), -0.45, 0.45)
+		giro_nado = lerpf(giro_nado, curva, 1.0 - exp(-delta * 5.0))
+		var inclinacion := lerpf(0.12, 0.88, avance_nado) * peso_nado
+		var balanceo := (sin(fase_nado) * 0.07 * avance_nado - giro_nado * 0.3) * peso_nado
+		var giro := Basis.from_euler(Vector3(inclinacion, 0, balanceo))
+		# Girar alrededor del pecho mantiene la cabeza fuera del agua y eleva
+		# las piernas detrás del cuerpo en vez de hundir la cabeza al avanzar.
+		var pivote := Vector3(0, 1.45, 0)
+		var elevacion := maxf(0, nivel_agua - global_position.y - 0.43) if nivel_agua > -INF else 0.0
+		var respirar := sin(fase_nado * 2.0 - 0.4) * lerpf(0.016, 0.010, avance_nado)
+		destino.origin += (pivote - giro * pivote) + Vector3.UP * (elevacion + respirar) * peso_nado / character_scale
+		destino.basis = _pose_modelo.basis * giro
+	modelo.transform = modelo.transform.interpolate_with(destino, 1.0 - exp(-delta * 8.0))
 
 
 func _register_inputs() -> void:

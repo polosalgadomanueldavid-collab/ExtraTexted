@@ -42,6 +42,8 @@ var _aviso: Label
 var _efectos: Node3D
 var _ambiente: AudioStreamPlayer
 var _salpicaduras: Array[AudioStreamPlayer] = []
+var _impactos: Array[Vector4] = []
+var _ultima_posicion_nado := Vector3.ZERO
 
 
 func configurar(oficina: Node3D, jugador: Player) -> void:
@@ -49,6 +51,7 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 	_jugador = jugador
 	_jugador.control_inundacion = self
 	_jugador.reset_performed.connect(_cerrar_reparacion)
+	_jugador.brazada_agua.connect(_al_brazar)
 	_crear_agua()
 	_crear_tuberias()
 	_efectos = Node3D.new()
@@ -102,6 +105,8 @@ func iniciar() -> bool:
 	nivel = PISO
 	tiempo = 0.0
 	_reloj_ondas = 0.0
+	_impactos.clear()
+	_ultima_posicion_nado = _jugador.global_position
 	panel.preparar(_oficina.generador_aleatorio.randi())
 	for mesa: Node3D in get_tree().get_nodes_in_group("mesas_incendiables"):
 		if _oficina.is_ancestor_of(mesa):
@@ -162,7 +167,11 @@ func _process(delta: float) -> void:
 	var peso := smoothstep(0.0, 0.25, altura)
 	superficie.position.y = nivel
 	_material.set_shader_parameter("reloj", tiempo)
-	_material.set_shader_parameter("amplitud", 0.018 * peso)
+	_material.set_shader_parameter("amplitud", 0.028 * peso)
+	_material.set_shader_parameter("presencia", peso)
+	_actualizar_impactos()
+	for efecto: Node3D in _efectos.get_children():
+		efecto.global_position.y = nivel + 0.045
 	_volumen.position.y = PISO + altura * 0.5
 	_volumen.scale.y = maxf(0.001, altura)
 	for dato in _flotantes:
@@ -184,10 +193,31 @@ func _process(delta: float) -> void:
 		_jugador.global_position, obtener_objetivo(_jugador) == self,
 		not drenando and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible)
 	_reloj_ondas -= delta
-	if _jugador.nadando and _reloj_ondas <= 0.0 and not _jugador.input_locked:
-		var moviendo := Vector2(_jugador.velocity.x, _jugador.velocity.z).length() > 0.15
-		_reloj_ondas = 0.48 if moviendo else 1.2
-		salpicar(_jugador.global_position + _jugador.visual.global_basis.z.normalized() * 0.12, 0.36 if moviendo else 0.18)
+	if _jugador.nadando:
+		var recorrido := _jugador.global_position.distance_to(_ultima_posicion_nado)
+		if (recorrido > 0.23 and _reloj_ondas <= 0.0) or _reloj_ondas < -0.9:
+			_reloj_ondas = 0.25
+			_ultima_posicion_nado = _jugador.global_position
+			var atras := -_jugador.visual.global_basis.z.normalized() * 0.16
+			salpicar(_jugador.global_position + atras, 0.32, true)
+
+
+func _al_brazar(lado: String) -> void:
+	if not activo or not _jugador.nadando:
+		return
+	var mano: Node3D = _jugador.gestos.mano_izquierda if lado == "L" else _jugador.gestos.mano_derecha
+	salpicar(mano.global_position, 0.24)
+
+
+func _actualizar_impactos() -> void:
+	while not _impactos.is_empty() and tiempo - _impactos.front().z > 2.2:
+		_impactos.pop_front()
+	var datos := PackedVector4Array()
+	datos.resize(32)
+	for i in _impactos.size():
+		datos[i] = _impactos[i]
+	_material.set_shader_parameter("impactos", datos)
+	_material.set_shader_parameter("cantidad_impactos", _impactos.size())
 
 
 func obtener_objetivo(jugador: Player) -> Node3D:
@@ -239,13 +269,19 @@ func _al_reparar() -> void:
 	_oficina.anuncios.mostrar_evento("TUBERÍAS", "REPARADAS", "El agua está bajando")
 
 
-func salpicar(punto: Vector3, fuerza: float = 1.0) -> void:
+func salpicar(punto: Vector3, fuerza: float = 1.0, solo_ondas := false) -> void:
 	if not activo or nivel < PISO + 0.05:
 		return
 	var efecto := Salpicadura.new()
 	efecto.intensidad = fuerza
+	efecto.solo_ondas = solo_ondas
 	_efectos.add_child(efecto)
-	efecto.global_position = Vector3(punto.x, nivel + 0.025, punto.z)
+	efecto.global_position = Vector3(punto.x, nivel + 0.045, punto.z)
+	if _impactos.size() == 32:
+		_impactos.pop_front()
+	_impactos.append(Vector4(punto.x, punto.z, tiempo, fuerza))
+	if solo_ondas:
+		return
 	for sonido in _salpicaduras:
 		if not sonido.playing:
 			sonido.volume_db = -20.0 if fuerza >= 1.0 else -29.0
@@ -259,6 +295,7 @@ func detener() -> void:
 	activo = false
 	drenando = false
 	nivel = PISO
+	_impactos.clear()
 	set_process(false)
 	set_physics_process(false)
 	if is_instance_valid(_jugador):
@@ -296,8 +333,8 @@ func _crear_agua() -> void:
 	superficie.name = "SuperficieAgua"
 	var plano := PlaneMesh.new()
 	plano.size = Vector2(6.86, 12.48)
-	plano.subdivide_width = 48
-	plano.subdivide_depth = 80
+	plano.subdivide_width = 96
+	plano.subdivide_depth = 160
 	superficie.mesh = plano
 	_material = ShaderMaterial.new()
 	_material.shader = AGUA
@@ -312,7 +349,7 @@ func _crear_agua() -> void:
 	_volumen.mesh = volumen
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.albedo_color = Color(0.025, 0.38, 0.52, 0.22)
+	material.albedo_color = Color(0.12, 0.65, 0.64, 0.12)
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_volumen.material_override = material
 	_volumen.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
