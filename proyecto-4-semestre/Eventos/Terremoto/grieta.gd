@@ -85,8 +85,8 @@ func invade_borde(poligono: PackedVector2Array, caja: Rect2) -> bool:
 	return false
 
 
-func abrir(suelo: CSGBox3D) -> void:
-	global_position.y = suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y
+func abrir(suelo: CSGBox3D, piso_visual: MeshInstance3D) -> void:
+	global_position.y = piso_visual.global_position.y + 0.003 if is_instance_valid(piso_visual) else suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y
 	_corte = CSGPolygon3D.new()
 	_corte.operation = CSGShape3D.OPERATION_SUBTRACTION
 	var subsuelo := StandardMaterial3D.new()

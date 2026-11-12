@@ -9,6 +9,9 @@ enum Etapa { INACTIVO, AVISO, RUPTURA, RECUPERACION }
 
 const Grieta := preload("res://Eventos/Terremoto/grieta.gd")
 const ZONA_MESAS := Rect2(-3.72, 1.04, 5.42, 4.72)
+const ANCHO_PISO := 7.0
+const LARGO_PISO := 12.5
+const TAMANO_CORTE_PISO := 0.125
 const SEGUNDOS_POR_ETAPA := 8.0
 const DURACION := 3.0 * SEGUNDOS_POR_ETAPA
 const TIEMPO_CIERRE := 0.60
@@ -17,6 +20,7 @@ const ANCHOS: Array[float] = [1.33, 0.79, 0.73, 0.69]
 const LARGOS: Array[float] = [2.18, 1.70, 1.42, 1.15]
 
 @export var suelo: CSGBox3D
+@export var piso_visual: MeshInstance3D
 @export_range(5.0, 120.0, 1.0) var espera_minima := 25.0
 @export_range(5.0, 120.0, 1.0) var espera_maxima := 40.0
 
@@ -41,9 +45,12 @@ var _altura: float
 var _ultimo_apoyo: Vector3
 var _solto_gravilla := false
 var _huella_hoja: Rect2
+var _malla_piso_original: Mesh
 
 
 func _ready() -> void:
+	if is_instance_valid(piso_visual):
+		_malla_piso_original = piso_visual.mesh
 	_reloj = Timer.new()
 	_reloj.one_shot = true
 	_reloj.process_callback = Timer.TIMER_PROCESS_PHYSICS
@@ -116,7 +123,8 @@ func _abrir_suelo() -> void:
 	_grafo.grietas.assign(_celdas_rotas)
 	_celdas_rotas.clear()
 	for grieta in grietas:
-		grieta.abrir(suelo)
+		grieta.abrir(suelo, piso_visual)
+	_recortar_piso_en_grietas()
 	for celda in _celdas_caidas:
 		var bloqueo := _bloqueos[celda] as StaticBody3D
 		bloqueo.call("caer_en_grieta", _celdas_caidas[celda].centro)
@@ -282,9 +290,75 @@ func _cerrar() -> void:
 	for grieta in grietas:
 		grieta.cerrar()
 	grietas.clear()
+	if is_instance_valid(piso_visual) and _malla_piso_original != null:
+		piso_visual.mesh = _malla_piso_original
 	_grafo.grietas.clear()
 	_grafo.construir_adyacencia()
 	set_physics_process(false)
 	etapa = Etapa.INACTIVO
 	terminado.emit()
 	programar()
+
+
+func _recortar_piso_en_grietas() -> void:
+	if not is_instance_valid(piso_visual) or _malla_piso_original == null:
+		return
+	var cortes: Array[Dictionary] = []
+	for grieta in grietas:
+		var corte := PackedVector2Array()
+		var limites := Rect2()
+		for punto in grieta.contorno:
+			var local := piso_visual.to_local(Vector3(punto.x, piso_visual.global_position.y, punto.y))
+			var p := Vector2(local.x, local.z)
+			corte.append(p)
+			limites = Rect2(p, Vector2.ZERO) if corte.size() == 1 else limites.expand(p)
+		cortes.append({"poligono": corte, "limites": limites})
+	var superficie := SurfaceTool.new()
+	superficie.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var vertices_generados := 0
+	var columnas := int(ANCHO_PISO / TAMANO_CORTE_PISO)
+	var filas := int(LARGO_PISO / TAMANO_CORTE_PISO)
+	for fila in range(filas):
+		for columna in range(columnas):
+			var origen := Vector2(-ANCHO_PISO * 0.5 + columna * TAMANO_CORTE_PISO,
+				-LARGO_PISO * 0.5 + fila * TAMANO_CORTE_PISO)
+			var celda := Rect2(origen, Vector2.ONE * TAMANO_CORTE_PISO)
+			var poligonos: Array[PackedVector2Array] = [PackedVector2Array([
+				origen, Vector2(celda.end.x, origen.y), celda.end, Vector2(origen.x, celda.end.y)
+			])]
+			for corte: Dictionary in cortes:
+				if not celda.intersects(corte["limites"]):
+					continue
+				var siguientes: Array[PackedVector2Array] = []
+				for poligono in poligonos:
+					var restos := Geometry2D.clip_polygons(poligono, corte["poligono"])
+					if restos.size() == 2 and Geometry2D.is_polygon_clockwise(restos[0]) != Geometry2D.is_polygon_clockwise(restos[1]):
+						siguientes.clear()
+						break
+					siguientes.append_array(restos)
+				poligonos = siguientes
+				if poligonos.is_empty():
+					break
+			for poligono in poligonos:
+				var triangulos := Geometry2D.triangulate_polygon(poligono)
+				for i in range(0, triangulos.size(), 3):
+					var a := poligono[triangulos[i]]
+					var b := poligono[triangulos[i + 1]]
+					var c := poligono[triangulos[i + 2]]
+					if (b - a).cross(c - a) > 0.0:
+						var intercambio := b
+						b = c
+						c = intercambio
+					_agregar_vertice_piso(superficie, a)
+					_agregar_vertice_piso(superficie, b)
+					_agregar_vertice_piso(superficie, c)
+					vertices_generados += 3
+	if vertices_generados > 0:
+		piso_visual.mesh = superficie.commit()
+
+
+func _agregar_vertice_piso(superficie: SurfaceTool, punto: Vector2) -> void:
+	superficie.set_normal(Vector3.UP)
+	superficie.set_uv(Vector2((punto.x + ANCHO_PISO * 0.5) / ANCHO_PISO,
+		(punto.y + LARGO_PISO * 0.5) / LARGO_PISO))
+	superficie.add_vertex(Vector3(punto.x, 0.0, punto.y))
