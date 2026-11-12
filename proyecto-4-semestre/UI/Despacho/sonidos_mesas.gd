@@ -35,6 +35,7 @@ static func crear_reproductor(padre: Node, nombre: String, pista: AudioStream, v
 	var reproductor := AudioStreamPlayer.new()
 	reproductor.name = nombre
 	reproductor.process_mode = Node.PROCESS_MODE_PAUSABLE
+	reproductor.bus = "Interacciones"
 	reproductor.volume_db = volumen
 	reproductor.stream = pista
 	if bucle and pista is AudioStreamWAV:

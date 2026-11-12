@@ -483,6 +483,7 @@ func _estilo(fondo: Color, borde: Color, margen: int) -> StyleBoxFlat:
 func _crear_sonido(clip: AudioStream, volumen: float) -> AudioStreamPlayer:
 	var reproductor := AudioStreamPlayer.new()
 	reproductor.stream = clip
+	reproductor.bus = "Interacciones"
 	reproductor.volume_db = volumen
 	reproductor.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(reproductor)
