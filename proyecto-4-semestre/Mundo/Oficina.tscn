@@ -212,6 +212,9 @@ script = ExtResource("1_sa8v2")
 [node name="MusicaPartida" type="AudioStreamPlayer" parent="."]
 script = ExtResource("18_musica_partida")
 
+[node name="MusicaCorduraBaja" type="AudioStreamPlayer" parent="."]
+script = ExtResource("18_musica_partida")
+
 [node name="Mesas verticales IZQ" type="Node3D" parent="." unique_id=2135345679]
 
 [node name="Table_017" type="MeshInstance3D" parent="Mesas verticales IZQ" unique_id=701138884 groups=["mesas_incendiables"]]

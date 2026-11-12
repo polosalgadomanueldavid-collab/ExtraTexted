@@ -5,7 +5,7 @@ class_name Player
 
 signal animation_state_changed(animation: StringName)
 signal reset_performed
-# El futuro panel puede abrirse al mantener G y elegir el emote al soltarla.
+# La ruleta de emotes se alterna con G.
 signal emote_menu_requested
 signal emote_menu_finished(cancelled: bool)
 
@@ -20,7 +20,6 @@ const EMOTE_MENU := &"policia_menu_emotes"
 const KAMEHAMEHA := &"policia_kamehameha"
 const GENKIDAMA := &"policia_genkidama"
 const RASENGAN := &"policia_rasengan"
-const EMOTE_HOLD_SECONDS := 0.3
 const AnimacionesInteraccion := preload("res://Personajes/PoliciaAzul/animaciones_interaccion.gd")
 
 @export_category("Movimiento")
@@ -47,7 +46,6 @@ var current_animation: StringName = &""
 var _spawn_transform: Transform3D
 var _spawn_visual_rotation: Vector3
 var _wave_remaining: float = 0.0
-var _emote_hold_remaining: float = 0.0
 var _emote_menu_active: bool = false
 var _animation_names: Dictionary = {}
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
@@ -111,7 +109,6 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		sonido_pasos.detener()
 		return
-	_update_emote_hold(delta)
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	elif velocity.y < 0.0:
@@ -217,6 +214,18 @@ func reproducir_expresion(expresion: StringName) -> bool:
 func _input(event: InputEvent) -> void:
 	if event.is_action_released(interaction_action) and is_instance_valid(control_incendio):
 		control_incendio.soltar()
+	if event.is_action_pressed(EMOTE_MENU) and not (event is InputEventKey and event.echo):
+		get_viewport().set_input_as_handled()
+		if _emote_menu_active:
+			_finish_emote_menu(false)
+		elif not input_locked and not realizando_gesto() and not usando_extintor:
+			_emote_menu_active = true
+			emote_menu_requested.emit()
+		return
+	if _emote_menu_active and event.is_action_pressed(&"ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_finish_emote_menu(true)
+		return
 	if usando_extintor:
 		return
 	if input_locked or realizando_gesto():
@@ -232,12 +241,6 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(RASENGAN) and not (event is InputEventKey and event.echo):
 		get_viewport().set_input_as_handled()
 		ejecutar_gesto(&"rasengan")
-		return
-	if event.is_action(EMOTE_MENU):
-		if event.is_action_released(EMOTE_MENU):
-			_finish_emote_menu(false)
-		elif event.is_action_pressed(EMOTE_MENU) and not input_locked and not _emote_menu_active:
-			_emote_hold_remaining = EMOTE_HOLD_SECONDS
 		return
 	if not event.is_action_pressed(interaction_action):
 		return
@@ -264,21 +267,14 @@ func _notification(what: int) -> void:
 		_finish_emote_menu(true)
 
 
-func _update_emote_hold(delta: float) -> void:
-	if _emote_hold_remaining <= 0.0:
-		return
-	_emote_hold_remaining = maxf(0.0, _emote_hold_remaining - delta)
-	if is_zero_approx(_emote_hold_remaining):
-		_emote_hold_remaining = 0.0
-		_emote_menu_active = true
-		emote_menu_requested.emit()
-
-
 func _finish_emote_menu(cancelled: bool) -> void:
-	_emote_hold_remaining = 0.0
 	if _emote_menu_active:
 		_emote_menu_active = false
 		emote_menu_finished.emit(cancelled)
+
+
+func cerrar_menu_emotes(cancelled: bool = false) -> void:
+	_finish_emote_menu(cancelled)
 
 
 func obtener_objetivo_interaccion() -> Node3D:

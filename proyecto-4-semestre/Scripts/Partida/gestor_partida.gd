@@ -42,6 +42,7 @@ const EventoTerremoto := preload("res://Eventos/Terremoto/evento_terremoto.gd")
 const EventoIncendio := preload("res://Eventos/Incendio/evento_incendio.gd")
 const AnuncioPartida := preload("res://UI/Despacho/anuncio_partida.gd")
 const IndicadorDenunciaPC := preload("res://UI/Computador/indicador_denuncia_pc.gd")
+const RuletaEmotesScript := preload("res://UI/Menus/ruleta_emotes.gd")
 
 
 var sistema_despacho: SistemaDespacho
@@ -102,6 +103,7 @@ var temporizador_eventos: Timer
 var _evento_aleatorio_pendiente := -1
 var evento_incendio: EventoIncendio
 var _tutorial_apagon_mostrado := false
+var ruleta_emotes: RuletaEmotes
 
 
 func _ready() -> void:
@@ -110,6 +112,13 @@ func _ready() -> void:
 	$CanvasLayer.add_child(anuncios)
 	indicador_denuncia_pc = IndicadorDenunciaPC.new()
 	$CanvasLayer.add_child(indicador_denuncia_pc)
+	ruleta_emotes = RuletaEmotesScript.new() as RuletaEmotes
+	ruleta_emotes.name = "RuletaEmotes"
+	ruleta_emotes.z_index = 100
+	$CanvasLayer.add_child(ruleta_emotes)
+	jugador.emote_menu_requested.connect(_abrir_ruleta_emotes)
+	jugador.emote_menu_finished.connect(_cerrar_ruleta_emotes)
+	ruleta_emotes.emote_seleccionado.connect(_seleccionar_emote_ruleta)
 	sonidos_mesas = SonidosMesas.new()
 	add_child(sonidos_mesas)
 	generador_aleatorio.randomize()
@@ -210,14 +219,10 @@ func _ready() -> void:
 	computador.entregar_papel = true
 	computador.papel_solicitado.connect(_entregar_papel)
 
-	temporizador_denuncias = Timer.new()
-	temporizador_denuncias.one_shot = true
-	temporizador_denuncias.timeout.connect(_recibir_denuncia_aleatoria)
-	add_child(temporizador_denuncias)
+	_asegurar_temporizador_denuncias()
 
 	# La primera llega pronto para confirmar visualmente la integración.
 	temporizador_denuncias.start(3.0)
-
 	temporizador_bloqueos = Timer.new()
 	temporizador_bloqueos.wait_time = DURACION_BLOQUEO_SEGUNDOS
 	temporizador_bloqueos.timeout.connect(_on_temporizador_bloqueos_timeout)
@@ -228,6 +233,24 @@ func _ready() -> void:
 	temporizador_eventos.timeout.connect(_intentar_evento_aleatorio)
 	add_child(temporizador_eventos)
 	_preparar_pool_bloqueos.call_deferred()
+
+
+func _abrir_ruleta_emotes() -> void:
+	var aura_activa := is_instance_valid(jugador.gestos) and jugador.gestos.aura_persistente_activada
+	ruleta_emotes.abrir(aura_activa)
+
+
+func _cerrar_ruleta_emotes(_cancelled: bool) -> void:
+	ruleta_emotes.cerrar()
+
+
+func _seleccionar_emote_ruleta(tipo: StringName) -> void:
+	jugador.cerrar_menu_emotes(false)
+	if tipo == &"aura_persistente":
+		if is_instance_valid(jugador.gestos):
+			jugador.gestos.alternar_aura_persistente()
+		return
+	jugador.ejecutar_gesto(tipo)
 
 
 func _preparar_pool_bloqueos() -> void:
@@ -438,9 +461,20 @@ func _presentar_clasificacion() -> void:
 	clasificacion_partida.presentar(consulta.entradas, _nombre_partida, sistema_despacho.puntuacion.puntos_ganados, consulta.error)
 
 
+func _asegurar_temporizador_denuncias() -> void:
+	if is_instance_valid(temporizador_denuncias):
+		return
+	temporizador_denuncias = Timer.new()
+	temporizador_denuncias.name = "TemporizadorDenuncias"
+	temporizador_denuncias.one_shot = true
+	temporizador_denuncias.timeout.connect(_recibir_denuncia_aleatoria)
+	add_child(temporizador_denuncias)
+
+
 func _recibir_denuncia_aleatoria() -> void:
 	if partida_finalizada:
 		return
+	_asegurar_temporizador_denuncias()
 	if sistema_despacho.obtener_denuncias_ordenadas().size() < MAX_DENUNCIAS_PENDIENTES:
 		var plantilla: Denuncia = catalogo_denuncias[
 			generador_aleatorio.randi_range(0, catalogo_denuncias.size() - 1)
@@ -474,6 +508,7 @@ func _recibir_denuncia_aleatoria() -> void:
 
 
 func _programar_siguiente_denuncia() -> void:
+	_asegurar_temporizador_denuncias()
 	var espera: float = generador_aleatorio.randf_range(
 		TIEMPO_MINIMO_ENTRE_DENUNCIAS,
 		TIEMPO_MAXIMO_ENTRE_DENUNCIAS
@@ -733,7 +768,8 @@ func _al_terminar_partida() -> void:
 	evento_incendio.detener()
 	MenuGlobal.final_de_partida_activo = true
 	jugador.input_locked = true
-	temporizador_denuncias.stop()
+	if is_instance_valid(temporizador_denuncias):
+		temporizador_denuncias.stop()
 	temporizador_bloqueos.stop()
 	temporizador_eventos.stop()
 	var abiertas: Array[Dictionary] = []
