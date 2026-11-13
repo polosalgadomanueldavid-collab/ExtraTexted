@@ -38,6 +38,8 @@ var duracion: float = 1.0
 var tambaleo: float = 1.0
 var mano_izquierda: Node3D
 var mano_derecha: Node3D
+var pie_izquierdo: Node3D
+var pie_derecho: Node3D
 var anclaje_taza: Node3D
 var objetivo: Node3D
 var _reloj: float = 0.0
@@ -103,6 +105,11 @@ var rociando_extintor := false
 var _peso_extintor := 0.0
 var _peso_sentado: float = 0.0
 var _peso_taza: float = 0.0
+var _peso_nado := 0.0
+var _peso_quemadura := 0.0
+var _fase_quemadura := 0.0
+var _contacto_quemadura := false
+var _sobresalto_quemadura := 0.0
 
 
 func _ready() -> void:
@@ -117,6 +124,12 @@ func _ready() -> void:
 	mano_derecha = Node3D.new()
 	mano_derecha.name = "AnclajeManoDerecha"
 	esqueleto.add_child(mano_derecha)
+	pie_izquierdo = Node3D.new()
+	pie_izquierdo.name = "AnclajePieIzquierdo"
+	esqueleto.add_child(pie_izquierdo)
+	pie_derecho = Node3D.new()
+	pie_derecho.name = "AnclajePieDerecho"
+	esqueleto.add_child(pie_derecho)
 	anclaje_taza = Node3D.new()
 	anclaje_taza.name = "AnclajeTaza"
 	esqueleto.add_child(anclaje_taza)
@@ -332,7 +345,23 @@ func cancelar() -> void:
 
 func _process(delta: float) -> void:
 	tambaleo = jugador.intensidad_tambaleo
-	_reloj += delta
+	if not jugador.congelado or gesto != &"":
+		_reloj += delta
+	_peso_nado = jugador.peso_nado
+	var ardiendo: bool = jugador.quemandose_pies and not sentado
+	if ardiendo and not _contacto_quemadura:
+		_sobresalto_quemadura = 1.0
+		if _peso_quemadura < 0.05:
+			_fase_quemadura = 0.0
+	_contacto_quemadura = ardiendo
+	_sobresalto_quemadura = move_toward(_sobresalto_quemadura, 0.0, delta * 3.5)
+	# Entrada de 0,2 s y salida amortiguada: no corta la pose al despegar o aterrizar.
+	var respuesta := 12.0 if ardiendo else 7.0
+	_peso_quemadura = lerpf(_peso_quemadura, float(ardiendo), 1.0 - exp(-delta * respuesta))
+	if _peso_quemadura > 0.001:
+		_fase_quemadura += delta * 12.5
+	else:
+		_peso_quemadura = 0.0
 	_peso_sentado = move_toward(_peso_sentado, float(sentado), delta * 5.0)
 	_peso_taza = move_toward(_peso_taza, float(lleva_taza), delta * 7.0)
 	_peso_extintor = move_toward(_peso_extintor, float(rociando_extintor), delta * 8.0)
@@ -402,13 +431,17 @@ func _process_modification() -> void:
 	elif locomocion in [&"jump", &"fall", &"wave"]:
 		ritmo = 5.0
 		amplitud = 0.095
-	var peso_balanceo := 1.0 - _peso_sentado * 0.85
+	var peso_balanceo := (1.0 - _peso_sentado * 0.85) * (1.0 - _peso_nado) * (1.0 - _peso_quemadura)
 	var balanceo := sin(_reloj * ritmo) * amplitud * tambaleo * peso_balanceo
 	_sumar("spine", Vector3(0.015 * sin(_reloj * ritmo * 2.0) * tambaleo, 0.0, balanceo))
 	_sumar("chest", Vector3(0.025 * sin(_reloj * ritmo - 0.6) * tambaleo, balanceo * 0.35, -balanceo * 0.3))
 	_sumar("head", Vector3(0.035 * sin(_reloj * ritmo - 0.9) * tambaleo, 0.0, -sin(_reloj * ritmo - 0.7) * amplitud * 1.4 * tambaleo))
 	if _peso_sentado > 0.0:
 		_aplicar_sentado(_peso_sentado)
+	if _peso_nado > 0.0:
+		_aplicar_nado(_peso_nado)
+	if _peso_quemadura > 0.0:
+		_aplicar_pies_quemados(_peso_quemadura)
 	_sostener(_peso_papel)
 	_sostener_taza(_peso_taza)
 	if reposo_especial != &"":
@@ -422,11 +455,81 @@ func _process_modification() -> void:
 	var esqueleto := get_skeleton()
 	mano_izquierda.transform = esqueleto.get_bone_global_pose(_huesos["hand.L"])
 	mano_derecha.transform = esqueleto.get_bone_global_pose(_huesos["hand.R"])
+	pie_izquierdo.transform = esqueleto.get_bone_global_pose(_huesos["foot.L"])
+	pie_derecho.transform = esqueleto.get_bone_global_pose(_huesos["foot.R"])
 	var inclinacion := 0.0
 	if gesto == &"beber":
 		var t := tiempo / duracion
 		inclinacion = -0.55 * smoothstep(0.22, 0.42, t) * (1.0 - smoothstep(0.66, 0.90, t))
 	anclaje_taza.transform = Transform3D(Basis.from_euler(Vector3(inclinacion, 0.0, 0.0)), mano_derecha.position + Vector3(0.13, -0.15, 0.05))
+
+
+func _aplicar_pies_quemados(peso: float) -> void:
+	# Pisadas de pánico: un pie se recoge hasta la cintura y el otro apenas toca.
+	var ciclo := _fase_quemadura
+	var sacudida := sin(ciclo)
+	var sobresalto := _sobresalto_quemadura * _sobresalto_quemadura
+	for lado: String in ["L", "R"]:
+		var signo := -1.0 if lado == "L" else 1.0
+		var levantar := smoothstep(-0.25, 0.85, sin(ciclo + (0.0 if lado == "L" else PI)))
+		_pose("thigh." + lado, Vector3(-0.10 - 1.65 * levantar, signo * 0.12, signo * 0.18), peso)
+		_pose("shin." + lado, Vector3(0.15 + 2.05 * levantar, 0.0, 0.0), peso)
+		_pose("foot." + lado, Vector3(-0.35 - 0.45 * levantar, 0.0, signo * 0.16 * sin(ciclo * 3.0)), peso)
+	_pose("pelvis", Vector3(-0.08, sacudida * 0.12, -sacudida * 0.16), peso)
+	_pose("spine", Vector3(-0.20 - sobresalto * 0.15, 0.0, sacudida * 0.22), peso)
+	_pose("chest", Vector3(0.10, -sacudida * 0.14, -sacudida * 0.12), peso)
+	_pose("head", Vector3(0.38 - sobresalto * 0.55, sin(ciclo * 0.5) * 0.18, -sacudida * 0.16), peso)
+	# Rebote puramente visual: no concede altura física extra ni evita daño.
+	if _huesos.has("root"):
+		var esqueleto := get_skeleton()
+		var raiz: int = _huesos["root"]
+		var elevacion := 0.06 + 0.15 * absf(cos(ciclo)) + 0.10 * sobresalto
+		var desplazamiento := Vector3(sacudida * 0.075, elevacion, 0.0) * peso
+		esqueleto.set_bone_pose_position(raiz, esqueleto.get_bone_pose_position(raiz) + desplazamiento)
+	if gesto == &"":
+		for lado: String in ["L", "R"]:
+			var signo := -1.0 if lado == "L" else 1.0
+			var agitar := sin(ciclo + signo * 0.8)
+			_pose("upper_arm." + lado, Vector3(-0.65 - sobresalto * 0.5, signo * 0.18, signo * (1.15 + agitar * 0.30)), peso)
+			_pose("forearm." + lado, Vector3(-0.95 + agitar * 0.35, 0.0, signo * 0.12), peso)
+			_pose("hand." + lado, Vector3(sin(ciclo * 2.0) * 0.28, 0.0, signo * 0.25), peso)
+
+
+func posicion_pie(lado: String) -> Vector3:
+	# El esqueleto restaura su pose base tras los modificadores. Estos anclajes
+	# conservan la pose final para los efectos que se actualizan en física.
+	return pie_izquierdo.global_position if lado == "L" else pie_derecho.global_position
+
+
+func _aplicar_nado(peso: float) -> void:
+	var avance: float = jugador.avance_nado
+	var ciclo: float = jugador.fase_nado
+	# Entrada, tracción, empuje y recuperación. Se interpolan codo/hombro/mano
+	# con la misma fase continua, también al cambiar de avance a flotación.
+	const HOMBROS := [Vector3(-1.85, -0.12, 0.23), Vector3(-0.85, 0.12, 0.65), Vector3(0.55, 0.04, 0.32), Vector3(-0.85, -0.12, 1.0)]
+	const CODOS := [-0.15, -0.85, -0.38, -1.55]
+	for lado: String in ["L", "R"]:
+		var signo := -1.0 if lado == "L" else 1.0
+		var fase := ciclo + (PI if lado == "R" else 0.0)
+		var tramo := fposmod(fase / TAU, 1.0) * 4.0
+		var indice := floori(tramo)
+		var mezcla := smoothstep(0.0, 1.0, fposmod(tramo, 1.0))
+		var hombro: Vector3 = HOMBROS[indice].lerp(HOMBROS[(indice + 1) % 4], mezcla)
+		hombro.z *= signo
+		hombro.y *= signo
+		var codo := lerpf(CODOS[indice], CODOS[(indice + 1) % 4], mezcla)
+		var remada := Vector3(-0.48 + sin(fase) * 0.22, cos(fase) * signo * 0.12, signo * (0.65 + cos(fase) * 0.16))
+		_pose("upper_arm." + lado, remada.lerp(hombro, avance), peso)
+		_pose("forearm." + lado, Vector3(lerpf(-0.92 + sin(fase) * 0.20, codo, avance), 0, 0), peso)
+		_pose("hand." + lado, Vector3(lerpf(-0.08, -0.24, avance), 0, signo * cos(fase) * 0.13), peso)
+		var patada := sin(ciclo * 2.0 + (PI if lado == "R" else 0.0))
+		_pose("thigh." + lado, Vector3(lerpf(-0.18 + sin(fase) * 0.20, patada * 0.23, avance), 0, signo * lerpf(0.19, 0.07, avance)), peso)
+		_pose("shin." + lado, Vector3(lerpf(0.72 + cos(fase) * 0.28, 0.15 + maxf(0, -patada) * 0.28, avance), 0, 0), peso)
+		_pose("foot." + lado, Vector3(lerpf(0.08, 0.35, avance), 0, signo * 0.04), peso)
+	_pose("spine", Vector3(0.03, sin(ciclo) * 0.04 * avance, 0), peso)
+	_pose("chest", Vector3(-0.04, sin(ciclo) * 0.10 * avance, 0), peso)
+	_pose("head", Vector3(lerpf(-0.08, -0.50, avance), sin(ciclo) * 0.035 * avance, 0), peso)
+	# Las poses de sostener papel/taza y de trabajo se aplican después, por brazo.
 
 
 func _aplicar_sentado(peso: float) -> void:

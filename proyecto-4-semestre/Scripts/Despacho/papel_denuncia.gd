@@ -9,6 +9,7 @@ const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")
 
 var denuncia_id: String = ""
 var portador: Player = null
+var nivel_agua := -INF
 var _malla_hoja: MeshInstance3D
 var _contorno: ShaderMaterial
 var _material_hoja: StandardMaterial3D
@@ -141,7 +142,20 @@ func lanzar() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if nivel_agua > -INF and portador == null:
+		sleeping = false
 	if portador == null and global_position.y < -12.0:
 		var gestor := get_tree().get_first_node_in_group("gestor_partida")
 		if gestor != null and gestor.has_method("recuperar_papel_perdido"):
 			gestor.recuperar_papel_perdido(self)
+
+
+func _integrate_forces(estado: PhysicsDirectBodyState3D) -> void:
+	if portador != null or nivel_agua == -INF:
+		return
+	var profundidad := nivel_agua - estado.transform.origin.y
+	if profundidad > -0.04:
+		# Resorte amortiguado: conserva el lanzamiento y aterriza sobre el agua.
+		var empuje := maxf(0.0, estado.total_gravity.length() + profundidad * 65.0 - estado.linear_velocity.y * 12.0)
+		estado.linear_velocity.y += empuje * estado.step
+		estado.angular_velocity *= maxf(0.0, 1.0 - estado.step * 5.0)

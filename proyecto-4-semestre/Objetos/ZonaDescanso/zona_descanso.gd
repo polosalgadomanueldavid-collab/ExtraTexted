@@ -103,6 +103,9 @@ func _disponible() -> bool:
 	return is_instance_valid(_jugador) and is_instance_valid(_despacho) and _despacho.calma_operativa > 0 and not get_tree().paused and not MenuGlobal.capa.visible
 
 func _objetivo_valido(quien: Player, objetivo: Node3D) -> bool:
+	if is_instance_valid(quien) and is_instance_valid(quien.control_inundacion) and quien.control_inundacion.activo:
+		mostrar_mensaje("Repara las tuberías antes de usar la zona de descanso.")
+		return false
 	return _disponible() and quien == _jugador and not _jugador.input_locked and not _jugador.realizando_gesto() and _jugador.obtener_objetivo_interaccion() == objetivo
 
 func interactuar_cafetera(quien: Player) -> bool:

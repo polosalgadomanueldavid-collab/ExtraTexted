@@ -5,6 +5,7 @@ sin grabaciones ni muestras de terceros. WAV PCM estéreo, 48 kHz, 16 bits.
 
 - Terremoto: retumbo grave y crujidos en bucle, impacto al abrir las grietas y cierre del suelo.
 - Apagón: relé y motor perdiendo energía al cortarse la luz; ambiente tenue de emergencia hasta restaurarla.
+- Inundación: agua en bucle y salpicaduras al nadar o caer cajones. Se generan con `herramientas/generar_sonidos_inundacion.py` en PCM mono, 24 kHz, 16 bits, sin muestras externas.
 
 El retumbo sigue la intensidad del terremoto y se atenúa en la zona segura.
 Los sonidos se pausan con la partida y los bucles se detienen al terminar su evento.

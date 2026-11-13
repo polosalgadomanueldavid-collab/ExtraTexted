@@ -10,7 +10,7 @@ Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) p
 | `proyecto-4-semestre/UI` | Menú, computador, despacho y sus interfaces. |
 | `proyecto-4-semestre/Objetos` | Objetos interactivos del mundo, incluido el computador activo. |
 | `proyecto-4-semestre/Personajes` | Escenas, scripts y modelos de personajes. |
-| `proyecto-4-semestre/Eventos` | Apagón, terremoto, incendio y bloqueos temporales. |
+| `proyecto-4-semestre/Eventos` | Apagón, terremoto, incendio, inundación, lava, hielo y bloqueos temporales. |
 | `proyecto-4-semestre/Scripts` | Lógica agrupada por computador, despacho, estructuras, mundo y partida. |
 | `proyecto-4-semestre/Casos` | Datos de las denuncias y los casos. |
 | `proyecto-4-semestre/MarcadoresEstaciones` | Marcadores visuales de las estaciones. |
@@ -22,3 +22,9 @@ Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) p
 Las rutas `res://` empiezan en `proyecto-4-semestre`. Al mover un recurso, actualiza sus referencias y conserva su archivo `.uid` o `.import` cuando exista.
 
 El evento [INCENDIO](proyecto-4-semestre/Eventos/Incendio/README.md) inutiliza las estaciones y las mesas del perímetro hasta apagarlas. Recoge el extintor con **E** en descanso y mantén **E** mirando cada fuego. A los diez segundos, los cajones se carbonizan con una animación y quedan como bloqueos de ceniza durante el evento. Al apagar la última mesa, se retiran las cenizas y vuelven los cajones normales y sus cambios periódicos. Para probarlo directamente, abre `Pruebas/Incendio/PruebaIncendio.tscn` y pulsa **F6**.
+
+El evento [INUNDACIÓN](proyecto-4-semestre/Eventos/Inundacion/README.md) llena la oficina de agua, hace flotar el mobiliario y ralentiza al policía con animaciones de natación. Los casos siguen disponibles y los nuevos cajones salpican sin perder sus protecciones de colocación. Repara las tuberías de descanso con **E**, girando los tramos para conectar el flujo. Los emotes se bloquean durante la natación. Para probarlo, abre `Pruebas/Inundacion/PruebaInundacion.tscn` y pulsa **F6**.
+
+El evento [LAVA](proyecto-4-semestre/Eventos/Lava/README.md) convierte el piso en magma durante **60 segundos**. El contacto reduce la cordura y los seis charcos brillantes hacen daño adicional. **Espacio** permite saltar hasta los bloqueos temporales para protegerse; las mesas laterales siguen sin poder treparse. Los bloqueos cambian cada **4 segundos**, con chispas al caer. El personaje sacude los pies quemados y un reloj muestra el tiempo restante. Para probarlo, abre `Pruebas/Lava/PruebaLava.tscn` y pulsa **F6**.
+
+El evento [HIELO](proyecto-4-semestre/Eventos/Hielo/README.md) cubre la oficina de hielo azul y nieve. El policía resbala y se congela **1,25 s cada 4 s**, conservando la inercia. Las tareas siguen disponibles. Repara la fuga de **nitrógeno en descanso con E**, apretando las tuercas en cruz durante tres pasadas. Para probarlo, abre `Pruebas/Hielo/PruebaHielo.tscn` y pulsa **F6**.

@@ -8,6 +8,8 @@ signal reset_performed
 # La ruleta de emotes se alterna con G.
 signal emote_menu_requested
 signal emote_menu_finished(cancelled: bool)
+signal emote_rechazado(mensaje: String)
+signal brazada_agua(lado: String)
 
 const LEFT := &"policia_prueba_izquierda"
 const RIGHT := &"policia_prueba_derecha"
@@ -16,6 +18,7 @@ const BACK := &"policia_prueba_atras"
 const RUN := &"policia_prueba_correr"
 const JUMP := &"policia_prueba_saltar"
 const ALTURA_SALTO_DE_GRIETA := 0.25
+const MARGEN_SALTO_LAVA := 1.10
 const EMOTE_MENU := &"policia_menu_emotes"
 const KAMEHAMEHA := &"policia_kamehameha"
 const GENKIDAMA := &"policia_genkidama"
@@ -52,6 +55,24 @@ var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_grav
 var papel_en_mano: PapelDenuncia = null
 var gestos: AnimacionesInteraccion
 var control_incendio: Node
+var control_inundacion: Node
+var control_hielo: Node
+var hielo_activo := false
+var congelado := false
+const ACELERACION_HIELO := 2.4
+const FRENADO_HIELO := 0.38
+var nadando := false
+var lava_activa := false
+var altura_bloqueo_lava := 0.91
+var quemandose_pies := false
+var nivel_agua := -INF
+const FACTOR_NADO := 0.55
+var fase_nado := 0.0
+var peso_nado := 0.0
+var avance_nado := 0.0
+var giro_nado := 0.0
+var _rapidez_real := 0.0
+var _pose_modelo := Transform3D.IDENTITY
 var usando_extintor := false
 var _efecto_gesto: Callable
 var _reloj_reposo: float = 0.0
@@ -76,6 +97,7 @@ func _ready() -> void:
 	scale = Vector3.ONE * character_scale
 	_spawn_transform = global_transform
 	_spawn_visual_rotation = visual.rotation
+	_pose_modelo = $Visual/Modelo.transform
 	_register_inputs()
 	animation_player = $Visual/Modelo.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if animation_player == null:
@@ -99,6 +121,10 @@ func _ready() -> void:
 		gestos.terminada.connect(_al_terminar_gesto)
 		gestos.reposo_terminado.connect(_al_terminar_reposo)
 	_azar_reposo.randomize()
+	# Las poses de nado se construyen sobre el reposo mediante el modificador.
+	if _animation_names.has(&"idle"):
+		_animation_names[&"swim"] = _animation_names[&"idle"]
+		_animation_names[&"swim_idle"] = _animation_names[&"idle"]
 	_play_animation(&"idle")
 	if not is_in_group("player"):
 		add_to_group("player")
@@ -115,15 +141,18 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 
 	var input_direction := Vector2.ZERO
-	if not input_locked and not realizando_gesto() and not usando_extintor:
+	if not congelado and not input_locked and not realizando_gesto() and not usando_extintor:
 		input_direction = Input.get_vector(LEFT, RIGHT, FORWARD, BACK)
 	var direction := _camera_relative_direction(input_direction)
 	var moving := direction.length_squared() > 0.001
 	var running := not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_pressed(RUN)
 
-	if not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
+	if not congelado and not nadando and not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
+		if lava_activa:
+			# Compensa el primer paso de integración: la cima queda al 110 % del cajón.
+			velocity.y = sqrt(2.0 * _gravity * altura_bloqueo_lava * MARGEN_SALTO_LAVA) - _gravity * delta * 0.5
 		for borde in get_tree().get_nodes_in_group(&"bordes_grietas_saltables"):
 			if borde.frente_a_los_pies(global_position, direction):
 				velocity.y = maxf(jump_velocity, sqrt(2.0 * _gravity * ALTURA_SALTO_DE_GRIETA))
@@ -135,21 +164,36 @@ func _physics_process(delta: float) -> void:
 		_wave_remaining = maxf(0.0, _wave_remaining - delta)
 
 	var target_speed := run_speed if running else walk_speed
+	if nadando:
+		target_speed = walk_speed * FACTOR_NADO
 	var desired_velocity := direction * target_speed
 	var change_rate := acceleration if moving else braking
-	velocity.x = move_toward(velocity.x, desired_velocity.x, change_rate * delta)
-	velocity.z = move_toward(velocity.z, desired_velocity.z, change_rate * delta)
+	if nadando:
+		change_rate *= 0.42
+	if hielo_activo:
+		change_rate = ACELERACION_HIELO if moving else FRENADO_HIELO
+	# Congelarse elimina el control, no la inercia, la gravedad ni las colisiones.
+	# Los paneles y gestos de tareas conservan su frenado habitual.
+	if hielo_activo and (input_locked or realizando_gesto()):
+		change_rate = braking
+	if not congelado or input_locked or realizando_gesto():
+		velocity.x = move_toward(velocity.x, desired_velocity.x, change_rate * delta)
+		velocity.z = move_toward(velocity.z, desired_velocity.z, change_rate * delta)
 	if moving:
 		var angle := atan2(direction.x, direction.z)
 		visual.rotation.y = lerp_angle(visual.rotation.y, angle, 1.0 - exp(-turn_speed * delta))
 	var posicion_anterior := global_position
 	move_and_slide()
 	var desplazamiento := Vector2(global_position.x - posicion_anterior.x, global_position.z - posicion_anterior.z).length()
+	_rapidez_real = desplazamiento / maxf(delta, 0.0001)
 	# El desplazamiento real evita seguir pisando al empujar una pared.
-	var caminando := is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
+	var caminando := not congelado and not nadando and is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
 	sonido_pasos.actualizar(delta, caminando, running)
 	_update_animation(moving, running)
+	if animation_player != null:
+		animation_player.speed_scale = 0.0 if congelado and not realizando_gesto() else 1.0
 	_update_idle_variants(delta)
+	_actualizar_pose_nado(delta)
 	# Una caída fuera de la plataforma siempre vuelve al punto inicial.
 	if global_position.y < -12.0:
 		reset_to_spawn()
@@ -173,7 +217,9 @@ func _camera_relative_direction(input_direction: Vector2) -> Vector3:
 
 
 func _update_animation(moving: bool, running: bool) -> void:
-	if not is_on_floor():
+	if nadando:
+		_play_animation(&"swim" if _rapidez_real > 0.1 and not realizando_gesto() else &"swim_idle")
+	elif not is_on_floor():
 		_play_animation(&"jump" if velocity.y > 0.0 else &"fall")
 	elif _wave_remaining > 0.0:
 		_play_animation(&"wave")
@@ -186,14 +232,19 @@ func _update_animation(moving: bool, running: bool) -> void:
 func _play_animation(clip: StringName) -> void:
 	if clip == current_animation:
 		return
+	var pista_anterior: StringName = _animation_names.get(current_animation, &"")
 	current_animation = clip
 	if animation_player != null and _animation_names.has(clip):
 		animation_player.speed_scale = 1.0
-		animation_player.play(_animation_names[clip], blend_time)
+		# Swim y swim_idle comparten base; mantener la fase del clip importado.
+		if pista_anterior != _animation_names[clip]:
+			animation_player.play(_animation_names[clip], blend_time)
 	animation_state_changed.emit(clip)
 
 
 func play_wave() -> void:
+	if _rechazar_emote_nadando():
+		return
 	if input_locked or _descanso_sentado or _taza_en_mano or realizando_gesto() or not is_on_floor():
 		return
 	_cancelar_reposo()
@@ -229,6 +280,11 @@ func _input(event: InputEvent) -> void:
 	if usando_extintor:
 		return
 	if input_locked or realizando_gesto():
+		return
+	if nadando and (event.is_action_pressed(EMOTE_MENU) or event.is_action_pressed(KAMEHAMEHA) or event.is_action_pressed(GENKIDAMA) or event.is_action_pressed(RASENGAN)):
+		if not event.is_echo():
+			_rechazar_emote_nadando()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed(KAMEHAMEHA) and not (event is InputEventKey and event.echo):
 		get_viewport().set_input_as_handled()
@@ -283,6 +339,14 @@ func obtener_objetivo_interaccion() -> Node3D:
 		return null
 	if get_tree().paused:
 		return null
+	if is_instance_valid(control_hielo):
+		var nitrogeno: Node3D = control_hielo.obtener_objetivo(self)
+		if nitrogeno != null:
+			return nitrogeno
+	if is_instance_valid(control_inundacion):
+		var tuberia: Node3D = control_inundacion.obtener_objetivo(self)
+		if tuberia != null:
+			return tuberia
 	if is_instance_valid(control_incendio):
 		var fuego: Node3D = control_incendio.obtener_objetivo(self)
 		if fuego != null:
@@ -347,6 +411,8 @@ func realizando_gesto() -> bool:
 
 
 func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: Node3D = null, segundos: float = 0.0) -> bool:
+	if tipo in [&"kamehameha", &"genkidama", &"rasengan"] and _rechazar_emote_nadando():
+		return false
 	if usando_extintor:
 		return false
 	var beber_sentado := tipo == &"beber" and _descanso_sentado
@@ -374,6 +440,8 @@ func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: N
 
 
 func play_idle_variant(tipo: StringName) -> bool:
+	if _rechazar_emote_nadando():
+		return false
 	if not is_instance_valid(gestos) or input_locked or _descanso_sentado or _taza_en_mano or realizando_gesto() or not is_on_floor():
 		return false
 	if current_animation != &"idle" or Vector2(velocity.x, velocity.z).length() > 0.15:
@@ -388,7 +456,7 @@ func play_idle_variant(tipo: StringName) -> bool:
 func _update_idle_variants(delta: float) -> void:
 	if not is_instance_valid(gestos):
 		return
-	var disponible := current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not usando_extintor
+	var disponible := not congelado and not nadando and not quemandose_pies and current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not usando_extintor
 	if not disponible:
 		if _reposo_disponible:
 			_cancelar_reposo()
@@ -457,6 +525,8 @@ func esta_sentado() -> bool:
 
 
 func iniciar_descanso_sentado() -> bool:
+	if nadando:
+		return false
 	if _descanso_sentado or realizando_gesto() or not is_instance_valid(gestos) or get_tree().paused:
 		return false
 	_descanso_sentado = true
@@ -479,6 +549,63 @@ func terminar_descanso_sentado(inmediato: bool = false) -> void:
 	if estaba_sentado:
 		velocity = Vector3.ZERO
 		animation_state_changed.emit(current_animation)
+
+
+func establecer_nivel_agua(altura: float) -> void:
+	nivel_agua = altura
+	# Histéresis al subir/bajar: el límite no alterna entre dos poses.
+	var entrando := altura > (0.69 if nadando else 0.75)
+	if entrando == nadando:
+		return
+	nadando = entrando
+	if nadando:
+		_wave_remaining = 0.0
+		_finish_emote_menu(true)
+		_cancelar_reposo()
+		if realizando_gesto() and gestos.gesto in [&"kamehameha", &"genkidama", &"rasengan"]:
+			cancelar_gesto()
+		sonido_pasos.detener()
+
+
+func _rechazar_emote_nadando() -> bool:
+	if not nadando:
+		return false
+	emote_rechazado.emit("No se pueden usar emotes en este momento")
+	return true
+
+
+func _actualizar_pose_nado(delta: float) -> void:
+	peso_nado = move_toward(peso_nado, float(nadando), delta / 0.65)
+	var avance_objetivo := clampf(_rapidez_real / (walk_speed * FACTOR_NADO), 0.0, 1.0) if nadando and not realizando_gesto() and not input_locked else 0.0
+	avance_nado = lerpf(avance_nado, avance_objetivo, 1.0 - exp(-delta * 4.5))
+	# Integrar la fase evita el salto que producía multiplicar el tiempo por
+	# una frecuencia distinta cada vez que se arrancaba o frenaba.
+	var anterior := fase_nado
+	if peso_nado > 0.0:
+		fase_nado += delta * lerpf(2.6, 4.5, avance_nado)
+	if nadando and peso_nado > 0.65 and avance_nado > 0.25 and not realizando_gesto():
+		for lado: String in ["L", "R"]:
+			var desfase := 0.0 if lado == "L" else PI
+			if floori((anterior + desfase) / TAU) != floori((fase_nado + desfase) / TAU):
+				if (lado == "L" and not is_instance_valid(papel_en_mano)) or (lado == "R" and not _taza_en_mano):
+					brazada_agua.emit(lado)
+	var modelo := $Visual/Modelo as Node3D
+	var destino := _pose_modelo
+	if peso_nado > 0.0:
+		var rumbo := atan2(velocity.x, velocity.z) if _rapidez_real > 0.1 else visual.rotation.y
+		var curva := clampf(angle_difference(visual.rotation.y, rumbo), -0.45, 0.45)
+		giro_nado = lerpf(giro_nado, curva, 1.0 - exp(-delta * 5.0))
+		var inclinacion := lerpf(0.12, 0.88, avance_nado) * peso_nado
+		var balanceo := (sin(fase_nado) * 0.07 * avance_nado - giro_nado * 0.3) * peso_nado
+		var giro := Basis.from_euler(Vector3(inclinacion, 0, balanceo))
+		# Girar alrededor del pecho mantiene la cabeza fuera del agua y eleva
+		# las piernas detrás del cuerpo en vez de hundir la cabeza al avanzar.
+		var pivote := Vector3(0, 1.45, 0)
+		var elevacion := maxf(0, nivel_agua - global_position.y - 0.43) if nivel_agua > -INF else 0.0
+		var respirar := sin(fase_nado * 2.0 - 0.4) * lerpf(0.016, 0.010, avance_nado)
+		destino.origin += (pivote - giro * pivote) + Vector3.UP * (elevacion + respirar) * peso_nado / character_scale
+		destino.basis = _pose_modelo.basis * giro
+	modelo.transform = modelo.transform.interpolate_with(destino, 1.0 - exp(-delta * 8.0))
 
 
 func _register_inputs() -> void:
