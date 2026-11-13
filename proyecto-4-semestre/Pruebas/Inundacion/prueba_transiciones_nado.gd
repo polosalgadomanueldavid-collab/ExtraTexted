@@ -30,6 +30,7 @@ func _probar() -> void:
 	current_scene = oficina
 	await _frames(45)
 	root.get_node("MenuGlobal").cerrar_ayuda()
+	oficina.tutoriales_vistos[&"inundacion"] = true
 	oficina.temporizador_denuncias.stop()
 	oficina.temporizador_bloqueos.stop()
 	oficina.temporizador_eventos.stop()

@@ -37,6 +37,7 @@ func _probar() -> void:
 	current_scene = oficina
 	await _cuadros(45)
 	menu.cerrar_ayuda()
+	oficina.tutoriales_vistos[&"inundacion"] = true
 	oficina.temporizador_denuncias.stop()
 	oficina.computador.timer_nuevo_problema.stop()
 	oficina.sistema_despacho.set_process(false)

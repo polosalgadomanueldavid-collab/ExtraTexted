@@ -5,6 +5,8 @@ const PETROLEO := Color("173b50")
 const TAMANO_EXPEDIENTE := 1560.0
 const DemostracionCircuitos := preload("res://UI/Apagon/demostracion_circuitos.gd")
 const ManualControles := preload("res://UI/Menus/manual_controles.gd")
+const TEMA_AJUSTES := preload("res://UI/Menus/tema_ajustes.tres")
+const GuiasEventos := preload("res://UI/Menus/guias_eventos.gd")
 const PASOS_APAGON := [
 	["Sigue el rayo", "Busca «Activar luz» en la zona de descanso.",
 		preload("res://UI/Menus/ArtePiloto/apagon_rayo.webp")],
@@ -46,19 +48,21 @@ const PASOS := [
 @onready var seccion: Label = %Seccion
 @onready var tutorial: HBoxContainer = %Tutorial
 @onready var leyenda: ManualControles = %Leyenda
-@onready var pagina_manual: Label = %PaginaManual
 @onready var tutorial_apagon: HBoxContainer = %TutorialApagon
+@onready var tutorial_evento: HBoxContainer = %TutorialEvento
 @onready var boton_cerrar: Button = %CerrarAyuda
 @onready var pista: Label = %Pista
 
 var _es_expediente := true
+var _estilos_cierre: Dictionary = {}
 
 
 func _ready() -> void:
 	_crear_pasos(tutorial, PASOS)
 	_crear_pasos(tutorial_apagon, PASOS_APAGON)
 	_crear_demostracion_circuitos()
-	leyenda.pagina_cambiada.connect(_actualizar_pagina)
+	for estado: String in ["normal", "hover", "pressed", "focus"]:
+		_estilos_cierre[estado] = boton_cerrar.get_theme_stylebox(estado)
 
 
 func _draw() -> void:
@@ -118,10 +122,6 @@ func controles_foco() -> Array[Control]:
 	return controles
 
 
-func _actualizar_pagina(indice: int) -> void:
-	pagina_manual.text = "%s · %d / 3" % [ManualControles.CATEGORIAS[indice].to_upper(), indice + 1]
-
-
 func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 	_establecer_expediente(not es_leyenda)
 	titulo.add_theme_font_size_override("font_size", 60)
@@ -130,8 +130,8 @@ func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 	titulo.text = "CONTROLES" if es_leyenda else "TU PRIMER TURNO"
 	tutorial.visible = not es_leyenda
 	leyenda.visible = es_leyenda
-	pagina_manual.visible = es_leyenda
 	tutorial_apagon.hide()
+	tutorial_evento.hide()
 	boton_cerrar.text = "EMPEZAR TURNO" if es_inicio else "VOLVER"
 	pista.text = "E · Interactuar, recoger o lanzar la hoja"
 	boton_cerrar.custom_minimum_size = Vector2(350, 80) if es_leyenda else Vector2(340, 76)
@@ -148,19 +148,29 @@ func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 		leyenda.seleccionar(0)
 
 
-func presentar_tutorial_apagon() -> void:
+func presentar_tutorial_evento(evento: StringName, desde_pausa: bool) -> void:
 	_establecer_expediente(true)
 	custom_minimum_size.x = TAMANO_EXPEDIENTE
 	titulo.add_theme_font_size_override("font_size", 60)
-	seccion.text = "GUÍA DE DESPACHO  ·  APAGÓN"
-	titulo.text = "RESTABLECE LA LUZ"
 	tutorial.hide()
 	leyenda.hide()
-	pagina_manual.hide()
-	tutorial_apagon.show()
+	tutorial_apagon.visible = evento == &"apagon"
+	tutorial_evento.visible = evento != &"apagon"
 	boton_cerrar.custom_minimum_size = Vector2(340, 76)
-	boton_cerrar.text = "ENTENDIDO"
-	pista.text = "Repara el circuito para recuperar la luz."
+	boton_cerrar.text = "VOLVER" if desde_pausa else "ENTENDIDO"
+	if evento == &"apagon":
+		seccion.text = "GUÍA DE DESPACHO  ·  APAGÓN"
+		titulo.text = "RESTABLECE LA LUZ"
+		pista.text = "Repara el circuito para recuperar la luz."
+		return
+	var guia: Dictionary = GuiasEventos.GUIAS[evento]
+	seccion.text = "GUÍA DE DESPACHO  ·  " + guia.nombre
+	titulo.text = guia.titulo
+	pista.text = guia.pista
+	for columna in tutorial_evento.get_children():
+		tutorial_evento.remove_child(columna)
+		columna.queue_free()
+	_crear_pasos(tutorial_evento, guia.pasos)
 
 
 func _establecer_expediente(activo: bool) -> void:
@@ -175,6 +185,11 @@ func _establecer_expediente(activo: bool) -> void:
 	%LineaEncabezado.visible = activo
 	%LineaPie.visible = activo
 	boton_cerrar.size_flags_horizontal = Control.SIZE_SHRINK_END if activo else Control.SIZE_SHRINK_CENTER
+	boton_cerrar.add_theme_font_override("font", fuente_enfasis if activo else TEMA_AJUSTES.get_font("font", "Button"))
+	boton_cerrar.add_theme_font_size_override("font_size", 28 if activo else 42)
+	for estado: String in ["normal", "hover", "pressed", "focus"]:
+		var estilo: StyleBox = _estilos_cierre[estado] if activo else TEMA_AJUSTES.get_stylebox(estado, "Button" if estado == "focus" else "Volver")
+		boton_cerrar.add_theme_stylebox_override(estado, estilo)
 	queue_redraw()
 
 

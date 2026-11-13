@@ -38,13 +38,14 @@ func _probar_escenario(escenario: String) -> void:
 		"junto_puerta":
 			oficina.jugador.global_position = puerta.to_global(Vector3(0.24, 0.0, 0.95))
 		"reparando_apagon":
-			oficina._tutorial_apagon_mostrado = true
+			oficina.tutoriales_vistos[&"apagon"] = true
 			for luz: Light3D in oficina.evento_apagon.luces:
 				luces[luz] = luz.visible
 			_verificar(oficina.evento_apagon.iniciar_apagon(), "Se prepara el apagón real")
 			oficina.evento_apagon._al_interactuar_taco(oficina.jugador)
 			_verificar(oficina.evento_apagon.panel.visible and oficina.jugador.input_locked, "El final puede ocurrir reparando un circuito")
 		"caida_terremoto":
+			oficina.tutoriales_vistos[&"terremoto"] = true
 			oficina.generador_aleatorio.seed = 1414
 			oficina.evento_terremoto._azar.seed = 8762
 			oficina._recibir_denuncia_aleatoria()

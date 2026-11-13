@@ -1,0 +1,400 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="1600" viewBox="0 0 1024 800">
+  <!-- Arte a doble resolución. Los rectángulos del panel se expresan en unidades del viewBox. -->
+  <defs>
+    <linearGradient id="acero-hidraulico" x1="0" y1="0" x2=".22" y2="1">
+      <stop stop-color="#577579" />
+      <stop offset=".13" stop-color="#e1e3cc" />
+      <stop offset=".31" stop-color="#bdc9bd" />
+      <stop offset=".59" stop-color="#8da5a4" />
+      <stop offset=".87" stop-color="#536e74" />
+      <stop offset="1" stop-color="#304d59" />
+    </linearGradient>
+    <linearGradient id="laton-hidraulico" x1=".12" y1="0" x2=".26" y2="1">
+      <stop stop-color="#85734b" />
+      <stop offset=".12" stop-color="#f4dfae" />
+      <stop offset=".3" stop-color="#cdb285" />
+      <stop offset=".54" stop-color="#ac9265" />
+      <stop offset=".76" stop-color="#c3a675" />
+      <stop offset="1" stop-color="#746248" />
+    </linearGradient>
+    <linearGradient id="placa-casilla" x1="0" y1="0" x2=".55" y2="1">
+      <stop stop-color="#48666a" />
+      <stop offset=".48" stop-color="#33535c" />
+      <stop offset="1" stop-color="#243f4b" />
+    </linearGradient>
+    <radialGradient id="marfil-agua" cx=".35" cy=".28" r=".87">
+      <stop stop-color="#fff5db" />
+      <stop offset=".74" stop-color="#eee2c5" />
+      <stop offset="1" stop-color="#cec5ab" />
+    </radialGradient>
+    <linearGradient id="esmalte-valvula" x1=".1" y1="0" x2=".65" y2="1">
+      <stop stop-color="#ffc19a" />
+      <stop offset=".3" stop-color="#ff9671" />
+      <stop offset=".7" stop-color="#df6a51" />
+      <stop offset="1" stop-color="#aa4d40" />
+    </linearGradient>
+    <g id="tornillo-agua">
+      <circle cx=".6" cy="1.1" r="3.1" fill="#142e39" />
+      <circle r="2.7" fill="url(#acero-hidraulico)" stroke="#28444b" stroke-width=".8" />
+      <path d="M-1.6 1.2 1.6-1.2" stroke="#293f49" stroke-width="1.15" />
+    </g>
+    <g id="pasamuros-agua">
+      <path d="M-4-15H5L8-11V11L5 15H-4L-6 12V-12Z" transform="translate(.8 1.6)" fill="#20373d" />
+      <path d="M-4-15H5L8-11V11L5 15H-4L-6 12V-12Z" fill="url(#laton-hidraulico)" stroke="#354747" stroke-width="1.5" />
+      <path d="M-3.3-12.4H4L6-10M-2-11V10.7" fill="none" stroke="#f0dbab" stroke-width="1.3" />
+      <path d="M4.7-10.8V10.8" stroke="#796648" stroke-width="1.3" />
+    </g>
+    <g id="manguito-agua">
+      <path d="M1 28.7H10L13.5 31V49L10 51.3H1Z" fill="url(#laton-hidraulico)" stroke="#293b40" stroke-width="1.45" />
+      <path d="M2.7 30H10M3.5 32V48.5" stroke="#ead4a5" stroke-width="1.2" fill="none" />
+      <path d="M9.8 31.5V48.5M12.1 32V48" stroke="#736447" stroke-width="1" fill="none" />
+    </g>
+    <g id="gota-hidraulica">
+      <path d="M0-5C1-2.4 3.7.1 3.7 2.5A3.7 3.7 0 1 1-3.7 2.5C-3.7.2-.9-2.7 0-5Z" fill="#73ded7" stroke="#275b67" stroke-width="1" />
+      <path d="M-1.9 2.2a1.8 1.8 0 0 0 1.6 1.8" fill="none" stroke="#e7fff1" stroke-width="1.25" stroke-linecap="round" />
+    </g>
+    <g id="racor-entrada">
+      <path d="M-1 44H101" stroke="#102a35" stroke-width="26" />
+      <rect x="-1" y="29" width="103" height="22" fill="url(#acero-hidraulico)" stroke="#253d45" stroke-width="1.5" />
+      <path d="M-1 40H101" stroke="#71ddd2" stroke-width="7" />
+      <path d="M60 40H100" stroke="#266c79" stroke-width="2.2" stroke-dasharray="2 6" stroke-linecap="round" />
+      <g fill="url(#laton-hidraulico)" stroke="#283d42" stroke-width="1.7">
+        <rect x="3" y="24" width="10" height="32" rx="2" />
+        <rect x="81" y="26" width="10" height="28" rx="2" />
+      </g>
+      <circle cx="43" cy="44" r="27.5" fill="#102b37" opacity=".75" />
+      <circle cx="41" cy="40" r="17.5" fill="url(#laton-hidraulico)" stroke="#374347" stroke-width="2" />
+      <g transform="rotate(-28 41 40)" fill="none" stroke-linecap="round">
+        <circle cx="41.8" cy="41.7" r="21.6" stroke="#623d37" stroke-width="10" />
+        <path d="M41 19V62M19 40H63" stroke="#793f37" stroke-width="8" />
+        <circle cx="41" cy="40" r="21.6" stroke="url(#esmalte-valvula)" stroke-width="7.5" />
+        <path d="M41 19V61M20 40H62" stroke="#e98162" stroke-width="5.2" />
+        <path d="M22 32A20.8 20.8 0 0 1 45 19.8" stroke="#ffd6a4" stroke-width="1.6" />
+      </g>
+      <path d="m34 37 4-4h6l4 6-3.5 7h-7L34 42Z" fill="url(#acero-hidraulico)" stroke="#464949" stroke-width="1.6" />
+      <circle cx="40.9" cy="39.8" r="2.4" fill="#43565a" />
+    </g>
+    <g id="racor-salida">
+      <path d="M0 45H70" stroke="#102a35" stroke-width="25" />
+      <rect x="-1" y="29" width="70" height="22" fill="url(#acero-hidraulico)" stroke="#293e45" stroke-width="1.6" />
+      <rect x="12" y="25.5" width="11" height="29" rx="2" fill="url(#laton-hidraulico)" stroke="#293d41" stroke-width="1.6" />
+      <circle cx="67.5" cy="43.5" r="26.7" fill="#102b36" />
+      <circle cx="66" cy="40" r="26" fill="url(#acero-hidraulico)" stroke="#253c44" stroke-width="2" />
+      <circle cx="66" cy="40" r="20" fill="#1a343e" stroke="#2b464f" stroke-width="2" />
+      <use href="#tornillo-agua" transform="translate(48 25.5)" />
+      <use href="#tornillo-agua" transform="translate(83.5 54.6)" />
+      <g>
+        <path d="M57.562 23.312L47.302 39.728" stroke="#8ea5a1" stroke-width="3.5" />
+        <path d="M57.562 23.312L47.302 39.728" stroke="#c4d0be" stroke-width=".7" transform="translate(-.65 -.4)" />
+        <path d="M67.056 21.330L49.680 49.130" stroke="#8ea5a1" stroke-width="3.5" />
+        <path d="M67.056 21.330L49.680 49.130" stroke="#c4d0be" stroke-width=".7" transform="translate(-.65 -.4)" />
+        <path d="M74.158 23.173L54.450 54.707" stroke="#8ea5a1" stroke-width="3.5" />
+        <path d="M74.158 23.173L54.450 54.707" stroke="#c4d0be" stroke-width=".7" transform="translate(-.65 -.4)" />
+        <path d="M79.790 27.370L60.690 57.930" stroke="#8ea5a1" stroke-width="3.5" />
+        <path d="M79.790 27.370L60.690 57.930" stroke="#c4d0be" stroke-width=".7" transform="translate(-.65 -.4)" />
+        <path d="M83.777 34.198L68.575 58.522" stroke="#8ea5a1" stroke-width="3.5" />
+        <path d="M83.777 34.198L68.575 58.522" stroke="#c4d0be" stroke-width=".7" transform="translate(-.65 -.4)" />
+      </g>
+    </g>
+    <g id="manometro-agua">
+      <rect x="47" y="88" width="16" height="17" rx="2" fill="url(#laton-hidraulico)" stroke="#273c44" stroke-width="2" />
+      <rect x="36" y="102" width="38" height="7" rx="2" fill="url(#acero-hidraulico)" stroke="#243d47" stroke-width="2" />
+      <circle cx="56.5" cy="55" r="46.7" fill="#102933" />
+      <circle cx="54" cy="51" r="46" fill="url(#acero-hidraulico)" stroke="#172f39" stroke-width="2" />
+      <circle cx="54" cy="51" r="39.8" fill="url(#marfil-agua)" stroke="#304852" stroke-width="2.75" />
+      <path d="M24.5 65A33 33 0 0 1 32 26.5" fill="none" stroke="#e39170" stroke-width="4" />
+      <path d="M43 20.5A32.5 32.5 0 0 1 79.4 31" fill="none" stroke="#89bba3" stroke-width="4" />
+      <g id="rayas-presion">
+        <path d="M54 13.6V22.2" transform="rotate(-130 54 51)" stroke="#324b56" stroke-width="2.4" />
+        <path d="M54 13.6V18.4" transform="rotate(-117 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(-104 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(-91 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V22.2" transform="rotate(-78 54 51)" stroke="#324b56" stroke-width="2.4" />
+        <path d="M54 13.6V18.4" transform="rotate(-65 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(-52 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(-39 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V22.2" transform="rotate(-26 54 51)" stroke="#324b56" stroke-width="2.4" />
+        <path d="M54 13.6V18.4" transform="rotate(-13 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(0 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(13 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V22.2" transform="rotate(26 54 51)" stroke="#324b56" stroke-width="2.4" />
+        <path d="M54 13.6V18.4" transform="rotate(39 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(52 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(65 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V22.2" transform="rotate(78 54 51)" stroke="#324b56" stroke-width="2.4" />
+        <path d="M54 13.6V18.4" transform="rotate(91 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(104 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V18.4" transform="rotate(117 54 51)" stroke="#324b56" stroke-width="1.35" />
+        <path d="M54 13.6V22.2" transform="rotate(130 54 51)" stroke="#324b56" stroke-width="2.4" />
+      </g>
+      <circle cx="54" cy="51" r="6.3" fill="url(#acero-hidraulico)" stroke="#2b424a" stroke-width="1.8" />
+      <path d="m51.4 52.9 5.1-4" stroke="#344951" stroke-width="1.4" />
+      <path d="M17.6 37A40 40 0 0 1 66 13.5" opacity=".8" fill="none" stroke="#fff8dd" stroke-width="1.6" />
+      <use href="#tornillo-agua" transform="translate(19.5 77) scale(.86)" />
+      <use href="#tornillo-agua" transform="translate(88.2 25) scale(.86)" />
+    </g>
+    <g id="casilla">
+      <rect width="80" height="80" fill="#1a3641" />
+      <path d="M15 3H65L77 15V65L65 77H15L3 65V15Z" transform="translate(1 2)" fill="#102c37" />
+      <path d="M15 3H65L77 15V65L65 77H15L3 65V15Z" fill="url(#placa-casilla)" stroke="#122f3c" stroke-width="1.25" />
+      <path d="M5 44V16L16 5H62" stroke="#718a8b" opacity=".5" fill="none" />
+      <circle cx="40" cy="40" r="27" fill="#294550" stroke="#647b7c" stroke-width=".85" />
+      <circle cx="40" cy="40" r="25.1" fill="none" stroke="#172f3b" stroke-width="1.2" />
+      <path d="M18 57A27.5 27.5 0 0 0 63 55" stroke="#8aa09b" opacity=".28" fill="none" />
+      <use href="#tornillo-agua" transform="translate(13 14) scale(.89)" />
+      <use href="#tornillo-agua" transform="translate(67 66) scale(.89)" />
+    </g>
+    <linearGradient id="pintura" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0.000" stop-color="#66908e" />
+      <stop offset="0.500" stop-color="#52777b" />
+      <stop offset="1.000" stop-color="#405e67" />
+    </linearGradient>
+    <linearGradient id="camara" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0.000" stop-color="#173340" />
+      <stop offset="0.500" stop-color="#244854" />
+      <stop offset="1.000" stop-color="#31545c" />
+    </linearGradient>
+    <linearGradient id="bisel" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0.000" stop-color="#d3d6cc" />
+      <stop offset="0.333" stop-color="#9dadb4" />
+      <stop offset="0.667" stop-color="#728897" />
+      <stop offset="1.000" stop-color="#91a4ae" />
+    </linearGradient>
+    <linearGradient id="bisagra" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0.000" stop-color="#536b70" />
+      <stop offset="0.250" stop-color="#c4ccbd" />
+      <stop offset="0.500" stop-color="#617c7e" />
+      <stop offset="0.750" stop-color="#9fada3" />
+      <stop offset="1.000" stop-color="#526973" />
+    </linearGradient>
+  </defs>
+  <!-- Gabinete y componentes fijos. -->
+  <g id="gabinete">
+    <rect x="40" y="26" width="824" height="510" rx="18" fill="#162d37" opacity=".55" />
+    <rect x="38" y="20" width="824" height="510" rx="18" fill="url(#pintura)" stroke="#273e47" stroke-width="3" />
+    <rect x="42" y="24" width="816" height="502" rx="14" fill="none" stroke="#b4c2b6" stroke-width="2.5" />
+    <rect x="46" y="27" width="808" height="495" rx="11" fill="none" stroke="#2e4c57" stroke-width="2" />
+    <rect x="70" y="42" width="760" height="433" rx="12" fill="#243d4b" />
+    <rect x="71" y="43" width="758" height="428" rx="11" fill="url(#bisel)" stroke="#293e50" stroke-width="2" />
+    <rect x="78" y="50" width="744" height="414" rx="5" fill="url(#camara)" stroke="#142d3d" stroke-width="3" />
+    <path d="M103 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M132 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M161 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M190 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M219 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M248 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M277 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M306 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M335 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M364 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M393 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M422 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M451 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M480 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M509 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M538 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M567 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M596 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M625 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M654 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M683 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M712 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M741 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M770 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M799 53V461" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 75H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 104H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 133H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 162H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 191H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 220H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 249H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 278H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 307H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 336H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 365H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 394H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 423H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M81 452H819" stroke="#cbdcea" stroke-opacity=".07" />
+    <use href="#tornillo-agua" transform="translate(59 41) scale(2.7) rotate(0)" />
+    <use href="#tornillo-agua" transform="translate(841 41) scale(2.7) rotate(65)" />
+    <use href="#tornillo-agua" transform="translate(59 508) scale(2.7) rotate(60)" />
+    <use href="#tornillo-agua" transform="translate(841 508) scale(2.7) rotate(13)" />
+    <rect x="847" y="148" width="15" height="44" rx="3" fill="url(#bisagra)" stroke="#293f47" stroke-width="1.4" />
+    <path d="M847 158h15m-15 25h15" stroke="#42575a" stroke-width="1.5" />
+    <rect x="847" y="284" width="15" height="44" rx="3" fill="url(#bisagra)" stroke="#293f47" stroke-width="1.4" />
+    <path d="M847 294h15m-15 25h15" stroke="#42575a" stroke-width="1.5" />
+    <path d="M133 31l62-2m608 504 34-4" stroke="#d7c9a3" stroke-opacity=".6" stroke-width="2" fill="none" />
+    <rect x="221" y="75" width="442" height="354" fill="#132e39" />
+    <use href="#casilla" transform="translate(222 76) scale(1.1)" />
+    <use href="#casilla" transform="translate(310 76) scale(1.1)" />
+    <use href="#casilla" transform="translate(398 76) scale(1.1)" />
+    <use href="#casilla" transform="translate(486 76) scale(1.1)" />
+    <use href="#casilla" transform="translate(574 76) scale(1.1)" />
+    <use href="#casilla" transform="translate(222 164) scale(1.1)" />
+    <use href="#casilla" transform="translate(310 164) scale(1.1)" />
+    <use href="#casilla" transform="translate(398 164) scale(1.1)" />
+    <use href="#casilla" transform="translate(486 164) scale(1.1)" />
+    <use href="#casilla" transform="translate(574 164) scale(1.1)" />
+    <use href="#casilla" transform="translate(222 252) scale(1.1)" />
+    <use href="#casilla" transform="translate(310 252) scale(1.1)" />
+    <use href="#casilla" transform="translate(398 252) scale(1.1)" />
+    <use href="#casilla" transform="translate(486 252) scale(1.1)" />
+    <use href="#casilla" transform="translate(574 252) scale(1.1)" />
+    <use href="#casilla" transform="translate(222 340) scale(1.1)" />
+    <use href="#casilla" transform="translate(310 340) scale(1.1)" />
+    <use href="#casilla" transform="translate(398 340) scale(1.1)" />
+    <use href="#casilla" transform="translate(486 340) scale(1.1)" />
+    <use href="#casilla" transform="translate(574 340) scale(1.1)" />
+    <path d="M20 72V100Q20 120 40 120H116" fill="none" stroke="#152d37" stroke-opacity=".45" stroke-width="28" transform="translate(2 3)" />
+    <path d="M20 72V100Q20 120 40 120H116" fill="none" stroke="#253c43" stroke-width="26" stroke-linejoin="round" />
+    <path d="M20 72V100Q20 120 40 120H116" fill="none" stroke="#839d9b" stroke-width="21" stroke-linejoin="round" />
+    <path d="M20 72V100Q20 120 40 120H116" fill="none" stroke="#4d938f" stroke-width="15" stroke-linejoin="round" />
+    <path d="M20 72V100Q20 120 40 120H116" fill="none" stroke="#a7d6c6" stroke-width="4" stroke-linejoin="round" />
+    <path d="M763 384H862Q884 384 884 406V413" fill="none" stroke="#152d37" stroke-opacity=".45" stroke-width="28" transform="translate(2 3)" />
+    <path d="M763 384H862Q884 384 884 406V413" fill="none" stroke="#253c43" stroke-width="26" stroke-linejoin="round" />
+    <path d="M763 384H862Q884 384 884 406V413" fill="none" stroke="#839d9b" stroke-width="21" stroke-linejoin="round" />
+    <path d="M763 384H862Q884 384 884 406V413" fill="none" stroke="#b1bcb0" stroke-width="15" stroke-linejoin="round" />
+    <path d="M763 384H862Q884 384 884 406V413" fill="none" stroke="#d4d9c3" stroke-width="4" stroke-linejoin="round" />
+    <ellipse cx="20" cy="72" rx="15" ry="5" fill="url(#laton-hidraulico)" stroke="#364545" stroke-width="1.5" />
+    <ellipse cx="20" cy="72" rx="10.5" ry="2.4" fill="#294650" />
+    <ellipse cx="884" cy="413" rx="13" ry="4" fill="url(#acero-hidraulico)" stroke="#30434a" stroke-width="2" />
+    <ellipse cx="884" cy="414" rx="9" ry="2" fill="#172c36" />
+    <use href="#pasamuros-agua" transform="translate(40 120) scale(1.1)" />
+    <use href="#pasamuros-agua" transform="translate(861 384) scale(1.1)" />
+    <use href="#racor-entrada" transform="translate(112 76) scale(1.1)" />
+    <use href="#racor-salida" transform="translate(662 340) scale(1.1)" />
+    <use href="#manometro-agua" transform="translate(686.6 89.9) scale(1.1)" />
+    <rect x="148" y="270" width="28" height="107" rx="4" fill="#173945" stroke="#8da39d" stroke-width="3" />
+    <path d="M155 274v99" stroke="#9cbbad" stroke-opacity=".5" stroke-width="2" />
+    <path d="M145 271h34m-34 105h34" stroke="#b5b89b" stroke-width="5" />
+    <use href="#tornillo-agua" transform="translate(89 62)" />
+    <use href="#tornillo-agua" transform="translate(811 62)" />
+    <use href="#tornillo-agua" transform="translate(89 452)" />
+    <use href="#tornillo-agua" transform="translate(811 452)" />
+  </g>
+  <!-- Componentes que el panel dibuja según el estado de la partida. -->
+  <!-- Tramos secos en y=590 y mojados en y=690. Máscaras 3, 5, 6, 9, 10, 12, de 88x88. -->
+  <g id="tramo-3-seco" transform="translate(0 590) scale(1.1)">
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#81999b" stroke-width="17.4" transform=" rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#b1bcb0" stroke-width="13.9" transform="translate(-.65 -.9) rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#dee0c8" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(180 40 40)" />
+  </g>
+  <g id="tramo-5-seco" transform="translate(96 590) scale(1.1)">
+    <path d="M0 40H80" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#81999b" stroke-width="17.4" transform=" rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#b1bcb0" stroke-width="13.9" transform="translate(-.65 -.9) rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#dee0c8" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(270 40 40)" />
+  </g>
+  <g id="tramo-6-seco" transform="translate(192 590) scale(1.1)">
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#81999b" stroke-width="17.4" transform=" rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#b1bcb0" stroke-width="13.9" transform="translate(-.65 -.9) rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#dee0c8" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(180 40 40)" />
+    <use href="#manguito-agua" transform="rotate(180 40 40)" />
+    <use href="#manguito-agua" transform="rotate(270 40 40)" />
+  </g>
+  <g id="tramo-9-seco" transform="translate(288 590) scale(1.1)">
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#81999b" stroke-width="17.4" transform=" rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#b1bcb0" stroke-width="13.9" transform="translate(-.65 -.9) rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#dee0c8" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(0 40 40)" />
+    <use href="#manguito-agua" transform="rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(0 40 40)" />
+  </g>
+  <g id="tramo-10-seco" transform="translate(384 590) scale(1.1)">
+    <path d="M0 40H80" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#81999b" stroke-width="17.4" transform=" rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#b1bcb0" stroke-width="13.9" transform="translate(-.65 -.9) rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#dee0c8" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(0 40 40)" />
+    <use href="#manguito-agua" transform="rotate(180 40 40)" />
+    <use href="#manguito-agua" transform="rotate(0 40 40)" />
+  </g>
+  <g id="tramo-12-seco" transform="translate(480 590) scale(1.1)">
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#81999b" stroke-width="17.4" transform=" rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#b1bcb0" stroke-width="13.9" transform="translate(-.65 -.9) rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#dee0c8" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(270 40 40)" />
+    <use href="#manguito-agua" transform="rotate(270 40 40)" />
+    <use href="#manguito-agua" transform="rotate(0 40 40)" />
+  </g>
+  <g id="tramo-3-agua" transform="translate(0 690) scale(1.1)">
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#519393" stroke-width="17.4" transform=" rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#8dccbc" stroke-width="13.9" transform="translate(-.65 -.9) rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#c5f2d9" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#3eccc1" stroke-width="8.7" transform="rotate(90 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#246776" stroke-width="2.2" stroke-dasharray="3 7" stroke-linecap="round" transform="rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(180 40 40)" />
+  </g>
+  <g id="tramo-5-agua" transform="translate(96 690) scale(1.1)">
+    <path d="M0 40H80" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#519393" stroke-width="17.4" transform=" rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#8dccbc" stroke-width="13.9" transform="translate(-.65 -.9) rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#c5f2d9" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#3eccc1" stroke-width="8.7" transform="rotate(90 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#246776" stroke-width="2.2" stroke-dasharray="3 7" stroke-linecap="round" transform="rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(270 40 40)" />
+  </g>
+  <g id="tramo-6-agua" transform="translate(192 690) scale(1.1)">
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#519393" stroke-width="17.4" transform=" rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#8dccbc" stroke-width="13.9" transform="translate(-.65 -.9) rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#c5f2d9" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#3eccc1" stroke-width="8.7" transform="rotate(180 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#246776" stroke-width="2.2" stroke-dasharray="3 7" stroke-linecap="round" transform="rotate(180 40 40)" />
+    <use href="#manguito-agua" transform="rotate(180 40 40)" />
+    <use href="#manguito-agua" transform="rotate(270 40 40)" />
+  </g>
+  <g id="tramo-9-agua" transform="translate(288 690) scale(1.1)">
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#519393" stroke-width="17.4" transform=" rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#8dccbc" stroke-width="13.9" transform="translate(-.65 -.9) rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#c5f2d9" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#3eccc1" stroke-width="8.7" transform="rotate(0 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#246776" stroke-width="2.2" stroke-dasharray="3 7" stroke-linecap="round" transform="rotate(0 40 40)" />
+    <use href="#manguito-agua" transform="rotate(90 40 40)" />
+    <use href="#manguito-agua" transform="rotate(0 40 40)" />
+  </g>
+  <g id="tramo-10-agua" transform="translate(384 690) scale(1.1)">
+    <path d="M0 40H80" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#519393" stroke-width="17.4" transform=" rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#8dccbc" stroke-width="13.9" transform="translate(-.65 -.9) rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#c5f2d9" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#3eccc1" stroke-width="8.7" transform="rotate(0 40 40)" />
+    <path d="M0 40H80" fill="none" stroke="#246776" stroke-width="2.2" stroke-dasharray="3 7" stroke-linecap="round" transform="rotate(0 40 40)" />
+    <use href="#manguito-agua" transform="rotate(180 40 40)" />
+    <use href="#manguito-agua" transform="rotate(0 40 40)" />
+  </g>
+  <g id="tramo-12-agua" transform="translate(480 690) scale(1.1)">
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#0f2935" stroke-width="22.2" transform="translate(1.1 2.7) rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#263d46" stroke-width="21" transform=" rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#519393" stroke-width="17.4" transform=" rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#8dccbc" stroke-width="13.9" transform="translate(-.65 -.9) rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#c5f2d9" stroke-width="3.5" transform="translate(-2.2 -3.7) rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#3eccc1" stroke-width="8.7" transform="rotate(270 40 40)" />
+    <path d="M0 40H23A17 17 0 0 0 40 23V0" fill="none" stroke="#246776" stroke-width="2.2" stroke-dasharray="3 7" stroke-linecap="round" transform="rotate(270 40 40)" />
+    <use href="#manguito-agua" transform="rotate(270 40 40)" />
+    <use href="#manguito-agua" transform="rotate(0 40 40)" />
+  </g>
+  <!-- Gota en (600,590), 16x20. -->
+  <use href="#gota-hidraulica" transform="translate(608 598) scale(1.5)" />
+</svg>

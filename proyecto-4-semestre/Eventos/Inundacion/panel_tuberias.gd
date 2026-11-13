@@ -3,13 +3,15 @@ extends Control
 signal reparado
 signal cerrado
 const Red := preload("res://Eventos/Inundacion/red_tuberias.gd")
-const TITULO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
-const TAMANO := Vector2(820, 630)
-const TABLERO := Vector2(190, 158)
+const ARTE := preload("res://Eventos/Inundacion/arte_tuberias.svg")
+const TAMANO := Vector2(900, 550)
+const TABLERO := Vector2(222, 76)
 const CELDA := 88.0
-const TINTA := Color("173b50")
-const AGUA := Color("42dbef")
+const MASCARAS := [3, 5, 6, 9, 10, 12]
+const TINTA := Color("25434c")
+const CREMA := Color("f5efd4")
+const AGUA := Color("73ded7")
 var red := Red.new()
 var seleccion := 0
 var _tiempo := 0.0
@@ -18,6 +20,7 @@ var _emitida := false
 var _escala := 1.0
 var _origen := Vector2.ZERO
 var _foco_anterior: Control
+var _fuente: FontVariation
 
 
 func _ready() -> void:
@@ -25,6 +28,12 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_ALL
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_fuente = FontVariation.new()
+	_fuente.base_font = TEXTO
+	_fuente.variation_opentype = {2003265652: 800.0}
+	resized.connect(_ajustar)
+	_ajustar()
 	hide()
 
 
@@ -39,6 +48,7 @@ func abrir() -> void:
 	_foco_anterior = get_viewport().gui_get_focus_owner()
 	show()
 	grab_focus()
+	_ajustar()
 	queue_redraw()
 
 
@@ -51,12 +61,16 @@ func cerrar() -> void:
 	cerrado.emit()
 
 
+func _ajustar() -> void:
+	_escala = maxf(0.01, minf(size.x / 1280.0, size.y / 720.0))
+	_origen = (size - TAMANO * _escala) * 0.5
+	queue_redraw()
+
+
 func _process(delta: float) -> void:
 	if not visible:
 		return
 	_tiempo += delta
-	_escala = minf(size.x / (TAMANO.x + 40), size.y / (TAMANO.y + 40))
-	_origen = (size - TAMANO * _escala) * 0.5
 	if red.resuelta and not _emitida:
 		_llenado += delta
 		if _llenado >= 1.4:
@@ -88,11 +102,11 @@ func _input(event: InputEvent) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if get_tree().paused:
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p: Vector2 = (event.position - _origen) / _escala
-		if Rect2(683, 28, 100, 38).has_point(p):
-			cerrar()
-		elif Rect2(TABLERO, Vector2(5, 4) * CELDA).has_point(p):
+		if Rect2(TABLERO, Vector2(Red.COLUMNAS, Red.FILAS) * CELDA).has_point(p):
 			var celda := Vector2i((p - TABLERO) / CELDA)
 			seleccion = celda.y * Red.COLUMNAS + celda.x
 			_girar(seleccion)
@@ -110,51 +124,91 @@ func _girar(indice: int) -> void:
 func _caja(rect: Rect2, color: Color, borde: Color = Color.TRANSPARENT) -> void:
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = color
-	estilo.set_corner_radius_all(12)
+	estilo.set_corner_radius_all(3)
 	estilo.border_color = borde
-	estilo.set_border_width_all(2)
+	estilo.set_border_width_all(0 if borde == Color.TRANSPARENT else 2)
 	draw_style_box(estilo, rect)
 
 
-func _texto(texto: String, punto: Vector2, tamano: int, color: Color, fuente: Font = TEXTO) -> void:
-	draw_string(fuente, punto, texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano, color)
+func _texto(texto: String, punto: Vector2, tamano: int, color: Color = CREMA) -> void:
+	draw_string(_fuente, punto, texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano, color)
+
+
+func _imagen(destino: Rect2, region: Rect2, color := Color.WHITE) -> void:
+	# El SVG se importa al doble de las coordenadas de diseño del atlas.
+	draw_texture_rect_region(ARTE, destino, Rect2(region.position * 2, region.size * 2), color)
+
+
+func _tecla(texto: String, posicion: Vector2, ancho: float) -> void:
+	_caja(Rect2(posicion + Vector2(0, 2), Vector2(ancho, 25)), Color("142f39"))
+	_caja(Rect2(posicion, Vector2(ancho, 25)), Color("e3e6d1"), TINTA)
+	var texto_ancho := _fuente.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+	_texto(texto, posicion + Vector2((ancho - texto_ancho) * 0.5, 18), 17, TINTA)
+
+
+func _dibujar_fugas(indice: int, origen: Vector2) -> void:
+	for lado in 4:
+		if not (red.piezas[indice] & (1 << lado)):
+			continue
+		if (indice == 0 and lado == 3) or (indice == red.piezas.size() - 1 and lado == 1):
+			continue
+		var vecina: Vector2i = Red.coordenada(indice) + Red.DIRECCIONES[lado]
+		if Red.dentro(vecina) and (red.piezas[vecina.y * Red.COLUMNAS + vecina.x] & (1 << ((lado + 2) % 4))):
+			continue
+		var direccion := Vector2(Red.DIRECCIONES[lado])
+		var extremo := origen + Vector2.ONE * CELDA * 0.5 + direccion * (CELDA * 0.5 - 4)
+		for gota in 2:
+			var fase := fposmod(_tiempo * 0.9 + gota * 0.5, 1.0)
+			var punto := extremo + direccion * (5 + fase * 14) + Vector2(0, fase * fase * 25)
+			var tamano := Vector2(9, 12) * (1.0 - fase * 0.3)
+			_imagen(Rect2(punto - tamano * 0.5, tamano), Rect2(600, 590, 16, 20), Color(1, 1, 1, 1.0 - fase))
+
+
+func _dibujar_seleccion() -> void:
+	var esquina := TABLERO + Vector2(Red.coordenada(seleccion)) * CELDA + Vector2(4, 4)
+	var ancho := CELDA - 8
+	for giro in 4:
+		var centro := esquina + Vector2.ONE * ancho * 0.5
+		var puntos := PackedVector2Array()
+		for punto in [Vector2(-ancho * 0.5, -ancho * 0.5 + 15), Vector2(-ancho * 0.5, -ancho * 0.5 + 4), Vector2(-ancho * 0.5 + 4, -ancho * 0.5), Vector2(-ancho * 0.5 + 15, -ancho * 0.5)]:
+			puntos.append(centro + punto.rotated(giro * PI * 0.5))
+		draw_polyline(puntos, Color("162e3a"), 6, true)
+		draw_polyline(puntos, Color("ffce79"), 3, true)
 
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.08, 0.13, 0.76))
 	draw_set_transform(_origen, 0, Vector2.ONE * _escala)
-	_caja(Rect2(Vector2(0, 7), TAMANO), Color("081f31"))
-	_caja(Rect2(Vector2.ZERO, TAMANO), Color("fff1d8"), TINTA)
-	_texto("REPARAR TUBERÍAS", Vector2(38, 65), 34, TINTA, TITULO)
-	_caja(Rect2(683, 28, 100, 38), TINTA)
-	_texto("ESC · Salir", Vector2(695, 54), 16, Color("fff1d8"))
-	_texto("Gira los tramos y conecta la entrada con el desagüe.", Vector2(38, 102), 22, TINTA)
-	_texto("El agua azul muestra hasta dónde llega el flujo.", Vector2(38, 131), 18, TINTA)
-	_caja(Rect2(TABLERO - Vector2(8, 8), Vector2(5, 4) * CELDA + Vector2(16, 16)), TINTA)
+	_imagen(Rect2(Vector2.ZERO, TAMANO), Rect2(Vector2.ZERO, TAMANO))
 	for i in red.piezas.size():
 		var p := TABLERO + Vector2(Red.coordenada(i)) * CELDA
-		_caja(Rect2(p + Vector2(3, 3), Vector2.ONE * (CELDA - 6)), Color("24566c"), Color("ffcb68") if i == seleccion else Color.TRANSPARENT)
-		var centro := p + Vector2.ONE * CELDA * 0.5
 		var mojada := red.conectadas.has(i)
-		var color := AGUA if mojada else Color("a0b4bb")
-		for d in 4:
-			if not (red.piezas[i] & (1 << d)):
-				continue
-			var extremo := centro + Vector2(Red.DIRECCIONES[d]) * (CELDA * 0.5 - 5)
-			draw_line(centro, extremo, Color("102f40"), 30, true)
-			draw_line(centro, extremo, color, 21, true)
-			draw_line(centro + Vector2(-2, -2), extremo + Vector2(-2, -2), Color(color, 0.4).lightened(0.35), 4, true)
-			if mojada:
-				draw_circle(centro.lerp(extremo, fposmod(_tiempo * 0.8 + i * 0.16, 1.0)), 3, Color("e3ffff"), true, -1, true)
-		draw_circle(centro, 11, color, true, -1, true)
-	_texto("ENTRADA", Vector2(50, 194), 20, TINTA, TITULO)
-	draw_line(Vector2(141, 202), TABLERO + Vector2(0, 44), AGUA, 15, true)
-	_texto("DESAGÜE", Vector2(651, 440), 19, TINTA, TITULO)
-	draw_line(TABLERO + Vector2(440, 308), Vector2(680, 466), AGUA if red.resuelta else Color("718b99"), 15, true)
-	_texto("FLUJO CONECTADO · Vaciando la oficina…" if red.resuelta else "Clic o E / Espacio: girar   ·   WASD / Flechas: elegir", Vector2(38, 558), 22, TINTA)
-	_caja(Rect2(38, 580, 744, 12), Color("b5c7c7"))
+		var region := Rect2(MASCARAS.find(red.piezas[i]) * 96, 690 if mojada else 590, CELDA, CELDA)
+		_imagen(Rect2(p, Vector2.ONE * CELDA), region)
+	for i in red.conectadas:
+		_dibujar_fugas(i, TABLERO + Vector2(Red.coordenada(i)) * CELDA)
+	_dibujar_seleccion()
+	_texto("ENTRADA", Vector2(122, 171), 17)
+	_texto("DESAGÜE", Vector2(698, 336), 17)
+	# El visor desciende durante la confirmación de vaciado ya existente.
+	var nivel := 0.73 * (1.0 - clampf(_llenado / 1.4, 0.0, 1.0))
+	if nivel > 0.0:
+		draw_rect(Rect2(152, 373 - 96 * nivel, 20, 96 * nivel), AGUA.darkened(0.15))
+		draw_line(Vector2(152, 373 - 96 * nivel), Vector2(172, 373 - 96 * nivel), Color("b7f1df"), 2, true)
+	for y in range(286, 370, 10):
+		draw_line(Vector2(168, y), Vector2(173, y), TINTA, 1, true)
+	var caudal := 1.0 if red.resuelta else float(red.conectadas.size()) / (Red.COLUMNAS * Red.FILAS) * 0.75
+	var aguja := Vector2.UP.rotated(deg_to_rad(lerpf(-130, 110, caudal)))
+	draw_line(Vector2(746, 146) - aguja * 8, Vector2(746, 146) + aguja * 33, Color("68443a"), 5, true)
+	draw_line(Vector2(746, 146) - aguja * 8, Vector2(746, 146) + aguja * 33, Color("ee805f"), 2.5, true)
+	draw_circle(Vector2(746, 146), 5.5, Color("a1b5aa"), true, -1, true)
 	if red.resuelta:
-		_caja(Rect2(38, 580, 744 * clampf(_llenado / 1.4, 0, 1), 12), Color("168b9d"))
+		_texto("Flujo conectado", Vector2(378, 502), 20, AGUA)
 	else:
-		_texto("Puedes salir y continuar después. Los casos siguen en marcha.", Vector2(38, 616), 16, TINTA)
+		_tecla("↑↓←→", Vector2(281, 481), 65)
+		_texto("Elegir", Vector2(354, 500), 18)
+		_tecla("E", Vector2(422, 481), 25)
+		_texto("/", Vector2(454, 500), 18)
+		_tecla("Clic", Vector2(470, 481), 43)
+		_texto("Girar", Vector2(522, 500), 18)
 	draw_set_transform(Vector2.ZERO)
