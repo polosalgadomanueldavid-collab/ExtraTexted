@@ -140,19 +140,41 @@ func _probar() -> void:
 	_verificar(hielo.reparando and hielo.panel.visible and jugador.input_locked, "E abre la reparación de nitrógeno")
 	var panel = hielo.panel
 	_verificar(not panel.apretar((panel.objetivo_actual() + 1) % 4) and panel.paso == 0, "Una tuerca fuera de orden no sella la fuga")
-	for i in 5:
+	_verificar(panel._giros == [0.0, 0.0, 0.0, 0.0] and panel._golpes == [0.0, 0.0, 0.0, 0.0], "Una tuerca incorrecta no gira ni rebota")
+	var primera: int = panel.objetivo_actual()
+	var clic := InputEventMouseButton.new()
+	clic.button_index = MOUSE_BUTTON_LEFT
+	clic.pressed = true
+	clic.position = panel._origen + panel.CENTROS[primera] * panel._escala
+	panel._gui_input(clic)
+	_verificar(panel.paso == 1 and panel._giros[primera] == 0.0 and panel._golpes[primera] == 1.0, "Clic inicia el apriete sin saltar al ángulo final")
+	await _cuadros(3)
+	_verificar(panel._giros[primera] > 0.0 and panel._giros[primera] < PI / 3.0 and panel._golpes[primera] > 0.0 and panel._golpes[primera] < 1.0, "La tuerca gira y rebota gradualmente")
+	for i in 4:
 		panel.apretar(panel.objetivo_actual())
+	var giros: Array = panel._giros.duplicate()
+	var golpes: Array = panel._golpes.duplicate()
 	panel.cerrar()
+	await _cuadros(3)
 	_verificar(not jugador.input_locked and hielo.activo and panel.paso == 5, "Cerrar conserva progreso sin resolver el evento")
+	_verificar(panel._giros == giros and panel._golpes == golpes, "Cerrar conserva la animación en curso")
 	hielo.interactuar(jugador)
 	_verificar(panel.paso == 5 and panel.visible, "Reabrir continúa la misma reparación")
 	await _capturar("05_puzzle")
 	var reloj: float = hielo.tiempo
 	var aprietes: Array = panel.aprietes.duplicate()
+	giros = panel._giros.duplicate()
+	golpes = panel._golpes.duplicate()
 	paused = true
 	await _cuadros(30)
 	_verificar(hielo.tiempo == reloj and not panel.apretar(panel.objetivo_actual()) and panel.aprietes == aprietes, "La pausa detiene el ciclo y bloquea el puzzle")
+	_verificar(panel._giros == giros and panel._golpes == golpes, "La pausa también detiene el giro y el rebote")
 	paused = false
+	await _cuadros(24)
+	var animacion_completa := true
+	for i in 4:
+		animacion_completa = animacion_completa and is_equal_approx(panel._giros[i], panel.aprietes[i] * PI / 3.0) and is_zero_approx(panel._golpes[i])
+	_verificar(animacion_completa, "Los aprietes rápidos acumulan giros de 60 grados y el rebote vuelve a reposo")
 	while not panel.resuelto:
 		panel.seleccion = panel.objetivo_actual()
 		var tecla := InputEventKey.new()
@@ -176,6 +198,7 @@ func _probar() -> void:
 	await _cuadros(4)
 	hielo.interactuar(jugador)
 	_verificar(hielo.panel.paso == 0 and hielo.reparando, "La siguiente fuga crea una reparación nueva")
+	_verificar(hielo.panel._giros == [0.0, 0.0, 0.0, 0.0] and hielo.panel._golpes == [0.0, 0.0, 0.0, 0.0], "Una nueva fuga reinicia las animaciones de las tuercas")
 	jugador.reset_to_spawn()
 	_verificar(not hielo.reparando and not hielo.panel.visible and not jugador.input_locked, "Reiniciar al personaje cierra el panel sin atascar controles")
 	jugador.global_position = hielo.acceso.global_position

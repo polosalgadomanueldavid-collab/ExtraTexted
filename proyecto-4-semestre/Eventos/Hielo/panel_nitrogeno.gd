@@ -27,6 +27,9 @@ var _escala := 1.0
 var _origen := Vector2.ZERO
 var _foco_anterior: Control
 var _fuente: FontVariation
+var _giros: Array[float] = [0.0, 0.0, 0.0, 0.0]
+var _golpes: Array[float] = [0.0, 0.0, 0.0, 0.0]
+var _sobre_tuerca := -1
 
 
 func _ready() -> void:
@@ -55,6 +58,11 @@ func preparar(semilla: int) -> void:
 	_emitida = false
 	_sellado = 0.0
 	_error = 0.0
+	_giros.fill(0.0)
+	_golpes.fill(0.0)
+	_sobre_tuerca = -1
+	mouse_default_cursor_shape = Control.CURSOR_ARROW
+	queue_redraw()
 
 
 func abrir() -> void:
@@ -62,6 +70,7 @@ func abrir() -> void:
 	show()
 	grab_focus()
 	_ajustar()
+	_actualizar_cursor()
 	queue_redraw()
 
 
@@ -90,6 +99,7 @@ func apretar(indice: int) -> bool:
 	paso += 1
 	resuelto = paso == 12
 	_error = 0.0
+	_golpes[indice] = 1.0
 	queue_redraw()
 	return true
 
@@ -111,6 +121,10 @@ func _process(delta: float) -> void:
 		return
 	_tiempo += delta
 	_error = maxf(0.0, _error - delta)
+	for i in 4:
+		_giros[i] = move_toward(_giros[i], aprietes[i] * PI / 3.0, delta * 7.0)
+		_golpes[i] = maxf(0.0, _golpes[i] - delta * 4.0)
+	_actualizar_cursor()
 	queue_redraw()
 
 
@@ -137,10 +151,23 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var punto: Vector2 = (event.position - _origen) / _escala
-		for i in 4:
-			if punto.distance_to(CENTROS[i]) <= 42:
-				apretar(i)
+		var indice := _indice_en_punto(punto)
+		if indice >= 0:
+			apretar(indice)
 		accept_event()
+
+
+func _indice_en_punto(punto: Vector2) -> int:
+	for i in 4:
+		if punto.distance_to(CENTROS[i]) <= 42:
+			return i
+	return -1
+
+
+func _actualizar_cursor() -> void:
+	var punto := (get_local_mouse_position() - _origen) / _escala
+	_sobre_tuerca = _indice_en_punto(punto) if not resuelto else -1
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if _sobre_tuerca >= 0 else Control.CURSOR_ARROW
 
 
 func _caja(rect: Rect2, color: Color, borde := Color.TRANSPARENT) -> void:
@@ -174,17 +201,22 @@ func _dibujar_tuercas() -> void:
 		var objetivo := i == objetivo_actual()
 		var destino := Rect2(centro - Vector2(40, 40), Vector2(80, 80))
 		_imagen(destino, Rect2(0, 590, 80, 80))
-		_imagen(destino, Rect2(96 + aprietes[i] * 84, 590, 80, 80))
+		# Movimiento de issa sobre la tuerca original de Barandica; la arandela queda fija.
+		var elevacion := Vector2(0, -3.0 * float(i == _sobre_tuerca) - sin(_golpes[i] * PI) * 4.0)
+		draw_set_transform(_origen + (centro + elevacion) * _escala, _giros[i], Vector2.ONE * _escala)
+		_imagen(Rect2(-40, -40, 80, 80), Rect2(96, 590, 80, 80))
+		draw_set_transform(_origen, 0, Vector2.ONE * _escala)
 		if objetivo:
-			draw_circle(centro, 15, AMBAR, true, -1, true)
+			draw_circle(centro + elevacion, 15, AMBAR, true, -1, true)
 			draw_colored_polygon(PackedVector2Array([centro + Vector2(-55, -5), centro + Vector2(-46, 0), centro + Vector2(-55, 5)]), AMBAR)
-		if i == seleccion:
-			var color := Color("ff9671") if _error > 0 else AMBAR
+		if i == seleccion or i == _sobre_tuerca:
+			var color := Color("ff9671") if _error > 0 and i == seleccion else AMBAR
 			for segmento in 4:
 				var inicio := segmento * PI * 0.5 - 0.2
 				draw_arc(centro, 40, inicio, inicio + 1.2, 18, Color("263c50"), 6, true)
 				draw_arc(centro, 40, inicio, inicio + 1.2, 18, color, 3, true)
-		_texto(str(i + 1), centro + Vector2(-8, 9), 26, TINTA if objetivo else BLANCO, TITULO)
+		# El número acompaña el rebote, pero siempre se lee derecho.
+		_texto(str(i + 1), centro + elevacion + Vector2(-8, 9), 26, TINTA if objetivo else BLANCO, TITULO)
 		for marca in 3:
 			var punto := centro + Vector2((marca - 1) * 12, 42)
 			draw_circle(punto + Vector2(0, 1), 4, Color("8199ab"), true, -1, true)
