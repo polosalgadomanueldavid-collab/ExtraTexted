@@ -74,6 +74,10 @@ func presentar(datos: Dictionary) -> void:
 		_rotulo.text = "DENUNCIA PERDIDA EN EL TERREMOTO · CALMA 0"
 	_titulo_caso.text = str(causa.get("titulo", "Denuncia sin resolver"))
 	_detalle.text = "Quedó pendiente: %s" % _estaciones(causa.get("pendientes", []))
+	if causa.get("lava", false):
+		_rotulo.text = "EL PISO ES LAVA · CALMA 0"
+		_titulo_caso.text = "El calor agotó tu cordura"
+		_detalle.text = "Los bloqueos temporales te protegen del suelo y de los charcos."
 	_dialogo.text = ""
 	_saltar.grab_focus()
 	_alerta.play()

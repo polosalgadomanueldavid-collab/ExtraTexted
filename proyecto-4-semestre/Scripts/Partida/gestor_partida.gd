@@ -40,6 +40,8 @@ const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
 const EventoTerremoto := preload("res://Eventos/Terremoto/evento_terremoto.gd")
 const EventoIncendio := preload("res://Eventos/Incendio/evento_incendio.gd")
 const EventoInundacion := preload("res://Eventos/Inundacion/evento_inundacion.gd")
+const EventoLava := preload("res://Eventos/Lava/evento_lava.gd")
+const EventoHielo := preload("res://Eventos/Hielo/evento_hielo.gd")
 const AnuncioPartida := preload("res://UI/Despacho/anuncio_partida.gd")
 const IndicadorDenunciaPC := preload("res://UI/Computador/indicador_denuncia_pc.gd")
 
@@ -102,6 +104,8 @@ var temporizador_eventos: Timer
 var _evento_aleatorio_pendiente := -1
 var evento_incendio: EventoIncendio
 var evento_inundacion: EventoInundacion
+var evento_lava: EventoLava
+var evento_hielo: EventoHielo
 var _tutorial_apagon_mostrado := false
 
 
@@ -147,6 +151,20 @@ func _ready() -> void:
 	evento_inundacion.permiso_inicio = _puede_iniciar_evento
 	evento_inundacion.iniciado.connect(_al_iniciar_inundacion)
 	evento_inundacion.terminado.connect(_al_terminar_inundacion)
+	evento_lava = EventoLava.new()
+	evento_lava.name = "EventoLava"
+	add_child(evento_lava)
+	evento_lava.configurar(self, jugador)
+	evento_lava.permiso_inicio = _puede_iniciar_evento
+	evento_lava.iniciado.connect(_al_iniciar_lava)
+	evento_lava.terminado.connect(_al_terminar_lava)
+	evento_hielo = EventoHielo.new()
+	evento_hielo.name = "EventoHielo"
+	add_child(evento_hielo)
+	evento_hielo.configurar(self, jugador)
+	evento_hielo.permiso_inicio = _puede_iniciar_evento
+	evento_hielo.iniciado.connect(_al_iniciar_hielo)
+	evento_hielo.terminado.connect(_al_terminar_hielo)
 	jugador.emote_rechazado.connect(func(mensaje: String) -> void:
 		panel_despacho._mostrar_mensaje(mensaje, PanelDespacho.CORAL)
 	)
@@ -297,7 +315,7 @@ func _input(evento: InputEvent) -> void:
 		clasificacion_partida.hide()
 		get_viewport().set_input_as_handled()
 		return
-	if evento_apagon.estado == EventoApagonScript.Estado.REPARANDO or evento_inundacion.reparando:
+	if evento_apagon.estado == EventoApagonScript.Estado.REPARANDO or evento_inundacion.reparando or evento_hielo.reparando:
 		return
 	if evento.is_action_pressed(VER_CLASIFICACION, true, true):
 		if not evento.is_echo() and not clasificacion_partida.visible:
@@ -324,6 +342,10 @@ func _unhandled_key_input(evento: InputEvent) -> void:
 		_iniciar_incendio()
 	elif evento.physical_keycode == KEY_U or evento.keycode == KEY_U:
 		_iniciar_inundacion()
+	elif evento.physical_keycode == KEY_L or evento.keycode == KEY_L:
+		_iniciar_lava()
+	elif evento.unicode in ["ñ".unicode_at(0), "Ñ".unicode_at(0)] or evento.keycode == "Ñ".unicode_at(0):
+		_iniciar_hielo()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -380,7 +402,7 @@ func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 		return
 	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible_debug))
 	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
-		_aviso_apagon.text = "[B] APAGÓN · [T] TERREMOTO · [I] INCENDIO · [U] INUNDACIÓN"
+		_aviso_apagon.text = "[B] APAGÓN · [T] TERREMOTO · [I] INCENDIO\n[U] INUNDACIÓN · [L] LAVA · [Ñ] HIELO"
 	elif objetivo == evento_apagon.taco:
 		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
 	else:
@@ -580,7 +602,7 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 
 
 func _puede_iniciar_evento() -> bool:
-	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo)
+	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo) and (not is_instance_valid(evento_lava) or not evento_lava.activo) and (not is_instance_valid(evento_hielo) or not evento_hielo.activo)
 
 
 func _programar_evento_aleatorio() -> void:
@@ -600,7 +622,7 @@ func _intentar_evento_aleatorio() -> void:
 	if not _puede_iniciar_evento():
 		return
 	if _evento_aleatorio_pendiente < 0:
-		_evento_aleatorio_pendiente = generador_aleatorio.randi_range(0, 3)
+		_evento_aleatorio_pendiente = generador_aleatorio.randi_range(0, 5)
 	# Conservar la elección hasta poder iniciarla: no favorecer al apagón
 	# mientras el jugador está en la zona segura o atendiendo una mesa.
 	if not get_tree().paused and not computador.is_using and not jugador.input_locked and not clasificacion_partida.visible and not MenuGlobal.capa.visible:
@@ -610,10 +632,50 @@ func _intentar_evento_aleatorio() -> void:
 			evento_apagon.iniciar_apagon()
 		elif _evento_aleatorio_pendiente == 2:
 			_iniciar_incendio()
-		else:
+		elif _evento_aleatorio_pendiente == 3:
 			_iniciar_inundacion()
+		elif _evento_aleatorio_pendiente == 4:
+			_iniciar_lava()
+		else:
+			_iniciar_hielo()
 	if _puede_iniciar_evento():
 		temporizador_eventos.start(2.0)
+
+
+func _iniciar_hielo() -> bool:
+	if not bloqueos_iniciados or computador.is_using or jugador.input_locked or jugador.realizando_gesto():
+		return false
+	return evento_hielo.iniciar()
+
+
+func _al_iniciar_hielo() -> void:
+	_al_iniciar_evento()
+	anuncios.mostrar_evento("¡EL PISO", "ES HIELO!", "Sella la fuga de nitrógeno en descanso · E")
+	panel_despacho._mostrar_mensaje("¡Hielo! Te deslizas y te congelas cada 4 s, conservando la inercia. Las tareas siguen disponibles. Aprieta las tuercas del nitrógeno en descanso.", Color("a6d3ff"))
+
+
+func _al_terminar_hielo() -> void:
+	_programar_evento_aleatorio()
+	if not partida_finalizada:
+		anuncios.mostrar_evento("¡OFICINA", "DESCONGELADA!", "Movimiento normal restablecido")
+
+
+func _iniciar_lava() -> bool:
+	if not bloqueos_iniciados or computador.is_using or jugador.input_locked or jugador.realizando_gesto():
+		return false
+	return evento_lava.iniciar()
+
+
+func _al_iniciar_lava() -> void:
+	_al_iniciar_evento()
+	anuncios.mostrar_evento("¡EL PISO", "ES LAVA!", "ESPACIO · Sube a los bloqueos temporales")
+	panel_despacho._mostrar_mensaje("¡Lava durante 60 s! Salta más alto. Los bloqueos cambian cada 4 s; las mesas laterales no se pueden trepar.", Color("ffb34f"))
+
+
+func _al_terminar_lava() -> void:
+	_programar_evento_aleatorio()
+	if not partida_finalizada:
+		anuncios.mostrar_evento("¡SUELO", "ENFRIADO!")
 
 
 func _iniciar_inundacion() -> bool:
@@ -768,6 +830,8 @@ func _al_terminar_partida() -> void:
 	partida_finalizada = true
 	evento_incendio.detener()
 	evento_inundacion.detener()
+	evento_lava.detener()
+	evento_hielo.detener()
 	MenuGlobal.final_de_partida_activo = true
 	jugador.input_locked = true
 	temporizador_denuncias.stop()
@@ -777,7 +841,7 @@ func _al_terminar_partida() -> void:
 	for denuncia: Denuncia in sistema_despacho.obtener_denuncias_ordenadas():
 		abiertas.append(_resumen_denuncia(denuncia))
 	var datos := {
-		"causa": _ultima_vencida.duplicate(true),
+		"causa": {"lava": true} if sistema_despacho.causa_agotamiento == &"lava" else _ultima_vencida.duplicate(true),
 		"resueltas": _resueltas.duplicate(true),
 		"vencidas": _vencidas.duplicate(true),
 		"pendientes": abiertas,
@@ -1271,6 +1335,10 @@ func _mostrar_bloqueo_temporal(celda: Vector2i) -> void:
 		bloqueo_visual.connect("impacto_agua", _al_caer_bloqueo_en_agua)
 	if evento_inundacion.activo:
 		bloqueo_visual.actualizar_agua(evento_inundacion.nivel, evento_inundacion.tiempo)
+	if not bloqueo_visual.is_connected("impacto_lava", evento_lava.salpicar):
+		bloqueo_visual.connect("impacto_lava", evento_lava.salpicar)
+	bloqueo_visual.actualizar_lava(evento_lava.activo)
+	evento_hielo.recubrir_bloqueo(bloqueo_visual)
 
 
 func _limpiar_bloqueos_temporales() -> void:

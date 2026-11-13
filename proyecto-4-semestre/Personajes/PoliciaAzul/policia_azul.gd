@@ -18,6 +18,7 @@ const BACK := &"policia_prueba_atras"
 const RUN := &"policia_prueba_correr"
 const JUMP := &"policia_prueba_saltar"
 const ALTURA_SALTO_DE_GRIETA := 0.25
+const MARGEN_SALTO_LAVA := 1.10
 const EMOTE_MENU := &"policia_menu_emotes"
 const KAMEHAMEHA := &"policia_kamehameha"
 const GENKIDAMA := &"policia_genkidama"
@@ -57,7 +58,15 @@ var papel_en_mano: PapelDenuncia = null
 var gestos: AnimacionesInteraccion
 var control_incendio: Node
 var control_inundacion: Node
+var control_hielo: Node
+var hielo_activo := false
+var congelado := false
+const ACELERACION_HIELO := 2.4
+const FRENADO_HIELO := 0.38
 var nadando := false
+var lava_activa := false
+var altura_bloqueo_lava := 0.91
+var quemandose_pies := false
 var nivel_agua := -INF
 const FACTOR_NADO := 0.55
 var fase_nado := 0.0
@@ -135,15 +144,18 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 
 	var input_direction := Vector2.ZERO
-	if not input_locked and not realizando_gesto() and not usando_extintor:
+	if not congelado and not input_locked and not realizando_gesto() and not usando_extintor:
 		input_direction = Input.get_vector(LEFT, RIGHT, FORWARD, BACK)
 	var direction := _camera_relative_direction(input_direction)
 	var moving := direction.length_squared() > 0.001
 	var running := not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_pressed(RUN)
 
-	if not nadando and not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
+	if not congelado and not nadando and not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
+		if lava_activa:
+			# Compensa el primer paso de integración: la cima queda al 110 % del cajón.
+			velocity.y = sqrt(2.0 * _gravity * altura_bloqueo_lava * MARGEN_SALTO_LAVA) - _gravity * delta * 0.5
 		for borde in get_tree().get_nodes_in_group(&"bordes_grietas_saltables"):
 			if borde.frente_a_los_pies(global_position, direction):
 				velocity.y = maxf(jump_velocity, sqrt(2.0 * _gravity * ALTURA_SALTO_DE_GRIETA))
@@ -161,8 +173,15 @@ func _physics_process(delta: float) -> void:
 	var change_rate := acceleration if moving else braking
 	if nadando:
 		change_rate *= 0.42
-	velocity.x = move_toward(velocity.x, desired_velocity.x, change_rate * delta)
-	velocity.z = move_toward(velocity.z, desired_velocity.z, change_rate * delta)
+	if hielo_activo:
+		change_rate = ACELERACION_HIELO if moving else FRENADO_HIELO
+	# Congelarse elimina el control, no la inercia, la gravedad ni las colisiones.
+	# Los paneles y gestos de tareas conservan su frenado habitual.
+	if hielo_activo and (input_locked or realizando_gesto()):
+		change_rate = braking
+	if not congelado or input_locked or realizando_gesto():
+		velocity.x = move_toward(velocity.x, desired_velocity.x, change_rate * delta)
+		velocity.z = move_toward(velocity.z, desired_velocity.z, change_rate * delta)
 	if moving:
 		var angle := atan2(direction.x, direction.z)
 		visual.rotation.y = lerp_angle(visual.rotation.y, angle, 1.0 - exp(-turn_speed * delta))
@@ -171,9 +190,11 @@ func _physics_process(delta: float) -> void:
 	var desplazamiento := Vector2(global_position.x - posicion_anterior.x, global_position.z - posicion_anterior.z).length()
 	_rapidez_real = desplazamiento / maxf(delta, 0.0001)
 	# El desplazamiento real evita seguir pisando al empujar una pared.
-	var caminando := not nadando and is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
+	var caminando := not congelado and not nadando and is_on_floor() and not input_locked and desplazamiento > 0.1 * delta
 	sonido_pasos.actualizar(delta, caminando, running)
 	_update_animation(moving, running)
+	if animation_player != null:
+		animation_player.speed_scale = 0.0 if congelado and not realizando_gesto() else 1.0
 	_update_idle_variants(delta)
 	_actualizar_pose_nado(delta)
 	# Una caída fuera de la plataforma siempre vuelve al punto inicial.
@@ -322,6 +343,10 @@ func obtener_objetivo_interaccion() -> Node3D:
 		return null
 	if get_tree().paused:
 		return null
+	if is_instance_valid(control_hielo):
+		var nitrogeno: Node3D = control_hielo.obtener_objetivo(self)
+		if nitrogeno != null:
+			return nitrogeno
 	if is_instance_valid(control_inundacion):
 		var tuberia: Node3D = control_inundacion.obtener_objetivo(self)
 		if tuberia != null:
@@ -435,7 +460,7 @@ func play_idle_variant(tipo: StringName) -> bool:
 func _update_idle_variants(delta: float) -> void:
 	if not is_instance_valid(gestos):
 		return
-	var disponible := not nadando and current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not usando_extintor
+	var disponible := not congelado and not nadando and not quemandose_pies and current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not usando_extintor
 	if not disponible:
 		if _reposo_disponible:
 			_cancelar_reposo()

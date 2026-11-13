@@ -1,6 +1,7 @@
 extends StaticBody3D
 
 signal impacto_agua(posicion: Vector3)
+signal impacto_lava(posicion: Vector3)
 
 @export_range(0.5, 5.0, 0.1) var altura_caida: float = 2.5
 @export_range(0.1, 2.0, 0.05) var duracion_caida: float = 0.55
@@ -14,6 +15,7 @@ var _animacion: Tween
 var _reposo: Transform3D
 var _flotacion: Node3D
 var _nivel_agua := -INF
+var _lava_activa := false
 var es_ceniza := false
 var _cenizas: Node3D
 var _polvo_ceniza: CPUParticles3D
@@ -21,6 +23,10 @@ var _hollin: StandardMaterial3D
 var _polvo_lanzado := false
 var _capas_originales: Dictionary[MeshInstance3D, Material] = {}
 const DURACION_CARBONIZACION := 1.1
+
+
+func _enter_tree() -> void:
+	add_to_group("bloqueos_temporales")
 
 
 func _ready() -> void:
@@ -53,6 +59,7 @@ func activar_en(posicion: Vector3) -> void:
 
 func desactivar() -> void:
 	actualizar_agua(-INF, 0)
+	actualizar_lava(false)
 	_activa = false
 	if _animacion != null and _animacion.is_valid():
 		_animacion.kill()
@@ -112,11 +119,22 @@ func _animar_caida() -> void:
 
 func _activar_polvo() -> void:
 	if _activa:
-		if _nivel_agua > 0.422:
+		if _lava_activa:
+			impacto_lava.emit(global_position)
+		elif _nivel_agua > 0.422:
 			impacto_agua.emit(global_position)
 		else:
 			$Polvo.emitting = true
 			$Polvo.restart()
+
+
+func actualizar_lava(activa: bool) -> void:
+	_lava_activa = activa
+	if activa:
+		$Polvo.emitting = false
+		# Retira también las motas emitidas justo antes del inicio del evento.
+		$Polvo.restart()
+		$Polvo.emitting = false
 
 
 func actualizar_agua(altura: float, reloj: float) -> void:

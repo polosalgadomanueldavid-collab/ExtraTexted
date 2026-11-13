@@ -125,7 +125,8 @@ func _dibujar_comic(factor: float) -> void:
 	draw_set_transform(centro + Vector2(4, 8) * factor, 0.0, Vector2.ONE * factor * escala)
 	draw_colored_polygon(_estallido, TINTA)
 	draw_set_transform(centro, 0.0, Vector2.ONE * factor * escala)
-	draw_colored_polygon(_estallido, Color("ffd078"))
+	var helado := segunda_linea.contains("HIELO") or segunda_linea.contains("DESCONGELADA") or titulo.contains("FUGA")
+	draw_colored_polygon(_estallido, Color("83baff") if helado else Color("ffd078"))
 	var deslizamiento := (1.0 - avance) * 70.0
 	draw_set_transform(centro + Vector2(-deslizamiento, 0) * factor, -0.08, Vector2.ONE * factor * escala)
 	var y := -5.0 if not segunda_linea.is_empty() else 24.0
@@ -134,7 +135,7 @@ func _dibujar_comic(factor: float) -> void:
 		var segundo := clampf((tiempo - 0.12) / 0.46, 0.0, 1.0)
 		var rebote := float(Tween.interpolate_value(0.65, 0.35, segundo, 1.0, Tween.TRANS_BACK, Tween.EASE_OUT))
 		draw_set_transform(centro + Vector2((1.0 - segundo) * 65.0, 0) * factor, -0.08, Vector2.ONE * factor * rebote)
-		_texto(segunda_linea, 60, 51, CORAL, true)
+		_texto(segunda_linea, 60, 51, Color("d8efff") if helado else CORAL, true)
 	if not detalle.is_empty() and tiempo > 0.4:
 		draw_set_transform(centro, 0.0, Vector2.ONE * factor)
 		var ancho := FUENTE_DETALLE.get_string_size(detalle, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
