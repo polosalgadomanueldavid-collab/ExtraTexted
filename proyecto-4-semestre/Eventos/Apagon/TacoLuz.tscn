@@ -40,9 +40,12 @@ rings = 6
 collision_layer = 5
 script = ExtResource("1_taco")
 
-[node name="ColisionCaja" type="CollisionShape3D" parent="." unique_id=16102412]
+[node name="ColisionCaja" type="CollisionShape3D" parent="." unique_id=16102412 groups=["obstaculos_navegacion"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.08)
 shape = SubResource("BoxShape_Caja")
+
+[node name="AccesoTaco" type="Marker3D" parent="." groups=["accesos_navegacion"]]
+position = Vector3(0, 0, 1.0)
 
 [node name="Base" type="MeshInstance3D" parent="." unique_id=1963248052]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.035, 0)

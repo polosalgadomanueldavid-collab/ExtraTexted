@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" path="res://Objetos/ZonaDescanso/ZonaDescanso.tscn" id="16_zona_descanso"]
 [ext_resource type="Script" path="res://Mundo/iluminacion_oficina.gd" id="17_iluminacion"]
 [ext_resource type="Script" path="res://Mundo/musica_partida.gd" id="18_musica_partida"]
+[ext_resource type="PackedScene" path="res://Objetos/PuertaRelevo/PuertaRelevo.tscn" id="19_puerta_relevo"]
 
 [sub_resource type="Environment" id="EntornoOficina"]
 background_mode = 1
@@ -474,6 +475,12 @@ use_collision = true
 size = Vector3(0.85186005, 29.045013, 0.010009766)
 material = SubResource("StandardMaterial3D_yf2d8")
 
+[node name="HuecoPuertaRelevo" type="CSGBox3D" parent="Pared, suelo, techo/Pared3"]
+position = Vector3(-0.09434947, -11.375777, 0)
+operation = 2
+size = Vector3(0.07093333, 6.67, 0.05)
+material = SubResource("StandardMaterial3D_yf2d8")
+
 [node name="Suelo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1030625205]
 position = Vector3(1.0810453, -0.12169261, 3.2155552)
 use_collision = true
@@ -674,6 +681,10 @@ luces_parpadeantes = [NodePath("../Pared, suelo, techo/FocoParpadeante1"), NodeP
 
 [node name="Gameplay" type="Node3D" parent="." unique_id=535684012]
 
+[node name="PuertaRelevo" parent="." instance=ExtResource("19_puerta_relevo")]
+position = Vector3(2.4407005, 0.3717064, 7.58)
+rotation_degrees = Vector3(0, -90, 0)
+
 [node name="Node3D" parent="Gameplay" unique_id=1060975544 instance=ExtResource("3_qg7b0")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.38361645, 0.80757535, 3.3316162)
 
@@ -691,7 +702,7 @@ layer = 30
 [node name="PanelDespacho" parent="CanvasLayer" unique_id=1634710326 instance=ExtResource("7_sa8v2")]
 
 [node name="TacoLuz" parent="." instance=ExtResource("13_taco_luz")]
-position = Vector3(2.28, 0.502, 8.2)
+position = Vector3(2.28, 0.502, 8.66)
 rotation_degrees = Vector3(0, -90, 0)
 scale = Vector3(0.52, 0.52, 0.52)
 montado_en_pared = true
@@ -702,7 +713,7 @@ jugador = NodePath("../Gameplay/Node3D")
 camara = NodePath("../Gameplay/Camera3D")
 taco = NodePath("../TacoLuz")
 barra_despacho = NodePath("../CanvasLayer/PanelDespacho/Contenido")
-luces = [NodePath("../Pared, suelo, techo/FocoParpadeante1"), NodePath("../Pared, suelo, techo/FocoParpadeante2"), NodePath("../Pared, suelo, techo/FocoFilaFrontal"), NodePath("../Pared, suelo, techo/FocoFilaTrasera"), NodePath("../Pared, suelo, techo/FocoComputador"), NodePath("../Pared, suelo, techo/FocoDescanso"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq4"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal5"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera4")]
+luces = [NodePath("../Pared, suelo, techo/FocoParpadeante1"), NodePath("../Pared, suelo, techo/FocoParpadeante2"), NodePath("../Pared, suelo, techo/FocoFilaFrontal"), NodePath("../Pared, suelo, techo/FocoFilaTrasera"), NodePath("../Pared, suelo, techo/FocoComputador"), NodePath("../Pared, suelo, techo/FocoDescanso"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq4"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal5"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera4"), NodePath("../PuertaRelevo/LuzAcceso"), NodePath("../PuertaRelevo/LuzPasillo")]
 radio_vision = 1.02
 
 [node name="EventoTerremoto" type="Node3D" parent="." node_paths=PackedStringArray("suelo")]

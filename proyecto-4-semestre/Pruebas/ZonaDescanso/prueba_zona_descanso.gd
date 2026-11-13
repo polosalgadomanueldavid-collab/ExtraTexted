@@ -54,7 +54,8 @@ func _probar() -> void:
 			await _probar_colisiones_y_paso()
 			await _probar_navegacion()
 		else:
-			_verificar(get_nodes_in_group(GRUPO_OBSTACULOS).size() == nodos_antes + 3, "Reentrar carga solo las tres formas físicas previstas")
+			var formas_zona := get_nodes_in_group(GRUPO_OBSTACULOS).filter(_zona.is_ancestor_of)
+			_verificar(formas_zona.size() == 3, "Reentrar carga las tres formas físicas de la zona de descanso")
 		var referencia: WeakRef = weakref(_zona)
 		await _descargar()
 		_verificar(referencia.get_ref() == null, "Salir libera la instancia de descanso sin dejarla persistente")
@@ -143,7 +144,8 @@ func _probar_navegacion() -> void:
 	var celdas: Array[Vector2i] = []
 	for punto: Vector2 in PUNTOS_LIBRES:
 		celdas.append(_grafo.posicion_a_celda(Vector3(punto.x, _altura_piso, punto.y)))
-	var objetivos: Array[Vector2i] = [Vector2i(12, 16)]
+	var acceso_taco := _escena.get_node("TacoLuz/AccesoTaco") as Marker3D
+	var objetivos: Array[Vector2i] = [_grafo.posicion_a_celda(acceso_taco.global_position)]
 	for celda: Vector2i in GrafoPiso.DESTINOS.values():
 		objetivos.append(celda)
 	for distribucion: int in range(6):
