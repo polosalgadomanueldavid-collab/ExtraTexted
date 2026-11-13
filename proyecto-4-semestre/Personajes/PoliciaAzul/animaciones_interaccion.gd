@@ -61,6 +61,7 @@ var aura_transformacion_progreso: float = 0.0
 var _tiempo_transformacion_aura: float = 0.0
 var _tween_aura_persistente: Tween
 var _materiales_aura_status: Array[ShaderMaterial] = []
+var _colores_originales_poderes: Array[Dictionary] = []
 var _esfera_energia: Node3D
 var _aura: MeshInstance3D
 var _orbita_aura: MeshInstance3D
@@ -192,6 +193,60 @@ func alternar_aura_persistente() -> void:
 			if is_instance_valid(emisor) and not aura_persistente_activada:
 				emisor.visible = false
 		)
+	_actualizar_colores_poderes()
+
+
+func _registrar_colores_poder(nodo: Node) -> void:
+	if nodo is Light3D:
+		_colores_originales_poderes.append({"objeto": nodo, "propiedad": &"light_color", "color": nodo.light_color, "shader": false})
+	if nodo is GeometryInstance3D:
+		var material: Material = nodo.material_override
+		if material is ShaderMaterial:
+			for nombre: StringName in [&"primary_color", &"secondary_color", &"tertiary_color", &"beam_color", &"highlight_color"]:
+				var valor: Variant = material.get_shader_parameter(nombre)
+				if valor is Color:
+					_colores_originales_poderes.append({"objeto": material, "propiedad": nombre, "color": valor, "shader": true})
+		elif material is BaseMaterial3D:
+			for propiedad: StringName in [&"albedo_color", &"emission"]:
+				_colores_originales_poderes.append({"objeto": material, "propiedad": propiedad, "color": material.get(propiedad), "shader": false})
+	for hijo: Node in nodo.get_children():
+		_registrar_colores_poder(hijo)
+
+
+func _color_poder_con_aura(original: Color, propiedad: StringName) -> Color:
+	var color: Color
+	match propiedad:
+		&"primary_color": color = COLOR_EXPLOSION_FINAL_PRIMARIO
+		&"secondary_color": color = COLOR_EXPLOSION_FINAL_SECUNDARIO
+		&"tertiary_color": color = COLOR_EXPLOSION_FINAL_TERCIARIO
+		&"light_color": color = COLOR_EXPLOSION_FINAL_LUZ
+		_:
+			# Conserva el contraste entre núcleo claro y bordes intensos, y su opacidad.
+			color = Color.from_hsv(COLOR_EXPLOSION_FINAL_PRIMARIO.h, original.s, original.v)
+	color.a = original.a
+	return color
+
+
+func _actualizar_colores_poderes() -> void:
+	# Solo se actualiza al alternar el aura; no recorre los materiales cada frame.
+	for registro: Dictionary in _colores_originales_poderes:
+		var original: Color = registro["color"]
+		var propiedad: StringName = registro["propiedad"]
+		var color := _color_poder_con_aura(original, propiedad) if aura_persistente_activada else original
+		if registro["shader"]:
+			(registro["objeto"] as ShaderMaterial).set_shader_parameter(propiedad, color)
+		else:
+			(registro["objeto"] as Object).set(propiedad, color)
+
+
+func _aislar_materiales_vfx(efecto: Node3D) -> void:
+	# Los prefabs comparten recursos; cada jugador/impacto necesita su propia paleta.
+	var materiales: Array[ShaderMaterial] = []
+	for hijo: Node in efecto.get_children():
+		if hijo is GeometryInstance3D and hijo.material_override is ShaderMaterial:
+			hijo.material_override = hijo.material_override.duplicate() as ShaderMaterial
+			materiales.append(hijo.material_override)
+	efecto.set("materials", materiales)
 
 
 func _crear_aura_persistente(esqueleto: Skeleton3D) -> void:
@@ -289,6 +344,8 @@ func _aplicar_overlay_aura_al_personaje() -> void:
 	if modelo == null:
 		return
 	for nodo: Node in modelo.find_children("*", "MeshInstance3D", true, false):
+		if _energia.is_ancestor_of(nodo) or _aura_persistente.is_ancestor_of(nodo):
+			continue
 		var malla := nodo as MeshInstance3D
 		if malla == null or malla.mesh == null:
 			continue
@@ -914,6 +971,8 @@ func _crear_energia(esqueleto: Skeleton3D) -> void:
 	_rayos_malla.append(_crear_tubo_kamehameha("CentroBlancoAzulado", 0.60 * ESCALA_GROSOR_KAMEHAMEHA, 0.54 * ESCALA_GROSOR_KAMEHAMEHA, Color(0.68, 0.94, 1.0), 0.96))
 	_rayo_vfx.visible = false
 	_energia.visible = false
+	for efecto: Node in [_esfera_energia, _aura, _orbita_aura, _luz_aura, _rayo_vfx, _esfera_genkidama, _rasengan]:
+		_registrar_colores_poder(efecto)
 
 
 func _crear_orbe_kamehameha(radio_exterior: float, radio_nucleo: float) -> Node3D:
@@ -923,13 +982,15 @@ func _crear_orbe_kamehameha(radio_exterior: float, radio_nucleo: float) -> Node3
 	shader.code = """
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never;
+uniform vec3 secondary_color : source_color = vec3(0.012, 0.12, 0.76);
+uniform vec3 primary_color : source_color = vec3(0.34, 0.86, 1.0);
 
 void fragment() {
 	float giro = UV.x * TAU * 5.0 + UV.y * 18.0 - TIME * 5.0
 		+ sin(UV.y * 11.0 - TIME * 2.2) * 1.1;
 	float corriente = smoothstep(-0.28, 0.82, sin(giro));
 	float borde = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 1.25);
-	vec3 azul = mix(vec3(0.012, 0.12, 0.76), vec3(0.34, 0.86, 1.0), corriente);
+	vec3 azul = mix(secondary_color, primary_color, corriente);
 	ALBEDO = azul;
 	EMISSION = azul * (0.9 + corriente * 1.25 + borde * 0.55);
 	ALPHA = clamp(0.56 + corriente * 0.28 + borde * 0.14, 0.56, 0.96);
@@ -937,6 +998,8 @@ void fragment() {
 """
 	var material := ShaderMaterial.new()
 	material.shader = shader
+	material.set_shader_parameter("secondary_color", Color(0.012, 0.12, 0.76))
+	material.set_shader_parameter("primary_color", Color(0.34, 0.86, 1.0))
 	exterior.material_override = material
 	orbe.add_child(exterior)
 	orbe.add_child(_crear_esfera_rayo(radio_nucleo, Color(0.73, 0.95, 1.0), 4.2))
@@ -993,6 +1056,7 @@ func _crear_tubo_kamehameha(nombre: String, radio_inicio: float, radio_final: fl
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
 uniform vec3 beam_color : source_color;
+uniform vec3 highlight_color : source_color = vec3(0.84, 0.98, 1.0);
 uniform float beam_alpha = 0.5;
 
 void vertex() {
@@ -1009,7 +1073,7 @@ void fragment() {
 	float wave = sin(drift + sin(UV.y * 7.0 + TIME * 1.7) * 1.3);
 	float filament = smoothstep(-0.28, 0.86, wave);
 	float bands = 0.73 + 0.18 * sin(UV.x * TAU * 3.0 - UV.y * 8.0 - TIME * 3.0);
-	vec3 color = mix(beam_color, vec3(0.84, 0.98, 1.0), filament * 0.42);
+	vec3 color = mix(beam_color, highlight_color, filament * 0.42);
 	ALBEDO = color;
 	EMISSION = color * (0.95 + filament * 1.1);
 	ALPHA = beam_alpha * clamp(bands + filament * 0.18, 0.22, 1.0);
@@ -1018,6 +1082,7 @@ void fragment() {
 	var material := ShaderMaterial.new()
 	material.shader = shader
 	material.set_shader_parameter("beam_color", color)
+	material.set_shader_parameter("highlight_color", Color(0.84, 0.98, 1.0))
 	material.set_shader_parameter("beam_alpha", opacidad)
 	tubo.material_override = material
 	_rayo_vfx.add_child(tubo)
@@ -1033,14 +1098,17 @@ func _crear_genkidama() -> void:
 	shader_esfera.code = """
 shader_type spatial;
 render_mode unshaded;
+uniform vec3 tertiary_color : source_color = vec3(0.012, 0.075, 0.48);
+uniform vec3 secondary_color : source_color = vec3(0.015, 0.31, 0.95);
+uniform vec3 primary_color : source_color = vec3(0.30, 0.82, 1.0);
 void fragment() {
 	float giro = UV.x * 6.28318 * 9.0 + UV.y * 24.0 - TIME * 3.4;
 	float corrientes = sin(giro + sin(UV.y * 31.0 - TIME * 2.1) * 1.6);
 	float vetas = smoothstep(-0.20, 0.78, corrientes);
 	float nubes = 0.5 + 0.5 * sin(UV.x * 42.0 + sin(UV.y * 28.0 - TIME) * 2.0 + TIME * 1.5);
-	vec3 profundo = vec3(0.012, 0.075, 0.48);
-	vec3 azul = vec3(0.015, 0.31, 0.95);
-	vec3 brillo = vec3(0.30, 0.82, 1.0);
+	vec3 profundo = tertiary_color;
+	vec3 azul = secondary_color;
+	vec3 brillo = primary_color;
 	vec3 color = mix(profundo, azul, 0.42 + vetas * 0.42);
 	color = mix(color, brillo, smoothstep(0.78, 0.97, nubes) * (0.20 + vetas * 0.45));
 	ALBEDO = color;
@@ -1049,6 +1117,9 @@ void fragment() {
 """
 	var material_esfera := ShaderMaterial.new()
 	material_esfera.shader = shader_esfera
+	material_esfera.set_shader_parameter("tertiary_color", Color(0.012, 0.075, 0.48))
+	material_esfera.set_shader_parameter("secondary_color", Color(0.015, 0.31, 0.95))
+	material_esfera.set_shader_parameter("primary_color", Color(0.30, 0.82, 1.0))
 	esfera_energia.material_override = material_esfera
 	_esfera_genkidama.add_child(esfera_energia)
 	_esfera_genkidama.add_child(_crear_esfera_rayo(1.48, Color(0.64, 0.92, 1.0), 4.2))
@@ -1069,6 +1140,7 @@ void fragment() {
 	_material_orbita_genkidama.set_shader_parameter("effect_decay", 0.58)
 	_material_orbita_genkidama.set_shader_parameter("emission", 1.9)
 	_genkidama_vfx = ESCENA_CARGA_AZUL.instantiate() as Node3D
+	_aislar_materiales_vfx(_genkidama_vfx)
 	_genkidama_vfx.name = "EsferaBattleFX"
 	_genkidama_vfx.scale = Vector3.ONE * 1.25
 	_genkidama_vfx.set("primary_color", Color(0.50, 0.91, 1.0))
@@ -1090,6 +1162,7 @@ void fragment() {
 
 func _crear_impacto_azul(posicion_global: Vector3, escala: float, duracion_humo: float = 0.0, velocidad: float = 1.6, persistir: bool = false) -> void:
 	var impacto := ESCENA_IMPACTO_AZUL.instantiate() as Node3D
+	_aislar_materiales_vfx(impacto)
 	impacto.name = "ImpactoAzulTemporal"
 	# El prefab se marca con autoplay; desactivarlo antes de entrar al árbol evita que repita el estallido.
 	impacto.set("autoplay", false)
@@ -1099,6 +1172,11 @@ func _crear_impacto_azul(posicion_global: Vector3, escala: float, duracion_humo:
 	impacto.set("tertiary_color", Color(0.005, 0.035, 0.30))
 	impacto.set("emission", 2.3)
 	impacto.set("light_color", Color(0.08, 0.42, 1.0))
+	if aura_persistente_activada:
+		impacto.set("primary_color", COLOR_EXPLOSION_FINAL_PRIMARIO)
+		impacto.set("secondary_color", COLOR_EXPLOSION_FINAL_SECUNDARIO)
+		impacto.set("tertiary_color", COLOR_EXPLOSION_FINAL_TERCIARIO)
+		impacto.set("light_color", COLOR_EXPLOSION_FINAL_LUZ)
 	impacto.set("speed_scale", velocidad)
 	if duracion_humo > 0.0:
 		var humo := impacto.get_node_or_null("Smoke") as GPUParticles3D
@@ -1115,6 +1193,7 @@ func _crear_impacto_azul(posicion_global: Vector3, escala: float, duracion_humo:
 
 func _crear_explosion_final_amarilla(posicion_global: Vector3) -> void:
 	var impacto := ESCENA_IMPACTO_AZUL.instantiate() as Node3D
+	_aislar_materiales_vfx(impacto)
 	impacto.name = "ExplosionFinalVegeta"
 	impacto.set("autoplay", false)
 	impacto.set("one_shot", true)
