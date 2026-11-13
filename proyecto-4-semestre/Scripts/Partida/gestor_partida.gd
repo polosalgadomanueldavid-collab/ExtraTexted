@@ -6,6 +6,7 @@ extends Node3D
 @onready var evento_apagon: EventoApagonScript = $EventoApagon
 @onready var evento_terremoto: EventoTerremoto = $EventoTerremoto
 @onready var musica_partida: MusicaPartida = $MusicaPartida
+@onready var musica_cordura_baja: MusicaPartida = $MusicaCorduraBaja
 
 const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
 const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
@@ -31,7 +32,7 @@ const HerramientaReporte := preload("res://Scripts/Despacho/herramienta_reporte.
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const FinalPartidaScript := preload("res://UI/Despacho/final_partida.gd")
-const MODELO_RELEVO := preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn")
+const CinematicaRelevo := preload("res://Scripts/Partida/cinematica_relevo.gd")
 const VER_CLASIFICACION := &"VerClasificacion"
 const ALTURA_INDICADOR_ESTACION: float = 1.25
 const DURACION_DESENCRIPTADO: float = 6.0
@@ -44,6 +45,7 @@ const EventoLava := preload("res://Eventos/Lava/evento_lava.gd")
 const EventoHielo := preload("res://Eventos/Hielo/evento_hielo.gd")
 const AnuncioPartida := preload("res://UI/Despacho/anuncio_partida.gd")
 const IndicadorDenunciaPC := preload("res://UI/Computador/indicador_denuncia_pc.gd")
+const RuletaEmotesScript := preload("res://UI/Menus/ruleta_emotes.gd")
 
 
 var sistema_despacho: SistemaDespacho
@@ -93,6 +95,7 @@ var _reporte_herramienta_recogida: bool = false
 var papel_actual: PapelDenuncia = null
 var partida_finalizada: bool = false
 var final_partida: FinalPartida
+var cinematica_relevo: CinematicaRelevo
 var _duracion_partida: float = 0.0
 var _resueltas: Array[Dictionary] = []
 var _vencidas: Array[Dictionary] = []
@@ -107,6 +110,7 @@ var evento_inundacion: EventoInundacion
 var evento_lava: EventoLava
 var evento_hielo: EventoHielo
 var _tutorial_apagon_mostrado := false
+var ruleta_emotes: RuletaEmotes
 
 
 func _ready() -> void:
@@ -115,6 +119,13 @@ func _ready() -> void:
 	$CanvasLayer.add_child(anuncios)
 	indicador_denuncia_pc = IndicadorDenunciaPC.new()
 	$CanvasLayer.add_child(indicador_denuncia_pc)
+	ruleta_emotes = RuletaEmotesScript.new() as RuletaEmotes
+	ruleta_emotes.name = "RuletaEmotes"
+	ruleta_emotes.z_index = 100
+	$CanvasLayer.add_child(ruleta_emotes)
+	jugador.emote_menu_requested.connect(_abrir_ruleta_emotes)
+	jugador.emote_menu_finished.connect(_cerrar_ruleta_emotes)
+	ruleta_emotes.emote_seleccionado.connect(_seleccionar_emote_ruleta)
 	sonidos_mesas = SonidosMesas.new()
 	add_child(sonidos_mesas)
 	generador_aleatorio.randomize()
@@ -122,6 +133,7 @@ func _ready() -> void:
 	sistema_despacho = SistemaDespacho.new()
 	add_child(sistema_despacho)
 	musica_partida.configurar(sistema_despacho)
+	musica_cordura_baja.configurar(sistema_despacho, true)
 	_nombre_partida = MenuGlobal.nombre_partida
 	panel_despacho.calma_jugadores.establecer_nombre(1, _nombre_partida)
 	clasificacion_partida = CLASIFICACION_PARTIDA_ESCENA.instantiate()
@@ -238,14 +250,10 @@ func _ready() -> void:
 	computador.entregar_papel = true
 	computador.papel_solicitado.connect(_entregar_papel)
 
-	temporizador_denuncias = Timer.new()
-	temporizador_denuncias.one_shot = true
-	temporizador_denuncias.timeout.connect(_recibir_denuncia_aleatoria)
-	add_child(temporizador_denuncias)
+	_asegurar_temporizador_denuncias()
 
 	# La primera llega pronto para confirmar visualmente la integración.
 	temporizador_denuncias.start(3.0)
-
 	temporizador_bloqueos = Timer.new()
 	temporizador_bloqueos.wait_time = DURACION_BLOQUEO_SEGUNDOS
 	temporizador_bloqueos.timeout.connect(_on_temporizador_bloqueos_timeout)
@@ -256,6 +264,24 @@ func _ready() -> void:
 	temporizador_eventos.timeout.connect(_intentar_evento_aleatorio)
 	add_child(temporizador_eventos)
 	_preparar_pool_bloqueos.call_deferred()
+
+
+func _abrir_ruleta_emotes() -> void:
+	var aura_activa := is_instance_valid(jugador.gestos) and jugador.gestos.aura_persistente_activada
+	ruleta_emotes.abrir(aura_activa)
+
+
+func _cerrar_ruleta_emotes(_cancelled: bool) -> void:
+	ruleta_emotes.cerrar()
+
+
+func _seleccionar_emote_ruleta(tipo: StringName) -> void:
+	jugador.cerrar_menu_emotes(false)
+	if tipo == &"aura_persistente":
+		if is_instance_valid(jugador.gestos):
+			jugador.gestos.alternar_aura_persistente()
+		return
+	jugador.ejecutar_gesto(tipo)
 
 
 func _preparar_pool_bloqueos() -> void:
@@ -406,7 +432,7 @@ func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 	elif objetivo == evento_apagon.taco:
 		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
 	else:
-		_aviso_apagon.text = "APAGÓN  ·  BUSCA EL TACO DE LUZ\nPARED DERECHA  ·  ZONA DE DESCANSO"
+		_aviso_apagon.text = "APAGÓN  ·  BUSCA EL TACO DE LUZ\nJUNTO A LA PUERTA DE PERSONAL"
 
 
 func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
@@ -472,9 +498,20 @@ func _presentar_clasificacion() -> void:
 	clasificacion_partida.presentar(consulta.entradas, _nombre_partida, sistema_despacho.puntuacion.puntos_ganados, consulta.error)
 
 
+func _asegurar_temporizador_denuncias() -> void:
+	if is_instance_valid(temporizador_denuncias):
+		return
+	temporizador_denuncias = Timer.new()
+	temporizador_denuncias.name = "TemporizadorDenuncias"
+	temporizador_denuncias.one_shot = true
+	temporizador_denuncias.timeout.connect(_recibir_denuncia_aleatoria)
+	add_child(temporizador_denuncias)
+
+
 func _recibir_denuncia_aleatoria() -> void:
 	if partida_finalizada:
 		return
+	_asegurar_temporizador_denuncias()
 	if sistema_despacho.obtener_denuncias_ordenadas().size() < MAX_DENUNCIAS_PENDIENTES:
 		var plantilla: Denuncia = catalogo_denuncias[
 			generador_aleatorio.randi_range(0, catalogo_denuncias.size() - 1)
@@ -508,6 +545,7 @@ func _recibir_denuncia_aleatoria() -> void:
 
 
 func _programar_siguiente_denuncia() -> void:
+	_asegurar_temporizador_denuncias()
 	var espera: float = generador_aleatorio.randf_range(
 		TIEMPO_MINIMO_ENTRE_DENUNCIAS,
 		TIEMPO_MAXIMO_ENTRE_DENUNCIAS
@@ -834,7 +872,8 @@ func _al_terminar_partida() -> void:
 	evento_hielo.detener()
 	MenuGlobal.final_de_partida_activo = true
 	jugador.input_locked = true
-	temporizador_denuncias.stop()
+	if is_instance_valid(temporizador_denuncias):
+		temporizador_denuncias.stop()
 	temporizador_bloqueos.stop()
 	temporizador_eventos.stop()
 	var abiertas: Array[Dictionary] = []
@@ -864,46 +903,32 @@ func _al_terminar_partida() -> void:
 
 
 func _mostrar_companero_relevo() -> void:
-	# El modelo existente aparece junto al jugador y se acerca durante el relevo.
-	var celda := grafo_piso.celda_de_acceso(jugador.global_position)
-	var offsets: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-	var destino_celda := Vector2i(-1, -1)
-	var inicio_celda := Vector2i(-1, -1)
-	for offset: Vector2i in offsets:
-		if grafo_piso.es_transitable(celda + offset):
-			destino_celda = celda + offset
-			inicio_celda = celda + offset * 2 if grafo_piso.es_transitable(celda + offset * 2) else destino_celda
-			break
-	if destino_celda == Vector2i(-1, -1):
-		return
-	var companero := MODELO_RELEVO.instantiate() as Node3D
-	companero.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(companero)
-	companero.scale = jugador.scale
-	var inicio := grafo_piso.celda_a_posicion(inicio_celda)
-	var destino := grafo_piso.celda_a_posicion(destino_celda)
-	inicio.y = jugador.global_position.y
-	destino.y = inicio.y
-	companero.global_position = inicio
-	var direccion := jugador.global_position - destino
-	companero.rotation.y = atan2(direccion.x, direccion.z)
-	var animador := companero.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	if inicio_celda != destino_celda:
-		_reproducir_animacion_relevo(animador, "walk")
-		var movimiento := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		movimiento.tween_property(companero, "global_position", destino, 1.35)
-		movimiento.finished.connect(_reproducir_animacion_relevo.bind(animador, "idle"))
-	else:
-		_reproducir_animacion_relevo(animador, "idle")
+	# Deja terminar la limpieza de las estaciones y el asiento, que también
+	# escuchan partida_terminada, antes de tomar el control de los personajes.
+	_iniciar_cinematica_relevo.call_deferred()
 
 
-func _reproducir_animacion_relevo(animador: AnimationPlayer, nombre: String) -> void:
-	if not is_instance_valid(animador):
+func _iniciar_cinematica_relevo() -> void:
+	if is_instance_valid(cinematica_relevo):
 		return
-	for clip: StringName in animador.get_animation_list():
-		if String(clip).to_lower().ends_with(nombre):
-			animador.play(clip)
-			return
+	clasificador_evidencias.cancelar()
+	escaner_verificacion.cancelar()
+	evento_apagon.panel.hide()
+	evento_apagon.mascara.hide()
+	evento_apagon.indicador_luz.hide()
+	evento_apagon._restaurar_luces()
+	# La salida requiere suelo firme incluso si la última hoja se perdió en
+	# una grieta. La simulación permanece pausada y no se generan más eventos.
+	if evento_terremoto.activo:
+		evento_terremoto._cerrar()
+	_limpiar_bloqueos_temporales()
+	jugador.input_locked = true
+	jugador.velocity = Vector3.ZERO
+	cinematica_relevo = CinematicaRelevo.new()
+	cinematica_relevo.name = "CinematicaRelevo"
+	add_child(cinematica_relevo)
+	cinematica_relevo.terminada.connect(final_partida.finalizar_relevo)
+	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso)
 
 
 func _reiniciar_despues_del_final() -> void:

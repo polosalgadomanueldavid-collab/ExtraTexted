@@ -22,9 +22,13 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES, APAGON }
 @onready var selector_filtro: OptionButton = %SelectorFiltro
 @onready var control_intensidad: HSlider = %Intensidad
 @onready var control_brillo: HSlider = %Brillo
+@onready var control_volumen_musica: HSlider = %VolumenMusica
+@onready var control_volumen_interacciones: HSlider = %VolumenInteracciones
 @onready var selector_balanceo: OptionButton = %SelectorBalanceo
 @onready var valor_intensidad: Label = %ValorIntensidad
 @onready var valor_brillo: Label = %ValorBrillo
+@onready var valor_volumen_musica: Label = %ValorVolumenMusica
+@onready var valor_volumen_interacciones: Label = %ValorVolumenInteracciones
 @onready var filtro_pantalla: ColorRect = %FiltroPantalla
 @onready var margen: MarginContainer = $Interfaz/CapaModal/Margen
 @onready var fondo_modal: ColorRect = $Interfaz/CapaModal/Fondo
@@ -49,6 +53,7 @@ var _momento_confirmacion := 0.0
 
 
 func _ready() -> void:
+	musica_menu.bus = "Musica"
 	%Reanudar.pressed.connect(reanudar_juego)
 	%OpcionesPausa.pressed.connect(abrir_opciones)
 	%TutorialPausa.pressed.connect(abrir_tutorial)
@@ -57,7 +62,13 @@ func _ready() -> void:
 	%MenuPrincipal.pressed.connect(_pedir_volver_al_menu)
 	%VolverOpciones.pressed.connect(cerrar_opciones)
 	%VolverAccesibilidad.pressed.connect(cerrar_accesibilidad)
-	_confinar_foco([%AccesibilidadOpciones, %ControlesOpciones, %VolverOpciones])
+	_confinar_foco([
+		control_volumen_musica,
+		control_volumen_interacciones,
+		%AccesibilidadOpciones,
+		%ControlesOpciones,
+		%VolverOpciones,
+	])
 	%Restablecer.pressed.connect(AjustesAccesibilidad.restablecer)
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
@@ -69,6 +80,8 @@ func _ready() -> void:
 	selector_balanceo.item_selected.connect(_cambiar_balanceo)
 	control_intensidad.value_changed.connect(_cambiar_intensidad)
 	control_brillo.value_changed.connect(_cambiar_brillo)
+	control_volumen_musica.value_changed.connect(_cambiar_volumen_musica)
+	control_volumen_interacciones.value_changed.connect(_cambiar_volumen_interacciones)
 	AjustesAccesibilidad.ajustes_cambiados.connect(_sincronizar_ajustes)
 	get_tree().scene_changed.connect(_al_cambiar_escena)
 	capa.resized.connect(_ajustar_presentacion)
@@ -535,10 +548,20 @@ func _cambiar_balanceo(indice: int) -> void:
 	AjustesAccesibilidad.establecer_balanceo_camara(indice == 0)
 
 
+func _cambiar_volumen_musica(valor: float) -> void:
+	AjustesAccesibilidad.establecer_volumen_musica(valor / 100.0)
+
+
+func _cambiar_volumen_interacciones(valor: float) -> void:
+	AjustesAccesibilidad.establecer_volumen_interacciones(valor / 100.0)
+
+
 func _sincronizar_ajustes() -> void:
 	selector_filtro.select(AjustesAccesibilidad.modo)
 	control_intensidad.set_value_no_signal(AjustesAccesibilidad.intensidad * 100.0)
 	control_brillo.set_value_no_signal(AjustesAccesibilidad.brillo * 100.0)
+	control_volumen_musica.set_value_no_signal(AjustesAccesibilidad.volumen_musica * 100.0)
+	control_volumen_interacciones.set_value_no_signal(AjustesAccesibilidad.volumen_interacciones * 100.0)
 	selector_balanceo.select(0 if AjustesAccesibilidad.balanceo_camara else 1)
 	control_intensidad.editable = AjustesAccesibilidad.modo != 0
 	control_intensidad.focus_mode = Control.FOCUS_ALL if control_intensidad.editable else Control.FOCUS_NONE
@@ -549,6 +572,8 @@ func _sincronizar_ajustes() -> void:
 	_confinar_foco(controles)
 	valor_intensidad.text = "%d %%" % roundi(control_intensidad.value)
 	valor_brillo.text = "%d %%" % roundi(control_brillo.value)
+	valor_volumen_musica.text = "%d %%" % roundi(control_volumen_musica.value)
+	valor_volumen_interacciones.text = "%d %%" % roundi(control_volumen_interacciones.value)
 	var material_filtro := filtro_pantalla.material as ShaderMaterial
 	material_filtro.set_shader_parameter("mode", AjustesAccesibilidad.modo)
 	material_filtro.set_shader_parameter("intensity", AjustesAccesibilidad.intensidad)

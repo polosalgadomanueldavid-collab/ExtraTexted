@@ -277,6 +277,75 @@ theme_override_font_sizes/font_size = 64
 text = "OPCIONES"
 horizontal_alignment = 1
 
+[node name="EtiquetaAudio" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_font_sizes/font_size = 34
+text = "AUDIO"
+horizontal_alignment = 1
+
+[node name="FilaVolumenMusica" type="HBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaVolumenMusica"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_font_sizes/font_size = 30
+size_flags_horizontal = 3
+text = "Música ambiental"
+
+[node name="ValorVolumenMusica" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaVolumenMusica"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_font_sizes/font_size = 30
+text = "100 %"
+horizontal_alignment = 2
+
+[node name="VolumenMusica" type="HSlider" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme = SubResource("Theme_controles")
+focus_mode = 2
+max_value = 100.0
+step = 1.0
+value = 100.0
+
+[node name="FilaVolumenInteracciones" type="HBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaVolumenInteracciones"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_font_sizes/font_size = 30
+size_flags_horizontal = 3
+text = "Interacciones y pasos"
+
+[node name="ValorVolumenInteracciones" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaVolumenInteracciones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_font_sizes/font_size = 30
+text = "100 %"
+horizontal_alignment = 2
+
+[node name="VolumenInteracciones" type="HSlider" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme = SubResource("Theme_controles")
+focus_mode = 2
+max_value = 100.0
+step = 1.0
+value = 100.0
+
 [node name="Botones" type="VBoxContainer" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
 custom_minimum_size = Vector2(514.42, 0)
 layout_mode = 2

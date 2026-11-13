@@ -32,6 +32,7 @@ func _ready() -> void:
 	sonido = AudioStreamPlayer.new()
 	sonido.name = "SonidoLapiz"
 	sonido.stream = SONIDO
+	sonido.bus = "Interacciones"
 	sonido.volume_db = -6.5
 	add_child(sonido)
 	resized.connect(queue_redraw)
