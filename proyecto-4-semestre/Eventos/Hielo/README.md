@@ -7,6 +7,7 @@ Una fuga de nitrógeno en descanso congela la oficina. Entra en el sorteo compar
 - Las tareas, papeles, computador, café y sofá siguen disponibles. Sus gestos y paneles mantienen el frenado normal; congelarse no bloquea la tecla E ni pausa los casos.
 - Aviso de inicio azul, HUD con cuenta atrás y marcador hacia **NITRÓGENO**. La tubería está en la pared derecha de descanso, separada de las tuberías de agua. Su acceso está protegido al distribuir cajones.
 - **E frente a la tubería** abre el puzzle: aprieta cuatro tuercas siguiendo el orden cruzado indicado, durante tres pasadas. Clic o WASD/flechas para elegir, E/Espacio/Enter para apretar. Un error no borra el progreso; Esc permite salir y continuar después. La pausa global detiene todo.
+- El puzzle comparte el papel crema, la tinta petróleo y las fuentes del menú. La tubería lleva escarcha, tuercas con relieve y giro animado; el manómetro y el vapor disminuyen al reparar. El orden, las tres pasadas y las marcas de cada tuerca muestran el progreso, con respuesta visual de acierto y error.
 - Al sellar la fuga, el frío desaparece durante 2,5 s y se restauran materiales, luces y movimiento. El final de partida también limpia el evento y cierra el puzzle.
 
 Prueba manual: abre `res://Pruebas/Hielo/PruebaHielo.tscn` y pulsa **F6**. También **Ñ** con el depurador de grafo visible.
