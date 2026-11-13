@@ -93,6 +93,7 @@ func iniciar() -> bool:
 	_fuga.emitting = true
 	set_physics_process(true)
 	set_process(true)
+	aviso.actualizar(INTERVALO, false, false, INTERVALO)
 	aviso.show()
 	_jugador.reproducir_expresion(&"sorpresa")
 	iniciado.emit()
@@ -116,7 +117,10 @@ func _physics_process(delta: float) -> void:
 		if is_instance_valid(dato.nodo):
 			dato.nodo.light_color = dato.color.lerp(Color("85afff"), presencia * 0.68)
 	var restante := CONGELACION - fase if _jugador.congelado else INTERVALO - fase
-	aviso.actualizar(restante, _jugador.congelado, descongelando, tiempo < ENTRADA)
+	var duracion := CONGELACION if _jugador.congelado else INTERVALO
+	if not _jugador.congelado and tiempo >= INTERVALO:
+		duracion = INTERVALO - CONGELACION
+	aviso.actualizar(restante, _jugador.congelado, descongelando, duracion)
 	for i in _tuercas.size():
 		_tuercas[i].rotation.z = lerp_angle(_tuercas[i].rotation.z, panel.aprietes[i] * PI / 3.0, minf(1.0, delta * 8))
 	if descongelando and _tiempo_deshielo >= DESHIELO:
@@ -126,7 +130,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	var disponible: bool = activo and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible and not _oficina.clasificador_evidencias.visible and not _oficina.escaner_verificacion.visible
-	aviso.visible = disponible
+	aviso.visible = disponible and not descongelando
 	indicador.actualizar(get_viewport().get_camera_3d(), tuberia.global_position + Vector3.UP * 0.45,
 		_jugador.global_position, obtener_objetivo(_jugador) == self, disponible and not descongelando)
 

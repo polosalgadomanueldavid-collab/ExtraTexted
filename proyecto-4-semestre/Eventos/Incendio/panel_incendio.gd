@@ -12,6 +12,7 @@ var instruccion := "Busca el extintor en la zona de descanso"
 var nombre_mesa := ""
 var progreso_mesa := 0.0
 var apagando_mesa := false
+var estado_cordura := ""
 
 
 func _ready() -> void:
@@ -40,6 +41,11 @@ func _draw() -> void:
 	var origen_cuenta := Vector2(-ancho_cuenta * 0.5, 110)
 	draw_string_outline(DETALLE, origen_cuenta, cuenta, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, 5, TINTA)
 	draw_string(DETALLE, origen_cuenta, cuenta, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, CREMA)
+	if not estado_cordura.is_empty():
+		var ancho_estado := DETALLE.get_string_size(estado_cordura, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+		var origen_estado := Vector2(-ancho_estado * 0.5, 135)
+		draw_string_outline(DETALLE, origen_estado, estado_cordura, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, 5, TINTA)
+		draw_string(DETALLE, origen_estado, estado_cordura, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, CREMA)
 	if not nombre_mesa.is_empty():
 		draw_set_transform(Vector2(size.x * 0.5, size.y - 86.0 * factor), 0.0, Vector2.ONE * factor)
 		_dibujar_arco_mesa(factor)

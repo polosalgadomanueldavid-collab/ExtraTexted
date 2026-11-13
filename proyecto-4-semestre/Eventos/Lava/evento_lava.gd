@@ -154,15 +154,7 @@ func _actualizar_entrada() -> void:
 
 
 func _actualizar_panel() -> void:
-	var refugio := sobre_bloqueo_temporal()
-	var texto := "En el aire · Evita los charcos brillantes"
-	if refugio:
-		texto = "A salvo sobre el bloqueo · ¡Prepárate para saltar!"
-	elif tocando_suelo():
-		texto = "¡Charco ardiente! Pierdes más cordura" if en_charco(_jugador.global_position) else "¡Te quemas los pies! El suelo quita cordura"
-	if _tiempo < DURACION_ENTRADA:
-		texto = "El suelo se está calentando… ¡Busca un bloqueo!"
-	panel.actualizar(tiempo_restante, _oficina.temporizador_bloqueos.time_left, texto, refugio)
+	panel.actualizar(tiempo_restante)
 
 
 func detener() -> void:

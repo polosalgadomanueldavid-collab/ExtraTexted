@@ -50,6 +50,7 @@ var bloqueos_fijos: Dictionary = {}
 var bloqueos_mesas: Dictionary = {}
 var bloqueos_temporales: Dictionary = {}
 var grietas: Dictionary[Vector2i, bool] = {}
+var escombros: Dictionary[Vector2i, bool] = {}
 
 func _init() -> void:
 	for celda: Vector2i in CELDAS_BLOQUEADAS_FIJAS:
@@ -82,6 +83,7 @@ func es_transitable(celda: Vector2i) -> bool:
 		and not bloqueos_mesas.has(celda)
 		and not bloqueos_temporales.has(celda)
 		and not grietas.has(celda)
+		and not escombros.has(celda)
 	)
 
 

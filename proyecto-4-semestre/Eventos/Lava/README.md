@@ -8,7 +8,7 @@ Evento aleatorio de **60 segundos de juego**, exclusivo con apagón, terremoto, 
 - En el aire o sobre los bloqueos temporales no hay daño por lava. El personaje da un sobresalto, levanta las rodillas, rebota y agita los brazos mientras se quema. Las llamas siguen los huesos de ambos pies. La pose entra y sale suavemente; su rebote visual no añade altura al salto ni interrumpe el daño.
 - Las mesas y demás muebles fijos no se pueden trepar. Durante el evento se prolonga su huella física en una capa exclusiva del personaje; las consultas de interacción y las hojas conservan sus colisiones habituales.
 - Los bloqueos se redistribuyen cada **4 segundos**. Su retirada hace caer al jugador si estaba encima. Se conservan las protecciones de colocación del grafo, del personaje y del papel.
-- El aviso inicial explica el salto. El panel superior muestra el reloj `01:00 → 00:00`, el estado del apoyo y cuánto falta para la próxima redistribución.
+- El aviso inicial explica el salto. Arriba, centrado, queda únicamente un cronómetro circular con la cuenta `01:00 → 00:00`: números compactos en Luckiest Guy, naranja y contorno oscuro. La carcasa y los números pasan a rojo durante los últimos diez segundos. Se eliminan el cuadro rectangular, los textos de estado y la barra de redistribución.
 - La pausa detiene reloj, daño, animaciones y cambios de bloqueos. Al terminar se retiran magma, charcos, chispas y barreras, se restaura el intervalo anterior (normalmente 10 s) y se programa el siguiente evento. Agotar la cordura finaliza la partida con una causa propia de lava.
 
 ## Probar

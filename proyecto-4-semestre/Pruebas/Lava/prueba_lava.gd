@@ -128,7 +128,7 @@ func _probar() -> void:
 	_verificar(lava.sobre_bloqueo_temporal(), "El policía aterriza y permanece sobre el bloqueo temporal")
 	calma = oficina.sistema_despacho.calma_operativa
 	lava._physics_process(3.0)
-	_verificar(oficina.sistema_despacho.calma_operativa == calma and lava.panel.seguro, "El bloqueo protege la cordura y el HUD confirma el refugio")
+	_verificar(oficina.sistema_despacho.calma_operativa == calma and is_equal_approx(lava.panel.restante, lava.tiempo_restante), "El bloqueo protege la cordura y el cronómetro sigue sincronizado")
 	# La barrera ocupa el espacio por encima de una mesa real; solo capa de jugador.
 	await _fisicas(2)
 	var barrera := lava._barreras.get_child(0) as StaticBody3D

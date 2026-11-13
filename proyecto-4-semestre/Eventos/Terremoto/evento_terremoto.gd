@@ -3,22 +3,27 @@ extends Node3D
 signal iniciado
 signal temblor_actualizado(tiempo: float, intensidad: float)
 signal suelo_roto
+signal escombros_actualizados
 signal jugador_caido(jugador: Player)
 signal terminado
 
 enum Etapa { INACTIVO, AVISO, RUPTURA, RECUPERACION }
 
 const Grieta := preload("res://Eventos/Terremoto/grieta.gd")
+const Escombro := preload("res://Eventos/Terremoto/escombro.gd")
 const SonidosEventos := preload("res://Eventos/sonidos_eventos.gd")
 const ZONA_MESAS := Rect2(-3.72, 1.04, 5.42, 4.72)
 const SEGUNDOS_POR_ETAPA := 8.0
 const DURACION := 3.0 * SEGUNDOS_POR_ETAPA
 const TIEMPO_CIERRE := 0.60
 # La base del policía mide 0.45 × 0.31 m y proyecta hasta 0.55 m en diagonal.
-const ANCHOS: Array[float] = [1.33, 0.79, 0.73, 0.69]
-const LARGOS: Array[float] = [2.18, 1.70, 1.42, 1.15]
+const ANCHOS: Array[float] = [1.33, 0.79, 0.73, 0.69, 0.73, 0.69, 0.73, 0.69]
+const LARGOS: Array[float] = [2.18, 1.70, 1.42, 1.15, 1.05, 1.00, 0.95, 0.90]
+const MINIMO_GRIETAS := 6
+const MAXIMO_ESCOMBROS := 4
 
 @export var suelo: CSGBox3D
+@export var techo: CSGBox3D
 
 var permiso_inicio: Callable
 var sonidos: SonidosEventos
@@ -30,6 +35,7 @@ var activo: bool:
 var tiempo := 0.0
 var grietas: Array[Grieta] = []
 var caidos: Array[StaticBody3D] = []
+var escombros: Array[Escombro] = []
 
 var _trazado: Array[Grieta] = []
 var _celdas_rotas: Dictionary[Vector2i, bool] = {}
@@ -73,24 +79,27 @@ func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoj
 		if alcanzables.has(celda):
 			protegidos.append(celda)
 
-	# La copia permite validar las cuatro grietas y mantener intactos los
+	# La copia permite validar grietas y derrumbes y mantener intactos los
 	# caminos, las colisiones y las mesas hasta el instante de la rotura.
 	var ensayo := AStarGrid2D.new()
 	ensayo.region = Rect2i(0, 0, GrafoPiso.COLUMNAS, GrafoPiso.FILAS)
 	ensayo.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	ensayo.update()
-	for fila in range(GrafoPiso.FILAS):
-		for columna in range(GrafoPiso.COLUMNAS):
-			var celda := Vector2i(columna, fila)
-			ensayo.set_point_solid(celda, not grafo.es_transitable(celda))
-	for i in range(ANCHOS.size()):
-		if not _elegir_grieta(i, origen, protegidos, ensayo):
-			for anterior in _trazado:
-				anterior.free()
-			_trazado.clear()
-			_celdas_caidas.clear()
-			_celdas_rotas.clear()
-			return false
+	for intento in range(8):
+		_limpiar_trazado()
+		for fila in range(GrafoPiso.FILAS):
+			for columna in range(GrafoPiso.COLUMNAS):
+				var celda := Vector2i(columna, fila)
+				ensayo.set_point_solid(celda, not grafo.es_transitable(celda))
+		for i in range(ANCHOS.size()):
+			if not _elegir_grieta(i, origen, protegidos, ensayo):
+				break
+		if _trazado.size() >= MINIMO_GRIETAS:
+			break
+	if _trazado.size() < MINIMO_GRIETAS:
+		_limpiar_trazado()
+		return false
+	_preparar_escombros(origen, protegidos, ensayo)
 	for grieta in _trazado:
 		add_child(grieta)
 	etapa = Etapa.AVISO
@@ -119,11 +128,100 @@ func _abrir_suelo() -> void:
 		_bloqueos.erase(celda)
 		_grafo.bloqueos_temporales.erase(celda)
 	_celdas_caidas.clear()
+	for i in range(escombros.size()):
+		escombros[i].iniciar_aviso(0.35 + i * 0.65)
 	_grafo.construir_adyacencia()
 	# Si el suelo se abre justo debajo del jugador, empezar en tierra firme.
 	_ultimo_apoyo = _grafo.celda_a_posicion(_grafo.celda_de_acceso(_jugador.global_position))
 	_ultimo_apoyo.y = _altura
 	suelo_roto.emit()
+
+
+func _preparar_escombros(origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarGrid2D) -> void:
+	var candidatas: Array[Vector2i] = []
+	var puntuaciones: Dictionary[Vector2i, float] = {}
+	for fila in range(GrafoPiso.FILAS):
+		for columna in range(GrafoPiso.COLUMNAS):
+			var celda := Vector2i(columna, fila)
+			if ensayo.is_point_solid(celda) or celda == origen or destinos.has(celda) or _grafo.es_zona_segura(celda):
+				continue
+			var p := _grafo.celda_a_posicion(celda)
+			var punto := Vector2(p.x, p.z)
+			var huella := Rect2(punto - Vector2.ONE * Escombro.RADIO, Vector2.ONE * Escombro.RADIO * 2.0)
+			if not ZONA_MESAS.encloses(huella) or huella.grow(0.32).has_point(Vector2(_jugador.global_position.x, _jugador.global_position.z)):
+				continue
+			if _huella_hoja.has_area() and huella.grow(0.12).intersects(_huella_hoja):
+				continue
+			var bordes: Array[Vector2] = []
+			var sobre_grieta := false
+			for grieta in _trazado:
+				if grieta.toca_cuadro(punto, Escombro.RADIO + 0.08):
+					sobre_grieta = true
+					break
+				var cercano := grieta.contorno[0]
+				for j in range(grieta.contorno.size()):
+					var borde := Geometry2D.get_closest_point_to_segment(punto, grieta.contorno[j - 1], grieta.contorno[j])
+					if punto.distance_squared_to(borde) < punto.distance_squared_to(cercano):
+						cercano = borde
+				if punto.distance_to(cercano) < 1.15:
+					bordes.append(cercano - punto)
+			if sobre_grieta:
+				continue
+			# Dos bordes en lados distintos: el montón cierra un paso entre grietas.
+			var puntuacion := INF
+			for a in range(bordes.size()):
+				for b in range(a + 1, bordes.size()):
+					if bordes[a].normalized().dot(bordes[b].normalized()) < -0.25:
+						puntuacion = minf(puntuacion, bordes[a].length() + bordes[b].length())
+			if puntuacion < INF:
+				candidatas.append(celda)
+				puntuaciones[celda] = puntuacion
+	candidatas.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return puntuaciones[a] < puntuaciones[b])
+	for celda in candidatas:
+		ensayo.set_point_solid(celda)
+		var conectado := true
+		for destino in destinos:
+			if ensayo.get_id_path(origen, destino).is_empty():
+				conectado = false
+				break
+		if not conectado:
+			ensayo.set_point_solid(celda, false)
+			continue
+		var escombro := Escombro.new()
+		escombro.celda = celda
+		add_child(escombro)
+		var p := _grafo.celda_a_posicion(celda)
+		p.y = _altura
+		escombro.global_position = p
+		var altura_techo := techo.to_global(Vector3.DOWN * techo.size.y * 0.5).y if is_instance_valid(techo) else _altura + 5.8
+		escombro.preparar(altura_techo - _altura, _azar)
+		escombros.append(escombro)
+		if escombros.size() >= MAXIMO_ESCOMBROS:
+			break
+
+
+func _actualizar_escombros(delta: float) -> void:
+	for escombro in escombros:
+		if not escombro.avanzar(delta):
+			continue
+		_grafo.escombros[escombro.celda] = true
+		_grafo.construir_adyacencia()
+		# El aviso permite apartarse; si se entra justo al impactar, sacar al
+		# personaje del volumen sólido antes del siguiente movimiento físico.
+		var pies := Vector2(_jugador.global_position.x, _jugador.global_position.z)
+		if escombro.huella().grow(0.32).has_point(pies):
+			_ultimo_apoyo = _grafo.celda_a_posicion(_grafo.celda_de_acceso(_jugador.global_position))
+			_ultimo_apoyo.y = _altura
+			_devolver_a_tierra()
+		escombros_actualizados.emit()
+
+
+func _limpiar_trazado() -> void:
+	for grieta in _trazado:
+		grieta.free()
+	_trazado.clear()
+	_celdas_caidas.clear()
+	_celdas_rotas.clear()
 
 
 func _elegir_grieta(indice: int, origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarGrid2D) -> bool:
@@ -240,6 +338,7 @@ func _physics_process(delta: float) -> void:
 	temblor_actualizado.emit(tiempo, intensidad_local)
 	if etapa == Etapa.AVISO:
 		return
+	_actualizar_escombros(delta)
 	if _jugador.global_position.y < _altura - 0.55:
 		_devolver_a_tierra()
 	elif not _solto_gravilla and _jugador.velocity.y < 0.0 and _jugador.global_position.y < _altura - 0.10:
@@ -276,6 +375,9 @@ func _peso_en_zona_de_juego() -> float:
 func _devolver_a_tierra() -> void:
 	_solto_gravilla = false
 	_jugador_en_grieta = false
+	if not _grafo.es_transitable(_grafo.posicion_a_celda(_ultimo_apoyo)):
+		_ultimo_apoyo = _grafo.celda_a_posicion(_grafo.celda_de_acceso(_ultimo_apoyo))
+		_ultimo_apoyo.y = _altura
 	_jugador.global_position = _ultimo_apoyo + Vector3.UP * 0.04
 	_jugador.velocity = Vector3.ZERO
 	_jugador.reset_physics_interpolation()
@@ -287,6 +389,11 @@ func _cerrar() -> void:
 	for grieta in grietas:
 		grieta.cerrar()
 	grietas.clear()
+	_limpiar_trazado()
+	for escombro in escombros:
+		escombro.retirar()
+	escombros.clear()
+	_grafo.escombros.clear()
 	_grafo.grietas.clear()
 	_grafo.construir_adyacencia()
 	set_physics_process(false)
