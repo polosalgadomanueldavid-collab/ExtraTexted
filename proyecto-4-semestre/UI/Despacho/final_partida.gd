@@ -326,6 +326,7 @@ func _llenar_balance() -> void:
 	der.add_child(_etiqueta(str(causa.get("titulo", "Denuncia sin resolver")), 27, PETROLEO, FUENTE_TITULOS))
 	der.add_child(_etiqueta("CALMA OPERATIVA  0 / 100", 17, CORAL, FUENTE_TITULOS))
 	if causa.get("incendio", false):
+		_encabezado(1, "El incendio", "El fuego agotó la cordura")
 		der.add_child(_etiqueta("El incendio siguió activo y agotó tu cordura. Apaga todas las mesas para detener el desgaste.", 19, TINTA, FUENTE_TEXTO))
 		return
 	var hechas: Array = causa.get("completadas", [])

@@ -14,10 +14,11 @@ const IndicadorExtintor := preload("res://Eventos/Incendio/indicador_extintor.gd
 const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
 const SEGUNDOS_CENIZA := 10.0
 const SEGUNDOS_POR_MESA := 3.0
-const SEGUNDOS_GRACIA_CORDURA := 30.0
-const SEGUNDOS_ESCALADA_CORDURA := 30.0
+const SEGUNDOS_APAGADO_ADYACENTE := 1.1
+const SEPARACION_MAXIMA_TRAMO := 0.25
+const SEGUNDOS_GRACIA_CORDURA := 24.0
+const UMBRALES_DESGASTE := [SEGUNDOS_GRACIA_CORDURA, 60.0, 90.0]
 const PERDIDA_BASE_CORDURA := 1.0
-const ETAPAS_DESGASTE := 3
 const ALCANCE := 1.15
 
 var permiso_inicio: Callable
@@ -133,6 +134,28 @@ func ajustar_accesos(grafo: GrafoPiso) -> void:
 		foco.acceso.global_position = grafo.celda_a_posicion(celda)
 
 
+func obtener_adyacentes(foco: Foco) -> Array[Foco]:
+	var vecinas: Array[Foco] = []
+	var indice := _focos_perimetro.find(foco)
+	if indice < 0:
+		return vecinas
+	for paso: int in [-1, 1]:
+		var vecina := _focos_perimetro[posmod(indice + paso, _focos_perimetro.size())]
+		var fila := foco.mesa.get_parent()
+		var fila_vecina := vecina.mesa.get_parent()
+		if fila.name == &"Mesas Horizontales DOWN" or fila_vecina.name == &"Mesas Horizontales DOWN":
+			# Los dos tramos inferiores terminan en el pasillo y en las esquinas:
+			# no llevan el efecto al otro tramo ni a las paredes laterales.
+			if fila != fila_vecina:
+				continue
+			var hueco := maxf(foco.limites.position.x - vecina.limites.end.x, vecina.limites.position.x - foco.limites.end.x)
+			if hueco > SEPARACION_MAXIMA_TRAMO:
+				continue
+		if vecina != foco and not vecinas.has(vecina):
+			vecinas.append(vecina)
+	return vecinas
+
+
 func iniciar(bloqueos: Dictionary) -> bool:
 	if activo or focos.is_empty() or get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto():
 		return false
@@ -185,7 +208,7 @@ func obtener_objetivo(jugador: Player) -> Node3D:
 	var cercano: Foco
 	var menor := INF
 	for foco in focos:
-		if foco.apagado >= 1.0:
+		if foco.apagado >= 1.0 or foco.apagando_adyacente:
 			continue
 		var p := jugador.global_position
 		var punto := Vector3(clampf(p.x, foco.limites.position.x, foco.limites.end.x), p.y + 0.42, clampf(p.z, foco.limites.position.z, foco.limites.end.z))
@@ -232,7 +255,7 @@ func _equipar() -> void:
 
 
 func solicitar_apagado(foco: Foco, jugador: Player) -> void:
-	if not activo or jugador != _jugador or not focos.has(foco) or foco.apagado >= 1.0:
+	if not activo or jugador != _jugador or not focos.has(foco) or foco.apagado >= 1.0 or foco.apagando_adyacente:
 		return
 	if not equipado:
 		_oficina.panel_despacho._mostrar_mensaje("¡Está en llamas! Busca el extintor en la zona de descanso.", Color("ff9b44"))
@@ -278,6 +301,9 @@ func _physics_process(delta: float) -> void:
 	tiempo += delta
 	if tiempo + 0.00001 >= SEGUNDOS_CENIZA and not _fuegos_cajones.is_empty():
 		_convertir_cenizas()
+	for foco in focos:
+		if foco.avanzar_apagado_adyacente(delta, SEGUNDOS_APAGADO_ADYACENTE):
+			mesa_recuperada.emit(foco.estacion_id)
 	if _solicitud:
 		if not Input.is_action_pressed(_jugador.interaction_action) or _jugador.input_locked or _jugador.realizando_gesto() or not _jugador.is_on_floor() or _jugador._taza_en_mano or obtener_objetivo(_jugador) != objetivo or _oficina.clasificacion_partida.visible:
 			soltar()
@@ -294,8 +320,8 @@ func _physics_process(delta: float) -> void:
 			if objetivo.rociar(delta, SEGUNDOS_POR_MESA):
 				_recuperar_mesa_y_adyacentes(objetivo)
 				soltar()
-				if _todas_apagadas():
-					_finalizar()
+	if _todas_apagadas():
+		_finalizar()
 	if activo:
 		_aplicar_desgaste_cordura(tiempo_anterior)
 		# perder_calma puede terminar la partida y ocultar el evento de inmediato.
@@ -306,23 +332,15 @@ func _physics_process(delta: float) -> void:
 
 func _recuperar_mesa_y_adyacentes(foco: Foco) -> void:
 	mesa_recuperada.emit(foco.estacion_id)
-	var indice := _focos_perimetro.find(foco)
-	if indice < 0:
-		return
-	for paso: int in [-1, 1]:
-		var vecina := _focos_perimetro[posmod(indice + paso, _focos_perimetro.size())]
-		if vecina.apagado >= 1.0:
-			continue
+	for vecina in obtener_adyacentes(foco):
 		# Solo las dos vecinas originales: el apagado adicional no se propaga.
-		vecina.rociar(SEGUNDOS_POR_MESA, SEGUNDOS_POR_MESA)
-		mesa_recuperada.emit(vecina.estacion_id)
+		vecina.iniciar_apagado_adyacente()
 
 
 func _aplicar_desgaste_cordura(tiempo_anterior: float) -> void:
 	# Integra únicamente el tiempo posterior a cada umbral, incluso si un
-	# cuadro cruza varios: 1 punto/s tras 30 s, 2 tras 60 s y 3 tras 90 s.
-	for etapa in ETAPAS_DESGASTE:
-		var umbral := SEGUNDOS_GRACIA_CORDURA + etapa * SEGUNDOS_ESCALADA_CORDURA
+	# cuadro cruza varios: 1 punto/s tras 24 s, 2 tras 60 s y 3 tras 90 s.
+	for umbral: float in UMBRALES_DESGASTE:
 		_perdida_acumulada += maxf(0.0, tiempo - maxf(tiempo_anterior, umbral)) * PERDIDA_BASE_CORDURA
 	var puntos := floori(_perdida_acumulada + 0.00001)
 	if puntos > 0:
@@ -390,7 +408,10 @@ func _actualizar_panel() -> void:
 	if tiempo <= SEGUNDOS_GRACIA_CORDURA:
 		panel.estado_cordura = "Cordura en %d s · Apaga hasta 3 mesas a la vez" % ceili(SEGUNDOS_GRACIA_CORDURA - tiempo)
 	else:
-		var etapa := mini(ETAPAS_DESGASTE, 1 + floori((tiempo - SEGUNDOS_GRACIA_CORDURA) / SEGUNDOS_ESCALADA_CORDURA))
+		var etapa := 0
+		for umbral: float in UMBRALES_DESGASTE:
+			if tiempo >= umbral:
+				etapa += 1
 		panel.estado_cordura = "Pierdes %d de cordura/s · ¡Apaga el incendio!" % (etapa * PERDIDA_BASE_CORDURA)
 	if not activo:
 		panel.instruccion = "Oficina recuperada · vuelven los bloqueos normales"
@@ -417,6 +438,8 @@ func _finalizar() -> void:
 func detener() -> void:
 	soltar()
 	activo = false
+	for foco in focos:
+		foco.cancelar_apagado_adyacente()
 	_perdida_acumulada = 0.0
 	equipado = false
 	_mostrar_completado = 0.0

@@ -13,10 +13,10 @@ const GUIAS := {
 	},
 	&"incendio": {
 		"nombre": "INCENDIO", "titulo": "APAGA LAS MESAS",
-		"pista": "Tras 30 segundos pierdes cordura, cada vez más rápido. ¡Apaga todo el incendio!",
+		"pista": "Tras 24 s pierdes cordura. Abajo no cruza el hueco ni gira a los laterales.",
 		"pasos": [
 			["Recoge el extintor", "Sigue el marcador hasta la zona de descanso. Acércate al extintor y pulsa E.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_extintor.webp")],
-			["Apaga de tres en tres", "Mira una mesa cercana y mantén E. Al completar su arco, también se apagan sus dos vecinas del perímetro.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_mesa.webp")],
+			["Apaga hasta tres", "Mira una mesa cercana y mantén E. Al completar su arco, las vecinas del mismo tramo se apagan suavemente.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_mesa.webp")],
 			["Recorre el perímetro", "Apaga todos los fuegos para detener la pérdida de cordura. Las estaciones apagadas vuelven a funcionar; los cajones se vuelven ceniza solos.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_oficina.webp")],
 		],
 	},
