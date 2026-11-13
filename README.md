@@ -20,3 +20,5 @@ Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) p
 | `arte-fuente`, `muestras_audio`, `herramientas` | Archivos editables, muestras y herramientas fuera del proyecto de Godot. |
 
 Las rutas `res://` empiezan en `proyecto-4-semestre`. Al mover un recurso, actualiza sus referencias y conserva su archivo `.uid` o `.import` cuando exista.
+
+Al agotar la calma, la partida se detiene y comienza el relevo: la cámara encuadra la puerta de personal, el compañero entra y habla con una burbuja sobre su cabeza, y el jugador sale con la mirada baja. La tarjeta «Tu turno termina aquí» permite abrir el cuaderno únicamente cuando ambos terminan su recorrido. La puerta está en `Objetos/PuertaRelevo` y la secuencia en `Scripts/Partida/cinematica_relevo.gd`. Las pruebas `Pruebas/Partida/prueba_final_partida.gd` y `prueba_relevo_eventos.gd` verifican el orden y los finales durante apagón y terremoto.

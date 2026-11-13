@@ -7,7 +7,7 @@ const DemostracionCircuitos := preload("res://UI/Apagon/demostracion_circuitos.g
 const PASOS_APAGON := [
 	["Sigue el rayo", "Busca «Activar luz» en la zona de descanso.",
 		preload("res://UI/Menus/ArtePiloto/apagon_rayo.webp")],
-	["Abre el taco de luz", "Frente al tablero de la pared derecha, pulsa E.",
+	["Abre el taco de luz", "Acércate al tablero junto a la puerta de personal y pulsa E.",
 		preload("res://UI/Menus/ArtePiloto/apagon_taco.webp")],
 ]
 const PASO_CIRCUITO := {

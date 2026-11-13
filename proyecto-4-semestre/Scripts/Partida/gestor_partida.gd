@@ -29,7 +29,7 @@ const HerramientaReporte := preload("res://Scripts/Despacho/herramienta_reporte.
 const CLASIFICACION_PARTIDA_ESCENA := preload("res://UI/Despacho/ClasificacionPartida.tscn")
 const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.gd")
 const FinalPartidaScript := preload("res://UI/Despacho/final_partida.gd")
-const MODELO_RELEVO := preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn")
+const CinematicaRelevo := preload("res://Scripts/Partida/cinematica_relevo.gd")
 const VER_CLASIFICACION := &"VerClasificacion"
 const ALTURA_INDICADOR_ESTACION: float = 1.25
 const DURACION_DESENCRIPTADO: float = 6.0
@@ -87,6 +87,7 @@ var _reporte_herramienta_recogida: bool = false
 var papel_actual: PapelDenuncia = null
 var partida_finalizada: bool = false
 var final_partida: FinalPartida
+var cinematica_relevo: CinematicaRelevo
 var _duracion_partida: float = 0.0
 var _resueltas: Array[Dictionary] = []
 var _vencidas: Array[Dictionary] = []
@@ -346,7 +347,7 @@ func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
 	elif objetivo == evento_apagon.taco:
 		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
 	else:
-		_aviso_apagon.text = "APAGÓN  ·  BUSCA EL TACO DE LUZ\nPARED DERECHA  ·  ZONA DE DESCANSO"
+		_aviso_apagon.text = "APAGÓN  ·  BUSCA EL TACO DE LUZ\nJUNTO A LA PUERTA DE PERSONAL"
 
 
 func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
@@ -652,46 +653,32 @@ func _al_terminar_partida() -> void:
 
 
 func _mostrar_companero_relevo() -> void:
-	# El modelo existente aparece junto al jugador y se acerca durante el relevo.
-	var celda := grafo_piso.celda_de_acceso(jugador.global_position)
-	var offsets: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-	var destino_celda := Vector2i(-1, -1)
-	var inicio_celda := Vector2i(-1, -1)
-	for offset: Vector2i in offsets:
-		if grafo_piso.es_transitable(celda + offset):
-			destino_celda = celda + offset
-			inicio_celda = celda + offset * 2 if grafo_piso.es_transitable(celda + offset * 2) else destino_celda
-			break
-	if destino_celda == Vector2i(-1, -1):
-		return
-	var companero := MODELO_RELEVO.instantiate() as Node3D
-	companero.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(companero)
-	companero.scale = jugador.scale
-	var inicio := grafo_piso.celda_a_posicion(inicio_celda)
-	var destino := grafo_piso.celda_a_posicion(destino_celda)
-	inicio.y = jugador.global_position.y
-	destino.y = inicio.y
-	companero.global_position = inicio
-	var direccion := jugador.global_position - destino
-	companero.rotation.y = atan2(direccion.x, direccion.z)
-	var animador := companero.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	if inicio_celda != destino_celda:
-		_reproducir_animacion_relevo(animador, "walk")
-		var movimiento := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		movimiento.tween_property(companero, "global_position", destino, 1.35)
-		movimiento.finished.connect(_reproducir_animacion_relevo.bind(animador, "idle"))
-	else:
-		_reproducir_animacion_relevo(animador, "idle")
+	# Deja terminar la limpieza de las estaciones y el asiento, que también
+	# escuchan partida_terminada, antes de tomar el control de los personajes.
+	_iniciar_cinematica_relevo.call_deferred()
 
 
-func _reproducir_animacion_relevo(animador: AnimationPlayer, nombre: String) -> void:
-	if not is_instance_valid(animador):
+func _iniciar_cinematica_relevo() -> void:
+	if is_instance_valid(cinematica_relevo):
 		return
-	for clip: StringName in animador.get_animation_list():
-		if String(clip).to_lower().ends_with(nombre):
-			animador.play(clip)
-			return
+	clasificador_evidencias.cancelar()
+	escaner_verificacion.cancelar()
+	evento_apagon.panel.hide()
+	evento_apagon.mascara.hide()
+	evento_apagon.indicador_luz.hide()
+	evento_apagon._restaurar_luces()
+	# La salida requiere suelo firme incluso si la última hoja se perdió en
+	# una grieta. La simulación permanece pausada y no se generan más eventos.
+	if evento_terremoto.activo:
+		evento_terremoto._cerrar()
+	_limpiar_bloqueos_temporales()
+	jugador.input_locked = true
+	jugador.velocity = Vector3.ZERO
+	cinematica_relevo = CinematicaRelevo.new()
+	cinematica_relevo.name = "CinematicaRelevo"
+	add_child(cinematica_relevo)
+	cinematica_relevo.terminada.connect(final_partida.finalizar_relevo)
+	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso)
 
 
 func _reiniciar_despues_del_final() -> void:

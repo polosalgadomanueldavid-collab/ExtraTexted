@@ -9,7 +9,6 @@ const FUENTE_TITULOS := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.t
 const FUENTE_TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 const ARTE_CUADERNO := preload("res://UI/Despacho/cuaderno_arte.gd")
 const SONIDO_ALERTA := preload("res://Audios/Apagon/rechazo.wav")
-const SONIDO_RELEVO := preload("res://Audios/VozPersonaje/Gomosa/saludo.wav")
 const SONIDO_PAGINA := preload("res://Audios/Mesas/pasar_hoja_1.ogg")
 const TAMANO_LIBRO := Vector2(1280, 720)
 const PETROLEO := Color("173b50")
@@ -27,15 +26,16 @@ const NOMBRES_ESTACIONES := {
 
 var _datos: Dictionary = {}
 var _fase: int = 0
+var _relevo_finalizado: bool = false
 var _pagina_actual: int = 0
 var _pasando_pagina: bool = false
 var _escala_libro: float = 1.0
 var _fondo: ColorRect
 var _tarjeta: PanelContainer
+var _aviso_cinematica: PanelContainer
 var _rotulo: Label
 var _titulo_caso: Label
 var _detalle: Label
-var _dialogo: Label
 var _saltar: Button
 var _cuaderno: Control
 var _paginas: Array[Dictionary] = []
@@ -46,7 +46,6 @@ var _numero_izq: Label
 var _numero_der: Label
 var _estadisticas: Label
 var _alerta: AudioStreamPlayer
-var _voz: AudioStreamPlayer
 var _sonido_pagina: AudioStreamPlayer
 
 
@@ -56,6 +55,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_construir_interfaz()
 	resized.connect(_ajustar)
+	# Los Label con ajuste de línea recalculan su alto después de recibir ancho.
+	# Ajustar de nuevo evita conservar el mínimo provisional de una sola letra.
+	_aviso_cinematica.minimum_size_changed.connect(_ajustar.call_deferred)
+	_tarjeta.minimum_size_changed.connect(_ajustar.call_deferred)
 	_ajustar()
 	hide()
 
@@ -65,61 +68,106 @@ func presentar(datos: Dictionary) -> void:
 		return
 	_datos = datos
 	_fase = 1
+	_relevo_finalizado = false
 	show()
-	_tarjeta.show()
+	_tarjeta.hide()
 	_cuaderno.hide()
-	_rotulo.text = "DENUNCIA VENCIDA · CALMA 0"
-	var causa: Dictionary = _datos.get("causa", {})
-	if causa.get("terremoto", false):
-		_rotulo.text = "DENUNCIA PERDIDA EN EL TERREMOTO · CALMA 0"
-	_titulo_caso.text = str(causa.get("titulo", "Denuncia sin resolver"))
-	_detalle.text = "Quedó pendiente: %s" % _estaciones(causa.get("pendientes", []))
-	_dialogo.text = ""
-	_saltar.grab_focus()
+	_saltar.disabled = true
+	_saltar.hide()
+	_fondo.color.a = 0.0
+	_aviso_cinematica.show()
+	_aviso_cinematica.modulate.a = 0.0
+	var entrada := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	entrada.tween_property(_aviso_cinematica, "modulate:a", 1.0, 0.45)
 	_alerta.play()
-	_secuencia()
-
-
-func _secuencia() -> void:
-	await get_tree().create_timer(2.4, true, false, true).timeout
-	if not is_inside_tree() or _fase != 1:
-		return
-	_rotulo.text = "RELEVO DE EMERGENCIA"
-	_titulo_caso.text = "El equipo toma el relevo"
-	_detalle.text = "Tu turno termina aquí."
-	_dialogo.text = "COMPAÑERO · «Déjalo. Yo me encargo desde aquí»"
-	_voz.play()
 	relevo_iniciado.emit()
-	await get_tree().create_timer(3.2, true, false, true).timeout
-	if is_inside_tree() and _fase == 1:
-		_abrir_cuaderno()
+
+
+func finalizar_relevo() -> void:
+	# La escena confirma que ambos policías terminaron el recorrido. El cuaderno
+	# solo se habilita aquí; ningún temporizador puede saltarse la cinemática.
+	if _fase != 1 or _relevo_finalizado:
+		return
+	_relevo_finalizado = true
+	_aviso_cinematica.hide()
+	_saltar.disabled = false
+	_saltar.show()
+	_tarjeta.modulate.a = 0.0
+	_tarjeta.show()
+	_ajustar()
+	var entrada := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	entrada.set_parallel(true)
+	entrada.tween_property(_tarjeta, "modulate:a", 1.0, 0.4)
+	entrada.tween_property(_fondo, "color:a", 0.24, 0.5)
+	_saltar.grab_focus()
 
 
 func _construir_interfaz() -> void:
 	_fondo = ColorRect.new()
-	_fondo.color = Color(0.02, 0.08, 0.12, 0.48)
+	_fondo.color = Color(0.02, 0.08, 0.12, 0.0)
 	_fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_fondo)
+	var fuente_enfasis := FontVariation.new()
+	fuente_enfasis.base_font = FUENTE_TEXTO
+	fuente_enfasis.variation_opentype = {2003265652: 750.0}
+
+	_aviso_cinematica = PanelContainer.new()
+	_aviso_cinematica.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var estilo_aviso := _estilo(Color(0.04, 0.11, 0.15, 0.88), CORAL, 18)
+	estilo_aviso.set_border_width_all(0)
+	estilo_aviso.border_width_left = 3
+	estilo_aviso.set_corner_radius_all(8)
+	_aviso_cinematica.add_theme_stylebox_override("panel", estilo_aviso)
+	add_child(_aviso_cinematica)
+	var aviso := VBoxContainer.new()
+	aviso.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	aviso.add_theme_constant_override("separation", 5)
+	_aviso_cinematica.add_child(aviso)
+	_rotulo = _etiqueta("RELEVO DE EMERGENCIA", 14, CORAL, fuente_enfasis)
+	aviso.add_child(_rotulo)
+	_titulo_caso = _etiqueta("El equipo toma el relevo", 25, CREMA, FUENTE_TITULOS)
+	aviso.add_child(_titulo_caso)
+	_aviso_cinematica.hide()
 
 	_tarjeta = PanelContainer.new()
-	_tarjeta.add_theme_stylebox_override("panel", _estilo(PETROLEO, CORAL, 22))
+	var estilo_tarjeta := _estilo(Color("142f3df5"), Color("597784"), 24)
+	estilo_tarjeta.set_border_width_all(1)
+	estilo_tarjeta.set_corner_radius_all(18)
+	estilo_tarjeta.shadow_color = Color(0.0, 0.0, 0.0, 0.3)
+	estilo_tarjeta.shadow_size = 14
+	estilo_tarjeta.shadow_offset = Vector2(0, 6)
+	_tarjeta.add_theme_stylebox_override("panel", estilo_tarjeta)
 	add_child(_tarjeta)
 	var contenido := VBoxContainer.new()
-	contenido.add_theme_constant_override("separation", 10)
+	contenido.add_theme_constant_override("separation", 20)
 	_tarjeta.add_child(contenido)
-	_rotulo = _etiqueta("", 24, CORAL, FUENTE_TITULOS)
-	contenido.add_child(_rotulo)
-	_titulo_caso = _etiqueta("", 36, CREMA, FUENTE_TITULOS)
-	contenido.add_child(_titulo_caso)
-	_detalle = _etiqueta("", 22, CREMA, FUENTE_TEXTO)
+	_detalle = _etiqueta("Tu turno termina aquí.", 30, CREMA, FUENTE_TITULOS)
+	_detalle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	contenido.add_child(_detalle)
-	_dialogo = _etiqueta("", 21, Color("ffd279"), FUENTE_TEXTO)
-	contenido.add_child(_dialogo)
 	_saltar = Button.new()
 	_saltar.text = "Ir al cuaderno  ›"
+	_saltar.custom_minimum_size.y = 48
+	_saltar.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_saltar.add_theme_font_override("font", fuente_enfasis)
+	_saltar.add_theme_font_size_override("font_size", 19)
+	_saltar.add_theme_color_override("font_color", PETROLEO)
+	_saltar.add_theme_color_override("font_hover_color", PETROLEO)
+	_saltar.add_theme_color_override("font_pressed_color", PETROLEO)
+	_saltar.add_theme_color_override("font_focus_color", PETROLEO)
+	_saltar.add_theme_stylebox_override("normal", _estilo(CREMA, CREMA, 10))
+	_saltar.add_theme_stylebox_override("hover", _estilo(Color("ffffff"), Color("ffffff"), 10))
+	_saltar.add_theme_stylebox_override("pressed", _estilo(Color("e5d5ba"), Color("e5d5ba"), 10))
+	var foco := _estilo(Color.TRANSPARENT, CORAL, 10)
+	foco.set_border_width_all(2)
+	foco.expand_margin_left = 3
+	foco.expand_margin_right = 3
+	foco.expand_margin_top = 3
+	foco.expand_margin_bottom = 3
+	_saltar.add_theme_stylebox_override("focus", foco)
 	_saltar.pressed.connect(_abrir_cuaderno)
 	contenido.add_child(_saltar)
+	_tarjeta.hide()
 
 	_cuaderno = Control.new()
 	_cuaderno.size = TAMANO_LIBRO
@@ -173,7 +221,6 @@ func _construir_interfaz() -> void:
 	_cuaderno.hide()
 
 	_alerta = _crear_sonido(SONIDO_ALERTA, -7.0)
-	_voz = _crear_sonido(SONIDO_RELEVO, -4.0)
 	_sonido_pagina = _crear_sonido(SONIDO_PAGINA, -5.0)
 
 
@@ -202,17 +249,22 @@ func _crear_pagina(x: float) -> Dictionary:
 func _ajustar() -> void:
 	if not is_instance_valid(_tarjeta):
 		return
-	_tarjeta.size = Vector2(minf(720.0, size.x - 40.0), 260.0)
-	_tarjeta.position = Vector2(20.0, maxf(20.0, size.y - _tarjeta.size.y - 25.0))
+	var margen := clampf(size.x * 0.025, 16.0, 40.0)
+	_aviso_cinematica.size = Vector2(minf(380.0, maxf(1.0, size.x - margen * 2.0)), 0.0)
+	_aviso_cinematica.position = Vector2(margen, margen)
+	_detalle.add_theme_font_size_override("font_size", 25 if size.x < 540.0 else 30)
+	_tarjeta.size = Vector2(minf(480.0, maxf(1.0, size.x - margen * 2.0)), 0.0)
+	_tarjeta.position = Vector2((size.x - _tarjeta.size.x) * 0.5, maxf(margen, size.y - _tarjeta.size.y - margen))
 	_escala_libro = minf(size.x / 1350.0, size.y / 765.0)
 	_cuaderno.position = (size - TAMANO_LIBRO * _escala_libro) * 0.5
 	_cuaderno.scale = Vector2.ONE * _escala_libro
 
 
 func _abrir_cuaderno() -> void:
-	if _fase != 1:
+	if _fase != 1 or not _relevo_finalizado:
 		return
 	_fase = 2
+	_aviso_cinematica.hide()
 	_tarjeta.hide()
 	_fondo.color = Color(0.02, 0.08, 0.12, 0.78)
 	_pagina_actual = 0
