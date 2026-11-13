@@ -18,6 +18,8 @@ func probar() -> void:
 	change_scene_to_file("res://Mundo/Oficina.tscn")
 	await scene_changed
 	oficina = current_scene
+	oficina.generador_aleatorio.seed = 1414
+	oficina.evento_terremoto._azar.seed = 8762
 	await _cuadros(5)
 	_verificar(paused and menu.panel_ayuda.visible, "La entrada normal abre el tutorial")
 	_verificar(not oficina.anuncios.visible and not oficina._turno_anunciado, "El sello espera al botón Empezar turno")
@@ -84,6 +86,7 @@ func probar() -> void:
 	oficina._recibir_denuncia_aleatoria()
 	oficina.temporizador_denuncias.stop()
 	oficina.temporizador_bloqueos.stop()
+	oficina.tutoriales_vistos[&"terremoto"] = true
 	oficina._iniciar_terremoto()
 	_verificar(oficina.evento_terremoto.activo and anuncio.titulo == "¡TERREMOTO!", "El terremoto usa la entrada de cómic")
 	await _cuadros(40)

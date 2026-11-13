@@ -1,13 +1,11 @@
 extends VBoxContainer
 ## Manual de controles: contenido nativo y navegación de foco dentro del modal.
 
-signal pagina_cambiada(indice: int)
-
 const TINTA := Color("173b50")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
 const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
-const TITULAR := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
+const TEMA_AJUSTES := preload("res://UI/Menus/tema_ajustes.tres")
 const CATEGORIAS := ["Movimiento", "Acciones", "Menús"]
 
 var pestanas: Array[Button] = []
@@ -20,17 +18,14 @@ func _ready() -> void:
 	var cabecera := HBoxContainer.new()
 	cabecera.add_theme_constant_override("separation", 8)
 	add_child(cabecera)
-	var enfasis := FontVariation.new()
-	enfasis.base_font = FUENTE
-	enfasis.variation_opentype = {2003265652: 800.0}
 	for indice: int in range(CATEGORIAS.size()):
 		var boton := Button.new()
-		boton.text = CATEGORIAS[indice]
+		boton.text = CATEGORIAS[indice].to_upper()
 		boton.custom_minimum_size = Vector2(0, 64)
 		boton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		boton.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		boton.add_theme_font_override("font", enfasis)
-		boton.add_theme_font_size_override("font_size", 26)
+		boton.add_theme_font_override("font", TEMA_AJUSTES.get_font("font", "Button"))
+		boton.add_theme_font_size_override("font_size", 32)
 		boton.pressed.connect(seleccionar.bind(indice))
 		boton.focus_entered.connect(seleccionar.bind(indice))
 		boton.gui_input.connect(_entrada_pestana.bind(indice))
@@ -59,9 +54,9 @@ func seleccionar(indice: int) -> void:
 		var activa := i == pagina_actual
 		paginas[i].visible = activa
 		var boton := pestanas[i]
-		boton.add_theme_stylebox_override("normal", _caja(CREMA if activa else Color("2a5062"), 12, 12, true))
-		boton.add_theme_stylebox_override("hover", _caja(CREMA if activa else Color("365e70"), 12, 12, true))
-		boton.add_theme_stylebox_override("pressed", _caja(CREMA, 12, 12, true))
+		boton.add_theme_stylebox_override("normal", _estilo_pestana(CREMA if activa else Color("2a5062")))
+		boton.add_theme_stylebox_override("hover", _estilo_pestana(CREMA if activa else Color("365e70")))
+		boton.add_theme_stylebox_override("pressed", _estilo_pestana(CREMA))
 		for estado: String in ["font_color", "font_hover_color", "font_focus_color"]:
 			boton.add_theme_color_override(estado, TINTA if activa else CREMA)
 		boton.add_theme_color_override("font_pressed_color", TINTA)
@@ -70,7 +65,14 @@ func seleccionar(indice: int) -> void:
 		foco.border_color = CORAL
 		foco.set_border_width_all(3)
 		boton.add_theme_stylebox_override("focus", foco)
-	pagina_cambiada.emit(pagina_actual)
+
+
+func _estilo_pestana(color: Color) -> StyleBoxFlat:
+	var estilo := _caja(color, 14, 12, true)
+	estilo.border_color = Color("102f40")
+	estilo.set_border_width_all(3)
+	estilo.border_width_bottom = 0
+	return estilo
 
 
 func _entrada_pestana(evento: InputEvent, indice: int) -> void:
@@ -182,7 +184,7 @@ func _tecla(etiqueta: String, minimo := Vector2(48, 48), tamano: int = 25) -> Pa
 	tecla.custom_minimum_size = minimo
 	tecla.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var estilo := _caja(TINTA, 7, 10)
-	estilo.border_color = CREMA
+	estilo.border_color = Color("3b6675")
 	estilo.set_border_width_all(2)
 	estilo.shadow_color = Color("0c2839")
 	estilo.shadow_offset = Vector2(0, 3)
@@ -201,7 +203,7 @@ func _texto(valor: String, tamano: int, titular: bool = false) -> Label:
 	var texto := Label.new()
 	texto.text = valor
 	if titular:
-		texto.add_theme_font_override("font", TITULAR)
+		texto.add_theme_font_override("font", TEMA_AJUSTES.get_font("font", "Button"))
 	else:
 		var lectura := FontVariation.new()
 		lectura.base_font = FUENTE

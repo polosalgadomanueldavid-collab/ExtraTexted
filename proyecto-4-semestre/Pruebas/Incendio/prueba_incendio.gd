@@ -21,6 +21,7 @@ func _probar() -> void:
 	current_scene = oficina
 	await _fisicas(12)
 	menu.cerrar_ayuda()
+	oficina.tutoriales_vistos[&"incendio"] = true
 	paused = false
 	jugador = oficina.jugador
 	evento = oficina.evento_incendio

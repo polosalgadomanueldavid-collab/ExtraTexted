@@ -284,6 +284,7 @@ func _mostrar_dialogo() -> void:
 	burbuja.modulate.a = 0.0
 	create_tween().tween_property(burbuja, "modulate:a", 1.0, 0.25)
 	var voz := AudioStreamPlayer3D.new()
+	voz.bus = "Interacciones"
 	voz.stream = VOZ_RELEVO
 	voz.volume_db = -5.0
 	voz.unit_size = 8.0

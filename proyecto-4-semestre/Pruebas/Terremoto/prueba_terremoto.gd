@@ -23,6 +23,7 @@ func _probar() -> void:
 	current_scene = oficina
 	await _fisicas(5)
 	menu.cerrar_ayuda()
+	oficina.tutoriales_vistos[&"terremoto"] = true
 	jugador = oficina.jugador
 	evento = oficina.evento_terremoto
 	grafo = oficina.grafo_piso

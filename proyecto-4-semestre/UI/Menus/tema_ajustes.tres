@@ -1,0 +1,208 @@
+[gd_resource type="Theme" format=3]
+
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf" id="1_titular"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="2_texto"]
+[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/control_slider.svg" id="3_control"]
+[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/control_slider_foco.svg" id="4_control_foco"]
+[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/control_slider_inactivo.svg" id="5_control_inactivo"]
+[ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/flecha_abajo.svg" id="6_flecha"]
+
+[sub_resource type="FontVariation" id="Font_titular"]
+base_font = ExtResource("1_titular")
+baseline_offset = 0.14
+
+[sub_resource type="FontVariation" id="Font_texto"]
+base_font = ExtResource("2_texto")
+variation_opentype = {2003265652: 750.0}
+
+[sub_resource type="StyleBoxFlat" id="Boton"]
+content_margin_left = 24.0
+content_margin_right = 24.0
+content_margin_top = 10.0
+content_margin_bottom = 14.0
+bg_color = Color(1, 0.945, 0.847, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.09, 0.231, 0.314, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+shadow_color = Color(0.09, 0.231, 0.314, 0.24)
+shadow_size = 3
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="Boton_hover"]
+content_margin_left = 24.0
+content_margin_right = 24.0
+content_margin_top = 10.0
+content_margin_bottom = 14.0
+bg_color = Color(1, 0.885, 0.74, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.09, 0.231, 0.314, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+shadow_color = Color(0.09, 0.231, 0.314, 0.24)
+shadow_size = 3
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="Boton_coral"]
+content_margin_left = 24.0
+content_margin_right = 24.0
+content_margin_top = 10.0
+content_margin_bottom = 14.0
+bg_color = Color(1, 0.47, 0.37, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.09, 0.231, 0.314, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+shadow_color = Color(0.43, 0.21, 0.17, 0.45)
+shadow_size = 3
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="Boton_coral_hover"]
+content_margin_left = 24.0
+content_margin_right = 24.0
+content_margin_top = 10.0
+content_margin_bottom = 14.0
+bg_color = Color(1, 0.6, 0.47, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.09, 0.231, 0.314, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+shadow_color = Color(0.43, 0.21, 0.17, 0.45)
+shadow_size = 3
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="Boton_pressed"]
+content_margin_left = 24.0
+content_margin_right = 24.0
+content_margin_top = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.09, 0.231, 0.314, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+
+[sub_resource type="StyleBoxFlat" id="Volver_pressed"]
+content_margin_left = 24.0
+content_margin_right = 24.0
+content_margin_top = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.93, 0.39, 0.29, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.09, 0.231, 0.314, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+
+[sub_resource type="StyleBoxFlat" id="Foco"]
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.09, 0.231, 0.314, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_left = 24
+corner_radius_bottom_right = 24
+expand_margin_left = 5.0
+expand_margin_right = 5.0
+expand_margin_top = 5.0
+expand_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxFlat" id="Pista"]
+content_margin_top = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.94, 0.88, 0.76, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.09, 0.231, 0.314, 1)
+
+[sub_resource type="StyleBoxFlat" id="Progreso"]
+content_margin_top = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(1, 0.47, 0.37, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.09, 0.231, 0.314, 1)
+
+[resource]
+default_font = SubResource("Font_titular")
+default_font_size = 42
+Button/fonts/font = SubResource("Font_titular")
+Label/colors/font_color = Color(0.09, 0.231, 0.314, 1)
+Button/colors/font_color = Color(0.09, 0.231, 0.314, 1)
+Button/colors/font_hover_color = Color(0.09, 0.231, 0.314, 1)
+Button/colors/font_focus_color = Color(0.09, 0.231, 0.314, 1)
+Button/colors/font_pressed_color = Color(1, 0.945, 0.847, 1)
+Button/styles/normal = SubResource("Boton")
+Button/styles/hover = SubResource("Boton_hover")
+Button/styles/pressed = SubResource("Boton_pressed")
+Button/styles/focus = SubResource("Foco")
+Volver/base_type = &"Button"
+Volver/styles/normal = SubResource("Boton_coral")
+Volver/styles/hover = SubResource("Boton_coral_hover")
+Volver/styles/pressed = SubResource("Volver_pressed")
+Volver/colors/font_pressed_color = Color(0.09, 0.231, 0.314, 1)
+OptionButton/fonts/font = SubResource("Font_texto")
+OptionButton/font_sizes/font_size = 32
+OptionButton/styles/normal = SubResource("Boton")
+OptionButton/styles/hover = SubResource("Boton_hover")
+OptionButton/styles/pressed = SubResource("Boton_hover")
+OptionButton/styles/focus = SubResource("Foco")
+OptionButton/colors/font_color = Color(0.09, 0.231, 0.314, 1)
+OptionButton/colors/font_hover_color = Color(0.09, 0.231, 0.314, 1)
+OptionButton/colors/font_focus_color = Color(0.09, 0.231, 0.314, 1)
+OptionButton/colors/font_pressed_color = Color(0.09, 0.231, 0.314, 1)
+OptionButton/constants/arrow_margin = 24
+OptionButton/constants/h_separation = 24
+OptionButton/icons/arrow = ExtResource("6_flecha")
+PopupMenu/fonts/font = SubResource("Font_texto")
+PopupMenu/font_sizes/font_size = 30
+PopupMenu/styles/panel = SubResource("Boton")
+PopupMenu/styles/hover = SubResource("Boton_pressed")
+PopupMenu/colors/font_color = Color(0.09, 0.231, 0.314, 1)
+PopupMenu/colors/font_hover_color = Color(1, 0.945, 0.847, 1)
+PopupMenu/constants/v_separation = 16
+HSlider/styles/slider = SubResource("Pista")
+HSlider/styles/grabber_area = SubResource("Progreso")
+HSlider/styles/grabber_area_highlight = SubResource("Progreso")
+HSlider/icons/grabber = ExtResource("3_control")
+HSlider/icons/grabber_highlight = ExtResource("4_control_foco")
+HSlider/icons/grabber_disabled = ExtResource("5_control_inactivo")
