@@ -9,7 +9,7 @@ const PanelAyuda = preload("res://UI/Menus/panel_ayuda.gd")
 const PanelClasificacion := preload("res://UI/Menus/panel_clasificacion.gd")
 const ClasificacionLocalScript := preload("res://Scripts/Partida/ClasificacionLocal.gd")
 
-enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES, APAGON }
+enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES, EVENTO }
 
 @onready var capa: Control = %CapaModal
 @onready var panel_pausa: PanelContainer = %PanelPausa
@@ -22,11 +22,13 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES, APAGON }
 @onready var selector_filtro: OptionButton = %SelectorFiltro
 @onready var control_intensidad: HSlider = %Intensidad
 @onready var control_brillo: HSlider = %Brillo
+@onready var control_volumen_general: HSlider = %VolumenGeneral
 @onready var control_volumen_musica: HSlider = %VolumenMusica
 @onready var control_volumen_interacciones: HSlider = %VolumenInteracciones
 @onready var selector_balanceo: OptionButton = %SelectorBalanceo
 @onready var valor_intensidad: Label = %ValorIntensidad
 @onready var valor_brillo: Label = %ValorBrillo
+@onready var valor_volumen_general: Label = %ValorVolumenGeneral
 @onready var valor_volumen_musica: Label = %ValorVolumenMusica
 @onready var valor_volumen_interacciones: Label = %ValorVolumenInteracciones
 @onready var filtro_pantalla: ColorRect = %FiltroPantalla
@@ -63,6 +65,7 @@ func _ready() -> void:
 	%VolverOpciones.pressed.connect(cerrar_opciones)
 	%VolverAccesibilidad.pressed.connect(cerrar_accesibilidad)
 	_confinar_foco([
+		control_volumen_general,
 		control_volumen_musica,
 		control_volumen_interacciones,
 		%AccesibilidadOpciones,
@@ -80,6 +83,7 @@ func _ready() -> void:
 	selector_balanceo.item_selected.connect(_cambiar_balanceo)
 	control_intensidad.value_changed.connect(_cambiar_intensidad)
 	control_brillo.value_changed.connect(_cambiar_brillo)
+	control_volumen_general.value_changed.connect(_cambiar_volumen_general)
 	control_volumen_musica.value_changed.connect(_cambiar_volumen_musica)
 	control_volumen_interacciones.value_changed.connect(_cambiar_volumen_interacciones)
 	AjustesAccesibilidad.ajustes_cambiados.connect(_sincronizar_ajustes)
@@ -180,7 +184,7 @@ func _exit_tree() -> void:
 
 
 func _ajustar_presentacion() -> void:
-	var tutorial_evento := panel_ayuda.is_visible_in_tree() and _origen_ayuda == OrigenAyuda.APAGON
+	var tutorial_evento := panel_ayuda.is_visible_in_tree() and _origen_ayuda == OrigenAyuda.EVENTO
 	fondo_modal.visible = not tutorial_evento
 	var escala_panel := ESCALA_PAUSA if panel_pausa.visible or panel_confirmacion.visible else 1.0
 	var factor := minf(capa.size.x / TAMANO_DISENO.x, capa.size.y / TAMANO_DISENO.y)
@@ -188,8 +192,6 @@ func _ajustar_presentacion() -> void:
 	margen.size = TAMANO_DISENO / escala_panel
 	margen.scale = Vector2.ONE * factor * escala_panel
 	margen.position = (capa.size - margen.size * margen.scale) * 0.5
-	# El expediente usa el ancho completo para sus tres pasos. Durante el apagón
-	# conserva la cámara de la partida y deja el escenario visible alrededor.
 
 
 func es_escena_de_juego() -> bool:
@@ -263,20 +265,29 @@ func abrir_tutorial() -> void:
 	if _cambiando_escena:
 		return
 	if panel_pausa.is_visible_in_tree():
-		_mostrar_ayuda(false, OrigenAyuda.PAUSA)
+		var evento: StringName = get_tree().current_scene.evento_para_consultar()
+		if evento != &"":
+			_abrir_guia_evento(evento, OrigenAyuda.PAUSA)
+		else:
+			_mostrar_ayuda(false, OrigenAyuda.PAUSA)
 	elif not capa.visible and not es_escena_de_juego():
 		_guardar_entrada()
 		_mostrar_ayuda(false, OrigenAyuda.MENU)
 
 
-func mostrar_tutorial_apagon() -> void:
-	if not es_escena_de_juego() or capa.visible or _cambiando_escena or final_de_partida_activo:
-		return
+func mostrar_tutorial_evento(evento: StringName) -> bool:
+	if not es_escena_de_juego() or get_tree().paused or capa.visible or _cambiando_escena or final_de_partida_activo:
+		return false
 	_guardar_entrada()
 	get_tree().paused = true
-	_origen_ayuda = OrigenAyuda.APAGON
+	_abrir_guia_evento(evento, OrigenAyuda.EVENTO)
+	return true
+
+
+func _abrir_guia_evento(evento: StringName, origen: OrigenAyuda) -> void:
+	_origen_ayuda = origen
 	panel_pausa.hide()
-	panel_ayuda.presentar_tutorial_apagon()
+	panel_ayuda.presentar_tutorial_evento(evento, origen == OrigenAyuda.PAUSA)
 	_confinar_foco(panel_ayuda.controles_foco())
 	panel_ayuda.show()
 	capa.show()
@@ -320,7 +331,7 @@ func _mostrar_ayuda(es_leyenda: bool, origen: OrigenAyuda) -> void:
 func cerrar_ayuda() -> void:
 	if not panel_ayuda.visible:
 		return
-	if _origen_ayuda in [OrigenAyuda.INICIO, OrigenAyuda.APAGON]:
+	if _origen_ayuda in [OrigenAyuda.INICIO, OrigenAyuda.EVENTO]:
 		get_tree().paused = false
 		capa.hide()
 	panel_ayuda.hide()
@@ -519,7 +530,7 @@ func _actualizar_musica_menu() -> void:
 	if not is_instance_valid(musica_menu):
 		return
 	var escena_menu := get_tree().current_scene != null and get_tree().current_scene.scene_file_path == ESCENA_MENU
-	var tutorial_automatico := panel_ayuda.is_visible_in_tree() and _origen_ayuda in [OrigenAyuda.INICIO, OrigenAyuda.APAGON]
+	var tutorial_automatico := panel_ayuda.is_visible_in_tree() and _origen_ayuda in [OrigenAyuda.INICIO, OrigenAyuda.EVENTO]
 	var pausa_visible := es_escena_de_juego() and get_tree().paused and capa.visible and not tutorial_automatico
 	if es_escena_de_juego():
 		var musica_partida := get_tree().current_scene.get_node("MusicaPartida") as AudioStreamPlayer
@@ -548,6 +559,10 @@ func _cambiar_balanceo(indice: int) -> void:
 	AjustesAccesibilidad.establecer_balanceo_camara(indice == 0)
 
 
+func _cambiar_volumen_general(valor: float) -> void:
+	AjustesAccesibilidad.establecer_volumen_general(valor / 100.0)
+
+
 func _cambiar_volumen_musica(valor: float) -> void:
 	AjustesAccesibilidad.establecer_volumen_musica(valor / 100.0)
 
@@ -560,6 +575,7 @@ func _sincronizar_ajustes() -> void:
 	selector_filtro.select(AjustesAccesibilidad.modo)
 	control_intensidad.set_value_no_signal(AjustesAccesibilidad.intensidad * 100.0)
 	control_brillo.set_value_no_signal(AjustesAccesibilidad.brillo * 100.0)
+	control_volumen_general.set_value_no_signal(AjustesAccesibilidad.volumen_general * 100.0)
 	control_volumen_musica.set_value_no_signal(AjustesAccesibilidad.volumen_musica * 100.0)
 	control_volumen_interacciones.set_value_no_signal(AjustesAccesibilidad.volumen_interacciones * 100.0)
 	selector_balanceo.select(0 if AjustesAccesibilidad.balanceo_camara else 1)
@@ -572,6 +588,7 @@ func _sincronizar_ajustes() -> void:
 	_confinar_foco(controles)
 	valor_intensidad.text = "%d %%" % roundi(control_intensidad.value)
 	valor_brillo.text = "%d %%" % roundi(control_brillo.value)
+	valor_volumen_general.text = "%d %%" % roundi(control_volumen_general.value)
 	valor_volumen_musica.text = "%d %%" % roundi(control_volumen_musica.value)
 	valor_volumen_interacciones.text = "%d %%" % roundi(control_volumen_interacciones.value)
 	var material_filtro := filtro_pantalla.material as ShaderMaterial

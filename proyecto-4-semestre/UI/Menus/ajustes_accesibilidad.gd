@@ -5,6 +5,7 @@ signal ajustes_cambiados
 const ARCHIVO := "user://accesibilidad.cfg"
 const BRILLO_MINIMO := 0.8
 const BRILLO_MAXIMO := 1.2
+const BUS_GENERAL: StringName = &"Master"
 const BUS_MUSICA: StringName = &"Musica"
 const BUS_INTERACCIONES: StringName = &"Interacciones"
 
@@ -12,6 +13,7 @@ var modo: int = 0
 var intensidad: float = 1.0
 var brillo: float = 1.0
 var balanceo_camara: bool = true
+var volumen_general: float = 1.0
 var volumen_musica: float = 1.0
 var volumen_interacciones: float = 1.0
 
@@ -45,6 +47,7 @@ func cargar() -> void:
 	brillo = _numero_valido(config.get_value("accesibilidad", "brillo", 1.0), BRILLO_MINIMO, BRILLO_MAXIMO)
 	var balanceo_guardado: Variant = config.get_value("accesibilidad", "balanceo_camara", true)
 	balanceo_camara = balanceo_guardado if balanceo_guardado is bool else true
+	volumen_general = _numero_valido(config.get_value("audio", "general", 1.0), 0.0, 1.0)
 	volumen_musica = _numero_valido(config.get_value("audio", "musica", 1.0), 0.0, 1.0)
 	volumen_interacciones = _numero_valido(config.get_value("audio", "interacciones", 1.0), 0.0, 1.0)
 	_aplicar_volumenes_audio()
@@ -79,6 +82,15 @@ func establecer_balanceo_camara(valor: bool) -> void:
 	if balanceo_camara == valor:
 		return
 	balanceo_camara = valor
+	_notificar_cambio()
+
+
+func establecer_volumen_general(valor: float) -> void:
+	valor = _numero_valido(valor, 0.0, 1.0)
+	if is_equal_approx(volumen_general, valor):
+		return
+	volumen_general = valor
+	_aplicar_volumenes_audio()
 	_notificar_cambio()
 
 
@@ -118,6 +130,7 @@ func guardar() -> void:
 	config.set_value("accesibilidad", "intensidad", intensidad)
 	config.set_value("accesibilidad", "brillo", brillo)
 	config.set_value("accesibilidad", "balanceo_camara", balanceo_camara)
+	config.set_value("audio", "general", volumen_general)
 	config.set_value("audio", "musica", volumen_musica)
 	config.set_value("audio", "interacciones", volumen_interacciones)
 	if config.save(ARCHIVO) == OK:
@@ -150,6 +163,7 @@ func _asegurar_bus_audio(nombre: StringName) -> int:
 
 
 func _aplicar_volumenes_audio() -> void:
+	_aplicar_volumen_bus(BUS_GENERAL, volumen_general)
 	_aplicar_volumen_bus(BUS_MUSICA, volumen_musica)
 	_aplicar_volumen_bus(BUS_INTERACCIONES, volumen_interacciones)
 

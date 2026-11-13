@@ -40,7 +40,7 @@ func _probar() -> void:
 	MenuGlobal.get_node("%VolverOpciones").grab_focus()
 	_pulsar_tecla(KEY_TAB)
 	await get_tree().process_frame
-	_verificar(accesibilidad_opciones.has_focus(), "Tab mantiene el foco entre las categorías y Volver")
+	_verificar(MenuGlobal.control_volumen_general.has_focus(), "Tab desde Volver empieza por General")
 	controles_opciones.grab_focus()
 	_pulsar_tecla(KEY_ENTER)
 	await get_tree().process_frame
@@ -54,7 +54,7 @@ func _probar() -> void:
 	await _capturar("00_manual_acciones")
 	_clic_control(manual.pestanas[2])
 	await get_tree().process_frame
-	_verificar(manual.pagina_actual == 2 and manual.paginas[2].is_visible_in_tree() and MenuGlobal.panel_ayuda.pagina_manual.text == "MENÚS · 3 / 3", "El ratón abre Menús y actualiza el número de página")
+	_verificar(manual.pagina_actual == 2 and manual.paginas[2].is_visible_in_tree(), "El ratón abre la sección Menús")
 	await _capturar("00_manual_menus")
 	_pulsar_tecla(KEY_TAB)
 	await get_tree().process_frame

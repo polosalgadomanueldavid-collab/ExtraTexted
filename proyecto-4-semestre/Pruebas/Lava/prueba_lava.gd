@@ -19,6 +19,7 @@ func _probar() -> void:
 	current_scene = oficina
 	await _fisicas(70)
 	menu.cerrar_ayuda()
+	oficina.tutoriales_vistos[&"lava"] = true
 	jugador = oficina.jugador
 	lava = oficina.evento_lava
 	oficina.generador_aleatorio.seed = 9526

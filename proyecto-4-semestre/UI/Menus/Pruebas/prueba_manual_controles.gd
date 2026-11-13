@@ -39,7 +39,7 @@ func _probar() -> void:
 	MenuGlobal.cerrar_ayuda()
 	MenuGlobal.cerrar_opciones()
 	MenuGlobal.abrir_tutorial()
-	if not panel.tutorial.visible or panel.leyenda.visible or panel.pagina_manual.visible:
+	if not panel.tutorial.visible or panel.leyenda.visible:
 		errores += 1
 	print("PRUEBA MANUAL: %d errores" % errores)
 	get_tree().quit(0 if errores == 0 else 1)

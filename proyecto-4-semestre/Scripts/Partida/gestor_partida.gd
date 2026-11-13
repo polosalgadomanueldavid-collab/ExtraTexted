@@ -109,7 +109,8 @@ var evento_incendio: EventoIncendio
 var evento_inundacion: EventoInundacion
 var evento_lava: EventoLava
 var evento_hielo: EventoHielo
-var _tutorial_apagon_mostrado := false
+var tutoriales_vistos: Dictionary[StringName, bool] = {}
+var _evento_con_guia: StringName = &""
 var ruleta_emotes: RuletaEmotes
 
 
@@ -143,7 +144,7 @@ func _ready() -> void:
 	evento_apagon.luz_restaurada.connect(_al_restaurar_luz)
 	evento_apagon.permiso_inicio = _puede_iniciar_evento
 	evento_terremoto.permiso_inicio = _puede_iniciar_evento
-	evento_terremoto.iniciado.connect(_al_iniciar_evento)
+	evento_terremoto.iniciado.connect(_al_iniciar_terremoto)
 	evento_terremoto.temblor_actualizado.connect($Gameplay/Camera3D.actualizar_temblor)
 	evento_terremoto.suelo_roto.connect(_al_romper_suelo)
 	evento_terremoto.jugador_caido.connect(_al_caer_jugador_en_grieta)
@@ -453,12 +454,7 @@ func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
 func _al_iniciar_apagon(_tipo: int) -> void:
 	_al_iniciar_evento()
 	jugador.reproducir_expresion(&"sorpresa")
-	if not _tutorial_apagon_mostrado:
-		_tutorial_apagon_mostrado = true
-		anuncios.detener()
-		MenuGlobal.mostrar_tutorial_apagon()
-	else:
-		anuncios.mostrar_evento("¡APAGÓN!", "", "Busca el taco de luz")
+	_anunciar_inicio_evento(&"apagon", "¡APAGÓN!", "", "Busca el taco de luz")
 
 
 func _al_restaurar_luz() -> void:
@@ -656,6 +652,19 @@ func _al_iniciar_evento() -> void:
 	_evento_aleatorio_pendiente = -1
 
 
+func evento_para_consultar() -> StringName:
+	return _evento_con_guia if not partida_finalizada and not _puede_iniciar_evento() else &""
+
+
+func _anunciar_inicio_evento(evento: StringName, titulo: String, segunda_linea: String, detalle: String) -> void:
+	_evento_con_guia = evento
+	if not tutoriales_vistos.has(evento) and MenuGlobal.mostrar_tutorial_evento(evento):
+		tutoriales_vistos[evento] = true
+		anuncios.detener()
+	else:
+		anuncios.mostrar_evento(titulo, segunda_linea, detalle)
+
+
 func _intentar_evento_aleatorio() -> void:
 	if not _puede_iniciar_evento():
 		return
@@ -688,7 +697,7 @@ func _iniciar_hielo() -> bool:
 
 func _al_iniciar_hielo() -> void:
 	_al_iniciar_evento()
-	anuncios.mostrar_evento("¡EL PISO", "ES HIELO!", "Sella la fuga de nitrógeno en descanso · E")
+	_anunciar_inicio_evento(&"hielo", "¡EL PISO", "ES HIELO!", "Sella la fuga de nitrógeno en descanso · E")
 	panel_despacho._mostrar_mensaje("¡Hielo! Te deslizas y te congelas cada 4 s, conservando la inercia. Las tareas siguen disponibles. Aprieta las tuercas del nitrógeno en descanso.", Color("a6d3ff"))
 
 
@@ -706,7 +715,7 @@ func _iniciar_lava() -> bool:
 
 func _al_iniciar_lava() -> void:
 	_al_iniciar_evento()
-	anuncios.mostrar_evento("¡EL PISO", "ES LAVA!", "ESPACIO · Sube a los bloqueos temporales")
+	_anunciar_inicio_evento(&"lava", "¡EL PISO", "ES LAVA!", "ESPACIO · Sube a los bloqueos temporales")
 	panel_despacho._mostrar_mensaje("¡Lava durante 60 s! Salta más alto. Los bloqueos cambian cada 4 s; las mesas laterales no se pueden trepar.", Color("ffb34f"))
 
 
@@ -724,7 +733,7 @@ func _iniciar_inundacion() -> bool:
 
 func _al_iniciar_inundacion() -> void:
 	_al_iniciar_evento()
-	anuncios.mostrar_evento("¡INUNDACIÓN!", "", "Repara las tuberías en la zona de descanso")
+	_anunciar_inicio_evento(&"inundacion", "¡INUNDACIÓN!", "", "Repara las tuberías en la zona de descanso")
 	panel_despacho._mostrar_mensaje("El agua te ralentiza. Puedes seguir resolviendo casos mientras nadas.", Color("76d7e7"))
 
 
@@ -751,7 +760,7 @@ func _al_iniciar_incendio() -> void:
 	if temporizador_seguridad.paused:
 		sonidos_mesas.cancelar_seguridad()
 		progreso_seguridad.hide()
-	anuncios.mostrar_evento("¡INCENDIO!", "", "Busca el extintor · Mantén E para apagar")
+	_anunciar_inicio_evento(&"incendio", "¡INCENDIO!", "", "Busca el extintor · Mantén E para apagar")
 	panel_despacho._mostrar_mensaje("¡La oficina arde! Apaga las estaciones y las mesas del perímetro.", PanelDespacho.CORAL)
 	_actualizar_indicadores_estaciones()
 
@@ -786,11 +795,14 @@ func _iniciar_terremoto() -> void:
 		return
 	if evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO:
 		return
-	if not evento_terremoto.iniciar(grafo_piso, jugador, bloqueos_visuales, _huella_papel_suelto()):
-		return
+	evento_terremoto.iniciar(grafo_piso, jugador, bloqueos_visuales, _huella_papel_suelto())
+
+
+func _al_iniciar_terremoto() -> void:
+	_al_iniciar_evento()
 	temporizador_bloqueos.paused = true
 	jugador.reproducir_expresion(&"estres")
-	anuncios.mostrar_evento("¡TERREMOTO!", "", "Cuida la hoja y rodea las grietas")
+	_anunciar_inicio_evento(&"terremoto", "¡TERREMOTO!", "", "Cuida la hoja y rodea las grietas")
 	panel_despacho._mostrar_mensaje("El suelo empieza a temblar…", PanelDespacho.CORAL)
 
 
