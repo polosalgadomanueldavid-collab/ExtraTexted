@@ -453,7 +453,7 @@ func _actualizar_escombros(delta: float) -> void:
 		# El aviso permite apartarse; si se entra justo al impactar, sacar al
 		# personaje del volumen sólido antes del siguiente movimiento físico.
 		var pies := Vector2(_jugador.global_position.x, _jugador.global_position.z)
-		if escombro.huella().grow(0.32).has_point(pies):
+		if not _jugador.en_relevo and escombro.huella().grow(0.32).has_point(pies):
 			_ultimo_apoyo = _apoyo_conectado(_jugador.global_position)
 			_devolver_a_tierra()
 		escombros_actualizados.emit()
@@ -575,7 +575,7 @@ func _physics_process(delta: float) -> void:
 			for grieta in grietas:
 				grieta.animar_cierre()
 	# Detectar la entrada antes del rescate o del cierre del suelo.
-	var en_grieta := not _jugador.is_on_floor() and _jugador.velocity.y < 0.0 and atrapo_hoja(_jugador.global_position)
+	var en_grieta := not _jugador.en_relevo and not _jugador.is_on_floor() and _jugador.velocity.y < 0.0 and atrapo_hoja(_jugador.global_position)
 	var acaba_de_caer := en_grieta and not _jugador_en_grieta
 	_jugador_en_grieta = en_grieta
 	if acaba_de_caer:
@@ -588,6 +588,10 @@ func _physics_process(delta: float) -> void:
 	sonidos.actualizar_terremoto(intensidad, intensidad_local)
 	temblor_actualizado.emit(tiempo, intensidad_local)
 	if etapa == Etapa.AVISO:
+		return
+	if _jugador.en_relevo:
+		# El director reserva las grietas/derrumbes para los dos actores.
+		_actualizar_escombros(delta)
 		return
 	var punto_jugador := Vector2(_jugador.global_position.x, _jugador.global_position.z)
 	var dentro_de_hueco := false

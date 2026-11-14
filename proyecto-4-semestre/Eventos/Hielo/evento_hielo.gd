@@ -106,7 +106,8 @@ func _physics_process(delta: float) -> void:
 	tiempo += delta
 	var presencia := minf(1.0, tiempo / ENTRADA)
 	var fase := fposmod(tiempo, INTERVALO)
-	_jugador.congelado = not descongelando and tiempo >= INTERVALO and fase < CONGELACION
+	if not _jugador.en_relevo:
+		_jugador.congelado = not descongelando and tiempo >= INTERVALO and fase < CONGELACION
 	if descongelando:
 		_tiempo_deshielo += delta
 		presencia = _presencia_al_reparar * (1.0 - clampf(_tiempo_deshielo / DESHIELO, 0.0, 1.0))
@@ -129,7 +130,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(_delta: float) -> void:
-	var disponible: bool = activo and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible and not _oficina.clasificador_evidencias.visible and not _oficina.escaner_verificacion.visible
+	var disponible: bool = activo and not _oficina.partida_finalizada and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible and not _oficina.clasificador_evidencias.visible and not _oficina.escaner_verificacion.visible
 	aviso.visible = disponible and not descongelando
 	indicador.actualizar(get_viewport().get_camera_3d(), tuberia.global_position + Vector3.UP * 0.45,
 		_jugador.global_position, obtener_objetivo(_jugador) == self, disponible and not descongelando)
@@ -280,7 +281,7 @@ func _preparar_nieve() -> void:
 		if pasada == 1:
 			while _oficina._bloqueos_pool.size() < _oficina.BLOQUEOS_SIMULTANEOS:
 				await get_tree().process_frame
-				if activo:
+				if not is_inside_tree() or activo:
 					return
 		for raiz in _raices_mobiliario():
 			var mallas := raiz.find_children("*", "MeshInstance3D", true, false)
@@ -291,6 +292,8 @@ func _preparar_nieve() -> void:
 					return
 				_generador_nieve.crear(malla, null, true)
 				await get_tree().process_frame
+				if not is_inside_tree():
+					return
 
 
 func _recubrir_mobiliario() -> void:

@@ -149,9 +149,12 @@ expand_margin_top = 5.0
 expand_margin_right = 5.0
 expand_margin_bottom = 5.0
 
+[sub_resource type="StyleBoxEmpty" id="Style_transparente"]
+
 [node name="PanelAyuda" type="PanelContainer"]
 custom_minimum_size = Vector2(1560, 0)
 theme = ExtResource("2_tema")
+theme_override_styles/panel = SubResource("Style_transparente")
 script = ExtResource("1_script")
 fuente_texto = SubResource("Font_lectura")
 fuente_enfasis = SubResource("Font_enfasis")
@@ -161,15 +164,37 @@ estilo_expediente = SubResource("Style_expediente")
 estilo_pestana = SubResource("Style_pestana")
 estilo_marco_foto = SubResource("Style_marco_foto")
 
-[node name="Contenido" type="VBoxContainer" parent="."]
+[node name="Estructura" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = -4
+
+[node name="NavegacionTutoriales" type="MarginContainer" parent="Estructura"]
+unique_name_in_owner = true
+visible = false
+z_index = 1
+layout_mode = 2
+theme_override_constants/margin_left = 44
+theme_override_constants/margin_right = 44
+
+[node name="PestanasTutoriales" type="HBoxContainer" parent="Estructura/NavegacionTutoriales"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Cuerpo" type="PanelContainer" parent="Estructura"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Contenido" type="VBoxContainer" parent="Estructura/Cuerpo"]
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="Encabezado" type="VBoxContainer" parent="Contenido"]
+[node name="Encabezado" type="VBoxContainer" parent="Estructura/Cuerpo/Contenido"]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Seccion" type="Label" parent="Contenido/Encabezado"]
+[node name="Seccion" type="Label" parent="Estructura/Cuerpo/Contenido/Encabezado"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.616, 0.286, 0.224, 1)
@@ -177,53 +202,56 @@ theme_override_fonts/font = SubResource("Font_enfasis")
 theme_override_font_sizes/font_size = 22
 text = "GUÍA DE DESPACHO"
 
-[node name="Titulo" type="Label" parent="Contenido/Encabezado"]
+[node name="Titulo" type="Label" parent="Estructura/Cuerpo/Contenido/Encabezado"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
 theme_override_font_sizes/font_size = 60
 text = "TU PRIMER TURNO"
 
-[node name="LineaEncabezado" type="HSeparator" parent="Contenido"]
+[node name="LineaEncabezado" type="HSeparator" parent="Estructura/Cuerpo/Contenido"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/separator = SubResource("Style_separador")
 
-[node name="Tutorial" type="HBoxContainer" parent="Contenido"]
+[node name="Tutorial" type="HBoxContainer" parent="Estructura/Cuerpo/Contenido"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 28
 
-[node name="Leyenda" type="VBoxContainer" parent="Contenido"]
+[node name="Leyenda" type="VBoxContainer" parent="Estructura/Cuerpo/Contenido"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 8
 script = ExtResource("5_manual")
 
-[node name="TutorialApagon" type="HBoxContainer" parent="Contenido"]
+[node name="TutorialApagon" type="HBoxContainer" parent="Estructura/Cuerpo/Contenido"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 28
 
-[node name="TutorialEvento" type="HBoxContainer" parent="Contenido"]
+[node name="TutorialEvento" type="HBoxContainer" parent="Estructura/Cuerpo/Contenido"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 28
 
-[node name="LineaPie" type="HSeparator" parent="Contenido"]
+[node name="LineaPie" type="HSeparator" parent="Estructura/Cuerpo/Contenido"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/separator = SubResource("Style_separador")
 
-[node name="Pie" type="HBoxContainer" parent="Contenido"]
+[node name="Pie" type="HBoxContainer" parent="Estructura/Cuerpo/Contenido"]
 layout_mode = 2
 theme_override_constants/separation = 24
 alignment = 2
 
-[node name="Pista" type="Label" parent="Contenido/Pie"]
+[node name="Pista" type="Label" parent="Estructura/Cuerpo/Contenido/Pie"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -233,7 +261,7 @@ theme_override_font_sizes/font_size = 24
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="CerrarAyuda" type="Button" parent="Contenido/Pie"]
+[node name="CerrarAyuda" type="Button" parent="Estructura/Cuerpo/Contenido/Pie"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(340, 76)
 layout_mode = 2

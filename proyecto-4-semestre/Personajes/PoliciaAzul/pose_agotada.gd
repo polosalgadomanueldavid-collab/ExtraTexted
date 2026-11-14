@@ -4,6 +4,7 @@ extends SkeletonModifier3D
 
 @export_range(0.0, 1.0) var peso: float = 0.0
 var caminando: bool = false
+var congelado := false
 
 var _tiempo: float = 0.0
 var _huesos: Dictionary = {}
@@ -22,7 +23,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_tiempo += delta
+	if not congelado:
+		_tiempo += delta
 
 
 func _process_modification() -> void:

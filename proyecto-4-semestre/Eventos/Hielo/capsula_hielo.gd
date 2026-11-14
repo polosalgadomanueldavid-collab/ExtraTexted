@@ -72,7 +72,7 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(jugador):
 		return
 	peso = move_toward(peso, 1.0 if jugador.congelado else 0.0, delta * 6.5)
-	visible = peso > 0.001 and not jugador.esta_sentado()
+	visible = jugador.visible and peso > 0.001 and not jugador.esta_sentado()
 	global_position = jugador.global_position
 	rotation.y = jugador.visual.global_rotation.y
 	_cristal.scale = Vector3(0.8 + peso * 0.2, maxf(0.01, peso), 0.8 + peso * 0.2)

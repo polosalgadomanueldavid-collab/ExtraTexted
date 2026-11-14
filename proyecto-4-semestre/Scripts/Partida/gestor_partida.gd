@@ -740,7 +740,8 @@ func _al_iniciar_inundacion() -> void:
 
 func _al_terminar_inundacion() -> void:
 	_programar_evento_aleatorio()
-	anuncios.mostrar_evento("OFICINA", "DRENADA", "Movimiento normal restablecido")
+	if not partida_finalizada:
+		anuncios.mostrar_evento("OFICINA", "DRENADA", "Movimiento normal restablecido")
 
 
 func _al_caer_bloqueo_en_agua(punto: Vector3) -> void:
@@ -776,6 +777,8 @@ func _al_recuperar_mesa_incendiada(estacion_id: String) -> void:
 
 
 func _al_terminar_incendio() -> void:
+	if partida_finalizada:
+		return
 	# Recicla las cenizas, preserva al jugador/la hoja y genera cajones normales.
 	temporizador_bloqueos.paused = false
 	_cambiar_bloqueo_temporal()
@@ -882,10 +885,10 @@ func _al_terminar_partida() -> void:
 	if partida_finalizada:
 		return
 	partida_finalizada = true
-	evento_incendio.detener()
-	evento_inundacion.detener()
-	evento_lava.detener()
-	evento_hielo.detener()
+	# El relevo sucede en la misma emergencia; sus efectos siguen activos.
+	evento_incendio.soltar()
+	evento_inundacion._cerrar_reparacion()
+	evento_hielo._cerrar_reparacion()
 	MenuGlobal.final_de_partida_activo = true
 	jugador.input_locked = true
 	if is_instance_valid(temporizador_denuncias):
@@ -932,21 +935,16 @@ func _iniciar_cinematica_relevo() -> void:
 	clasificador_evidencias.cancelar()
 	escaner_verificacion.cancelar()
 	evento_apagon.panel.hide()
-	evento_apagon.mascara.hide()
 	evento_apagon.indicador_luz.hide()
-	evento_apagon._restaurar_luces()
-	# La salida requiere suelo firme incluso si la última hoja se perdió en
-	# una grieta. La simulación permanece pausada y no se generan más eventos.
-	if evento_terremoto.activo:
-		evento_terremoto._cerrar()
-	_limpiar_bloqueos_temporales()
+	evento_apagon._al_cerrar_panel()
 	jugador.input_locked = true
-	jugador.velocity = Vector3.ZERO
+	if not jugador.hielo_activo:
+		jugador.velocity = Vector3.ZERO
 	cinematica_relevo = CinematicaRelevo.new()
 	cinematica_relevo.name = "CinematicaRelevo"
 	add_child(cinematica_relevo)
 	cinematica_relevo.terminada.connect(final_partida.finalizar_relevo)
-	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso)
+	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso, self)
 
 
 func _reiniciar_despues_del_final() -> void:

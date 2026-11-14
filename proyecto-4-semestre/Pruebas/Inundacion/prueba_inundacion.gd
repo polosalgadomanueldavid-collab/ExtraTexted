@@ -187,7 +187,7 @@ func _probar() -> void:
 	await _cuadros(260)
 	evento.interactuar(jugador)
 	oficina._al_terminar_partida()
-	_verificar(not evento.activo and not evento.reparando and not evento.panel.visible and not jugador.nadando and jugador.input_locked, "El final de partida limpia el evento sin devolver controles de juego")
+	_verificar(evento.activo and not evento.reparando and not evento.panel.visible and jugador.input_locked, "El final cierra la reparación y conserva el agua para el relevo")
 	oficina.queue_free()
 	await process_frame
 	print("[INUNDACION] %d errores" % errores)

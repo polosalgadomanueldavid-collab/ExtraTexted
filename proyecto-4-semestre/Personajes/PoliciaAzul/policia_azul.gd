@@ -59,6 +59,7 @@ var control_inundacion: Node
 var control_hielo: Node
 var hielo_activo := false
 var congelado := false
+var en_relevo := false
 const ACELERACION_HIELO := 2.4
 const FRENADO_HIELO := 0.38
 var nadando := false
@@ -131,6 +132,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if en_relevo:
+		return # La cinemática dirige el cuerpo, conservando las poses del evento.
 	if _descanso_sentado:
 		velocity = Vector3.ZERO
 		sonido_pasos.detener()
@@ -574,9 +577,18 @@ func _rechazar_emote_nadando() -> bool:
 	return true
 
 
+func actualizar_animacion_relevo(delta: float, rapidez: float, cansado: bool) -> void:
+	_rapidez_real = rapidez
+	var andando := rapidez > 0.035
+	_play_animation((&"swim" if andando else &"swim_idle") if nadando else (&"walk" if andando else &"idle"))
+	animation_player.speed_scale = 0.0 if congelado else (0.62 if cansado else 1.0)
+	sonido_pasos.actualizar(delta, andando and not nadando and not congelado, false)
+	_actualizar_pose_nado(delta)
+
+
 func _actualizar_pose_nado(delta: float) -> void:
 	peso_nado = move_toward(peso_nado, float(nadando), delta / 0.65)
-	var avance_objetivo := clampf(_rapidez_real / (walk_speed * FACTOR_NADO), 0.0, 1.0) if nadando and not realizando_gesto() and not input_locked else 0.0
+	var avance_objetivo := clampf(_rapidez_real / (walk_speed * FACTOR_NADO), 0.0, 1.0) if nadando and not realizando_gesto() and (not input_locked or en_relevo) else 0.0
 	avance_nado = lerpf(avance_nado, avance_objetivo, 1.0 - exp(-delta * 4.5))
 	# Integrar la fase evita el salto que producía multiplicar el tiempo por
 	# una frecuencia distinta cada vez que se arrancaba o frenaba.
