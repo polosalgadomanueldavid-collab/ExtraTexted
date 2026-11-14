@@ -6,8 +6,9 @@ const PISTA_DONUTS: AudioStream = preload("res://Audios/Three_Donuts_One_Badge.m
 const PISTA_KITCHEN: AudioStream = preload("res://Audios/The_Kitchen_Collapse.mp3")
 const PISTA_CLOCKWORK: AudioStream = preload("res://Audios/Feeding_The_Clockwork_Mouth.mp3")
 const VOLUMEN_NORMAL_DB := -6.0
+const VOLUMEN_ENTRADA_DB := -20.0
 const VOLUMEN_SILENCIO_DB := -60.0
-const DURACION_FUNDIDO := 2.0
+const DURACION_FUNDIDO := 0.55
 
 var _musica_calma_baja := false
 var _en_rango := false
@@ -32,7 +33,9 @@ func configurar(sistema: SistemaDespacho, para_calma_baja: bool = false) -> void
 
 
 func _al_actualizar_calma(nueva_calma: int) -> void:
-	var dentro_del_rango := nueva_calma < 50 if _musica_calma_baja else nueva_calma > 50
+	# El valor exacto de 50 pertenece a la música normal. Así siempre hay una
+	# familia de pistas activa y no queda un hueco silencioso en el umbral.
+	var dentro_del_rango := nueva_calma < 50 if _musica_calma_baja else nueva_calma >= 50
 	if dentro_del_rango == _en_rango:
 		return
 	_en_rango = dentro_del_rango
@@ -54,7 +57,9 @@ func _iniciar_pista_aleatoria() -> void:
 
 func _reproducir_pista_actual() -> void:
 	stream = _pista_uno if _indice_pista_actual == 0 else _pista_dos
-	volume_db = VOLUMEN_SILENCIO_DB
+	# La canción nueva comienza baja pero audible. Iniciar desde -60 dB producía
+	# un silencio perceptible entre temas aunque el reproductor ya estuviera activo.
+	volume_db = VOLUMEN_ENTRADA_DB
 	play()
 	_fundir_a(VOLUMEN_NORMAL_DB)
 
