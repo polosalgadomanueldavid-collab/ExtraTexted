@@ -30,6 +30,7 @@ var _azar := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
+	bus = "Interacciones"
 	_azar.randomize()
 	max_polyphony = 1
 

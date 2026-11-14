@@ -1,6 +1,6 @@
 class_name EventoApagon
 extends Node
-## Evento optativo. La escena que lo instancia decide cuándo iniciar el apagón.
+## La partida coordina el apagón con los demás eventos aleatorios.
 
 signal estado_cambiado(nuevo_estado: Estado)
 signal apagon_iniciado(tipo: int)
@@ -12,11 +12,14 @@ const PANEL_CIRCUITOS := preload("res://UI/Apagon/panel_circuitos.gd")
 const TIPOS_DISPONIBLES := PANEL_CIRCUITOS.TIPOS_DISPONIBLES
 const TACO_LUZ := preload("res://Eventos/Apagon/taco_luz.gd")
 const VISION_APAGON := preload("res://Eventos/Apagon/vision_apagon.gdshader")
+const SonidosEventos := preload("res://Eventos/sonidos_eventos.gd")
+const INDICADOR_LUZ := preload("res://UI/Apagon/indicador_luz.gd")
 
 @export var jugador: Player
 @export var camara: Camera3D
 @export var taco: TACO_LUZ
 @export var luces: Array[Light3D] = []
+@export var barra_despacho: Control
 @export_range(1.0, 5.0, 0.01) var radio_vision: float = 2.4
 
 var estado: Estado = Estado.RESTAURADO
@@ -25,6 +28,9 @@ var semilla_circuito: int = 0
 var panel: PANEL_CIRCUITOS
 var mascara: ColorRect
 var luz_jugador: OmniLight3D
+var permiso_inicio: Callable
+var sonidos: SonidosEventos
+var indicador_luz: INDICADOR_LUZ
 
 var _azar := RandomNumberGenerator.new()
 var _visibilidad_luces: Dictionary = {}
@@ -39,7 +45,14 @@ func _ready() -> void:
 		set_process(false)
 		return
 	_azar.randomize()
+	sonidos = SonidosEventos.new()
+	add_child(sonidos)
 	_crear_vision()
+	var capa_indicador := CanvasLayer.new()
+	capa_indicador.layer = 25
+	add_child(capa_indicador)
+	indicador_luz = INDICADOR_LUZ.new()
+	capa_indicador.add_child(indicador_luz)
 	var capa_panel := CanvasLayer.new()
 	capa_panel.layer = 40
 	add_child(capa_panel)
@@ -74,6 +87,8 @@ func _crear_vision() -> void:
 
 
 func iniciar_apagon() -> bool:
+	if permiso_inicio.is_valid() and not permiso_inicio.call():
+		return false
 	if not is_node_ready() or mascara == null or estado != Estado.RESTAURADO:
 		return false
 	if get_tree().paused or jugador.input_locked:
@@ -89,6 +104,7 @@ func iniciar_apagon() -> bool:
 	luz_jugador.show()
 	_actualizar_vision()
 	_cambiar_estado(Estado.APAGADO)
+	sonidos.iniciar_apagon()
 	apagon_iniciado.emit(tipo_circuito)
 	return true
 
@@ -96,6 +112,15 @@ func iniciar_apagon() -> bool:
 func _process(_delta: float) -> void:
 	if estado != Estado.RESTAURADO:
 		_actualizar_vision()
+		_actualizar_indicador()
+
+
+func _actualizar_indicador() -> void:
+	indicador_luz.actualizar(
+		camara, taco.to_global(Vector3(0, 1.8, 0)), barra_despacho,
+		estado == Estado.APAGADO and get_viewport().get_camera_3d() == camara,
+		jugador.obtener_objetivo_interaccion() == taco
+	)
 
 
 func _actualizar_vision() -> void:
@@ -146,6 +171,7 @@ func _al_resolver_circuito() -> void:
 	mascara.hide()
 	luz_jugador.hide()
 	taco.establecer_apagon(false)
+	sonidos.detener()
 	_cambiar_estado(Estado.RESTAURADO)
 	panel.cerrar()
 	luz_restaurada.emit()
@@ -160,6 +186,7 @@ func _restaurar_luces() -> void:
 
 func _cambiar_estado(nuevo_estado: Estado) -> void:
 	estado = nuevo_estado
+	_actualizar_indicador()
 	estado_cambiado.emit(estado)
 
 

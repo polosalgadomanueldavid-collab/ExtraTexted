@@ -29,6 +29,7 @@ var _nombre_local := ""
 
 func _ready() -> void:
 	nombre_jugador.max_length = ClasificacionLocalScript.MAX_CARACTERES_NOMBRE
+	nombre_jugador.placeholder_text = "Nombre o alias (máximo %d caracteres)" % ClasificacionLocalScript.MAX_CARACTERES_NOMBRE
 	nombre_jugador.text_changed.connect(_actualizar_nombre)
 	nombre_jugador.text_submitted.connect(_confirmar_nombre)
 	boton_continuar.pressed.connect(func() -> void: _confirmar_nombre(nombre_jugador.text))
@@ -93,9 +94,10 @@ func presentar_nombre(nombre_anterior: String) -> void:
 	estado.hide()
 	formulario.show()
 	boton_continuar.show()
-	nombre_jugador.text = nombre_anterior
+	var nombre_previo := ClasificacionLocalScript.limpiar_nombre(nombre_anterior)
+	nombre_jugador.text = nombre_previo.substr(0, ClasificacionLocalScript.MAX_CARACTERES_NOMBRE)
 	error_inicio.hide()
-	_actualizar_nombre(nombre_anterior)
+	_actualizar_nombre(nombre_jugador.text)
 
 
 func presentar_tabla(entradas: Array[Dictionary], error: Error, nombre_local: String = "") -> void:
@@ -139,12 +141,13 @@ func mostrar_error_inicio() -> void:
 
 
 func _actualizar_nombre(texto: String) -> void:
-	boton_continuar.disabled = ClasificacionLocalScript.limpiar_nombre(texto).is_empty()
+	var nombre := ClasificacionLocalScript.limpiar_nombre(texto)
+	boton_continuar.disabled = nombre.is_empty() or nombre.length() > ClasificacionLocalScript.MAX_CARACTERES_NOMBRE
 
 
 func _confirmar_nombre(texto: String) -> void:
 	var nombre := ClasificacionLocalScript.limpiar_nombre(texto)
-	if not nombre.is_empty():
+	if not nombre.is_empty() and nombre.length() <= ClasificacionLocalScript.MAX_CARACTERES_NOMBRE:
 		nombre_confirmado.emit(nombre)
 
 

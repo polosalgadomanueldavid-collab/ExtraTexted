@@ -40,6 +40,16 @@ var _posicion_seguimiento: Vector3
 var _fase_balanceo: float = 0.0
 var _peso_balanceo: float = 1.0
 var _temblor := Vector2.ZERO
+var _camara_libre: bool = false
+var _bloqueo_previo_jugador: bool = false
+var _modo_mouse_previo: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
+var _yaw_libre: float = 0.0
+var _pitch_libre: float = 0.0
+var _ayuda_camara_libre: Label
+var _peso_zoom_explosion: float = 0.0
+var _fase_orbita_aura: float = 0.0
+var _peso_orbita_aura: float = 0.0
+var _peso_zoom_aura: float = 0.0
 
 
 func actualizar_temblor(tiempo: float, intensidad: float) -> void:
@@ -64,9 +74,21 @@ func _sincronizar_balanceo() -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
-	if evento.is_echo() or not is_current() or get_tree().paused or not is_instance_valid(objetivo):
+	if evento.is_echo() or not is_current() or get_tree().paused:
 		return
-	if bool(objetivo.get("input_locked")):
+	if evento is InputEventKey and evento.pressed and evento.physical_keycode == KEY_F5:
+		_alternar_camara_libre()
+		get_viewport().set_input_as_handled()
+		return
+	if _camara_libre:
+		if evento is InputEventMouseMotion:
+			var movimiento := evento as InputEventMouseMotion
+			_yaw_libre -= movimiento.relative.x * 0.0025
+			_pitch_libre = clampf(_pitch_libre - movimiento.relative.y * 0.0025, -1.50, 1.50)
+			rotation = Vector3(_pitch_libre, _yaw_libre, 0.0)
+			get_viewport().set_input_as_handled()
+		return
+	if not is_instance_valid(objetivo) or bool(objetivo.get("input_locked")):
 		return
 	if evento.is_action_pressed("CambiarCamara"):
 		establecer_vista((int(vista_actual) + 1) % Vista.size())
@@ -90,8 +112,30 @@ func establecer_vista(vista: int) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _camara_libre:
+		_actualizar_camara_libre(delta)
+		return
 	if not is_instance_valid(objetivo):
 		return
+	var zoom_objetivo := _obtener_zoom_explosion_final()
+	_peso_zoom_explosion = move_toward(_peso_zoom_explosion, zoom_objetivo, delta * 3.0)
+	var gestos: Variant = objetivo.get("gestos")
+	var transformando_aura := is_instance_valid(gestos) and bool(gestos.get("aura_transformacion_en_curso"))
+	if transformando_aura:
+		var progreso_aura := clampf(float(gestos.get("aura_transformacion_progreso")), 0.0, 1.0)
+		var recorrido_aura := smoothstep(0.0, 1.0, progreso_aura)
+		_fase_orbita_aura = TAU * recorrido_aura
+		_peso_orbita_aura = 1.0
+		_peso_zoom_aura = 1.0 - recorrido_aura
+	elif is_instance_valid(gestos) and bool(gestos.get("aura_persistente_activada")) and float(gestos.get("aura_transformacion_progreso")) >= 1.0:
+		# La vuelta completa termina exactamente en el encuadre normal; el blend
+		# de seguimiento suaviza el pequeño error acumulado de la cámara.
+		_fase_orbita_aura = 0.0
+		_peso_orbita_aura = 0.0
+		_peso_zoom_aura = 0.0
+	else:
+		_peso_orbita_aura = move_toward(_peso_orbita_aura, 0.0, delta * 0.9)
+		_peso_zoom_aura = move_toward(_peso_zoom_aura, 0.0, delta * 0.9)
 	# Conserva el seguimiento original y aplica luego la seguridad al encuadre real.
 	var ancla := objetivo.global_position + offset
 	ancla.x = clampf(ancla.x, limite_min_x, limite_max_x)
@@ -105,6 +149,16 @@ func _physics_process(delta: float) -> void:
 	elif vista_actual == Vista.GOD:
 		desfase = offset_god
 		orientacion_deseada = Quaternion(Vector3.RIGHT, -PI / 2.0)
+	if _peso_orbita_aura > 0.001:
+		# Durante la transformación se usa la vista orbital estándar y luego se
+		# mezcla de vuelta a la vista que el jugador tenía seleccionada.
+		desfase = desfase.lerp(offset, _peso_orbita_aura)
+	desfase *= 1.0 + 1.4 * _peso_zoom_explosion
+	var zoom_radial_aura := Vector2(desfase.x, desfase.z) * (1.0 + 2.1 * _peso_zoom_aura)
+	desfase = Vector3(zoom_radial_aura.x, desfase.y + 1.1 * _peso_zoom_aura, zoom_radial_aura.y)
+	if _peso_orbita_aura > 0.001:
+		var giro := _fase_orbita_aura * _peso_orbita_aura
+		desfase = Basis(Vector3.UP, giro) * desfase
 	var posicion_deseada := _limitar_encuadre(ancla + desfase, Basis(orientacion_deseada))
 	if zona_segura_activa and vista_actual != Vista.GOD:
 		# Al detenerse antes del muro posterior, inclina la vista lo necesario para
@@ -117,6 +171,10 @@ func _physics_process(delta: float) -> void:
 		var inclinacion_segura := minf(inclinacion_base, inclinacion_objetivo + margen_angular)
 		orientacion_deseada = Quaternion(Vector3.RIGHT, maxf(-PI * 0.5, inclinacion_segura))
 		posicion_deseada = _limitar_encuadre(posicion_deseada, Basis(orientacion_deseada))
+	if _peso_orbita_aura > 0.001:
+		var punto_mirada := objetivo.global_position + Vector3.UP * 0.85
+		var orientacion_orbita := Basis.looking_at(punto_mirada - posicion_deseada, Vector3.UP).get_rotation_quaternion()
+		orientacion_deseada = orientacion_deseada.slerp(orientacion_orbita, _peso_orbita_aura)
 	var avance := 1.0 - exp(-suavizado * delta)
 	_posicion_seguimiento = _posicion_seguimiento.lerp(posicion_deseada, avance)
 	_orientacion = _orientacion.slerp(orientacion_deseada, 1.0 - exp(-suavizado_giro * delta))
@@ -132,6 +190,75 @@ func _physics_process(delta: float) -> void:
 	# Limita también cada cuadro intermedio y el balanceo, no solo el destino.
 	_posicion_seguimiento = _limitar_encuadre(_posicion_seguimiento, global_basis)
 	global_position = _limitar_encuadre(_posicion_seguimiento + global_basis.x * balanceo.x + global_basis.y * balanceo.y, global_basis)
+
+
+func _obtener_zoom_explosion_final() -> float:
+	if not is_instance_valid(objetivo):
+		return 0.0
+	var animacion: Variant = objetivo.get("gestos")
+	if not is_instance_valid(animacion) or animacion.get("gesto") != &"explosion_final":
+		return 0.0
+	var duracion_gesto := maxf(0.001, float(animacion.get("duracion")))
+	var progreso := float(animacion.get("tiempo")) / duracion_gesto
+	return smoothstep(0.40, 0.58, progreso) * (1.0 - smoothstep(0.93, 1.0, progreso))
+
+
+func _alternar_camara_libre() -> void:
+	if not is_instance_valid(objetivo):
+		return
+	_camara_libre = not _camara_libre
+	if _camara_libre:
+		_bloqueo_previo_jugador = bool(objetivo.get("input_locked"))
+		objetivo.set("input_locked", true)
+		_modo_mouse_previo = Input.mouse_mode
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		var angulos := global_rotation
+		_pitch_libre = angulos.x
+		_yaw_libre = angulos.y
+		_mostrar_ayuda_camara_libre(true)
+	else:
+		Input.mouse_mode = _modo_mouse_previo
+		objetivo.set("input_locked", _bloqueo_previo_jugador)
+		_mostrar_ayuda_camara_libre(false)
+		_posicion_seguimiento = global_position
+		_orientacion = global_basis.orthonormalized().get_rotation_quaternion()
+
+
+func _actualizar_camara_libre(delta: float) -> void:
+	var lateral := (1.0 if Input.is_key_pressed(KEY_D) else 0.0) - (1.0 if Input.is_key_pressed(KEY_A) else 0.0)
+	var adelante := (1.0 if Input.is_key_pressed(KEY_W) else 0.0) - (1.0 if Input.is_key_pressed(KEY_S) else 0.0)
+	var vertical := (1.0 if Input.is_key_pressed(KEY_SPACE) else 0.0) - (1.0 if Input.is_key_pressed(KEY_CTRL) else 0.0)
+	var direccion := global_basis.x * lateral - global_basis.z * adelante + Vector3.UP * vertical
+	if direccion.length_squared() < 0.001:
+		return
+	var rapidez := 6.0
+	if Input.is_key_pressed(KEY_SHIFT):
+		rapidez = 18.0
+	elif Input.is_key_pressed(KEY_ALT):
+		rapidez = 2.0
+	global_position += direccion.normalized() * rapidez * delta
+
+
+func _mostrar_ayuda_camara_libre(mostrar: bool) -> void:
+	if mostrar:
+		var capa := CanvasLayer.new()
+		capa.name = "AyudaCamaraLibre"
+		capa.layer = 100
+		add_child(capa)
+		_ayuda_camara_libre = Label.new()
+		_ayuda_camara_libre.text = "CÁMARA LIBRE  ·  WASD mover  ·  Espacio/Ctrl subir/bajar  ·  Mayús rápido  ·  F5 salir"
+		_ayuda_camara_libre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_ayuda_camara_libre.add_theme_color_override("font_color", Color("fff1d8"))
+		_ayuda_camara_libre.add_theme_color_override("font_shadow_color", Color(0.02, 0.06, 0.08, 0.9))
+		_ayuda_camara_libre.add_theme_constant_override("shadow_offset_x", 2)
+		_ayuda_camara_libre.add_theme_constant_override("shadow_offset_y", 2)
+		_ayuda_camara_libre.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		_ayuda_camara_libre.offset_top = -46.0
+		_ayuda_camara_libre.offset_bottom = -16.0
+		capa.add_child(_ayuda_camara_libre)
+	elif is_instance_valid(_ayuda_camara_libre):
+		_ayuda_camara_libre.get_parent().queue_free()
+		_ayuda_camara_libre = null
 
 
 func _limitar_encuadre(posicion: Vector3, orientacion: Basis) -> Vector3:

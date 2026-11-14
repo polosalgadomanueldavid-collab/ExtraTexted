@@ -23,6 +23,8 @@ static func crear(estacion_id: String) -> Node3D:
 			_crear_documento(modelo)
 		"bienestar":
 			_crear_corazon(modelo)
+		"luz":
+			_crear_rayo(modelo)
 		_:
 			modelo.set_meta("fallback", true)
 			_crear_documento(modelo)
@@ -200,6 +202,21 @@ static func _crear_corazon(modelo: Node3D) -> void:
 	var frente := _pieza("CorazonFrenteCoral", silueta, 0.062, CORAL, 0.025)
 	frente.scale = Vector3(0.974, 0.974, 1.0)
 	frente.position.z = 0.045
+	modelo.add_child(frente)
+
+
+static func _crear_rayo(modelo: Node3D) -> void:
+	var silueta := _redondear(PackedVector2Array([
+		Vector2(0.015, 0.37), Vector2(-0.25, -0.035),
+		Vector2(-0.025, -0.035), Vector2(-0.12, -0.38),
+		Vector2(0.26, 0.10), Vector2(0.045, 0.10), Vector2(0.17, 0.37)
+	]), 0.018, 5)
+	var canto := _pieza("RayoCanto", silueta, 0.14, PETROLEO, 0.020)
+	canto.position.z = -0.025
+	modelo.add_child(canto)
+	var frente := _pieza("RayoDorado", silueta, 0.09, Color("ffc969"), 0.022)
+	frente.scale = Vector3(0.91, 0.94, 1.0)
+	frente.position.z = 0.055
 	modelo.add_child(frente)
 
 

@@ -23,16 +23,18 @@ func _probar() -> void:
 	current_scene = oficina
 	await _fisicas(5)
 	menu.cerrar_ayuda()
+	oficina.tutoriales_vistos[&"terremoto"] = true
 	jugador = oficina.jugador
 	evento = oficina.evento_terremoto
 	grafo = oficina.grafo_piso
-	evento.espera_minima = 1.0
-	evento.espera_maxima = 1.0
 	evento.temblor_actualizado.connect(func(_t: float, valor: float) -> void: intensidad = valor)
 	evento.suelo_roto.connect(func() -> void: instante_rotura = evento.tiempo)
 	evento._azar.seed = 8762
 	oficina.generador_aleatorio.seed = 1414
 	oficina._recibir_denuncia_aleatoria()
+	# Acortar solo la espera de esta prueba; el reloj compartido se cubre aparte.
+	oficina._evento_aleatorio_pendiente = 0
+	oficina.temporizador_eventos.start(1.0)
 	oficina.temporizador_denuncias.stop()
 	oficina.computador.timer_nuevo_problema.stop()
 	var antes: Dictionary = oficina.bloqueos_visuales.duplicate()
@@ -66,10 +68,10 @@ func _probar() -> void:
 		var p := Vector3(trazada.centro.x, evento._altura, trazada.centro.y)
 		_verificar(not _suelo_bajo(p).is_empty(), "El futuro hueco aún soporta al jugador")
 	await _hasta(8.10)
-	_verificar(is_equal_approx(instante_rotura, 8.0) and evento.etapa == evento.Etapa.RUPTURA and evento.grietas.size() >= 4,
-		"Se abren al menos cuatro rasgaduras juntas en el segundo ocho")
+	_verificar(is_equal_approx(instante_rotura, 8.0) and evento.etapa == evento.Etapa.RUPTURA and evento.grietas.size() >= 10,
+		"Se abren al menos diez rasgaduras juntas en el segundo ocho")
 	for celda in grafo.grietas:
-		_verificar(grafo.es_celda_valida(celda) and not grafo.es_zona_segura(celda), "La rasgadura está en el área de juego")
+		_verificar(grafo.es_celda_valida(celda), "La rasgadura está en el área de juego")
 	var congelado: Dictionary = oficina.bloqueos_visuales.duplicate()
 	var restantes: float = oficina.temporizador_bloqueos.time_left
 	_verificar(restantes > 0.0 and oficina.temporizador_bloqueos.paused, "Se pausa el reloj de bloqueos")
@@ -105,12 +107,26 @@ func _probar() -> void:
 	oficina.add_child(papel)
 	oficina.papel_actual = papel
 	papel.tomar(jugador)
-	# El jugador cae en el agujero con el caso en la mano y reaparece sobre piso firme.
+	# La denuncia se pierde al entrar en la grieta, antes del rescate del personaje.
 	jugador.global_position = centro + Vector3.UP * 0.03
+	for i in range(20):
+		await _fisicas(1)
+		if caso.estado == Denuncia.Estado.VENCIDA:
+			break
+	_verificar(caso.motivo_perdida == Denuncia.MotivoPerdida.TERREMOTO and jugador.global_position.y < evento._altura - 0.025 and jugador.global_position.y > evento._altura - 0.55,
+		"Caer con la hoja pierde el caso en cuanto entra en la grieta, antes de regresar a tierra")
+	_verificar(jugador.papel_en_mano == null and oficina.papel_actual == null and despacho.obtener_denuncia_activa() == null,
+		"La caída retira la hoja de la mano y cierra la denuncia activa")
 	await _fisicas(43)
-	_verificar(jugador.is_on_floor() and jugador.papel_en_mano == papel and despacho.obtener_denuncia_activa() == caso,
-		"Caer llevando la hoja conserva la denuncia y devuelve al jugador a tierra")
-	jugador.global_position = Vector3(centro.x, evento._altura + 0.01, _borde_sur(grande) + 0.09)
+	_verificar(jugador.is_on_floor() and despacho.calma_operativa == calma - caso.penalidad_calma,
+		"El rescate devuelve al jugador a tierra y aplica una sola penalización por el caso perdido")
+	caso = _recibir_caso_con_hoja("TERREMOTO-HOJA-LANZADA")
+	papel = oficina.papel_actual
+	calma = despacho.calma_operativa
+	# La gigante ofrece una boca amplia para comprobar la pérdida de la hoja,
+	# independientemente de la longitud y los obstáculos de las grietas pequeñas.
+	var destino_lanzamiento: Grieta = evento.grieta_gigante
+	jugador.global_position = Vector3(destino_lanzamiento.centro.x, evento._altura + 0.01, _borde_sur(destino_lanzamiento) + 0.09)
 	jugador.visual.rotation.y = PI
 	await _fisicas(3)
 	# Mismo gesto, anclaje e impulso que usa el jugador al pulsar E.
@@ -120,8 +136,6 @@ func _probar() -> void:
 		"La hoja suelta que cae pierde su caso por terremoto")
 	_verificar(oficina.papel_actual == null and despacho.calma_operativa == calma - caso.penalidad_calma,
 		"Se descarta la hoja y se aplica una sola pérdida de calma")
-	evento.espera_minima = 120.0
-	evento.espera_maxima = 120.0
 	await _hasta(15.95)
 	_verificar(intensidad == 1.0 and evento.etapa == evento.Etapa.RUPTURA, "La segunda etapa mantiene el temblor fuerte")
 	await _hasta(16.04)
@@ -140,22 +154,33 @@ func _probar() -> void:
 	_verificar(oficina.bloqueos_visuales != congelado and oficina._bloqueos_pool.size() == 30, "El turno siguiente reutiliza los bloqueos caídos")
 	oficina.temporizador_bloqueos.stop()
 	oficina._limpiar_bloqueos_temporales()
-	var origen := jugador.global_position
 	jugador.global_position = grafo.celda_a_posicion(Vector2i(7, 19)) + Vector3.UP * evento._altura
 	await _pulsar(KEY_F3)
 	await _pulsar(KEY_T)
-	_verificar(not evento.activo, "No se inicia un terremoto desde la zona segura")
-	jugador.global_position = origen
-	await _pulsar(KEY_T)
-	_verificar(evento.activo, "F3 y T inician un segundo terremoto desde la partida")
+	_verificar(evento.activo, "F3 y T también inician el terremoto desde descanso")
 	if evento.activo:
-		jugador.global_position = grafo.celda_a_posicion(Vector2i(7, 19)) + Vector3.UP * evento._altura
 		await _hasta(8.85)
-		_verificar(intensidad == 0.0 and evento.grietas.size() >= 4, "La zona segura queda tranquila mientras se rompe el suelo de juego")
-		_verificar(camara._temblor.is_zero_approx() and not _suelo_bajo(jugador.global_position).is_empty(),
-			"El jugador conserva suelo firme y cámara sin sacudidas en la zona segura")
-		await _intentar_salto(evento.grietas[0], false)
-		await _intentar_salto(evento.grietas[2], true)
+		_verificar(intensidad > 0.0 and evento.grietas.size() >= 10, "Descanso también tiembla durante el terremoto")
+		var gigante: Grieta = evento.grieta_gigante
+		var fondo := Vector3(gigante.centro.x, evento._altura, gigante.centro.y)
+		_verificar(_suelo_bajo(fondo).is_empty(), "La grieta gigante abre un agujero físico en descanso")
+		# Caer en descanso también rescata al jugador en tierra conectada.
+		jugador.global_position = fondo + Vector3.UP * 0.03
+		await _fisicas(40)
+		_verificar(jugador.is_on_floor() and grafo.es_transitable(grafo.posicion_a_celda(jugador.global_position)), "El rescate funciona en la grieta gigante")
+		# Dejar la hoja en el acceso al descanso, que permanece protegido.
+		jugador.global_position = grafo.celda_a_posicion(Vector2i(4, 17)) + Vector3.UP * (evento._altura + 0.02)
+		await _fisicas(4)
+		var caso_seguro := _recibir_caso_con_hoja("TERREMOTO-HOJA-A-SALVO")
+		var hoja_segura: RigidBody3D = oficina.papel_actual
+		hoja_segura.lanzar()
+		await _intentar_salto(_grieta_con_orillas_libres(false), false)
+		_verificar(despacho.obtener_denuncia_activa() == caso_seguro and is_instance_valid(hoja_segura),
+			"Caer con las manos vacías conserva la hoja que quedó en tierra firme")
+		hoja_segura.tomar(jugador)
+		await _intentar_salto(_grieta_con_orillas_libres(true), true)
+		_verificar(despacho.obtener_denuncia_activa() == caso_seguro and jugador.papel_en_mano == hoja_segura,
+			"Saltar por encima de una grieta con la hoja conserva el caso")
 	oficina.queue_free()
 	await process_frame
 	# El mezclador libera las voces de pasos y salto en tiempo real con --fixed-fps.
@@ -165,6 +190,22 @@ func _probar() -> void:
 		await process_frame
 	print("[TERREMOTO] %d errores" % errores)
 	quit(1 if errores else 0)
+
+
+func _recibir_caso_con_hoja(id: String) -> Denuncia:
+	var caso := Denuncia.new()
+	caso.id = id
+	caso.tiempo_limite_segundos = 300.0
+	caso.protocolo_estaciones = ["bienestar"]
+	var despacho: SistemaDespacho = oficina.sistema_despacho
+	_verificar(despacho.recibir_denuncia(caso) and despacho.iniciar_denuncia_prioritaria() == caso,
+		"Se activa el caso " + id)
+	var papel := load("res://Scripts/Despacho/papel_denuncia.gd").new() as RigidBody3D
+	papel.denuncia_id = caso.id
+	oficina.add_child(papel)
+	oficina.papel_actual = papel
+	papel.tomar(jugador)
+	return caso
 
 
 func _suelo_bajo(posicion: Vector3) -> Dictionary:
@@ -179,7 +220,41 @@ func _borde_sur(grieta: Grieta) -> float:
 	return z
 
 
+func _grieta_con_orillas_libres(saltable: bool) -> Grieta:
+	# Los derrumbes pueden bloquear deliberadamente el despegue o el aterrizaje.
+	# Para comprobar el salto, escoger una boca con ambos lados despejados.
+	var forma := CapsuleShape3D.new()
+	forma.radius = 0.24
+	forma.height = 0.5
+	var consulta := PhysicsShapeQueryParameters3D.new()
+	consulta.shape = forma
+	consulta.collision_mask = 1
+	consulta.exclude = [jugador.get_rid()]
+	var espacio := jugador.get_world_3d().direct_space_state
+	for candidata: Grieta in evento.grietas:
+		if candidata.saltable != saltable:
+			continue
+		var mitad := Grieta.TRAMOS >> 1
+		var borde := candidata._izquierda[mitad]
+		var destino := candidata._derecha[mitad]
+		var direccion := borde.direction_to(destino)
+		var libre := true
+		for distancia: float in [-0.21, -0.04, borde.distance_to(destino) + 0.25, borde.distance_to(destino) + 0.6]:
+			var punto := borde + direccion * distancia
+			var posicion := Vector3(punto.x, evento._altura, punto.y)
+			consulta.transform = Transform3D(Basis.IDENTITY, posicion + Vector3.UP * 0.3)
+			if not espacio.intersect_shape(consulta, 1).is_empty() or _suelo_bajo(posicion).is_empty():
+				libre = false
+				break
+		if libre:
+			return candidata
+	return null
+
+
 func _intentar_salto(grieta: Grieta, saltable: bool) -> void:
+	_verificar(grieta != null, "Hay una grieta con orillas libres para comprobar el salto")
+	if grieta == null:
+		return
 	# Cruzar el ancho real de esta boca, aunque el terremoto la haya girado.
 	var mitad := Grieta.TRAMOS >> 1
 	var borde := grieta._izquierda[mitad]

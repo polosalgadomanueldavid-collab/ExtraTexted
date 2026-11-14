@@ -1,0 +1,280 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="1536" viewBox="0 0 1024 768">
+  <!-- Arte a doble resolución. Los rectángulos del panel se expresan en unidades del viewBox. -->
+  <defs>
+    <linearGradient id="nh-tubo">
+      <stop stop-color="#243d58" />
+      <stop offset=".045" stop-color="#587590" />
+      <stop offset=".18" stop-color="#93adc0" />
+      <stop offset=".31" stop-color="#e6edec" />
+      <stop offset=".43" stop-color="#c4d6df" />
+      <stop offset=".63" stop-color="#90b1c8" />
+      <stop offset=".78" stop-color="#6b8faa" />
+      <stop offset=".94" stop-color="#466983" />
+      <stop offset="1" stop-color="#2d4c65" />
+    </linearGradient>
+    <linearGradient id="nh-abrazadera" x1="0" x2="1" y1=".08" y2=".22">
+      <stop stop-color="#324962" />
+      <stop offset=".12" stop-color="#5b82a2" />
+      <stop offset=".31" stop-color="#82a6be" />
+      <stop offset=".58" stop-color="#507797" />
+      <stop offset=".86" stop-color="#345473" />
+      <stop offset="1" stop-color="#273e58" />
+    </linearGradient>
+    <linearGradient id="nh-bisel-metal" x1="0" y1="0" x2=".78" y2="1">
+      <stop stop-color="#f3f1db" />
+      <stop offset=".22" stop-color="#c5d6da" />
+      <stop offset=".54" stop-color="#a0b6c3" />
+      <stop offset=".86" stop-color="#7790a3" />
+      <stop offset="1" stop-color="#47637b" />
+    </linearGradient>
+    <linearGradient id="nh-esmalte" x1="0" y1="0" x2=".8" y2="1">
+      <stop stop-color="#547da0" />
+      <stop offset=".36" stop-color="#436c92" />
+      <stop offset=".74" stop-color="#385d80" />
+      <stop offset="1" stop-color="#2b506f" />
+    </linearGradient>
+    <linearGradient id="nh-canto" x1=".16" y1="0" x2=".62" y2="1">
+      <stop stop-color="#b2cad4" />
+      <stop offset=".27" stop-color="#718eaa" />
+      <stop offset=".59" stop-color="#506d87" />
+      <stop offset="1" stop-color="#2d455d" />
+    </linearGradient>
+    <linearGradient id="nh-hielo" x1=".08" y1="0" x2=".72" y2=".98">
+      <stop stop-color="#f2fff9" />
+      <stop offset=".27" stop-color="#c6e6ed" />
+      <stop offset=".65" stop-color="#9ccdda" />
+      <stop offset="1" stop-color="#6b9eb8" />
+    </linearGradient>
+    <linearGradient id="nh-vaho" x1=".24" y1="0" x2=".8" y2="1">
+      <stop stop-color="#e0f6fc" stop-opacity=".82" />
+      <stop offset=".3" stop-color="#bfe6fa" stop-opacity=".44" />
+      <stop offset=".68" stop-color="#b1daef" stop-opacity=".22" />
+      <stop offset="1" stop-color="#9ec3db" stop-opacity="0" />
+    </linearGradient>
+    <radialGradient id="nh-vaho-suave">
+      <stop stop-color="#c6f1ff" stop-opacity=".26" />
+      <stop offset="1" stop-color="#bde1fa" stop-opacity="0" />
+    </radialGradient>
+    <g id="nh-tornillo-ras">
+      <circle cx=".7" cy="1.4" r="3.4" fill="#152d44" />
+      <circle r="2.9" fill="url(#nh-bisel-metal)" stroke="#354d63" stroke-width=".65" />
+      <path d="m-1.6 1.1 3.2-2.2" stroke="#30455a" stroke-width="1.1" />
+    </g>
+    <g id="nh-collar">
+      <path d="M148 21 155 17H243L251 22V41L243 46H156L148 42Z" fill="#183247" opacity=".55" transform="translate(2 3)" />
+      <path d="M148 21 155 17H243L251 22V41L243 46H156L148 42Z" fill="url(#nh-abrazadera)" stroke="#1d344e" stroke-width="1.8" />
+      <path d="M149 22 157 19H241L249 22" stroke="#c2d3db" stroke-width="1.4" fill="none" />
+      <path d="M149 40 157 42H242L249 39" stroke="#223e57" stroke-width="2.3" fill="none" />
+      <use href="#nh-tornillo-ras" transform="translate(156.2 30.5)" />
+      <use href="#nh-tornillo-ras" transform="translate(242 30.5)" />
+    </g>
+    <g id="nh-arandela">
+      <circle cx="1.8" cy="3.5" r="27" fill="#152d43" opacity=".8" />
+      <circle r="27.6" fill="url(#nh-canto)" stroke="#223c51" stroke-width="1.7" />
+      <circle r="24.7" fill="#435b71" stroke="#c5d4d6" stroke-opacity=".8" stroke-width="1" />
+      <circle r="22.7" fill="#253d53" />
+      <path d="M-21.5-14A25.6 25.6 0 0 1-2.5-25.4" fill="none" stroke="#e5ece4" opacity=".75" stroke-width="1.4" />
+    </g>
+    <g id="nh-hexagono">
+      <path d="M-24 0-12-20.8H12L24 0 12 20.8H-12Z" transform="translate(.8 2.5)" fill="#26394b" stroke="#203346" stroke-width="1.8" />
+      <path d="M-24 0-12-20.8H12L24 0 12 20.8H-12Z" fill="url(#nh-bisel-metal)" stroke="#40556b" stroke-width="1.4" stroke-linejoin="round" />
+      <path d="M-24 0-12-20.8-9.2-15.9-18.3 0Z" fill="#cbdcde" />
+      <path d="M-12-20.8H12L9.2-15.9H-9.2Z" fill="#edf0df" />
+      <path d="M12-20.8 24 0H18.3L9.2-15.9Z" fill="#a4bbca" />
+      <path d="M24 0 12 20.8 9.2 15.9 18.3 0Z" fill="#688498" />
+      <path d="M12 20.8H-12L-9.2 15.9H9.2Z" fill="#4c6a82" />
+      <path d="M-12 20.8-24 0H-18.3L-9.2 15.9Z" fill="#95adbc" />
+      <circle r="12.5" fill="#20394b" stroke="#a4bdc8" stroke-width="1.7" />
+    </g>
+    <g id="nh-marca-si">
+      <circle cy=".6" r="3.2" fill="#233a50" />
+      <circle r="2.6" fill="#7bd7d1" stroke="#bcf2e5" stroke-width=".75" />
+    </g>
+    <g id="nh-marca-no">
+      <circle cy=".7" r="3.2" fill="#8199ab" />
+      <circle r="2.7" fill="#1c364e" stroke="#2a435d" stroke-width=".8" />
+    </g>
+    <g id="nh-una-marca">
+      <use href="#nh-marca-si" x="-9" />
+      <use href="#nh-marca-no" />
+      <use href="#nh-marca-no" x="9" />
+    </g>
+    <g id="nh-dos-marcas">
+      <use href="#nh-marca-si" x="-9" />
+      <use href="#nh-marca-si" />
+      <use href="#nh-marca-no" x="9" />
+    </g>
+    <linearGradient id="pintura" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0.000" stop-color="#688190" />
+      <stop offset="0.500" stop-color="#4f6e82" />
+      <stop offset="1.000" stop-color="#354e63" />
+    </linearGradient>
+    <linearGradient id="camara" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0.000" stop-color="#192d40" />
+      <stop offset="0.500" stop-color="#213c51" />
+      <stop offset="1.000" stop-color="#2d495b" />
+    </linearGradient>
+    <linearGradient id="bisel" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0.000" stop-color="#d3d6cc" />
+      <stop offset="0.333" stop-color="#9dadb4" />
+      <stop offset="0.667" stop-color="#728897" />
+      <stop offset="1.000" stop-color="#91a4ae" />
+    </linearGradient>
+    <linearGradient id="bisagra" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0.000" stop-color="#536b70" />
+      <stop offset="0.250" stop-color="#c4ccbd" />
+      <stop offset="0.500" stop-color="#617c7e" />
+      <stop offset="0.750" stop-color="#9fada3" />
+      <stop offset="1.000" stop-color="#526973" />
+    </linearGradient>
+    <linearGradient id="papel" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0.000" stop-color="#fff3d6" />
+      <stop offset="0.500" stop-color="#f1e7cd" />
+      <stop offset="1.000" stop-color="#e7dfc5" />
+    </linearGradient>
+  </defs>
+  <!-- Gabinete y componentes fijos. -->
+  <g id="gabinete">
+    <rect x="14" y="34" width="836" height="520" rx="18" fill="#162d37" opacity=".55" />
+    <rect x="12" y="28" width="836" height="520" rx="18" fill="url(#pintura)" stroke="#273e47" stroke-width="3" />
+    <rect x="16" y="32" width="828" height="512" rx="14" fill="none" stroke="#b4c2b6" stroke-width="2.5" />
+    <rect x="20" y="35" width="820" height="505" rx="11" fill="none" stroke="#2e4c57" stroke-width="2" />
+    <rect x="44" y="56" width="772" height="424" rx="12" fill="#243d4b" />
+    <rect x="45" y="57" width="770" height="419" rx="11" fill="url(#bisel)" stroke="#293e50" stroke-width="2" />
+    <rect x="52" y="64" width="756" height="405" rx="5" fill="url(#camara)" stroke="#142d3d" stroke-width="3" />
+    <path d="M77 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M106 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M135 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M164 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M193 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M222 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M251 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M280 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M309 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M338 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M367 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M396 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M425 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M454 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M483 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M512 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M541 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M570 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M599 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M628 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M657 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M686 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M715 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M744 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M773 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M802 67V466" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 89H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 118H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 147H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 176H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 205H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 234H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 263H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 292H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 321H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 350H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 379H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 408H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <path d="M55 437H805" stroke="#cbdcea" stroke-opacity=".07" />
+    <use href="#nh-tornillo-ras" transform="translate(33 49) scale(2.7) rotate(0)" />
+    <use href="#nh-tornillo-ras" transform="translate(827 49) scale(2.7) rotate(65)" />
+    <use href="#nh-tornillo-ras" transform="translate(33 526) scale(2.7) rotate(60)" />
+    <use href="#nh-tornillo-ras" transform="translate(827 526) scale(2.7) rotate(13)" />
+    <rect x="833" y="203" width="15" height="44" rx="3" fill="url(#bisagra)" stroke="#293f47" stroke-width="1.4" />
+    <path d="M833 213h15m-15 25h15" stroke="#42575a" stroke-width="1.5" />
+    <rect x="833" y="383" width="15" height="44" rx="3" fill="url(#bisagra)" stroke="#293f47" stroke-width="1.4" />
+    <path d="M833 393h15m-15 25h15" stroke="#42575a" stroke-width="1.5" />
+    <path d="M107 39l62-2m620 514 34-4" stroke="#d7c9a3" stroke-opacity=".6" stroke-width="2" fill="none" />
+    <g transform="translate(61 70) scale(1.24)">
+      <g class="nh-cabezal" aria-hidden="true">
+        <path d="M163-43H236V5H163Z" transform="translate(2 3)" fill="#172d3b" opacity=".36" />
+        <path d="M161-45H237V9H161Z" fill="url(#nh-tubo)" stroke="#293f51" stroke-width="2.5" />
+        <path d="M182.6-44V7" stroke="#eff4e9" stroke-width="2.5" opacity=".58" />
+        <path d="M226.6-44V7" stroke="#385872" stroke-width="1.5" opacity=".46" />
+        <ellipse cx="199" cy="-45" rx="38" ry="4.8" fill="url(#nh-bisel-metal)" stroke="#293f51" stroke-width="1.7" />
+        <ellipse cx="199" cy="-44.8" rx="30.8" ry="2.6" fill="#506a7b" />
+        <path d="M165-45.6q32-6.2 68 0" fill="none" stroke="#e6efeb" stroke-width="1.4" />
+      </g>
+      <path d="M167 0H246V320H167Z" fill="#0d2336" opacity=".48" />
+      <path d="M161-8V320H237V-8" fill="url(#nh-tubo)" stroke="#213d55" stroke-width="2.5" />
+      <path d="M182.6-3V320" stroke="#eff4e9" opacity=".58" stroke-width="2.5" />
+      <path d="M226.6-3V320" stroke="#385872" opacity=".46" stroke-width="1.5" />
+      <g class="nh-abrazadera-exterior" transform="translate(0 -60)" aria-hidden="true">
+        <use href="#nh-collar" />
+        <path d="m154 20 5-4 7 1 5-4 6 2 5-3 7 4 7-1 5 2 7-1 3 3-7 1-6 2-7-1-6 3-7-3-5 3-6-2-3 2-6-1-3 2Z" fill="url(#nh-hielo)" stroke="#94bbc9" stroke-width=".7" />
+        <path d="m165 17 6-4 3 3 5-2-4 5-6 1Zm12 4 8-4 2 2-3 4-5 1Z" fill="#eef8f0" />
+        <path d="m156 21 3 7 4.2-7m10 1 2 5 2.7-6" fill="#b5d8e3" />
+      </g>
+      <use href="#nh-collar" transform="translate(0 249)" />
+      <path d="M163 261 171 260 177 263 184 260 191 263 195 270 187 268 179 272 174 269 166 269Z" fill="#cee4e8" opacity=".85" />
+      <path d="M92 74H308L327 94V226L306 249H92L72 229V96Z" fill="#0d2336" opacity=".63" transform="translate(4.5 7)" />
+      <path d="M92 73H308L327 93V226L307 248H92L71 228V94Z" fill="#415f79" stroke="#182c42" stroke-width="2.4" />
+      <path d="M92 69H307L326 89V221L305 243H92L71 223V91Z" fill="url(#nh-canto)" stroke="#293f55" stroke-width="2" />
+      <path d="M74 93 94 73H305L322 91" fill="none" stroke="#c5d8dd" stroke-width="2.1" stroke-linejoin="round" />
+      <path d="M74 220 94 240H304L323 219" fill="none" stroke="#2b455e" stroke-width="2.7" />
+      <path d="M96 78H196V233H96L81 218V94Z" fill="url(#nh-esmalte)" stroke="#375475" stroke-width="1.6" />
+      <path d="M202 78H303L317 94V217L301 233H202Z" fill="url(#nh-esmalte)" stroke="#375475" stroke-width="1.6" />
+      <path d="M196 77 200 76 201.3 235 196.5 235Z" fill="#172e44" />
+      <path d="M202.5 81V231" fill="none" stroke="#a5c2cd" stroke-width="1" opacity=".86" />
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M87 142V174 M311 142V174" stroke="#29445e" stroke-width="5" />
+        <path d="M86.1 141V172.6 M310.2 141V172.6" stroke="#779bb6" stroke-width="2.7" />
+        <path d="M151 145 164 153V164L154 172 M247 145 234 153V164L244 172" stroke="#355673" stroke-width="4" />
+        <path d="M151 144 164 152 M247 144 234 152" stroke="#88a9bc" opacity=".63" stroke-width="1.1" />
+        <path d="m86 105 4-5 5-2m187 134 10-1 3-2m-126-146 9 1 4-1" stroke="#b1c8cf" opacity=".65" stroke-width="1" />
+      </g>
+      <path d="m155 74 8-4 8 2 6-6 8 1 7-4 5 3 6-5 6 5 8-2 6 6 12-1 10 5-12 1-7 5-13-3-8 6-8-6-4 3-7-5-14 2-8-3-7 2Z" fill="url(#nh-hielo)" opacity=".97" />
+      <path d="m172 73 6-6 8 1 4 5-8-2-4 4Zm23-6 6-6 5 6-1 7-6-4Zm19 5 9-2 8 4-12 1-6 4Z" fill="#eefaf5" opacity=".89" />
+      <path d="m187 67 5 6 5 6 2-8 4-4-6 1Zm28 5 6-3-1 8Zm-36 3 3 8 4-7Z" fill="#80b1c4" />
+      <g fill="none" stroke="#c6e6ee" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m195 77-8 12 3 8-11 10-6 1m15-17-10 2-4 5m15-2 2 7-5 8m-7-4-4 8m29-37 8 8 9 2 7 7m-15-9 1 8 7 6m-1-12 10-2" stroke-width="1.1" opacity=".72" />
+        <path d="m196 165-10 8-3 10-8 4m10-9-7-3-6 3m15-5-1-7m15-4 8 5 6-2 8 5m-15-3 4 6 8 3" stroke-width=".95" opacity=".76" />
+      </g>
+      <path d="m191 153 1-8 4 8 3-13 4 15 5-7-1 11 5 3-6 2 3 5-9-4-6 4 1-7-7-1Z" fill="url(#nh-hielo)" opacity=".96" />
+      <path d="m198 156 1-14 3 15-2 6Zm3 6 6-12-1 9 4 3Z" fill="#edf9f5" />
+      <g transform="translate(-7 4)" aria-hidden="true">
+        <path d="m83 222 7 2 3 4 5-1 9 5 10-1 5 3 11-1 5 2-7 3-11-1-4 3-12-3-8 1-6-5-4-1Z" fill="url(#nh-hielo)" opacity=".85" />
+        <path d="m95 230 10 4 5 2-11-1-4 2Zm17 4 5 1 8-1-4 4Z" fill="#d6eeee" />
+      </g>
+    </g>
+    <g transform="translate(577 184) rotate(-2.3)">
+      <rect x="3" y="5" width="200" height="202" fill="#102535" opacity=".6" />
+      <rect width="200" height="202" fill="url(#papel)" stroke="#9caa9e" stroke-width="1.5" />
+      <path d="M95-4v-6q5-7 10 0v6" fill="none" stroke="#334c5b" stroke-width="1.7" />
+      <rect x="90" y="-6" width="20" height="12" rx="2" fill="url(#bisel)" stroke="#2e4555" stroke-width="1.3" />
+    </g>
+  </g>
+  <!-- Componentes que el panel dibuja según el estado de la partida. -->
+  <!-- Arandela en (0,590), 80x80. Tuercas de 80x80 en x=96,180,264,348. -->
+  <g transform="translate(40 630) scale(1.24)">
+    <use href="#nh-arandela" />
+  </g>
+  <g transform="translate(136 630) scale(1.24)">
+    <use href="#nh-hexagono" transform="rotate(0)" />
+  </g>
+  <g transform="translate(220 630) scale(1.24)">
+    <use href="#nh-hexagono" transform="rotate(30)" />
+  </g>
+  <g transform="translate(304 630) scale(1.24)">
+    <use href="#nh-hexagono" transform="rotate(60)" />
+  </g>
+  <g transform="translate(388 630) scale(1.24)">
+    <use href="#nh-hexagono" transform="rotate(90)" />
+  </g>
+  <!-- Vaho en (448,590), 160x180. Su opacidad depende de los aprietes. -->
+  <g transform="translate(448 590) scale(1.24) translate(-190 -150)">
+    <g aria-hidden="true">
+      <ellipse cx="228" cy="218" rx="39" ry="47" fill="url(#nh-vaho-suave)" transform="rotate(-28 228 218)" />
+      <ellipse cx="267" cy="256" rx="47" ry="25" fill="url(#nh-vaho-suave)" transform="rotate(13 267 256)" />
+      <path d="M198 158C204 171 218 170 215 182S215 199 228 203C249 210 219 225 241 234S260 237 270 252 299 261 308 279C291 283 268 274 254 265S232 257 221 247C198 232 220 214 209 203S201 188 205 181 199 167 198 158Z" fill="url(#nh-vaho)" />
+      <path d="M199 160C201 173 209 178 205 189S198 207 208 215C219 222 207 230 211 238S232 247 225 262C241 254 237 243 228 237S227 220 220 213 210 205 213 195C219 177 206 171 199 160Z" fill="url(#nh-vaho)" opacity=".82" />
+      <path d="M201 162c8 15 21 13 20 27-1 12 14 11 18 20" fill="none" stroke="#deedf5" stroke-width="1.8" opacity=".69" stroke-linecap="round" />
+      <path d="m222 181 3-5 3 5-3 4Zm13 10 1.7-3.5 2.4 3-2.1 3.2Zm-24 12 1.8-3 1.7 3-2 1.6Z" fill="#d1edf3" opacity=".74" />
+    </g>
+  </g>
+</svg>

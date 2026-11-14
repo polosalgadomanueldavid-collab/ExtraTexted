@@ -18,6 +18,8 @@ func probar() -> void:
 	change_scene_to_file("res://Mundo/Oficina.tscn")
 	await scene_changed
 	oficina = current_scene
+	oficina.generador_aleatorio.seed = 1414
+	oficina.evento_terremoto._azar.seed = 8762
 	await _cuadros(5)
 	_verificar(paused and menu.panel_ayuda.visible, "La entrada normal abre el tutorial")
 	_verificar(not oficina.anuncios.visible and not oficina._turno_anunciado, "El sello espera al botón Empezar turno")
@@ -68,7 +70,13 @@ func probar() -> void:
 	await _cuadros(3)
 	_verificar(not indicador.visible, "Vencer la última denuncia elimina el aviso")
 
-	_verificar(oficina.evento_apagon.iniciar_apagon(), "Se inicia el apagón real")
+	_verificar(oficina.evento_apagon.iniciar_apagon(), "Se inicia el primer apagón real")
+	_verificar(paused and menu.panel_ayuda.visible and not anuncio.visible, "El primer apagón presenta el tutorial antes de los avisos de eventos")
+	menu.cerrar_ayuda()
+	oficina.evento_apagon._al_interactuar_taco(oficina.jugador)
+	oficina.evento_apagon._al_resolver_circuito()
+	_verificar(not paused and oficina.evento_apagon.estado == 0, "Cerrar el tutorial permite reparar el primer apagón")
+	_verificar(oficina.evento_apagon.iniciar_apagon(), "Se inicia un segundo apagón real")
 	_verificar(anuncio.visible and not anuncio.es_inicio and anuncio.titulo == "¡APAGÓN!", "El apagón reproduce Golpe de cómic")
 	await _cuadros(40)
 	await _capturar("comic_apagon")
@@ -78,6 +86,7 @@ func probar() -> void:
 	oficina._recibir_denuncia_aleatoria()
 	oficina.temporizador_denuncias.stop()
 	oficina.temporizador_bloqueos.stop()
+	oficina.tutoriales_vistos[&"terremoto"] = true
 	oficina._iniciar_terremoto()
 	_verificar(oficina.evento_terremoto.activo and anuncio.titulo == "¡TERREMOTO!", "El terremoto usa la entrada de cómic")
 	await _cuadros(40)
@@ -93,7 +102,11 @@ func probar() -> void:
 	oficina._al_terminar_partida()
 	_verificar(not anuncio.visible and not indicador.visible, "El final retira los anuncios y el sobre")
 	# Completa el relevo antes de liberar sus temporizadores y recursos.
-	await create_timer(5.8, true, false, true).timeout
+	for intento: int in range(450):
+		if oficina.final_partida._relevo_finalizado:
+			break
+		await create_timer(0.1, true, false, true).timeout
+	_verificar(oficina.final_partida._relevo_finalizado, "El relevo termina sin depender de los anuncios de partida")
 	paused = false
 	oficina.queue_free()
 	menu.musica_menu.stop()

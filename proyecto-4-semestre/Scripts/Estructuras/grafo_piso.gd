@@ -33,11 +33,7 @@ const CELDAS_BLOQUEADAS_FIJAS: Array[Vector2i] = [
 	Vector2i(1, 0),
 	Vector2i(4, 0),
 	Vector2i(1, 12),
-	Vector2i(12, 12),
-	# Taco de luz de la pared derecha. La aproximación queda en la columna 12.
-	Vector2i(13, 15),
-	Vector2i(13, 16),
-	Vector2i(13, 17)
+	Vector2i(12, 12)
 ]
 
 const DIRECCIONES: Array[Vector2i] = [
@@ -54,6 +50,7 @@ var bloqueos_fijos: Dictionary = {}
 var bloqueos_mesas: Dictionary = {}
 var bloqueos_temporales: Dictionary = {}
 var grietas: Dictionary[Vector2i, bool] = {}
+var escombros: Dictionary[Vector2i, bool] = {}
 
 func _init() -> void:
 	for celda: Vector2i in CELDAS_BLOQUEADAS_FIJAS:
@@ -86,6 +83,7 @@ func es_transitable(celda: Vector2i) -> bool:
 		and not bloqueos_mesas.has(celda)
 		and not bloqueos_temporales.has(celda)
 		and not grietas.has(celda)
+		and not escombros.has(celda)
 	)
 
 

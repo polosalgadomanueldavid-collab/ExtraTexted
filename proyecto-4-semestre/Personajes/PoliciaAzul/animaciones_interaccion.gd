@@ -6,15 +6,31 @@ signal contacto
 signal terminada
 signal reposo_terminado
 
-const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8, &"kamehameha": 3.6, &"genkidama": 5.0, &"rasengan": 3.8}
-const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56, &"kamehameha": 0.55, &"genkidama": 0.72, &"rasengan": 0.5}
+const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8, &"kamehameha": 3.6, &"genkidama": 5.0, &"rasengan": 3.8, &"explosion_final": 6.8}
+const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56, &"kamehameha": 0.55, &"genkidama": 0.72, &"rasengan": 0.5, &"explosion_final": 0.72}
 const REPOSOS := {&"idle_despistado": 3.4, &"idle_tambaleo": 3.1}
-const ESCALA_RAYO := 30.0
-const ESCALA_ANCHO_RAYO := 10.0
-const ESCALA_ESFERA_SALIDA := 8.5
 const ESCALA_GENKIDAMA := 3.0
 const RADIO_GENKIDAMA := 2.38
+const DURACION_CARGA_EXPLOSION_FINAL := 4.8
+const RECORRIDO_GENKIDAMA := 12.0
+const RECORRIDO_RASENGAN := 10.0
 const ALTURA_MODELO_POLICIA := 2.66
+const DURACION_TRANSFORMACION_AURA := 7.0
+const ESCALA_INICIAL_AURA_TRANSFORMACION := 5.4
+const ESCALA_FINAL_AURA_TRANSFORMACION := 1.08
+const LONGITUD_KAMEHAMEHA := 16.0
+const ESCALA_GROSOR_KAMEHAMEHA := 4.0
+const ESCALA_ORBE_INICIO_KAMEHAMEHA := 1.3
+const ESCALA_AURA_PERSONAJE := Vector3(0.92, 0.92, 0.92)
+const COLOR_EXPLOSION_FINAL_PRIMARIO := Color(1.0, 0.91, 0.36)
+const COLOR_EXPLOSION_FINAL_SECUNDARIO := Color(1.0, 0.46, 0.035)
+const COLOR_EXPLOSION_FINAL_TERCIARIO := Color(0.46, 0.085, 0.0)
+const COLOR_EXPLOSION_FINAL_LUZ := Color(1.0, 0.62, 0.12)
+const ESCENA_CARGA_AZUL := preload("res://assets/BinbunVFX_Vol2/BattleFX/effects/charge/vfx_blank_charge.tscn")
+const ESCENA_AURA_AZUL := preload("res://assets/BinbunVFX_Vol2/BattleFX/effects/shield/vfx_blank_shield_01.tscn")
+const ESCENA_IMPACTO_AZUL := preload("res://assets/BinbunVFX_Vol2/ExplosionFX/effects/air/vfx_air_explosion_01.tscn")
+const ESCENA_AURA_STATUS := preload("res://assets/BinbunVFX_Vol2/StatusFX/effects/status/vfx_status_shatter.tscn")
+const MATERIAL_OVERLAY_AURA := preload("res://assets/BinbunVFX_Vol2/StatusFX/effects/overlay/shatter_overlay.tres")
 var jugador: CharacterBody3D
 var gesto: StringName = &""
 var tiempo: float = 0.0
@@ -22,6 +38,8 @@ var duracion: float = 1.0
 var tambaleo: float = 1.0
 var mano_izquierda: Node3D
 var mano_derecha: Node3D
+var pie_izquierdo: Node3D
+var pie_derecho: Node3D
 var anclaje_taza: Node3D
 var objetivo: Node3D
 var _reloj: float = 0.0
@@ -31,21 +49,51 @@ var _huesos: Dictionary = {}
 var _reposo: Dictionary = {}
 var _llave: Node3D
 var _energia: Node3D
+var _aura_persistente: Node3D
+var _luz_aura_persistente: OmniLight3D
+var _material_overlay_aura: ShaderMaterial
+var _overlays_originales_aura: Array[Dictionary] = []
+var _material_particulas_aura: ShaderMaterial
+var _material_trazos_aura: ShaderMaterial
+var aura_persistente_activada: bool = false
+var aura_transformacion_en_curso: bool = false
+var aura_transformacion_progreso: float = 0.0
+var _tiempo_transformacion_aura: float = 0.0
+var _tween_aura_persistente: Tween
+var _materiales_aura_status: Array[ShaderMaterial] = []
+var _colores_originales_poderes: Array[Dictionary] = []
 var _esfera_energia: Node3D
 var _aura: MeshInstance3D
+var _orbita_aura: MeshInstance3D
 var _material_aura: ShaderMaterial
+var _material_orbita_aura: ShaderMaterial
 var _luz_aura: OmniLight3D
-var _rayo: Node3D
-var _rayo_halo: MeshInstance3D
-var _rayo_exterior: MeshInstance3D
-var _rayo_nucleo: MeshInstance3D
-var _esfera_origen_rayo: Node3D
-var _cabeza_rayo: Node3D
+var _aura_dorada: MeshInstance3D
+var _orbita_dorada: MeshInstance3D
+var _material_aura_dorada: ShaderMaterial
+var _material_orbita_dorada: ShaderMaterial
+var _luz_dorada: OmniLight3D
+var _rayo_vfx: Node3D
+var _rayos_malla: Array[MeshInstance3D] = []
+var _orbe_inicio_rayo: Node3D
+var _orbe_final_rayo: Node3D
 var _esfera_genkidama: Node3D
+var _genkidama_vfx: Node3D
 var _luz_genkidama: OmniLight3D
+var _capa_aura_genkidama: MeshInstance3D
+var _orbita_genkidama: MeshInstance3D
+var _material_aura_genkidama: ShaderMaterial
+var _material_orbita_genkidama: ShaderMaterial
+var _impacto_disparado: bool = false
+var _impacto_activo: Node3D
+var _explosion_final_activa: Node3D
 var _rasengan: Node3D
 var _rasengan_espinas: Node3D
 var _rasengan_espinas_inversas: Node3D
+var _capa_aura_rasengan: MeshInstance3D
+var _orbita_rasengan: MeshInstance3D
+var _material_aura_rasengan: ShaderMaterial
+var _material_orbita_rasengan: ShaderMaterial
 var _rasengan_lanzado: bool = false
 var _origen_lanzamiento_rasengan := Vector3.ZERO
 var reposo_especial: StringName = &""
@@ -54,8 +102,15 @@ var _peso_reposo: float = 0.0
 var _saliendo_reposo: bool = false
 var sentado: bool = false
 var lleva_taza: bool = false
+var rociando_extintor := false
+var _peso_extintor := 0.0
 var _peso_sentado: float = 0.0
 var _peso_taza: float = 0.0
+var _peso_nado := 0.0
+var _peso_quemadura := 0.0
+var _fase_quemadura := 0.0
+var _contacto_quemadura := false
+var _sobresalto_quemadura := 0.0
 
 
 func _ready() -> void:
@@ -70,11 +125,18 @@ func _ready() -> void:
 	mano_derecha = Node3D.new()
 	mano_derecha.name = "AnclajeManoDerecha"
 	esqueleto.add_child(mano_derecha)
+	pie_izquierdo = Node3D.new()
+	pie_izquierdo.name = "AnclajePieIzquierdo"
+	esqueleto.add_child(pie_izquierdo)
+	pie_derecho = Node3D.new()
+	pie_derecho.name = "AnclajePieDerecho"
+	esqueleto.add_child(pie_derecho)
 	anclaje_taza = Node3D.new()
 	anclaje_taza.name = "AnclajeTaza"
 	esqueleto.add_child(anclaje_taza)
 	_crear_llave()
 	_crear_energia(esqueleto)
+	_crear_aura_persistente(esqueleto)
 
 
 func iniciar(tipo: StringName, destino: Node3D = null, segundos: float = 0.0) -> bool:
@@ -86,9 +148,217 @@ func iniciar(tipo: StringName, destino: Node3D = null, segundos: float = 0.0) ->
 	_contacto_emitido = false
 	if tipo == &"rasengan":
 		_rasengan_lanzado = false
+		_impacto_disparado = false
+	if tipo == &"genkidama":
+		_genkidama_vfx.set("one_shot", false)
+		var animacion_esfera := _genkidama_vfx.get_node("AnimationPlayer") as AnimationPlayer
+		if not animacion_esfera.is_playing():
+			_genkidama_vfx.call("play")
+		_impacto_disparado = false
+	if tipo == &"kamehameha":
+		_impacto_disparado = false
+	if tipo == &"explosion_final":
+		_impacto_disparado = false
 	objetivo = destino
 	cancelar_reposo()
 	return true
+
+
+func alternar_aura_persistente() -> void:
+	if not is_instance_valid(_aura_persistente):
+		return
+	aura_persistente_activada = not aura_persistente_activada
+	if is_instance_valid(_tween_aura_persistente):
+		_tween_aura_persistente.kill()
+	var emisor := _aura_persistente
+	if aura_persistente_activada:
+		_aplicar_color_explosion_final_aura()
+		_aplicar_overlay_aura_al_personaje()
+		emisor.visible = true
+		aura_transformacion_en_curso = true
+		aura_transformacion_progreso = 0.0
+		_tiempo_transformacion_aura = 0.0
+		emisor.scale = Vector3.ONE * ESCALA_INICIAL_AURA_TRANSFORMACION
+		emisor.set("emitting", true)
+	else:
+		aura_transformacion_en_curso = false
+		aura_transformacion_progreso = 0.0
+		_material_overlay_aura.set_shader_parameter("effect_amount", 0.0)
+		_restaurar_overlays_personaje()
+		emisor.set("emitting", false)
+		_tween_aura_persistente = create_tween()
+		_tween_aura_persistente.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		_tween_aura_persistente.tween_property(emisor, "scale", Vector3.ONE * 0.05, 0.42)
+		_tween_aura_persistente.tween_callback(func() -> void:
+			if is_instance_valid(emisor) and not aura_persistente_activada:
+				emisor.visible = false
+		)
+	_actualizar_colores_poderes()
+
+
+func _registrar_colores_poder(nodo: Node) -> void:
+	if nodo is Light3D:
+		_colores_originales_poderes.append({"objeto": nodo, "propiedad": &"light_color", "color": nodo.light_color, "shader": false})
+	if nodo is GeometryInstance3D:
+		var material: Material = nodo.material_override
+		if material is ShaderMaterial:
+			for nombre: StringName in [&"primary_color", &"secondary_color", &"tertiary_color", &"beam_color", &"highlight_color"]:
+				var valor: Variant = material.get_shader_parameter(nombre)
+				if valor is Color:
+					_colores_originales_poderes.append({"objeto": material, "propiedad": nombre, "color": valor, "shader": true})
+		elif material is BaseMaterial3D:
+			for propiedad: StringName in [&"albedo_color", &"emission"]:
+				_colores_originales_poderes.append({"objeto": material, "propiedad": propiedad, "color": material.get(propiedad), "shader": false})
+	for hijo: Node in nodo.get_children():
+		_registrar_colores_poder(hijo)
+
+
+func _color_poder_con_aura(original: Color, propiedad: StringName) -> Color:
+	var color: Color
+	match propiedad:
+		&"primary_color": color = COLOR_EXPLOSION_FINAL_PRIMARIO
+		&"secondary_color": color = COLOR_EXPLOSION_FINAL_SECUNDARIO
+		&"tertiary_color": color = COLOR_EXPLOSION_FINAL_TERCIARIO
+		&"light_color": color = COLOR_EXPLOSION_FINAL_LUZ
+		_:
+			# Conserva el contraste entre núcleo claro y bordes intensos, y su opacidad.
+			color = Color.from_hsv(COLOR_EXPLOSION_FINAL_PRIMARIO.h, original.s, original.v)
+	color.a = original.a
+	return color
+
+
+func _actualizar_colores_poderes() -> void:
+	# Solo se actualiza al alternar el aura; no recorre los materiales cada frame.
+	for registro: Dictionary in _colores_originales_poderes:
+		var original: Color = registro["color"]
+		var propiedad: StringName = registro["propiedad"]
+		var color := _color_poder_con_aura(original, propiedad) if aura_persistente_activada else original
+		if registro["shader"]:
+			(registro["objeto"] as ShaderMaterial).set_shader_parameter(propiedad, color)
+		else:
+			(registro["objeto"] as Object).set(propiedad, color)
+
+
+func _aislar_materiales_vfx(efecto: Node3D) -> void:
+	# Los prefabs comparten recursos; cada jugador/impacto necesita su propia paleta.
+	var materiales: Array[ShaderMaterial] = []
+	for hijo: Node in efecto.get_children():
+		if hijo is GeometryInstance3D and hijo.material_override is ShaderMaterial:
+			hijo.material_override = hijo.material_override.duplicate() as ShaderMaterial
+			materiales.append(hijo.material_override)
+	efecto.set("materials", materiales)
+
+
+func _crear_aura_persistente(esqueleto: Skeleton3D) -> void:
+	_aura_persistente = ESCENA_AURA_STATUS.instantiate() as Node3D
+	_aura_persistente.name = "AuraPersistenteStatusFX"
+	_aura_persistente.position = Vector3(0.0, ALTURA_MODELO_POLICIA * 0.5, 0.0)
+	_aura_persistente.scale = Vector3.ONE * 0.05
+	_aura_persistente.visible = false
+	_aura_persistente.set("particles_amount", 180)
+	_aura_persistente.set("lifetime", 1.35)
+	_aura_persistente.set("emission_shape", Vector3(0.55, 1.0, 0.55))
+	_aura_persistente.set("waviness", 0.52)
+	_aura_persistente.set("particles_radial", 0.08)
+	_aura_persistente.set("particles_vertical", 0.12)
+	_material_overlay_aura = MATERIAL_OVERLAY_AURA.duplicate() as ShaderMaterial
+	_material_overlay_aura.set_shader_parameter("effect_amount", 0.0)
+	for nombre_nodo: String in ["MeshInstance3D", "Aura"]:
+		var efecto := _aura_persistente.get_node(nombre_nodo) as GeometryInstance3D
+		if efecto == null:
+			continue
+		var material_base := efecto.material_override as ShaderMaterial
+		var material_copia := material_base.duplicate() as ShaderMaterial
+		efecto.material_override = material_copia
+		if nombre_nodo == "Aura":
+			material_copia.set_shader_parameter("use_secondary", true)
+			_material_particulas_aura = material_copia
+			(_aura_persistente.get_node("Aura") as GPUParticles3D).local_coords = true
+			var procesador := (_aura_persistente.get_node("Aura") as GPUParticles3D).process_material.duplicate() as ParticleProcessMaterial
+			procesador.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+			procesador.emission_box_extents = Vector3(1.0, 1.42, 1.0)
+			procesador.direction = Vector3(0.0, 1.0, 0.0)
+			# Columnas de fuego más definidas: suben con dirección clara y se
+			# abren ligeramente alrededor del cuerpo en vez de parecer humo.
+			procesador.initial_velocity_min = 1.0
+			procesador.initial_velocity_max = 2.25
+			procesador.spread = 22.0
+			procesador.radial_velocity_min = 0.08
+			procesador.radial_velocity_max = 0.24
+			(_aura_persistente.get_node("Aura") as GPUParticles3D).process_material = procesador
+			material_copia.set_shader_parameter("noise_scale", Vector2(1.3, 0.85))
+			material_copia.set_shader_parameter("shape_curve", 1.45)
+			material_copia.set_shader_parameter("edge_hardness", 0.22)
+			material_copia.set_shader_parameter("noise_scroll", Vector2(0.07, -0.42))
+		else:
+			_material_trazos_aura = material_copia
+			material_copia.set_shader_parameter("streaks1_count", 18.0)
+			material_copia.set_shader_parameter("streaks2_count", 25.0)
+			material_copia.set_shader_parameter("streaks_fade", 0.72)
+			material_copia.set_shader_parameter("streaks_thickness", 1.15)
+			material_copia.set_shader_parameter("center_radius", 0.12)
+			material_copia.set_shader_parameter("fade_radius", 0.82)
+		_materiales_aura_status.append(material_copia)
+	var malla_trazos := _aura_persistente.get_node("MeshInstance3D") as MeshInstance3D
+	# El destello del paquete es un QuadMesh billboard; junto a este personaje
+	# forma un panel rectangular visible. Las llamas y el overlay del cuerpo bastan.
+	malla_trazos.visible = false
+	esqueleto.add_child(_aura_persistente)
+	_aura_persistente.set("emitting", false)
+	_material_overlay_aura.set_shader_parameter("noise_scale", Vector2(1.2, 1.2))
+	_material_overlay_aura.set_shader_parameter("noise_scroll", Vector2(0.025, 0.24))
+	_material_overlay_aura.set_shader_parameter("offset", 0.028)
+	_luz_aura_persistente = OmniLight3D.new()
+	_luz_aura_persistente.name = "LuzAuraDoradaPersistente"
+	_luz_aura_persistente.light_color = COLOR_EXPLOSION_FINAL_LUZ
+	_luz_aura_persistente.light_energy = 0.0
+	_luz_aura_persistente.omni_range = 5.0
+	_luz_aura_persistente.shadow_enabled = false
+	_luz_aura_persistente.position = Vector3(0.0, ALTURA_MODELO_POLICIA * 0.5, 0.0)
+	esqueleto.add_child(_luz_aura_persistente)
+
+
+func _aplicar_color_explosion_final_aura() -> void:
+	for material: ShaderMaterial in _materiales_aura_status:
+		material.set_shader_parameter("primary_color", COLOR_EXPLOSION_FINAL_PRIMARIO)
+		material.set_shader_parameter("secondary_color", COLOR_EXPLOSION_FINAL_SECUNDARIO)
+		material.set_shader_parameter("emission", 4.4)
+	_material_particulas_aura.set_shader_parameter("tertiary_color", COLOR_EXPLOSION_FINAL_TERCIARIO)
+	_material_particulas_aura.set_shader_parameter("color_curve", 1.05)
+	_material_particulas_aura.set_shader_parameter("hue_variation", 0.025)
+	_material_trazos_aura.set_shader_parameter("primary_color", COLOR_EXPLOSION_FINAL_PRIMARIO)
+	_material_trazos_aura.set_shader_parameter("secondary_color", COLOR_EXPLOSION_FINAL_SECUNDARIO)
+	_material_trazos_aura.set_shader_parameter("emission", 5.2)
+	_material_overlay_aura.set_shader_parameter("primary_color", COLOR_EXPLOSION_FINAL_PRIMARIO)
+	_material_overlay_aura.set_shader_parameter("secondary_color", COLOR_EXPLOSION_FINAL_SECUNDARIO)
+	_material_overlay_aura.set_shader_parameter("emission", 4.8)
+	_material_overlay_aura.set_shader_parameter("color_curve", 0.75)
+	_material_overlay_aura.set_shader_parameter("effect_amount", 0.14)
+
+
+func _aplicar_overlay_aura_al_personaje() -> void:
+	_restaurar_overlays_personaje()
+	if not is_instance_valid(jugador):
+		return
+	var modelo := jugador.get_node_or_null("Visual/Modelo")
+	if modelo == null:
+		return
+	for nodo: Node in modelo.find_children("*", "MeshInstance3D", true, false):
+		if _energia.is_ancestor_of(nodo) or _aura_persistente.is_ancestor_of(nodo):
+			continue
+		var malla := nodo as MeshInstance3D
+		if malla == null or malla.mesh == null:
+			continue
+		_overlays_originales_aura.append({"malla": malla, "material": malla.material_overlay})
+		malla.material_overlay = _material_overlay_aura
+
+
+func _restaurar_overlays_personaje() -> void:
+	for registro: Dictionary in _overlays_originales_aura:
+		var malla := registro.get("malla") as MeshInstance3D
+		if is_instance_valid(malla):
+			malla.material_overlay = registro.get("material") as Material
+	_overlays_originales_aura.clear()
 
 
 func iniciar_reposo(tipo: StringName) -> bool:
@@ -117,6 +387,14 @@ func establecer_sentado(activo: bool, inmediato: bool = false) -> void:
 
 
 func cancelar() -> void:
+	if is_instance_valid(_explosion_final_activa):
+		_separar_humo_final(_explosion_final_activa)
+	if gesto == &"genkidama" and is_instance_valid(_genkidama_vfx):
+		# Deja terminar el ciclo actual de la esfera y evita que se repita fuera del gesto.
+		_genkidama_vfx.set("one_shot", true)
+	if is_instance_valid(_impacto_activo):
+		_impacto_activo.queue_free()
+		_impacto_activo = null
 	gesto = &""
 	objetivo = null
 	_llave.visible = false
@@ -124,9 +402,26 @@ func cancelar() -> void:
 
 func _process(delta: float) -> void:
 	tambaleo = jugador.intensidad_tambaleo
-	_reloj += delta
+	if not jugador.congelado or gesto != &"":
+		_reloj += delta
+	_peso_nado = jugador.peso_nado
+	var ardiendo: bool = jugador.quemandose_pies and not sentado
+	if ardiendo and not _contacto_quemadura:
+		_sobresalto_quemadura = 1.0
+		if _peso_quemadura < 0.05:
+			_fase_quemadura = 0.0
+	_contacto_quemadura = ardiendo
+	_sobresalto_quemadura = move_toward(_sobresalto_quemadura, 0.0, delta * 3.5)
+	# Entrada de 0,2 s y salida amortiguada: no corta la pose al despegar o aterrizar.
+	var respuesta := 12.0 if ardiendo else 7.0
+	_peso_quemadura = lerpf(_peso_quemadura, float(ardiendo), 1.0 - exp(-delta * respuesta))
+	if _peso_quemadura > 0.001:
+		_fase_quemadura += delta * 12.5
+	else:
+		_peso_quemadura = 0.0
 	_peso_sentado = move_toward(_peso_sentado, float(sentado), delta * 5.0)
 	_peso_taza = move_toward(_peso_taza, float(lleva_taza), delta * 7.0)
+	_peso_extintor = move_toward(_peso_extintor, float(rociando_extintor), delta * 8.0)
 	var lleva: bool = is_instance_valid(jugador.papel_en_mano)
 	_peso_papel = move_toward(_peso_papel, 1.0 if lleva else 0.0, delta * 7.0)
 	if reposo_especial != &"":
@@ -141,6 +436,7 @@ func _process(delta: float) -> void:
 			if tiempo_reposo >= float(REPOSOS[reposo_especial]):
 				_saliendo_reposo = true
 				reposo_terminado.emit()
+	_actualizar_transformacion_aura(delta)
 	if gesto == &"":
 		return
 	tiempo = minf(tiempo + delta, duracion)
@@ -153,6 +449,28 @@ func _process(delta: float) -> void:
 	if tiempo >= duracion:
 		cancelar()
 		terminada.emit()
+
+
+func _actualizar_transformacion_aura(delta: float) -> void:
+	if not aura_persistente_activada:
+		if is_instance_valid(_luz_aura_persistente):
+			_luz_aura_persistente.light_energy = 0.0
+		return
+	if aura_transformacion_en_curso:
+		_tiempo_transformacion_aura = minf(_tiempo_transformacion_aura + delta, DURACION_TRANSFORMACION_AURA)
+		aura_transformacion_progreso = _tiempo_transformacion_aura / DURACION_TRANSFORMACION_AURA
+	var progreso_suave := smoothstep(0.0, 1.0, aura_transformacion_progreso)
+	if aura_transformacion_en_curso:
+		var escala_actual := lerpf(ESCALA_INICIAL_AURA_TRANSFORMACION, ESCALA_FINAL_AURA_TRANSFORMACION, progreso_suave)
+		_aura_persistente.scale = Vector3.ONE * escala_actual
+	if is_instance_valid(_material_overlay_aura):
+		var pulso := 0.94 + 0.06 * sin(_reloj * 8.5)
+		_material_overlay_aura.set_shader_parameter("effect_amount", lerpf(0.14, 1.0, progreso_suave) * pulso)
+	if is_instance_valid(_luz_aura_persistente):
+		var tremolo := 0.88 + 0.12 * sin(_reloj * 7.2)
+		_luz_aura_persistente.light_energy = lerpf(0.62, 1.25, progreso_suave) * tremolo
+	if aura_transformacion_en_curso and aura_transformacion_progreso >= 1.0:
+		aura_transformacion_en_curso = false
 
 
 func _process_modification() -> void:
@@ -170,13 +488,17 @@ func _process_modification() -> void:
 	elif locomocion in [&"jump", &"fall", &"wave"]:
 		ritmo = 5.0
 		amplitud = 0.095
-	var peso_balanceo := 1.0 - _peso_sentado * 0.85
+	var peso_balanceo := (1.0 - _peso_sentado * 0.85) * (1.0 - _peso_nado) * (1.0 - _peso_quemadura)
 	var balanceo := sin(_reloj * ritmo) * amplitud * tambaleo * peso_balanceo
 	_sumar("spine", Vector3(0.015 * sin(_reloj * ritmo * 2.0) * tambaleo, 0.0, balanceo))
 	_sumar("chest", Vector3(0.025 * sin(_reloj * ritmo - 0.6) * tambaleo, balanceo * 0.35, -balanceo * 0.3))
 	_sumar("head", Vector3(0.035 * sin(_reloj * ritmo - 0.9) * tambaleo, 0.0, -sin(_reloj * ritmo - 0.7) * amplitud * 1.4 * tambaleo))
 	if _peso_sentado > 0.0:
 		_aplicar_sentado(_peso_sentado)
+	if _peso_nado > 0.0:
+		_aplicar_nado(_peso_nado)
+	if _peso_quemadura > 0.0:
+		_aplicar_pies_quemados(_peso_quemadura)
 	_sostener(_peso_papel)
 	_sostener_taza(_peso_taza)
 	if reposo_especial != &"":
@@ -184,15 +506,87 @@ func _process_modification() -> void:
 	_llave.visible = gesto == &"reparar"
 	if gesto != &"":
 		_aplicar_gesto(tiempo / duracion)
+	if _peso_extintor > 0.0:
+		_aplicar_extintor(_peso_extintor)
 	_actualizar_energia()
 	var esqueleto := get_skeleton()
 	mano_izquierda.transform = esqueleto.get_bone_global_pose(_huesos["hand.L"])
 	mano_derecha.transform = esqueleto.get_bone_global_pose(_huesos["hand.R"])
+	pie_izquierdo.transform = esqueleto.get_bone_global_pose(_huesos["foot.L"])
+	pie_derecho.transform = esqueleto.get_bone_global_pose(_huesos["foot.R"])
 	var inclinacion := 0.0
 	if gesto == &"beber":
 		var t := tiempo / duracion
 		inclinacion = -0.55 * smoothstep(0.22, 0.42, t) * (1.0 - smoothstep(0.66, 0.90, t))
 	anclaje_taza.transform = Transform3D(Basis.from_euler(Vector3(inclinacion, 0.0, 0.0)), mano_derecha.position + Vector3(0.13, -0.15, 0.05))
+
+
+func _aplicar_pies_quemados(peso: float) -> void:
+	# Pisadas de pánico: un pie se recoge hasta la cintura y el otro apenas toca.
+	var ciclo := _fase_quemadura
+	var sacudida := sin(ciclo)
+	var sobresalto := _sobresalto_quemadura * _sobresalto_quemadura
+	for lado: String in ["L", "R"]:
+		var signo := -1.0 if lado == "L" else 1.0
+		var levantar := smoothstep(-0.25, 0.85, sin(ciclo + (0.0 if lado == "L" else PI)))
+		_pose("thigh." + lado, Vector3(-0.10 - 1.65 * levantar, signo * 0.12, signo * 0.18), peso)
+		_pose("shin." + lado, Vector3(0.15 + 2.05 * levantar, 0.0, 0.0), peso)
+		_pose("foot." + lado, Vector3(-0.35 - 0.45 * levantar, 0.0, signo * 0.16 * sin(ciclo * 3.0)), peso)
+	_pose("pelvis", Vector3(-0.08, sacudida * 0.12, -sacudida * 0.16), peso)
+	_pose("spine", Vector3(-0.20 - sobresalto * 0.15, 0.0, sacudida * 0.22), peso)
+	_pose("chest", Vector3(0.10, -sacudida * 0.14, -sacudida * 0.12), peso)
+	_pose("head", Vector3(0.38 - sobresalto * 0.55, sin(ciclo * 0.5) * 0.18, -sacudida * 0.16), peso)
+	# Rebote puramente visual: no concede altura física extra ni evita daño.
+	if _huesos.has("root"):
+		var esqueleto := get_skeleton()
+		var raiz: int = _huesos["root"]
+		var elevacion := 0.06 + 0.15 * absf(cos(ciclo)) + 0.10 * sobresalto
+		var desplazamiento := Vector3(sacudida * 0.075, elevacion, 0.0) * peso
+		esqueleto.set_bone_pose_position(raiz, esqueleto.get_bone_pose_position(raiz) + desplazamiento)
+	if gesto == &"":
+		for lado: String in ["L", "R"]:
+			var signo := -1.0 if lado == "L" else 1.0
+			var agitar := sin(ciclo + signo * 0.8)
+			_pose("upper_arm." + lado, Vector3(-0.65 - sobresalto * 0.5, signo * 0.18, signo * (1.15 + agitar * 0.30)), peso)
+			_pose("forearm." + lado, Vector3(-0.95 + agitar * 0.35, 0.0, signo * 0.12), peso)
+			_pose("hand." + lado, Vector3(sin(ciclo * 2.0) * 0.28, 0.0, signo * 0.25), peso)
+
+
+func posicion_pie(lado: String) -> Vector3:
+	# El esqueleto restaura su pose base tras los modificadores. Estos anclajes
+	# conservan la pose final para los efectos que se actualizan en física.
+	return pie_izquierdo.global_position if lado == "L" else pie_derecho.global_position
+
+
+func _aplicar_nado(peso: float) -> void:
+	var avance: float = jugador.avance_nado
+	var ciclo: float = jugador.fase_nado
+	# Entrada, tracción, empuje y recuperación. Se interpolan codo/hombro/mano
+	# con la misma fase continua, también al cambiar de avance a flotación.
+	const HOMBROS := [Vector3(-1.85, -0.12, 0.23), Vector3(-0.85, 0.12, 0.65), Vector3(0.55, 0.04, 0.32), Vector3(-0.85, -0.12, 1.0)]
+	const CODOS := [-0.15, -0.85, -0.38, -1.55]
+	for lado: String in ["L", "R"]:
+		var signo := -1.0 if lado == "L" else 1.0
+		var fase := ciclo + (PI if lado == "R" else 0.0)
+		var tramo := fposmod(fase / TAU, 1.0) * 4.0
+		var indice := floori(tramo)
+		var mezcla := smoothstep(0.0, 1.0, fposmod(tramo, 1.0))
+		var hombro: Vector3 = HOMBROS[indice].lerp(HOMBROS[(indice + 1) % 4], mezcla)
+		hombro.z *= signo
+		hombro.y *= signo
+		var codo := lerpf(CODOS[indice], CODOS[(indice + 1) % 4], mezcla)
+		var remada := Vector3(-0.48 + sin(fase) * 0.22, cos(fase) * signo * 0.12, signo * (0.65 + cos(fase) * 0.16))
+		_pose("upper_arm." + lado, remada.lerp(hombro, avance), peso)
+		_pose("forearm." + lado, Vector3(lerpf(-0.92 + sin(fase) * 0.20, codo, avance), 0, 0), peso)
+		_pose("hand." + lado, Vector3(lerpf(-0.08, -0.24, avance), 0, signo * cos(fase) * 0.13), peso)
+		var patada := sin(ciclo * 2.0 + (PI if lado == "R" else 0.0))
+		_pose("thigh." + lado, Vector3(lerpf(-0.18 + sin(fase) * 0.20, patada * 0.23, avance), 0, signo * lerpf(0.19, 0.07, avance)), peso)
+		_pose("shin." + lado, Vector3(lerpf(0.72 + cos(fase) * 0.28, 0.15 + maxf(0, -patada) * 0.28, avance), 0, 0), peso)
+		_pose("foot." + lado, Vector3(lerpf(0.08, 0.35, avance), 0, signo * 0.04), peso)
+	_pose("spine", Vector3(0.03, sin(ciclo) * 0.04 * avance, 0), peso)
+	_pose("chest", Vector3(-0.04, sin(ciclo) * 0.10 * avance, 0), peso)
+	_pose("head", Vector3(lerpf(-0.08, -0.50, avance), sin(ciclo) * 0.035 * avance, 0), peso)
+	# Las poses de sostener papel/taza y de trabajo se aplican después, por brazo.
 
 
 func _aplicar_sentado(peso: float) -> void:
@@ -347,6 +741,27 @@ func _aplicar_gesto(t: float) -> void:
 				_apuntar_mano(esqueleto.to_global(objetivo_R), peso_brazos, "R")
 			_pose("hand.L", Vector3(-0.12, 0.0, -0.08), peso_brazos)
 			_pose("hand.R", Vector3(0.12, 0.0, 0.08), peso_brazos)
+		&"explosion_final":
+			# Primero concentra el puño delante del torso; luego abre ambos brazos
+			# hacia los lados y atrás para que cada mano permanezca fuera del cuerpo.
+			var fase_explosion := tiempo / DURACION_CARGA_EXPLOSION_FINAL
+			var preparar := smoothstep(0.02, 0.22, fase_explosion) * (1.0 - smoothstep(0.32, 0.44, fase_explosion))
+			var liberar := smoothstep(0.32, 0.58, fase_explosion) * (1.0 - smoothstep(1.32, 1.42, fase_explosion))
+			var peso_brazos := maxf(preparar, liberar)
+			var esqueleto := get_skeleton()
+			_sumar("spine", Vector3(-0.10 * preparar + 0.16 * liberar, 0.0, sin(_reloj * 24.0) * 0.018 * liberar))
+			_sumar("chest", Vector3(0.12 * preparar - 0.08 * liberar, 0.0, 0.0))
+			var puño_derecho := Vector3(-0.62, 1.52, 0.94)
+			var puño_izquierdo := Vector3(0.66, 1.32, 0.20)
+			var mano_abierta_L := Vector3(1.28, 1.58, -0.18)
+			var mano_abierta_R := Vector3(-1.28, 1.58, -0.18)
+			var objetivo_L := puño_izquierdo.lerp(mano_abierta_L, liberar)
+			var objetivo_R := puño_derecho.lerp(mano_abierta_R, liberar)
+			if peso_brazos > 0.01:
+				_apuntar_mano(esqueleto.to_global(objetivo_L), peso_brazos, "L")
+				_apuntar_mano(esqueleto.to_global(objetivo_R), peso_brazos, "R")
+			_pose("hand.R", Vector3(-0.10, 0.0, 0.0), preparar * (1.0 - liberar))
+			_pose("hand.L", Vector3.ZERO, liberar)
 		&"rasengan":
 			var agacharse := smoothstep(0.0, 0.20, t) * (1.0 - smoothstep(0.78, 0.96, t))
 			var extender := smoothstep(0.10, 0.40, t) * (1.0 - smoothstep(0.86, 0.99, t))
@@ -365,6 +780,22 @@ func _aplicar_gesto(t: float) -> void:
 			if extender > 0.01:
 				_apuntar_mano(esqueleto.to_global(mano_objetivo), extender, "R")
 			_pose("hand.R", Vector3(0.0, 0.0, 0.08), extender)
+
+
+func _aplicar_extintor(peso: float) -> void:
+	# Izquierda en el asa; derecha dirige la boquilla con un barrido corto.
+	var barrido := sin(_reloj * 3.8) * 0.10
+	_pose("upper_arm.L", Vector3(-0.48, 0.0, -0.16), peso)
+	_pose("forearm.L", Vector3(-1.12, 0.0, 0.0), peso)
+	_pose("hand.L", Vector3.ZERO, peso)
+	_pose("upper_arm.R", Vector3(-1.0, barrido, 0.12), peso)
+	_pose("forearm.R", Vector3(-0.48, 0.0, 0.0), peso)
+	_pose("hand.R", Vector3(0.0, barrido, 0.0), peso)
+	_pose("thigh.L", Vector3(-0.14, 0.0, -0.05), peso)
+	_pose("shin.L", Vector3(0.22, 0.0, 0.0), peso)
+	_pose("thigh.R", Vector3(0.10, 0.0, 0.05), peso)
+	_sumar("spine", Vector3(-0.09 + sin(_reloj * 19.0) * 0.012, barrido * 0.3, 0.0) * peso)
+	_sumar("head", Vector3(0.10, -barrido * 0.3, 0.0) * peso)
 
 
 func _sostener(peso: float) -> void:
@@ -450,105 +881,276 @@ func _crear_energia(esqueleto: Skeleton3D) -> void:
 	luz.light_energy = 1.8
 	luz.omni_range = 2.4
 	_esfera_energia.add_child(luz)
-	_aura = MeshInstance3D.new()
-	_aura.name = "AuraAzul"
-	var malla_aura := SphereMesh.new()
-	malla_aura.radius = 1.0
-	malla_aura.height = 2.0
-	malla_aura.radial_segments = 40
-	malla_aura.rings = 28
-	_aura.mesh = malla_aura
-	var shader_aura := Shader.new()
-	shader_aura.code = """
-shader_type spatial;
-render_mode unshaded, cull_front, blend_add, depth_draw_never;
-uniform float aura_strength = 0.0;
-varying vec3 local_position;
-
-void vertex() {
-	local_position = VERTEX;
-	VERTEX += NORMAL * (0.025 * sin(TIME * 8.0 + VERTEX.y * 7.0 + VERTEX.x * 4.0));
-}
-
-void fragment() {
-	float facing = abs(dot(normalize(NORMAL), normalize(VIEW)));
-	float rim = pow(1.0 - facing, 2.0);
-	float flicker = 0.68 + 0.32 * sin(TIME * 13.0 + local_position.y * 10.0 + sin(local_position.x * 8.0));
-	float alpha = clamp(rim * flicker * aura_strength * 0.72, 0.0, 0.56);
-	ALBEDO = vec3(0.025, 0.28, 1.0);
-	EMISSION = vec3(0.015, 0.16, 1.0) * (1.1 + flicker * aura_strength);
-	ALPHA = alpha;
-}
-"""
-	_material_aura = ShaderMaterial.new()
-	_material_aura.shader = shader_aura
-	_material_aura.set_shader_parameter("aura_strength", 0.0)
+	var escena_aura := ESCENA_AURA_AZUL.instantiate() as Node3D
+	escena_aura.name = "AuraAzulBattleFX"
+	_energia.add_child(escena_aura)
+	_aura = escena_aura.get_node("Surface") as MeshInstance3D
+	_aura.position = Vector3(0.0, ESCALA_AURA_PERSONAJE.y * 2.0, 0.0)
+	_aura.scale = ESCALA_AURA_PERSONAJE
+	_material_aura = (_aura.material_override as ShaderMaterial).duplicate() as ShaderMaterial
 	_aura.material_override = _material_aura
-	_aura.position = Vector3(0.0, 1.34, 0.0)
-	_energia.add_child(_aura)
+	_material_aura.set_shader_parameter("primary_color", Color(0.34, 0.86, 1.0))
+	_material_aura.set_shader_parameter("secondary_color", Color(0.025, 0.26, 0.90))
+	_material_aura.set_shader_parameter("tertiary_color", Color(0.005, 0.035, 0.28))
+	_material_aura.set_shader_parameter("emission", 1.6)
+	_material_aura.set_shader_parameter("effect_decay", 1.0)
+	# Usamos la superficie esférica del escudo como una envoltura ajustada al cuerpo.
+	escena_aura.get_node("Aura").visible = false
+	_orbita_aura = escena_aura.get_node("Orbit") as MeshInstance3D
+	_orbita_aura.position = _aura.position
+	_orbita_aura.scale = Vector3.ONE * 0.52
+	_material_orbita_aura = (_orbita_aura.material_override as ShaderMaterial).duplicate() as ShaderMaterial
+	_orbita_aura.material_override = _material_orbita_aura
+	_material_orbita_aura.set_shader_parameter("primary_color", Color(0.46, 0.89, 1.0))
+	_material_orbita_aura.set_shader_parameter("secondary_color", Color(0.045, 0.32, 1.0))
+	_material_orbita_aura.set_shader_parameter("tertiary_color", Color(0.005, 0.035, 0.30))
+	_material_orbita_aura.set_shader_parameter("emission", 1.9)
+	_material_orbita_aura.set_shader_parameter("effect_decay", 1.0)
+	_material_orbita_aura.set_shader_parameter("rotation_frequency", 0.65)
+	_material_orbita_aura.set_shader_parameter("rotation_amount", 0.24)
+	escena_aura.get_node("Shards").visible = false
 	_luz_aura = OmniLight3D.new()
 	_luz_aura.name = "LuzAuraAzul"
 	_luz_aura.light_color = Color(0.035, 0.22, 1.0)
 	_luz_aura.light_energy = 1.2
 	_luz_aura.omni_range = 3.8
-	_aura.add_child(_luz_aura)
+	_luz_aura.position = Vector3(0.0, 1.35, 0.0)
+	_energia.add_child(_luz_aura)
+	var escena_aura_dorada := ESCENA_AURA_AZUL.instantiate() as Node3D
+	escena_aura_dorada.name = "AuraDoradaExplosionFinal"
+	_energia.add_child(escena_aura_dorada)
+	_aura_dorada = escena_aura_dorada.get_node("Surface") as MeshInstance3D
+	_aura_dorada.position = Vector3(0.0, ESCALA_AURA_PERSONAJE.y * 2.0, 0.0)
+	_aura_dorada.scale = ESCALA_AURA_PERSONAJE
+	_material_aura_dorada = (_aura_dorada.material_override as ShaderMaterial).duplicate() as ShaderMaterial
+	_aura_dorada.material_override = _material_aura_dorada
+	_material_aura_dorada.set_shader_parameter("primary_color", COLOR_EXPLOSION_FINAL_PRIMARIO)
+	_material_aura_dorada.set_shader_parameter("secondary_color", COLOR_EXPLOSION_FINAL_SECUNDARIO)
+	_material_aura_dorada.set_shader_parameter("tertiary_color", COLOR_EXPLOSION_FINAL_TERCIARIO)
+	_material_aura_dorada.set_shader_parameter("emission", 2.2)
+	_material_aura_dorada.set_shader_parameter("effect_decay", 1.0)
+	escena_aura_dorada.get_node("Aura").visible = false
+	_orbita_dorada = escena_aura_dorada.get_node("Orbit") as MeshInstance3D
+	_orbita_dorada.position = _aura_dorada.position
+	_orbita_dorada.scale = Vector3.ONE * 0.52
+	_material_orbita_dorada = (_orbita_dorada.material_override as ShaderMaterial).duplicate() as ShaderMaterial
+	_orbita_dorada.material_override = _material_orbita_dorada
+	_material_orbita_dorada.set_shader_parameter("primary_color", Color(1.0, 0.96, 0.55))
+	_material_orbita_dorada.set_shader_parameter("secondary_color", Color(1.0, 0.55, 0.05))
+	_material_orbita_dorada.set_shader_parameter("tertiary_color", Color(0.45, 0.10, 0.0))
+	_material_orbita_dorada.set_shader_parameter("emission", 2.5)
+	_material_orbita_dorada.set_shader_parameter("effect_decay", 1.0)
+	_material_orbita_dorada.set_shader_parameter("rotation_frequency", 0.8)
+	_material_orbita_dorada.set_shader_parameter("rotation_amount", 0.28)
+	escena_aura_dorada.get_node("Shards").visible = false
+	_luz_dorada = OmniLight3D.new()
+	_luz_dorada.name = "LuzAuraDorada"
+	_luz_dorada.light_color = Color(1.0, 0.62, 0.12)
+	_luz_dorada.light_energy = 0.0
+	_luz_dorada.omni_range = 5.2
+	_luz_dorada.position = Vector3(0.0, 1.35, 0.0)
+	_energia.add_child(_luz_dorada)
 	_crear_genkidama()
 	_crear_rasengan()
-	_rayo = Node3D.new()
-	_rayo.name = "RayoDeEnergia"
-	_rayo.rotation.x = PI * 0.5
-	_rayo.position = Vector3(0.0, 1.36, 7.5)
-	_energia.add_child(_rayo)
-	_rayo_halo = _crear_tramo_rayo(0.36, Color(0.015, 0.12, 1.0, 0.12), 2.5)
-	_rayo_exterior = _crear_tramo_rayo(0.22, Color(0.08, 0.48, 1.0, 0.38), 2.4)
-	_rayo_nucleo = _crear_tramo_rayo(0.085, Color(0.82, 0.98, 1.0), 5.0)
-	_rayo.add_child(_rayo_halo)
-	_rayo.add_child(_rayo_exterior)
-	_rayo.add_child(_rayo_nucleo)
-	_esfera_origen_rayo = Node3D.new()
-	_esfera_origen_rayo.name = "EsferaSalidaRayo"
-	_esfera_origen_rayo.position = Vector3(0.0, 1.36, 6.2)
-	_energia.add_child(_esfera_origen_rayo)
-	_esfera_origen_rayo.add_child(_crear_esfera_rayo(0.50, Color(0.04, 0.36, 1.0, 0.42), 3.0))
-	_esfera_origen_rayo.add_child(_crear_esfera_rayo(0.31, Color(0.80, 0.98, 1.0), 5.0))
-	_cabeza_rayo = Node3D.new()
-	_cabeza_rayo.name = "EsferaFrontalConPuntas"
-	_cabeza_rayo.position = Vector3(0.0, 1.36, 6.2)
-	_energia.add_child(_cabeza_rayo)
-	_cabeza_rayo.add_child(_crear_esfera_rayo(0.62, Color(0.015, 0.20, 1.0, 0.38), 3.0))
-	_cabeza_rayo.add_child(_crear_esfera_rayo(0.40, Color(0.88, 0.99, 1.0), 5.0))
-	_crear_puntas_cabeza()
+	_rayo_vfx = Node3D.new()
+	_rayo_vfx.name = "RayoKamehamehaAzul"
+	_rayo_vfx.position = Vector3(0.0, 1.36, 1.55)
+	_rayo_vfx.rotation.x = PI * 0.5 # El eje largo local Y del tubo apunta hacia delante (+Z).
+	_energia.add_child(_rayo_vfx)
+	_orbe_inicio_rayo = Node3D.new()
+	_orbe_inicio_rayo.name = "EsferaInicialKamehameha"
+	_rayo_vfx.add_child(_orbe_inicio_rayo)
+	_orbe_inicio_rayo.add_child(_crear_orbe_kamehameha(1.10 * ESCALA_GROSOR_KAMEHAMEHA * ESCALA_ORBE_INICIO_KAMEHAMEHA, 0.68 * ESCALA_GROSOR_KAMEHAMEHA * ESCALA_ORBE_INICIO_KAMEHAMEHA))
+	_orbe_final_rayo = Node3D.new()
+	_orbe_final_rayo.name = "EsferaFinalKamehameha"
+	_rayo_vfx.add_child(_orbe_final_rayo)
+	_orbe_final_rayo.add_child(_crear_orbe_kamehameha(0.98 * ESCALA_GROSOR_KAMEHAMEHA, 0.60 * ESCALA_GROSOR_KAMEHAMEHA))
+	_rayos_malla.clear()
+	_rayos_malla.append(_crear_tubo_kamehameha("AureolaDeEnergia", 1.12 * ESCALA_GROSOR_KAMEHAMEHA, 1.0 * ESCALA_GROSOR_KAMEHAMEHA, Color(0.008, 0.12, 1.0), 0.16))
+	_rayos_malla.append(_crear_tubo_kamehameha("DescargaAzul", 0.94 * ESCALA_GROSOR_KAMEHAMEHA, 0.84 * ESCALA_GROSOR_KAMEHAMEHA, Color(0.025, 0.40, 1.0), 0.54))
+	_rayos_malla.append(_crear_tubo_kamehameha("CentroBlancoAzulado", 0.60 * ESCALA_GROSOR_KAMEHAMEHA, 0.54 * ESCALA_GROSOR_KAMEHAMEHA, Color(0.68, 0.94, 1.0), 0.96))
+	_rayo_vfx.visible = false
 	_energia.visible = false
+	for efecto: Node in [_esfera_energia, _aura, _orbita_aura, _luz_aura, _rayo_vfx, _esfera_genkidama, _rasengan]:
+		_registrar_colores_poder(efecto)
 
 
-func _crear_tramo_rayo(radius: float, color: Color, brillo: float) -> MeshInstance3D:
-	var tramo := MeshInstance3D.new()
-	var cilindro := CylinderMesh.new()
-	cilindro.top_radius = radius
-	cilindro.bottom_radius = radius
-	cilindro.height = 14.0
-	cilindro.radial_segments = 96
-	tramo.mesh = cilindro
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	if color.a < 1.0:
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.albedo_color = color
-	material.emission_enabled = true
-	material.emission = Color(color.r, color.g, color.b)
-	material.emission_energy_multiplier = brillo
-	tramo.material_override = material
-	return tramo
+func _crear_orbe_kamehameha(radio_exterior: float, radio_nucleo: float) -> Node3D:
+	var orbe := Node3D.new()
+	var exterior := _crear_esfera_rayo(radio_exterior, Color(0.02, 0.34, 1.0, 0.48), 3.0)
+	var shader := Shader.new()
+	shader.code = """
+shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never;
+uniform vec3 secondary_color : source_color = vec3(0.012, 0.12, 0.76);
+uniform vec3 primary_color : source_color = vec3(0.34, 0.86, 1.0);
 
+void fragment() {
+	float giro = UV.x * TAU * 5.0 + UV.y * 18.0 - TIME * 5.0
+		+ sin(UV.y * 11.0 - TIME * 2.2) * 1.1;
+	float corriente = smoothstep(-0.28, 0.82, sin(giro));
+	float borde = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 1.25);
+	vec3 azul = mix(secondary_color, primary_color, corriente);
+	ALBEDO = azul;
+	EMISSION = azul * (0.9 + corriente * 1.25 + borde * 0.55);
+	ALPHA = clamp(0.56 + corriente * 0.28 + borde * 0.14, 0.56, 0.96);
+}
+"""
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	material.set_shader_parameter("secondary_color", Color(0.012, 0.12, 0.76))
+	material.set_shader_parameter("primary_color", Color(0.34, 0.86, 1.0))
+	exterior.material_override = material
+	orbe.add_child(exterior)
+	orbe.add_child(_crear_esfera_rayo(radio_nucleo, Color(0.73, 0.95, 1.0), 4.2))
+	return orbe
+
+
+func _crear_tubo_kamehameha(nombre: String, radio_inicio: float, radio_final: float, color: Color, opacidad: float) -> MeshInstance3D:
+	var anillos: int = 96
+	var segmentos: int = 128
+	var vertices := PackedVector3Array()
+	var normales := PackedVector3Array()
+	var uv := PackedVector2Array()
+	var indices := PackedInt32Array()
+	for anillo: int in range(anillos + 1):
+		var avance := float(anillo) / float(anillos)
+		var comienzo_punta_redonda := 1.0 - radio_final / LONGITUD_KAMEHAMEHA
+		var radio: float
+		if avance < comienzo_punta_redonda:
+			radio = lerpf(radio_inicio, radio_final, smoothstep(0.0, 0.76, avance))
+		else:
+			var progreso_punta := (avance - comienzo_punta_redonda) / (1.0 - comienzo_punta_redonda)
+			radio = radio_final * sqrt(maxf(1.0 - progreso_punta * progreso_punta, 0.0))
+		for segmento: int in range(segmentos + 1):
+			var vuelta := float(segmento) / float(segmentos)
+			var angulo := vuelta * TAU
+			var radial := Vector2(cos(angulo), sin(angulo))
+			vertices.append(Vector3(radial.x * radio, avance - 0.5, radial.y * radio))
+			normales.append(Vector3(radial.x, 0.0, radial.y))
+			uv.append(Vector2(vuelta, avance))
+	for anillo: int in range(anillos):
+		for segmento: int in range(segmentos):
+			var actual := anillo * (segmentos + 1) + segmento
+			var siguiente := actual + segmentos + 1
+			indices.append(actual)
+			indices.append(siguiente)
+			indices.append(actual + 1)
+			indices.append(actual + 1)
+			indices.append(siguiente)
+			indices.append(siguiente + 1)
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normales
+	arrays[Mesh.ARRAY_TEX_UV] = uv
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var haz := ArrayMesh.new()
+	haz.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var tubo := MeshInstance3D.new()
+	tubo.name = nombre
+	tubo.mesh = haz
+	tubo.scale.y = 0.0
+	var shader := Shader.new()
+	shader.code = """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
+uniform vec3 beam_color : source_color;
+uniform vec3 highlight_color : source_color = vec3(0.84, 0.98, 1.0);
+uniform float beam_alpha = 0.5;
+
+void vertex() {
+	float phase = UV.y * 18.0 - TIME * 3.8 + sin(UV.x * TAU * 5.0 - TIME * 2.4) * 0.55;
+	float wave = sin(phase) * 0.035 * smoothstep(0.0, 0.8, UV.y);
+	vec2 radial = normalize(VERTEX.xz + vec2(0.0001));
+	VERTEX.xz += radial * wave;
+	VERTEX.x += sin(UV.y * 5.0 - TIME * 1.4) * 0.08 * UV.y;
+	VERTEX.z += cos(UV.y * 4.0 - TIME * 1.2) * 0.035 * UV.y;
+}
+
+void fragment() {
+	float drift = UV.x * TAU * 7.0 + UV.y * 18.0 - TIME * 6.5;
+	float wave = sin(drift + sin(UV.y * 7.0 + TIME * 1.7) * 1.3);
+	float filament = smoothstep(-0.28, 0.86, wave);
+	float bands = 0.73 + 0.18 * sin(UV.x * TAU * 3.0 - UV.y * 8.0 - TIME * 3.0);
+	vec3 color = mix(beam_color, highlight_color, filament * 0.42);
+	ALBEDO = color;
+	EMISSION = color * (0.95 + filament * 1.1);
+	ALPHA = beam_alpha * clamp(bands + filament * 0.18, 0.22, 1.0);
+}
+"""
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	material.set_shader_parameter("beam_color", color)
+	material.set_shader_parameter("highlight_color", Color(0.84, 0.98, 1.0))
+	material.set_shader_parameter("beam_alpha", opacidad)
+	tubo.material_override = material
+	_rayo_vfx.add_child(tubo)
+	return tubo
 
 func _crear_genkidama() -> void:
 	_esfera_genkidama = Node3D.new()
 	_esfera_genkidama.name = "Genkidama"
 	_esfera_genkidama.position = Vector3(0.0, ALTURA_MODELO_POLICIA + RADIO_GENKIDAMA * ESCALA_GENKIDAMA, 0.25)
 	_energia.add_child(_esfera_genkidama)
-	_esfera_genkidama.add_child(_crear_esfera_rayo(RADIO_GENKIDAMA, Color(0.035, 0.34, 1.0, 0.12), 2.0))
-	_esfera_genkidama.add_child(_crear_esfera_rayo(2.12, Color(0.08, 0.55, 1.0, 0.30), 3.0))
-	_esfera_genkidama.add_child(_crear_esfera_rayo(1.55, Color(0.65, 0.91, 1.0), 4.2))
+	var esfera_energia := _crear_esfera_rayo(RADIO_GENKIDAMA, Color(0.035, 0.34, 1.0), 2.0)
+	var shader_esfera := Shader.new()
+	shader_esfera.code = """
+shader_type spatial;
+render_mode unshaded;
+uniform vec3 tertiary_color : source_color = vec3(0.012, 0.075, 0.48);
+uniform vec3 secondary_color : source_color = vec3(0.015, 0.31, 0.95);
+uniform vec3 primary_color : source_color = vec3(0.30, 0.82, 1.0);
+void fragment() {
+	float giro = UV.x * 6.28318 * 9.0 + UV.y * 24.0 - TIME * 3.4;
+	float corrientes = sin(giro + sin(UV.y * 31.0 - TIME * 2.1) * 1.6);
+	float vetas = smoothstep(-0.20, 0.78, corrientes);
+	float nubes = 0.5 + 0.5 * sin(UV.x * 42.0 + sin(UV.y * 28.0 - TIME) * 2.0 + TIME * 1.5);
+	vec3 profundo = tertiary_color;
+	vec3 azul = secondary_color;
+	vec3 brillo = primary_color;
+	vec3 color = mix(profundo, azul, 0.42 + vetas * 0.42);
+	color = mix(color, brillo, smoothstep(0.78, 0.97, nubes) * (0.20 + vetas * 0.45));
+	ALBEDO = color;
+	EMISSION = color * (1.4 + vetas * 1.8 + smoothstep(0.78, 0.97, nubes) * 1.2);
+}
+"""
+	var material_esfera := ShaderMaterial.new()
+	material_esfera.shader = shader_esfera
+	material_esfera.set_shader_parameter("tertiary_color", Color(0.012, 0.075, 0.48))
+	material_esfera.set_shader_parameter("secondary_color", Color(0.015, 0.31, 0.95))
+	material_esfera.set_shader_parameter("primary_color", Color(0.30, 0.82, 1.0))
+	esfera_energia.material_override = material_esfera
+	_esfera_genkidama.add_child(esfera_energia)
+	_esfera_genkidama.add_child(_crear_esfera_rayo(1.48, Color(0.64, 0.92, 1.0), 4.2))
+	_capa_aura_genkidama = _crear_malla_aura_esferica("MantoDeAuraGenkidama", RADIO_GENKIDAMA * 1.015, _material_aura)
+	_esfera_genkidama.add_child(_capa_aura_genkidama)
+	_material_aura_genkidama = _capa_aura_genkidama.material_override as ShaderMaterial
+	_material_aura_genkidama.set_shader_parameter("primary_color", Color(0.54, 0.91, 1.0))
+	_material_aura_genkidama.set_shader_parameter("secondary_color", Color(0.025, 0.30, 0.98))
+	_material_aura_genkidama.set_shader_parameter("tertiary_color", Color(0.005, 0.045, 0.38))
+	_material_aura_genkidama.set_shader_parameter("effect_decay", 0.42)
+	_material_aura_genkidama.set_shader_parameter("emission", 2.1)
+	_orbita_genkidama = _crear_malla_aura_esferica("CorrientesDeAuraGenkidama", RADIO_GENKIDAMA * 1.065, _material_orbita_aura)
+	_esfera_genkidama.add_child(_orbita_genkidama)
+	_material_orbita_genkidama = _orbita_genkidama.material_override as ShaderMaterial
+	_material_orbita_genkidama.set_shader_parameter("primary_color", Color(0.72, 0.97, 1.0))
+	_material_orbita_genkidama.set_shader_parameter("secondary_color", Color(0.06, 0.42, 1.0))
+	_material_orbita_genkidama.set_shader_parameter("tertiary_color", Color(0.005, 0.06, 0.42))
+	_material_orbita_genkidama.set_shader_parameter("effect_decay", 0.58)
+	_material_orbita_genkidama.set_shader_parameter("emission", 1.9)
+	_genkidama_vfx = ESCENA_CARGA_AZUL.instantiate() as Node3D
+	_aislar_materiales_vfx(_genkidama_vfx)
+	_genkidama_vfx.name = "EsferaBattleFX"
+	_genkidama_vfx.scale = Vector3.ONE * 1.25
+	_genkidama_vfx.set("primary_color", Color(0.50, 0.91, 1.0))
+	_genkidama_vfx.set("secondary_color", Color(0.02, 0.38, 1.0))
+	_genkidama_vfx.set("tertiary_color", Color(0.005, 0.045, 0.35))
+	_genkidama_vfx.set("emission", 3.0)
+	_genkidama_vfx.set("particle_amount", 48)
+	_genkidama_vfx.set("particle_local_coords", true)
+	_genkidama_vfx.set("speed_scale", 0.78)
+	_esfera_genkidama.add_child(_genkidama_vfx)
 	_luz_genkidama = OmniLight3D.new()
 	_luz_genkidama.name = "LuzGenkidama"
 	_luz_genkidama.light_color = Color(0.12, 0.52, 1.0)
@@ -558,11 +1160,137 @@ func _crear_genkidama() -> void:
 	_esfera_genkidama.visible = false
 
 
+func _crear_impacto_azul(posicion_global: Vector3, escala: float, duracion_humo: float = 0.0, velocidad: float = 1.6, persistir: bool = false) -> void:
+	var impacto := ESCENA_IMPACTO_AZUL.instantiate() as Node3D
+	_aislar_materiales_vfx(impacto)
+	impacto.name = "ImpactoAzulTemporal"
+	# El prefab se marca con autoplay; desactivarlo antes de entrar al árbol evita que repita el estallido.
+	impacto.set("autoplay", false)
+	impacto.set("one_shot", true)
+	impacto.set("primary_color", Color(0.36, 0.82, 1.0))
+	impacto.set("secondary_color", Color(0.025, 0.24, 0.88))
+	impacto.set("tertiary_color", Color(0.005, 0.035, 0.30))
+	impacto.set("emission", 2.3)
+	impacto.set("light_color", Color(0.08, 0.42, 1.0))
+	if aura_persistente_activada:
+		impacto.set("primary_color", COLOR_EXPLOSION_FINAL_PRIMARIO)
+		impacto.set("secondary_color", COLOR_EXPLOSION_FINAL_SECUNDARIO)
+		impacto.set("tertiary_color", COLOR_EXPLOSION_FINAL_TERCIARIO)
+		impacto.set("light_color", COLOR_EXPLOSION_FINAL_LUZ)
+	impacto.set("speed_scale", velocidad)
+	if duracion_humo > 0.0:
+		var humo := impacto.get_node_or_null("Smoke") as GPUParticles3D
+		if is_instance_valid(humo):
+			humo.lifetime = duracion_humo
+	get_skeleton().add_child(impacto)
+	if not persistir:
+		_impacto_activo = impacto
+	impacto.global_position = posicion_global
+	impacto.scale = Vector3.ONE * escala
+	(impacto.get_node("AnimationPlayer") as AnimationPlayer).play("main")
+	_liberar_impacto_azul(impacto, duracion_humo if duracion_humo > 0.0 else 0.82, persistir)
+
+
+func _crear_explosion_final_amarilla(posicion_global: Vector3) -> void:
+	var impacto := ESCENA_IMPACTO_AZUL.instantiate() as Node3D
+	_aislar_materiales_vfx(impacto)
+	impacto.name = "ExplosionFinalVegeta"
+	impacto.set("autoplay", false)
+	impacto.set("one_shot", true)
+	impacto.set("primary_color", COLOR_EXPLOSION_FINAL_PRIMARIO)
+	impacto.set("secondary_color", COLOR_EXPLOSION_FINAL_SECUNDARIO)
+	impacto.set("tertiary_color", COLOR_EXPLOSION_FINAL_TERCIARIO)
+	impacto.set("emission", 2.8)
+	impacto.set("light_color", COLOR_EXPLOSION_FINAL_LUZ)
+	impacto.set("speed_scale", 0.9)
+	var humo := impacto.get_node_or_null("Smoke") as GPUParticles3D
+	if is_instance_valid(humo):
+		humo.lifetime = 5.0
+	var malla_centro := SphereMesh.new()
+	malla_centro.radius = RADIO_GENKIDAMA
+	malla_centro.height = RADIO_GENKIDAMA * 2.0
+	malla_centro.radial_segments = 64
+	malla_centro.rings = 40
+	var centro_dorado := MeshInstance3D.new()
+	centro_dorado.name = "CentroSolidoExplosion"
+	centro_dorado.mesh = malla_centro
+	var material_centro := StandardMaterial3D.new()
+	material_centro.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material_centro.albedo_color = COLOR_EXPLOSION_FINAL_SECUNDARIO
+	material_centro.emission_enabled = true
+	material_centro.emission = COLOR_EXPLOSION_FINAL_SECUNDARIO
+	material_centro.emission_energy_multiplier = 1.3
+	centro_dorado.material_override = material_centro
+	impacto.add_child(centro_dorado)
+	var borde := _crear_malla_aura_esferica("BordeEsfericoDorado", RADIO_GENKIDAMA * 1.035, _material_aura_dorada)
+	impacto.add_child(borde)
+	var material_borde := borde.material_override as ShaderMaterial
+	material_borde.set_shader_parameter("primary_color", COLOR_EXPLOSION_FINAL_PRIMARIO)
+	material_borde.set_shader_parameter("secondary_color", COLOR_EXPLOSION_FINAL_SECUNDARIO)
+	material_borde.set_shader_parameter("tertiary_color", COLOR_EXPLOSION_FINAL_TERCIARIO)
+	material_borde.set_shader_parameter("effect_decay", 0.56)
+	material_borde.set_shader_parameter("emission", 2.7)
+	var corrientes := _crear_malla_aura_esferica("CorrientesEsfericasDoradas", RADIO_GENKIDAMA * 1.085, _material_orbita_dorada)
+	impacto.add_child(corrientes)
+	var material_corrientes := corrientes.material_override as ShaderMaterial
+	material_corrientes.set_shader_parameter("primary_color", Color(1.0, 0.96, 0.58))
+	material_corrientes.set_shader_parameter("secondary_color", Color(1.0, 0.60, 0.08))
+	material_corrientes.set_shader_parameter("tertiary_color", Color(0.48, 0.11, 0.005))
+	material_corrientes.set_shader_parameter("effect_decay", 0.64)
+	material_corrientes.set_shader_parameter("emission", 2.3)
+	get_skeleton().add_child(impacto)
+	impacto.global_position = posicion_global
+	impacto.scale = Vector3.ONE * ESCALA_GENKIDAMA * 1.65
+	(impacto.get_node("AnimationPlayer") as AnimationPlayer).play("main")
+	_explosion_final_activa = impacto
+	_apagar_explosion_y_dejar_humo(impacto, humo, maxf(0.0, duracion - tiempo))
+
+
+func _apagar_explosion_y_dejar_humo(impacto: Node3D, humo: GPUParticles3D, segundos: float) -> void:
+	await get_tree().create_timer(segundos).timeout
+	if not is_instance_valid(impacto):
+		return
+	_separar_humo_final(impacto, humo)
+
+
+func _separar_humo_final(impacto: Node3D, humo: GPUParticles3D = null) -> void:
+	if not is_instance_valid(impacto):
+		_explosion_final_activa = null
+		return
+	var humo_residual := humo if is_instance_valid(humo) else impacto.get_node_or_null("Smoke") as GPUParticles3D
+	if is_instance_valid(humo_residual) and humo_residual.get_parent() == impacto:
+		var transformacion_humo := humo_residual.global_transform
+		humo_residual.emitting = false
+		impacto.remove_child(humo_residual)
+		get_skeleton().add_child(humo_residual)
+		humo_residual.name = "HumoResidualExplosionFinal"
+		humo_residual.global_transform = transformacion_humo
+		_liberar_humo_residual(humo_residual, humo_residual.lifetime)
+	impacto.queue_free()
+	_explosion_final_activa = null
+
+
+func _liberar_humo_residual(humo: GPUParticles3D, segundos: float) -> void:
+	await get_tree().create_timer(segundos).timeout
+	if is_instance_valid(humo):
+		humo.queue_free()
+
+
+func _liberar_impacto_azul(impacto: Node3D, segundos: float, persistir: bool) -> void:
+	# El efecto se recorta antes de que las partículas largas de humo queden flotando en el mapa.
+	await get_tree().create_timer(segundos).timeout
+	if not is_instance_valid(impacto):
+		return
+	impacto.queue_free()
+	if not persistir and _impacto_activo == impacto:
+		_impacto_activo = null
+
+
 func _crear_rasengan() -> void:
 	_rasengan = Node3D.new()
 	_rasengan.name = "RasenganEnMano"
-	_rasengan.add_child(_crear_esfera_rayo(0.50, Color(0.04, 0.48, 1.0, 0.40), 3.0))
-	_rasengan.add_child(_crear_esfera_rayo(0.31, Color(0.76, 0.98, 1.0), 5.0))
+	_rasengan.add_child(_crear_esfera_rayo(0.50, Color(0.025, 0.42, 1.0), 3.8))
+	_rasengan.add_child(_crear_esfera_rayo(0.31, Color(0.76, 0.98, 1.0), 5.6))
 	_energia.add_child(_rasengan)
 	_rasengan_espinas = Node3D.new()
 	_rasengan_espinas.name = "EspinasAzules"
@@ -572,6 +1300,22 @@ func _crear_rasengan() -> void:
 	_rasengan_espinas_inversas.name = "EspinasClaras"
 	_rasengan.add_child(_rasengan_espinas_inversas)
 	_crear_espinas_rasengan(_rasengan_espinas_inversas, 8, 0.35, 0.08, 0.27, Color(0.62, 0.92, 1.0), 5.0, PI / 8.0)
+	_capa_aura_rasengan = _crear_malla_aura_esferica("CapaAuraRasengan", 0.53, _material_aura)
+	_rasengan.add_child(_capa_aura_rasengan)
+	_material_aura_rasengan = _capa_aura_rasengan.material_override as ShaderMaterial
+	_material_aura_rasengan.set_shader_parameter("primary_color", Color(0.65, 0.96, 1.0))
+	_material_aura_rasengan.set_shader_parameter("secondary_color", Color(0.03, 0.38, 1.0))
+	_material_aura_rasengan.set_shader_parameter("tertiary_color", Color(0.005, 0.04, 0.32))
+	_material_aura_rasengan.set_shader_parameter("effect_decay", 0.48)
+	_material_aura_rasengan.set_shader_parameter("emission", 2.7)
+	_orbita_rasengan = _crear_malla_aura_esferica("EspiralAuraRasengan", 0.56, _material_orbita_aura)
+	_rasengan.add_child(_orbita_rasengan)
+	_material_orbita_rasengan = _orbita_rasengan.material_override as ShaderMaterial
+	_material_orbita_rasengan.set_shader_parameter("primary_color", Color(0.75, 0.98, 1.0))
+	_material_orbita_rasengan.set_shader_parameter("secondary_color", Color(0.05, 0.44, 1.0))
+	_material_orbita_rasengan.set_shader_parameter("tertiary_color", Color(0.005, 0.05, 0.36))
+	_material_orbita_rasengan.set_shader_parameter("effect_decay", 0.62)
+	_material_orbita_rasengan.set_shader_parameter("emission", 2.3)
 	var luz := OmniLight3D.new()
 	luz.name = "LuzRasengan"
 	luz.light_color = Color(0.05, 0.48, 1.0)
@@ -624,44 +1368,17 @@ func _crear_esfera_rayo(radio: float, color: Color, brillo: float) -> MeshInstan
 	return esfera
 
 
-func _crear_puntas_cabeza() -> void:
-	var cantidad := 16
-	for indice: int in range(cantidad):
-		var angulo := TAU * float(indice) / float(cantidad)
-		var direccion := Vector3(cos(angulo), 0.0, sin(angulo))
-		var punta := MeshInstance3D.new()
-		var cono := CylinderMesh.new()
-		cono.top_radius = 0.0
-		cono.bottom_radius = 0.16
-		cono.height = 0.95
-		cono.radial_segments = 24
-		punta.mesh = cono
-		punta.position = direccion * 0.46
-		punta.quaternion = Quaternion(Vector3.UP, direccion)
-		var material := StandardMaterial3D.new()
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.albedo_color = Color(0.16, 0.62, 1.0, 0.72)
-		material.emission_enabled = true
-		material.emission = Color(0.06, 0.38, 1.0)
-		material.emission_energy_multiplier = 4.2
-		punta.material_override = material
-		_cabeza_rayo.add_child(punta)
-	var punta_frontal := MeshInstance3D.new()
-	var cono_frontal := CylinderMesh.new()
-	cono_frontal.top_radius = 0.0
-	cono_frontal.bottom_radius = 0.22
-	cono_frontal.height = 1.0
-	cono_frontal.radial_segments = 32
-	punta_frontal.mesh = cono_frontal
-	punta_frontal.position.y = 0.70
-	var material_frontal := StandardMaterial3D.new()
-	material_frontal.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material_frontal.albedo_color = Color(0.76, 0.96, 1.0)
-	material_frontal.emission_enabled = true
-	material_frontal.emission = Color(0.42, 0.82, 1.0)
-	material_frontal.emission_energy_multiplier = 5.0
-	punta_frontal.material_override = material_frontal
-	_cabeza_rayo.add_child(punta_frontal)
+func _crear_malla_aura_esferica(nombre: String, radio: float, material_base: ShaderMaterial) -> MeshInstance3D:
+	var malla_aura := SphereMesh.new()
+	malla_aura.radius = radio
+	malla_aura.height = radio * 2.0
+	malla_aura.radial_segments = 64
+	malla_aura.rings = 40
+	var capa := MeshInstance3D.new()
+	capa.name = nombre
+	capa.mesh = malla_aura
+	capa.material_override = material_base.duplicate() as ShaderMaterial
+	return capa
 
 
 func _actualizar_energia() -> void:
@@ -670,20 +1387,44 @@ func _actualizar_energia() -> void:
 	var es_kamehameha := gesto == &"kamehameha"
 	var es_genkidama := gesto == &"genkidama"
 	var es_rasengan := gesto == &"rasengan"
-	if not es_kamehameha and not es_genkidama and not es_rasengan:
+	var es_explosion_final := gesto == &"explosion_final"
+	if not es_kamehameha and not es_genkidama and not es_rasengan and not es_explosion_final:
 		_energia.visible = false
 		return
 	_energia.visible = true
 	var t := tiempo / duracion
 	var fuerza_aura := 0.0 if es_rasengan else smoothstep(0.02, 0.18, t) * (1.0 - smoothstep(0.84, 0.99, t))
-	_aura.visible = fuerza_aura > 0.01
-	_aura.scale = Vector3(1.0, 1.55, 0.95) * (1.0 + sin(_reloj * 8.0) * 0.035 * fuerza_aura)
-	_material_aura.set_shader_parameter("aura_strength", fuerza_aura)
-	_luz_aura.light_energy = 0.8 + fuerza_aura * 1.8
+	_aura.visible = fuerza_aura > 0.01 and not es_explosion_final
+	_orbita_aura.visible = fuerza_aura > 0.01 and not es_explosion_final
+	var fase_aura_dorada := tiempo / DURACION_CARGA_EXPLOSION_FINAL
+	var fuerza_aura_dorada := smoothstep(0.02, 0.20, fase_aura_dorada) * (1.0 - smoothstep(1.32, 1.42, fase_aura_dorada)) if es_explosion_final else 0.0
+	_aura_dorada.visible = fuerza_aura_dorada > 0.01
+	_orbita_dorada.visible = fuerza_aura_dorada > 0.01
+	_aura_dorada.scale = ESCALA_AURA_PERSONAJE * (1.0 + sin(_reloj * 10.0) * 0.025 * fuerza_aura_dorada)
+	_material_aura_dorada.set_shader_parameter("effect_decay", 1.0 - fuerza_aura_dorada * 0.64)
+	_material_aura_dorada.set_shader_parameter("emission", 2.0 + fuerza_aura_dorada * 1.7)
+	_material_orbita_dorada.set_shader_parameter("effect_decay", 1.0 - fuerza_aura_dorada * 0.58)
+	_material_orbita_dorada.set_shader_parameter("emission", 1.8 + fuerza_aura_dorada * 1.8)
+	_orbita_dorada.rotation.y = _reloj * 0.82
+	_luz_dorada.light_energy = fuerza_aura_dorada * 3.8
+	_aura.scale = ESCALA_AURA_PERSONAJE * (1.0 + sin(_reloj * 8.0) * 0.018 * fuerza_aura)
+	_material_aura.set_shader_parameter("effect_decay", 1.0 - fuerza_aura * 0.55)
+	_material_aura.set_shader_parameter("emission", 1.6 + fuerza_aura * 1.1)
+	_material_orbita_aura.set_shader_parameter("effect_decay", 1.0 - fuerza_aura * 0.50)
+	_material_orbita_aura.set_shader_parameter("emission", 1.3 + fuerza_aura * 1.0)
+	_orbita_aura.rotation.y = _reloj * 0.34
+	_luz_aura.light_energy = 0.0 if es_explosion_final else 1.0 + fuerza_aura * 2.6
+	if es_explosion_final:
+		_rayo_vfx.visible = false
+		_esfera_genkidama.visible = false
+		_esfera_energia.visible = false
+		_rasengan.visible = false
+		if tiempo >= DURACION_CARGA_EXPLOSION_FINAL * 0.72 and not _impacto_disparado:
+			_impacto_disparado = true
+			_crear_explosion_final_amarilla(_energia.to_global(Vector3(0.0, 1.30, 0.0)))
+		return
 	if es_rasengan:
-		_rayo.visible = false
-		_esfera_origen_rayo.visible = false
-		_cabeza_rayo.visible = false
+		_rayo_vfx.visible = false
 		_esfera_genkidama.visible = false
 		_esfera_energia.visible = false
 		var aparicion := smoothstep(0.30, 0.48, t) * (1.0 - smoothstep(0.97, 1.0, t))
@@ -694,54 +1435,71 @@ func _actualizar_energia() -> void:
 			_rasengan_lanzado = true
 		if _rasengan_lanzado:
 			var recorrido := smoothstep(0.68, 0.96, t)
-			_rasengan.position = _origen_lanzamiento_rasengan.lerp(_origen_lanzamiento_rasengan + Vector3(0.0, 0.0, 24.0), recorrido)
+			_rasengan.position = _origen_lanzamiento_rasengan.lerp(_origen_lanzamiento_rasengan + Vector3(0.0, 0.0, RECORRIDO_RASENGAN), recorrido)
 		else:
 			_rasengan.position = posicion_en_mano
 		_rasengan.visible = aparicion > 0.01
 		_rasengan.scale = Vector3.ONE * 2.1 * aparicion * (1.0 + sin(_reloj * 9.0) * 0.035)
 		_rasengan_espinas.rotation.z = _reloj * 8.0
 		_rasengan_espinas_inversas.rotation.z = -_reloj * 10.5
+		_orbita_rasengan.rotation.y = _reloj * 1.3
+		_orbita_rasengan.rotation.x = _reloj * 0.45
+		if t >= 0.96 and not _impacto_disparado:
+			_impacto_disparado = true
+			_crear_impacto_azul(_energia.to_global(_rasengan.position), 2.2, 5.0, 1.1, true)
 		return
 	_rasengan.visible = false
 	if es_genkidama:
-		_rayo.visible = false
+		_rayo_vfx.visible = false
 		_esfera_energia.visible = false
-		_esfera_origen_rayo.visible = false
-		_cabeza_rayo.visible = false
 		_esfera_genkidama.visible = t > 0.14 and t < 0.995
 		var crecimiento := smoothstep(0.14, 0.34, t)
 		var vuelo := smoothstep(0.66, 0.97, t)
 		var pulso_genki := 1.0 + sin(_reloj * 7.0) * 0.035
 		var altura_genkidama := ALTURA_MODELO_POLICIA + RADIO_GENKIDAMA * ESCALA_GENKIDAMA
-		_esfera_genkidama.position = Vector3(0.0, altura_genkidama, 0.25).lerp(Vector3(0.0, altura_genkidama, 26.0), vuelo)
+		_esfera_genkidama.position = Vector3(0.0, altura_genkidama, 0.25).lerp(Vector3(0.0, altura_genkidama, RECORRIDO_GENKIDAMA), vuelo)
 		_esfera_genkidama.scale = Vector3.ONE * ESCALA_GENKIDAMA * crecimiento * pulso_genki
+		_capa_aura_genkidama.rotation.y = _reloj * 0.46
+		_orbita_genkidama.rotation.y = -_reloj * 0.72
+		_orbita_genkidama.rotation.x = sin(_reloj * 0.55) * 0.22
 		_luz_genkidama.light_energy = 1.5 + crecimiento * (1.5 + 1.0 * (1.0 - vuelo))
+		if t >= 0.95 and not _impacto_disparado:
+			_impacto_disparado = true
+			_crear_impacto_azul(_energia.to_global(_esfera_genkidama.position), 3.4, 5.0, 0.9, true)
 		return
 	_esfera_genkidama.visible = false
 	var carga := smoothstep(0.08, 0.20, t) * (1.0 - smoothstep(0.48, 0.60, t))
 	var avance := smoothstep(0.59, 0.90, t)
-	var desvanecer_rayo := 1.0 - smoothstep(0.90, 0.99, t)
-	var disparo := smoothstep(0.59, 0.63, t) * desvanecer_rayo
-	_esfera_energia.visible = t > 0.08 and t < 0.72
-	# Son los puntos medios exactos de las dos manos en carga y lanzamiento.
-	_esfera_energia.position = Vector3(-0.58, 1.36, 0.62).lerp(Vector3(0.0, 1.395, 0.78), smoothstep(0.42, 0.64, t))
+	var desvanecer_rayo := 1.0 - smoothstep(0.93, 0.995, t)
+	var apertura_rayo := smoothstep(0.59, 0.90, t) * desvanecer_rayo
+	var desvanecer_carga := 1.0 - smoothstep(0.52, 0.60, t)
+	_esfera_energia.visible = t > 0.08 and t < 0.60
+	# La esfera sigue el punto medio real de las palmas mientras las manos se juntan para cargar.
+	var esqueleto := get_skeleton()
+	var palma_izquierda := esqueleto.get_bone_global_pose(_huesos["hand.L"]).origin
+	var palma_derecha := esqueleto.get_bone_global_pose(_huesos["hand.R"]).origin
+	var centro_manos := (palma_izquierda + palma_derecha) * 0.5
+	_esfera_energia.position = centro_manos
+	var adelanto_orbe := 0.42 + 1.10 * (ESCALA_GROSOR_KAMEHAMEHA - 1.0) + 1.10 * ESCALA_GROSOR_KAMEHAMEHA * (ESCALA_ORBE_INICIO_KAMEHAMEHA - 1.0)
+	_rayo_vfx.position = centro_manos + Vector3(0.0, 0.0, adelanto_orbe)
 	var pulso := 1.0 + sin(_reloj * 10.0) * (0.08 + carga * 0.14)
-	_esfera_energia.scale = Vector3.ONE * pulso
+	_esfera_energia.scale = Vector3.ONE * pulso * desvanecer_carga
 	_luz_aura.light_energy = 0.8 + fuerza_aura * (1.0 + carga * 1.2)
-	_rayo.visible = disparo > 0.01
-	var escala_largo := ESCALA_RAYO * avance * desvanecer_rayo
-	var escala_ancho := ESCALA_ANCHO_RAYO * smoothstep(0.04, 0.32, avance) * desvanecer_rayo
-	_rayo.scale = Vector3(escala_ancho, escala_largo, escala_ancho)
-	_rayo.position = Vector3(0.0, 1.36, 6.2 + 7.0 * escala_largo)
-	_rayo_halo.visible = disparo > 0.01
-	_rayo_exterior.visible = disparo > 0.01
-	_rayo_nucleo.visible = disparo > 0.01
-	_esfera_origen_rayo.visible = disparo > 0.01
-	_esfera_origen_rayo.scale = Vector3.ONE * (ESCALA_ESFERA_SALIDA * desvanecer_rayo)
-	_cabeza_rayo.visible = disparo > 0.01
-	_cabeza_rayo.position.z = 6.2 + 14.0 * escala_largo
-	var crecimiento_cabeza := smoothstep(0.03, 0.24, avance)
-	_cabeza_rayo.scale = Vector3.ONE * ESCALA_ESFERA_SALIDA * crecimiento_cabeza * (0.88 + 0.12 * sin(_reloj * 16.0)) * desvanecer_rayo
+	_rayo_vfx.visible = apertura_rayo > 0.001
+	var largo_rayo := LONGITUD_KAMEHAMEHA * apertura_rayo
+	_orbe_inicio_rayo.visible = apertura_rayo > 0.001
+	_orbe_inicio_rayo.scale = Vector3.ONE * (0.96 + 0.04 * sin(_reloj * 11.0))
+	_orbe_final_rayo.visible = apertura_rayo > 0.08
+	_orbe_final_rayo.position.y = largo_rayo
+	_orbe_final_rayo.scale = Vector3.ONE * smoothstep(0.08, 0.24, apertura_rayo) * (0.96 + 0.04 * sin(_reloj * 13.0))
+	for tubo: MeshInstance3D in _rayos_malla:
+		tubo.visible = apertura_rayo > 0.001
+		tubo.scale.y = largo_rayo
+		tubo.position.y = largo_rayo * 0.5
+	if t >= 0.89 and not _impacto_disparado:
+		_impacto_disparado = true
+		var punto_impacto := _energia.to_global(centro_manos + Vector3(0.0, 0.0, adelanto_orbe + LONGITUD_KAMEHAMEHA * avance))
+		_crear_impacto_azul(punto_impacto, 4.0, 5.0, 0.9, true)
 
 
 func _crear_llave() -> void:

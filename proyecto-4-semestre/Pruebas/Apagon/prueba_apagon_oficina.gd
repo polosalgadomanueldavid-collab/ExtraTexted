@@ -98,7 +98,10 @@ func _validar_hud_y_estaciones() -> void:
 	var indicadores: Dictionary = _escena.get("indicadores_estaciones")
 	_verificar(indicadores.size() == 5 and not indicadores.has("taco_luz"), "El taco conserva los cinco marcadores de estaciones separados")
 	_verificar(_escena.find_children("*", "Estacion", true, false).size() == 5, "El tablero eléctrico conserva las cinco estaciones de denuncias")
-	for celda: Vector2i in [Vector2i(13, 15), Vector2i(13, 16), Vector2i(13, 17)]:
+	var colision := _taco.get_node("ColisionCaja") as CollisionShape3D
+	var caja := colision.shape as BoxShape3D
+	for extremo: float in [-0.5, 0.5]:
+		var celda := _grafo.posicion_a_celda(colision.to_global(Vector3.RIGHT * caja.size.x * extremo))
 		_verificar(not _grafo.es_transitable(celda), "El grafo respeta la ocupación física del taco en %s" % celda)
 
 
@@ -155,6 +158,8 @@ func _probar_circuito(tipo: int) -> void:
 	_evento.connect("luz_restaurada", _comprobar_luces, CONNECT_ONE_SHOT)
 	await _pulsar_tecla(KEY_B)
 	_verificar(int(_evento.get("estado")) == 1, "B inicia el apagón %d dentro de Oficina" % tipo)
+	if _menu.panel_ayuda.visible:
+		_menu.cerrar_ayuda()
 	var semilla: int = _evento.get("semilla_circuito")
 	await _pulsar_tecla(KEY_B)
 	_verificar(int(_evento.get("semilla_circuito")) == semilla, "B repetida conserva el circuito activo")

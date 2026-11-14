@@ -15,6 +15,7 @@ const CALMA_RECUPERADA_AL_RESOLVER: int = 5
 var arbol: ArbolDenunciasAVL = ArbolDenunciasAVL.new()
 var puntuacion: SistemaPuntuacion = SistemaPuntuacion.new()
 var calma_operativa: int = CALMA_MAXIMA
+var causa_agotamiento: StringName = &""
 var terminada: bool = false
 var denuncia_activa_id: String = ""
 # Guarda cuánto tiempo le queda a cada denuncia pendiente.
@@ -153,6 +154,21 @@ func obtener_denuncia_prioritaria() -> Denuncia:
 
 func obtener_denuncias_ordenadas() -> Array[Denuncia]:
 	return arbol.recorrido_inorden()
+
+
+func perder_calma(cantidad: int, causa: StringName = &"") -> int:
+	if terminada or cantidad <= 0 or calma_operativa <= 0:
+		return 0
+	var perdida := mini(cantidad, calma_operativa)
+	calma_operativa -= perdida
+	# Marcar antes de emitir: ningún observador puede revivir una partida terminada.
+	terminada = calma_operativa == 0
+	if terminada:
+		causa_agotamiento = causa
+	calma_actualizada.emit(calma_operativa)
+	if terminada:
+		partida_terminada.emit()
+	return perdida
 
 
 func recuperar_calma(cantidad: int) -> int:

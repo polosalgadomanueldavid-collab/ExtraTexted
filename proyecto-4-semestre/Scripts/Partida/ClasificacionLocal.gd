@@ -3,7 +3,8 @@ extends RefCounted
 ## Mejores puntajes de cada nombre en esta instalación.
 
 const RUTA_PREDETERMINADA := "user://clasificacion_local.json"
-const MAX_CARACTERES_NOMBRE := 24
+const MAX_CARACTERES_NOMBRE := 10
+const MAX_CARACTERES_NOMBRE_ANTERIOR := 24
 const VERSION := 1
 
 var _ruta: String
@@ -46,7 +47,8 @@ func cargar() -> Error:
 		if not registro is Dictionary or not registro.get("nombre") is String or not registro.get("puntos") is String:
 			return ERR_FILE_CORRUPT
 		var nombre: String = registro.nombre
-		if not _nombre_valido(nombre) or limpiar_nombre(nombre) != nombre or nombre.to_lower() != clave:
+		# Los récords anteriores pueden tener nombres del límite original.
+		if not _nombre_valido(nombre, MAX_CARACTERES_NOMBRE_ANTERIOR) or limpiar_nombre(nombre) != nombre or nombre.to_lower() != clave:
 			return ERR_FILE_CORRUPT
 		var puntos: int = registro.puntos.to_int()
 		if puntos < 0 or str(puntos) != registro.puntos:
@@ -92,8 +94,8 @@ func obtener_clasificacion() -> Array[Dictionary]:
 	return clasificacion
 
 
-static func _nombre_valido(nombre: String) -> bool:
-	return not nombre.is_empty() and nombre.length() <= MAX_CARACTERES_NOMBRE
+static func _nombre_valido(nombre: String, limite: int = MAX_CARACTERES_NOMBRE) -> bool:
+	return not nombre.is_empty() and nombre.length() <= limite
 
 
 func _guardar(jugadores: Dictionary[String, Dictionary]) -> Error:

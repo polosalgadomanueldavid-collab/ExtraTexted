@@ -46,7 +46,8 @@ func _probar() -> void:
 	]
 	for borde: Vector2 in bordes:
 		await _probar_posicion(Vector3(borde.x, altura, borde.y), true)
-	for celda: Vector2i in [Vector2i(7, 6), Vector2i(7, 20), Vector2i(12, 16)]:
+	var acceso_taco := _oficina.get_node("TacoLuz/AccesoTaco") as Marker3D
+	for celda: Vector2i in [Vector2i(7, 6), Vector2i(7, 20), _grafo.posicion_a_celda(acceso_taco.global_position)]:
 		var posicion := _grafo.celda_a_posicion(celda)
 		posicion.y = altura
 		await _probar_posicion(posicion, false)
