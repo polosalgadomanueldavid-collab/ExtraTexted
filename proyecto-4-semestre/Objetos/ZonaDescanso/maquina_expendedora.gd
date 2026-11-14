@@ -189,18 +189,8 @@ func _process(delta: float) -> void:
 	if not _disponible() or panel.visible:
 		return
 	var detalle := ""
-	for i in 4:
-		if inventario[i] > 0:
-			detalle += ("  ·  " if not detalle.is_empty() else "") + "[%s] %s" % [ATAJOS[i], NOMBRES[i]]
 	var titulo := "BOLSILLO"
-	if jugador.chocolate_restante > 0.0:
-		titulo = "CHOCOLATE · %d s" % ceili(jugador.chocolate_restante)
-	if jugador.dona_restante > 0.0:
-		titulo += "  ·  DONA %d s" % ceili(jugador.dona_restante)
-	if poderes.restante > 0.0:
-		titulo = "ZA WARUDO · %d s" % ceili(poderes.restante)
-		detalle = "Mundo detenido · puedes completar denuncias"
-	elif jugador.obtener_objetivo_interaccion() == self:
+	if jugador.obtener_objetivo_interaccion() == self:
 		titulo = "[E] MÁQUINA EXPENDEDORA"
 		detalle = "Chocolate · Dona · Papa tiempo · El Avatar"
 	elif _mensaje_restante > 0.0:

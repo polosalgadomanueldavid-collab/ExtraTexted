@@ -22,6 +22,16 @@ La herramienta `Editor/hornear_sofa_l.gd` genera las dos mallas recortadas del s
 
 ## Máquina expendedora
 
+### Preview de objetos y café
+
+El bolsillo usa los **medallones de la propuesta A**, con crema, coral, azul petróleo y la misma fuente que la hoja. `UI/Descanso/indicador_bolsillo.gd` observa el inventario y la taza real: chocolate **Z**, dona **X**, papa tiempo **V**, Avatar **N** y café **F · BEBER**. No intercepta entradas ni cambia el flujo de compra o consumo.
+
+Solo aparecen objetos disponibles o con un efecto en curso. Mientras se consumen muestran **USANDO/BEBIENDO**; los efectos temporales mantienen el medallón con aro menta y segundos restantes. Una nueva unidad comprada durante un efecto conserva su contador. Avatar muestra **SIN EVENTO** y su atajo hasta que haya un evento. El café desaparece al contacto del sorbo, cuando se aplica la recuperación de calma.
+
+La fila se coloca junto a la hoja cuando está en la mano; sin hoja utiliza el margen izquierdo. Escala con la referencia 1280 × 720. Los avisos de descanso se sitúan encima. El HUD se oculta al abrir tiendas, computador, tareas, clasificación, pausa o ayuda y al terminar la partida. Durante ZA WARUDO sigue mostrando el reloj real.
+
+Los cinco iconos son PNG transparentes prerenderizados desde los modelos del proyecto, sin viewports 3D permanentes. Se regeneran con `res://Objetos/ZonaDescanso/Editor/hornear_iconos_bolsillo.gd` (sin `--headless`). `res://Pruebas/ZonaDescanso/prueba_indicador_bolsillo.gd` verifica el HUD con compras y consumo de café reales; `-- --capturas` guarda las vistas en `.godot/bolsillo_qa`.
+
 **E** frente a la máquina abre la tienda. Clic o **1–4** compran; **E/Esc** cierra. El mundo continúa mientras compras. Guarda una unidad de cada producto y actívala fuera de la tienda:
 
 | Objeto | Usar | Precio inicial | Efecto |

@@ -24,6 +24,7 @@ const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 const GUIA_ESTACION_ESCENA := preload("res://UI/Despacho/GuiaEstacion.tscn")
 const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/Despacho/papel_denuncia.gd")
 const IndicadorPapel := preload("res://UI/Despacho/indicador_papel.gd")
+const IndicadorBolsillo := preload("res://UI/Descanso/indicador_bolsillo.gd")
 const ProgresoSeguridad := preload("res://UI/Despacho/progreso_seguridad.gd")
 const ClasificadorEvidencias := preload("res://UI/Despacho/clasificador_evidencias.gd")
 const EscanerVerificacion := preload("res://UI/Despacho/escaner_verificacion.gd")
@@ -81,6 +82,7 @@ var _nombre_partida: String = ""
 var _aviso_apagon: Label
 var depurador_recursos: CanvasLayer
 var indicador_papel: IndicadorPapel
+var indicador_bolsillo: Control
 var progreso_seguridad: ProgresoSeguridad
 var temporizador_seguridad: Timer
 var _denuncia_en_descriptado: String = ""
@@ -203,6 +205,9 @@ func _ready() -> void:
 	panel_despacho.configurar_sistema(sistema_despacho)
 	indicador_papel = IndicadorPapel.new()
 	$CanvasLayer.add_child(indicador_papel)
+	indicador_bolsillo = IndicadorBolsillo.new()
+	$CanvasLayer.add_child(indicador_bolsillo)
+	indicador_bolsillo.configurar(self)
 	progreso_seguridad = ProgresoSeguridad.new()
 	$CanvasLayer.add_child(progreso_seguridad)
 	clasificador_evidencias = ClasificadorEvidencias.new()
@@ -425,6 +430,8 @@ func _ajustar_aviso_apagon() -> void:
 	if indicador_papel.visible:
 		var separacion := 14.0 * indicador_papel.scale.y
 		_aviso_apagon.position = Vector2(indicador_papel.position.x, indicador_papel.position.y - separacion - _aviso_apagon.size.y * factor)
+	if is_instance_valid(indicador_bolsillo) and indicador_bolsillo.visible:
+		_aviso_apagon.position.y = minf(_aviso_apagon.position.y, indicador_bolsillo.position.y - 14.0 * indicador_bolsillo.scale.y - _aviso_apagon.size.y * factor)
 
 
 func _actualizar_indicador_papel() -> void:
@@ -442,6 +449,8 @@ func _actualizar_aviso_apagon() -> void:
 	if not is_instance_valid(_aviso_apagon):
 		return
 	_aviso_apagon.visible = OS.is_debug_build() and depurador_grafo.visible_debug and not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO
+	if _aviso_apagon.visible:
+		_ajustar_aviso_apagon()
 
 
 func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
@@ -743,8 +752,8 @@ func _iniciar_inundacion() -> bool:
 
 func _al_iniciar_inundacion() -> void:
 	_al_iniciar_evento()
-	_anunciar_inicio_evento(&"inundacion", "¡INUNDACIÓN!", "", "Repara las tuberías en la zona de descanso")
-	panel_despacho._mostrar_mensaje("El agua te ralentiza. Puedes seguir resolviendo casos mientras nadas.", Color("76d7e7"))
+	_anunciar_inicio_evento(&"inundacion", "REPARA LA", "TUBERÍA", "Busca la válvula en descanso · Pulsa E")
+	panel_despacho._mostrar_mensaje("¡Cierra la fuga! Repara la tubería en descanso.", Color("76d7e7"))
 
 
 func _al_terminar_inundacion() -> void:

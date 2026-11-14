@@ -454,9 +454,6 @@ func _actualizar_aviso() -> void:
 	elif _mensaje_restante > 0.0:
 		titulo = "ZONA DE DESCANSO"
 		detalle = _mensaje
-	elif tiene_cafe():
-		titulo = "CAFÉ LISTO  ·  [F] BEBER"
-		detalle = "+%d de calma operativa al beberlo" % calma_cafe
 	else:
 		var objetivo := _jugador.obtener_objetivo_interaccion()
 		if objetivo == $RinconCafe/MuebleCafe:
@@ -473,7 +470,8 @@ func _actualizar_aviso() -> void:
 		var limite := get_viewport().get_visible_rect().size.y - margen
 		var papel: Control = _gestor.get("indicador_papel")
 		var apagon: Control = _gestor.get("_aviso_apagon")
-		for otro: Control in [papel, apagon]:
+		var bolsillo: Control = _gestor.get("indicador_bolsillo")
+		for otro: Control in [papel, apagon, bolsillo]:
 			if is_instance_valid(otro) and otro.is_visible_in_tree():
 				limite = minf(limite, otro.global_position.y - margen)
 		_aviso.position.y = minf(_aviso.position.y, limite - _aviso.size.y * _aviso.scale.y)
