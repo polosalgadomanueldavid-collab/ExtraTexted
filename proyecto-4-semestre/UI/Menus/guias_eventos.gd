@@ -4,20 +4,20 @@ extends RefCounted
 const GUIAS := {
 	&"terremoto": {
 		"nombre": "TERREMOTO", "titulo": "PROTEGE LA DENUNCIA",
-		"pista": "La zona de descanso tiene suelo firme.",
+		"pista": "¡Descanso también se rompe! Rodea la grieta gigante.",
 		"pasos": [
 			["Reconoce el aviso", "Cuando empiece el temblor, busca suelo firme antes de que se abran las grietas.", preload("res://UI/Menus/ArtePiloto/Eventos/sismo_aviso.webp")],
-			["Rodea la grieta", "Pasa por un lado de la grieta grande. Puedes saltar las estrechas con Espacio.", preload("res://UI/Menus/ArtePiloto/Eventos/sismo_grieta.webp")],
+			["Busca otro paso", "Caen más escombros en la oficina. Sal de las marcas rayadas: el borde se consume y se vuelve rojo antes del impacto. Salta solo las grietas estrechas con Espacio.", preload("res://UI/Menus/ArtePiloto/Eventos/sismo_grieta.webp")],
 			["Cuida la hoja", "Si la hoja cae en una grieta, sola o contigo, pierdes ese caso. Espera al cierre para volver a cruzar.", preload("res://UI/Menus/ArtePiloto/Eventos/sismo_hoja.webp")],
 		],
 	},
 	&"incendio": {
 		"nombre": "INCENDIO", "titulo": "APAGA LAS MESAS",
-		"pista": "Los cajones se convierten en ceniza por sí solos.",
+		"pista": "Tras 24 s pierdes cordura. Abajo no cruza el hueco ni gira a los laterales.",
 		"pasos": [
 			["Recoge el extintor", "Sigue el marcador hasta la zona de descanso. Acércate al extintor y pulsa E.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_extintor.webp")],
-			["Apunta a la mesa", "Ponte cerca y mira hacia las llamas. Mantén E hasta completar el arco de esa mesa.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_mesa.webp")],
-			["Recorre el perímetro", "Apaga las mesas que quedan en llamas. Cada estación vuelve a funcionar en cuanto la apagas.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_oficina.webp")],
+			["Apaga hasta tres", "Mira una mesa cercana y mantén E. Al completar su arco, las vecinas del mismo tramo se apagan suavemente.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_mesa.webp")],
+			["Recorre el perímetro", "Apaga todos los fuegos para detener la pérdida de cordura. Las estaciones apagadas vuelven a funcionar; los cajones se vuelven ceniza solos.", preload("res://UI/Menus/ArtePiloto/Eventos/fuego_oficina.webp")],
 		],
 	},
 	&"inundacion": {

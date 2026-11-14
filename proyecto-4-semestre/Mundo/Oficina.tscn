@@ -716,9 +716,10 @@ barra_despacho = NodePath("../CanvasLayer/PanelDespacho/Contenido")
 luces = [NodePath("../Pared, suelo, techo/FocoParpadeante1"), NodePath("../Pared, suelo, techo/FocoParpadeante2"), NodePath("../Pared, suelo, techo/FocoFilaFrontal"), NodePath("../Pared, suelo, techo/FocoFilaTrasera"), NodePath("../Pared, suelo, techo/FocoComputador"), NodePath("../Pared, suelo, techo/FocoDescanso"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralIzq4"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer1"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer2"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer3"), NodePath("../Pared, suelo, techo/LuzPuestoLateralDer4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal4"), NodePath("../Pared, suelo, techo/LuzPuestoFilaFrontal5"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera1"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera2"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera3"), NodePath("../Pared, suelo, techo/LuzPuestoFilaTrasera4"), NodePath("../PuertaRelevo/LuzAcceso"), NodePath("../PuertaRelevo/LuzPasillo")]
 radio_vision = 1.02
 
-[node name="EventoTerremoto" type="Node3D" parent="." node_paths=PackedStringArray("suelo")]
+[node name="EventoTerremoto" type="Node3D" parent="." node_paths=PackedStringArray("suelo", "techo")]
 script = ExtResource("17_terremoto")
 suelo = NodePath("../Pared, suelo, techo/Suelo")
+techo = NodePath("../Pared, suelo, techo/Techo")
 
 [node name="ZonaDescanso" parent="." instance=ExtResource("16_zona_descanso")]
 position = Vector3(0, 0.3717064, 0)

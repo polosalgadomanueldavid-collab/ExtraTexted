@@ -14,6 +14,11 @@ const IndicadorExtintor := preload("res://Eventos/Incendio/indicador_extintor.gd
 const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
 const SEGUNDOS_CENIZA := 10.0
 const SEGUNDOS_POR_MESA := 3.0
+const SEGUNDOS_APAGADO_ADYACENTE := 1.1
+const SEPARACION_MAXIMA_TRAMO := 0.25
+const SEGUNDOS_GRACIA_CORDURA := 24.0
+const UMBRALES_DESGASTE := [SEGUNDOS_GRACIA_CORDURA, 60.0, 90.0]
+const PERDIDA_BASE_CORDURA := 1.0
 const ALCANCE := 1.15
 
 var permiso_inicio: Callable
@@ -37,6 +42,8 @@ var _chorro: AudioStreamPlayer
 var _papel_guardado: PapelDenuncia
 var _pose_papel: Transform3D
 var _mostrar_completado := 0.0
+var _focos_perimetro: Array[Foco] = []
+var _perdida_acumulada := 0.0
 
 
 func configurar(oficina: Node3D, jugador: Player) -> void:
@@ -75,6 +82,7 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 		else:
 			acceso.global_position = Vector3(centro.x, 0.38, limites.position.z - 0.38)
 		foco.acceso = acceso
+	_ordenar_perimetro()
 	# Identifica la mesa del PC por cercanía, sin depender del nombre del modelo.
 	var mas_cercana: Foco
 	var distancia := INF
@@ -102,11 +110,50 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 	_chorro = SonidosMesas.crear_reproductor(self, "ChorroExtintor", preload("res://Audios/Eventos/incendio_extintor.wav"), -18.0, true)
 
 
+func _ordenar_perimetro() -> void:
+	_focos_perimetro.assign(focos)
+	if focos.is_empty():
+		return
+	var limites := focos[0].limites
+	for foco in focos:
+		limites = limites.merge(foco.limites)
+	var centro := limites.get_center()
+	# El orden del árbol no sigue las paredes; el ángulo conserva ambas vecinas,
+	# incluidas las esquinas, sin saltar mesas que ya estén apagadas.
+	_focos_perimetro.sort_custom(func(a: Foco, b: Foco) -> bool:
+		var pa := a.global_position - centro
+		var pb := b.global_position - centro
+		return atan2(pa.z, pa.x) < atan2(pb.z, pb.x)
+	)
+
+
 func ajustar_accesos(grafo: GrafoPiso) -> void:
 	# El grafo ya incorporó las colisiones de mesas y sillas. Reservar celdas reales.
 	for foco in focos:
 		var celda := grafo.celda_de_acceso(foco.acceso.global_position)
 		foco.acceso.global_position = grafo.celda_a_posicion(celda)
+
+
+func obtener_adyacentes(foco: Foco) -> Array[Foco]:
+	var vecinas: Array[Foco] = []
+	var indice := _focos_perimetro.find(foco)
+	if indice < 0:
+		return vecinas
+	for paso: int in [-1, 1]:
+		var vecina := _focos_perimetro[posmod(indice + paso, _focos_perimetro.size())]
+		var fila := foco.mesa.get_parent()
+		var fila_vecina := vecina.mesa.get_parent()
+		if fila.name == &"Mesas Horizontales DOWN" or fila_vecina.name == &"Mesas Horizontales DOWN":
+			# Los dos tramos inferiores terminan en el pasillo y en las esquinas:
+			# no llevan el efecto al otro tramo ni a las paredes laterales.
+			if fila != fila_vecina:
+				continue
+			var hueco := maxf(foco.limites.position.x - vecina.limites.end.x, vecina.limites.position.x - foco.limites.end.x)
+			if hueco > SEPARACION_MAXIMA_TRAMO:
+				continue
+		if vecina != foco and not vecinas.has(vecina):
+			vecinas.append(vecina)
+	return vecinas
 
 
 func iniciar(bloqueos: Dictionary) -> bool:
@@ -117,6 +164,7 @@ func iniciar(bloqueos: Dictionary) -> bool:
 	activo = true
 	bloqueos_fijos = false
 	tiempo = 0.0
+	_perdida_acumulada = 0.0
 	equipado = false
 	extintor.recogido = false
 	extintor.deposito.transform = Transform3D.IDENTITY
@@ -160,7 +208,7 @@ func obtener_objetivo(jugador: Player) -> Node3D:
 	var cercano: Foco
 	var menor := INF
 	for foco in focos:
-		if foco.apagado >= 1.0:
+		if foco.apagado >= 1.0 or foco.apagando_adyacente:
 			continue
 		var p := jugador.global_position
 		var punto := Vector3(clampf(p.x, foco.limites.position.x, foco.limites.end.x), p.y + 0.42, clampf(p.z, foco.limites.position.z, foco.limites.end.z))
@@ -207,7 +255,7 @@ func _equipar() -> void:
 
 
 func solicitar_apagado(foco: Foco, jugador: Player) -> void:
-	if not activo or jugador != _jugador or not focos.has(foco) or foco.apagado >= 1.0:
+	if not activo or jugador != _jugador or not focos.has(foco) or foco.apagado >= 1.0 or foco.apagando_adyacente:
 		return
 	if not equipado:
 		_oficina.panel_despacho._mostrar_mensaje("¡Está en llamas! Busca el extintor en la zona de descanso.", Color("ff9b44"))
@@ -249,9 +297,13 @@ func _physics_process(delta: float) -> void:
 			if _mostrar_completado <= 0.0:
 				panel.hide()
 		return
+	var tiempo_anterior := tiempo
 	tiempo += delta
 	if tiempo + 0.00001 >= SEGUNDOS_CENIZA and not _fuegos_cajones.is_empty():
 		_convertir_cenizas()
+	for foco in focos:
+		if foco.avanzar_apagado_adyacente(delta, SEGUNDOS_APAGADO_ADYACENTE):
+			mesa_recuperada.emit(foco.estacion_id)
 	if _solicitud:
 		if not Input.is_action_pressed(_jugador.interaction_action) or _jugador.input_locked or _jugador.realizando_gesto() or not _jugador.is_on_floor() or _jugador._taza_en_mano or obtener_objetivo(_jugador) != objetivo or _oficina.clasificacion_partida.visible:
 			soltar()
@@ -266,11 +318,34 @@ func _physics_process(delta: float) -> void:
 			if not _chorro.playing:
 				_chorro.play()
 			if objetivo.rociar(delta, SEGUNDOS_POR_MESA):
-				mesa_recuperada.emit(objetivo.estacion_id)
+				_recuperar_mesa_y_adyacentes(objetivo)
 				soltar()
-				if _todas_apagadas():
-					_finalizar()
+	if _todas_apagadas():
+		_finalizar()
+	if activo:
+		_aplicar_desgaste_cordura(tiempo_anterior)
+		# perder_calma puede terminar la partida y ocultar el evento de inmediato.
+		if not activo:
+			return
 	_actualizar_panel()
+
+
+func _recuperar_mesa_y_adyacentes(foco: Foco) -> void:
+	mesa_recuperada.emit(foco.estacion_id)
+	for vecina in obtener_adyacentes(foco):
+		# Solo las dos vecinas originales: el apagado adicional no se propaga.
+		vecina.iniciar_apagado_adyacente()
+
+
+func _aplicar_desgaste_cordura(tiempo_anterior: float) -> void:
+	# Integra únicamente el tiempo posterior a cada umbral, incluso si un
+	# cuadro cruza varios: 1 punto/s tras 24 s, 2 tras 60 s y 3 tras 90 s.
+	for umbral: float in UMBRALES_DESGASTE:
+		_perdida_acumulada += maxf(0.0, tiempo - maxf(tiempo_anterior, umbral)) * PERDIDA_BASE_CORDURA
+	var puntos := floori(_perdida_acumulada + 0.00001)
+	if puntos > 0:
+		_perdida_acumulada = maxf(0.0, _perdida_acumulada - puntos)
+		_oficina.sistema_despacho.perder_calma(puntos, &"incendio")
 
 
 func _process(_delta: float) -> void:
@@ -330,8 +405,17 @@ func _actualizar_panel() -> void:
 	panel.nombre_mesa = cercano.nombre_visible if cercano != null and equipado else ""
 	panel.progreso_mesa = cercano.apagado if cercano != null else 0.0
 	panel.apagando_mesa = rociando and cercano != null
+	if tiempo <= SEGUNDOS_GRACIA_CORDURA:
+		panel.estado_cordura = "Cordura en %d s · Apaga hasta 3 mesas a la vez" % ceili(SEGUNDOS_GRACIA_CORDURA - tiempo)
+	else:
+		var etapa := 0
+		for umbral: float in UMBRALES_DESGASTE:
+			if tiempo >= umbral:
+				etapa += 1
+		panel.estado_cordura = "Pierdes %d de cordura/s · ¡Apaga el incendio!" % (etapa * PERDIDA_BASE_CORDURA)
 	if not activo:
 		panel.instruccion = "Oficina recuperada · vuelven los bloqueos normales"
+		panel.estado_cordura = ""
 	panel.queue_redraw()
 
 
@@ -354,6 +438,9 @@ func _finalizar() -> void:
 func detener() -> void:
 	soltar()
 	activo = false
+	for foco in focos:
+		foco.cancelar_apagado_adyacente()
+	_perdida_acumulada = 0.0
 	equipado = false
 	_mostrar_completado = 0.0
 	extintor.hide()

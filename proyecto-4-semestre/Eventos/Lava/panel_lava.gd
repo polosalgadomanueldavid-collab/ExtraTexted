@@ -1,12 +1,17 @@
 extends Control
-## Reloj persistente, estado del apoyo y aviso del próximo cambio de cajones.
+## Cronómetro compacto con la cuenta regresiva del evento.
 
-const TITULO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
-const TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
+const FUENTE := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
+const DIMENSIONES := Vector2(168, 190)
+const CENTRO := Vector2(84, 104)
+const TAMANO_NUMEROS := 36
+const TINTA := Color("251a17")
+const ESFERA := Color("2e2320")
+const MARCAS := Color("fff1d8")
+const AMBAR := Color("ffb34f")
+const URGENTE := Color("ff7258")
+
 var restante := 60.0
-var cambio := 4.0
-var estado := "¡Suelo caliente! Pierdes cordura"
-var seguro := false
 
 
 func _ready() -> void:
@@ -19,44 +24,50 @@ func _ready() -> void:
 func _ajustar() -> void:
 	var pantalla := get_viewport().get_visible_rect().size
 	var factor := minf(pantalla.x / 1920.0, pantalla.y / 1080.0)
-	size = Vector2(600, 172)
+	size = DIMENSIONES
 	scale = Vector2.ONE * factor
-	position = Vector2(pantalla.x * 0.5 - 300.0 * factor, 18.0 * factor)
+	position = Vector2((pantalla.x - size.x * factor) * 0.5, 18.0 * factor)
 	queue_redraw()
 
 
-func actualizar(segundos: float, proximo: float, mensaje: String, refugio: bool) -> void:
-	restante = segundos
-	cambio = proximo
-	estado = mensaje
-	seguro = refugio
-	queue_redraw()
+func actualizar(segundos: float) -> void:
+	var anterior := ceili(restante)
+	restante = maxf(0.0, segundos)
+	if ceili(restante) != anterior:
+		queue_redraw()
 
 
 func _draw() -> void:
-	var borde := Color("ffb34f") if restante > 10.0 else Color("ff7258")
-	var caja := StyleBoxFlat.new()
-	caja.bg_color = Color("241a17")
-	caja.border_color = borde
-	caja.set_border_width_all(2)
-	caja.set_corner_radius_all(18)
-	draw_style_box(caja, Rect2(Vector2.ZERO, size))
-	draw_string(TITULO, Vector2(24, 38), "¡EL PISO ES LAVA!", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color("ffd48a"))
 	var segundos := ceili(maxf(0.0, restante))
-	draw_string(TEXTO, Vector2(449, 48), "%02d:%02d" % [segundos / 60, segundos % 60], HORIZONTAL_ALIGNMENT_LEFT, -1, 38, Color("fff1d8"))
-	draw_arc(Vector2(422, 32), 16.0, -PI * 0.5, TAU - PI * 0.5, 48, Color("594052"), 4.0, true)
-	draw_arc(Vector2(422, 32), 16.0, -PI * 0.5, TAU * clampf(restante / 60.0, 0.0, 1.0) - PI * 0.5, 48, borde, 4.0, true)
-	draw_line(Vector2(422, 32), Vector2(422, 21), Color("fff1d8"), 2.0, true)
-	draw_line(Vector2(422, 32), Vector2(429, 36), Color("fff1d8"), 2.0, true)
-	draw_string(TEXTO, Vector2(24, 74), "ESPACIO · Salta a los bloqueos temporales", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("fff1d8"))
-	draw_string(TEXTO, Vector2(24, 103), estado, HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color("a8e4c3") if seguro else Color("ffb195"))
-	draw_string(TEXTO, Vector2(24, 134), "Los bloqueos cambian en %.1f s" % maxf(0.0, cambio), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("dac0a5"))
-	draw_style_box(_barra(Color("5b3c2b")), Rect2(24, 147, 552, 7))
-	draw_style_box(_barra(borde), Rect2(24, 147, maxf(0.1, 552.0 * cambio / 4.0), 7))
+	var acento := AMBAR if segundos > 10 else URGENTE
+	# Pulsadores y cuello: la silueta del cronómetro sustituye al panel rectangular.
+	draw_rect(Rect2(77, 16, 14, 20), TINTA)
+	draw_style_box(_pulsador(acento), Rect2(64, 1, 40, 20))
+	draw_set_transform(Vector2(140, 39), PI * 0.25)
+	draw_style_box(_pulsador(acento), Rect2(-13, -7, 26, 14))
+	draw_set_transform(Vector2.ZERO)
+	# Contorno con sombra corta y esfera opaca para leer sobre el magma.
+	draw_circle(CENTRO + Vector2(0, 7), 75.0, Color(0.0, 0.0, 0.0, 0.22), true, -1.0, true)
+	draw_circle(CENTRO + Vector2(0, 4), 75.0, TINTA, true, -1.0, true)
+	draw_circle(CENTRO, 75.0, TINTA, true, -1.0, true)
+	draw_circle(CENTRO, 71.0, acento, true, -1.0, true)
+	draw_circle(CENTRO, 62.0, ESFERA, true, -1.0, true)
+	for direccion: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+		draw_line(CENTRO + direccion * 51.0, CENTRO + direccion * 57.0, MARCAS, 3.0, true)
+	# Tipografía del diseño Digital, reducida y centrada dentro de la esfera.
+	var cuenta := "%02d:%02d" % [segundos / 60, segundos % 60]
+	var ancho := FUENTE.get_string_size(cuenta, HORIZONTAL_ALIGNMENT_LEFT, -1, TAMANO_NUMEROS).x
+	var base := (FUENTE.get_ascent(TAMANO_NUMEROS) - FUENTE.get_descent(TAMANO_NUMEROS)) * 0.5
+	var origen := CENTRO + Vector2(-ancho * 0.5, base)
+	draw_string_outline(FUENTE, origen + Vector2(0, 2), cuenta, HORIZONTAL_ALIGNMENT_LEFT, -1, TAMANO_NUMEROS, 5, TINTA)
+	draw_string_outline(FUENTE, origen, cuenta, HORIZONTAL_ALIGNMENT_LEFT, -1, TAMANO_NUMEROS, 3, TINTA)
+	draw_string(FUENTE, origen, cuenta, HORIZONTAL_ALIGNMENT_LEFT, -1, TAMANO_NUMEROS, acento)
 
 
-func _barra(color: Color) -> StyleBoxFlat:
+func _pulsador(color: Color) -> StyleBoxFlat:
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = color
-	estilo.set_corner_radius_all(3)
+	estilo.border_color = TINTA
+	estilo.set_border_width_all(3)
+	estilo.set_corner_radius_all(4)
 	return estilo

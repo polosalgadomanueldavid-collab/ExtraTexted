@@ -147,6 +147,7 @@ func _ready() -> void:
 	evento_terremoto.iniciado.connect(_al_iniciar_terremoto)
 	evento_terremoto.temblor_actualizado.connect($Gameplay/Camera3D.actualizar_temblor)
 	evento_terremoto.suelo_roto.connect(_al_romper_suelo)
+	evento_terremoto.escombros_actualizados.connect(_al_caer_escombros)
 	evento_terremoto.jugador_caido.connect(_al_caer_jugador_en_grieta)
 	evento_terremoto.terminado.connect(_al_terminar_terremoto)
 	evento_incendio = EventoIncendio.new()
@@ -802,15 +803,18 @@ func _al_iniciar_terremoto() -> void:
 	_al_iniciar_evento()
 	temporizador_bloqueos.paused = true
 	jugador.reproducir_expresion(&"estres")
-	_anunciar_inicio_evento(&"terremoto", "¡TERREMOTO!", "", "Cuida la hoja y rodea las grietas")
+	_anunciar_inicio_evento(&"terremoto", "¡TERREMOTO!", "", "Cuida la hoja; rodea grietas y escombros")
 	panel_despacho._mostrar_mensaje("El suelo empieza a temblar…", PanelDespacho.CORAL)
 
 
 func _al_romper_suelo() -> void:
 	if is_instance_valid(papel_actual) and papel_actual.portador == null:
 		papel_actual.sleeping = false
-	if not grafo_piso.es_zona_segura(grafo_piso.posicion_a_celda(jugador.global_position)):
-		panel_despacho._mostrar_mensaje("¡Terremoto! Cuida la hoja y rodea la grieta grande.", PanelDespacho.CORAL)
+	panel_despacho._mostrar_mensaje("¡Derrumbes en oleadas! Descanso también se abre: rodea la grieta gigante.", PanelDespacho.CORAL)
+	_al_caer_escombros()
+
+
+func _al_caer_escombros() -> void:
 	depurador_grafo.actualizar_mapa()
 	_calcular_ruta_a_proxima_estacion()
 
@@ -900,6 +904,8 @@ func _al_terminar_partida() -> void:
 		"puntos_ganados": sistema_despacho.puntuacion.puntos_ganados,
 		"saldo": sistema_despacho.puntuacion.puntos
 	}
+	if sistema_despacho.causa_agotamiento == &"incendio":
+		datos["causa"] = {"incendio": true, "titulo": "Incendio sin apagar"}
 	panel_despacho.hide()
 	depurador_grafo.hide()
 	for indicador: IndicadorProximaEstacion in indicadores_estaciones.values():
