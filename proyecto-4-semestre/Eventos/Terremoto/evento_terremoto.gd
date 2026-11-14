@@ -35,6 +35,7 @@ const MINIMO_PASOS_CERRADOS := 4
 
 @export var suelo: CSGBox3D
 @export var techo: CSGBox3D
+@export var alfombra: Node3D
 
 var permiso_inicio: Callable
 var sonidos: SonidosEventos
@@ -67,6 +68,9 @@ var _jugador_en_grieta := false
 var _origen_seguro: Vector2i
 var _material_piso: ShaderMaterial
 var _colision_jugador: CollisionShape3D
+var _animacion_alfombra: Tween
+var _reposo_alfombra: Transform3D
+var _alfombra_caida := false
 
 
 func _ready() -> void:
@@ -177,6 +181,7 @@ func _abrir_suelo() -> void:
 	for grieta in grietas:
 		grieta.abrir(suelo)
 	_actualizar_mascara_huecos()
+	_hundir_alfombra()
 	for celda in _celdas_caidas:
 		var bloqueo := _bloqueos[celda] as StaticBody3D
 		bloqueo.call("caer_en_grieta", _celdas_caidas[celda].centro)
@@ -191,6 +196,35 @@ func _abrir_suelo() -> void:
 	# Si el suelo se abre justo debajo del jugador, empezar en tierra firme.
 	_ultimo_apoyo = _apoyo_conectado(_jugador.global_position)
 	suelo_roto.emit()
+
+
+func _hundir_alfombra() -> void:
+	if not is_instance_valid(alfombra) or not alfombra.visible or _alfombra_caida:
+		return
+	_reposo_alfombra = alfombra.transform
+	_alfombra_caida = true
+	# Mismo vuelco y aceleración que los bloqueos al perder el apoyo.
+	var hacia := Vector3(grieta_gigante.centro.x - alfombra.global_position.x, 0,
+		grieta_gigante.centro.y - alfombra.global_position.z)
+	var eje := Vector3.UP.cross(hacia.normalized())
+	if eje.is_zero_approx():
+		eje = Vector3.RIGHT
+	var vuelco := alfombra.global_transform
+	vuelco.basis = vuelco.basis.rotated(eje, 1.22)
+	vuelco.origin += hacia.limit_length(0.65) + Vector3.DOWN * 1.8
+	_animacion_alfombra = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_animacion_alfombra.tween_property(alfombra, "global_transform", vuelco, 0.72)
+	_animacion_alfombra.tween_callback(alfombra.hide)
+
+
+func _restaurar_alfombra() -> void:
+	if _animacion_alfombra != null:
+		_animacion_alfombra.kill()
+		_animacion_alfombra = null
+	if _alfombra_caida and is_instance_valid(alfombra):
+		alfombra.transform = _reposo_alfombra
+		alfombra.show()
+	_alfombra_caida = false
 
 
 func _mostrar_aviso_gigante() -> void:
@@ -661,6 +695,7 @@ func _cerrar() -> void:
 	for grieta in grietas:
 		grieta.cerrar()
 	grietas.clear()
+	_restaurar_alfombra()
 	_limpiar_trazado()
 	for escombro in escombros:
 		escombro.retirar()
@@ -695,3 +730,10 @@ func _actualizar_mascara_huecos() -> void:
 					imagen.set_pixel(x, y, Color.BLACK)
 	_material_piso.set_shader_parameter("mascara_huecos", ImageTexture.create_from_image(imagen))
 	_material_piso.set_shader_parameter("usar_mascara_huecos", true)
+
+
+func resolver_con_avatar() -> void:
+	if not activo:
+		return
+	temblor_actualizado.emit(DURACION, 0.0)
+	_cerrar()

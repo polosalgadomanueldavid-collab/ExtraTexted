@@ -442,3 +442,10 @@ func _crear_tuberias() -> void:
 	acceso.add_to_group("accesos_navegacion")
 	acceso.position = Vector3(1.5, PISO, tuberias.position.z)
 	add_child(acceso)
+
+
+func resolver_con_avatar() -> void:
+	if not activo:
+		return
+	detener()
+	terminado.emit()

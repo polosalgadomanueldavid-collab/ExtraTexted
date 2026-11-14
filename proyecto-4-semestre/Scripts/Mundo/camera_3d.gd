@@ -182,7 +182,8 @@ func _physics_process(delta: float) -> void:
 
 	# Dos senos a frecuencias 1:2 dibujan un infinito en el plano de la pantalla.
 	# Se aplica después del seguimiento para evitar deriva o acumulación del balanceo.
-	_fase_balanceo = fposmod(_fase_balanceo + TAU * delta / periodo_balanceo, TAU)
+	if not bool(objetivo.get("tiempo_detenido")):
+		_fase_balanceo = fposmod(_fase_balanceo + TAU * delta / periodo_balanceo, TAU)
 	_peso_balanceo = lerpf(_peso_balanceo, 1.0 if balanceo_activo else 0.0, avance)
 	var balanceo := Vector2(sin(_fase_balanceo), sin(2.0 * _fase_balanceo)) * amplitud_balanceo * _peso_balanceo
 	if balanceo_activo:

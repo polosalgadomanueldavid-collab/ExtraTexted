@@ -451,3 +451,14 @@ func detener() -> void:
 
 func _exit_tree() -> void:
 	soltar()
+
+
+func resolver_con_avatar() -> void:
+	if not activo:
+		return
+	for foco in focos:
+		foco.cancelar_apagado_adyacente()
+		foco.rociar(1.0, 1.0)
+		mesa_recuperada.emit(foco.estacion_id)
+	_finalizar()
+	_actualizar_panel()

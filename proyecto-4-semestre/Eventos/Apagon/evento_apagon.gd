@@ -225,3 +225,18 @@ func _exit_tree() -> void:
 	if is_instance_valid(taco) and taco.is_inside_tree():
 		taco.establecer_apagon(false)
 		taco.establecer_abierto(false)
+
+
+func resolver_con_avatar() -> void:
+	if estado == Estado.RESTAURADO:
+		return
+	_restaurar_luces()
+	mascara.hide()
+	luz_jugador.hide()
+	taco.establecer_apagon(false)
+	taco.establecer_abierto(false)
+	sonidos.detener()
+	_cambiar_estado(Estado.RESTAURADO)
+	panel.cerrar()
+	_al_cerrar_panel()
+	luz_restaurada.emit()

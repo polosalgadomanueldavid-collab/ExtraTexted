@@ -25,6 +25,8 @@ func _probar() -> void:
 	menu.cerrar_ayuda()
 	oficina.tutoriales_vistos[&"terremoto"] = true
 	evento = oficina.evento_terremoto
+	var alfombra := oficina.get_node("AlfombraCentro") as Node3D
+	var reposo_alfombra := alfombra.transform
 	grafo = oficina.grafo_piso
 	jugador = oficina.jugador
 	jugador.set_physics_process(false)
@@ -143,6 +145,7 @@ func _probar() -> void:
 		await _capturar("escombros_bloqueo", semilla)
 		await _capturar_descanso(semilla)
 		evento._cerrar()
+		_verificar(alfombra.visible and alfombra.transform == reposo_alfombra, "Cerrar cada terremoto restaura la alfombra")
 		_verificar(grafo.escombros.is_empty() and evento.escombros.is_empty(), "El final retira todos los bloqueos de escombros")
 		for escombro: Escombro in montones:
 			_verificar(escombro.collision_layer == 0, "Se quita la colisión antes de liberar el nodo")
@@ -153,10 +156,13 @@ func _probar() -> void:
 		if evento.iniciar(grafo, jugador, oficina.bloqueos_visuales, Rect2()):
 			if semilla == 8762:
 				evento._abrir_suelo()
+				await _fisicas(12)
+				_verificar(alfombra.position.y < reposo_alfombra.origin.y, "La alfombra cae antes de interrumpir el terremoto")
 				evento._actualizar_escombros(1.5)
 			evento._cerrar()
 			_verificar(evento._trazado.is_empty() and evento.escombros.is_empty() and grafo.grietas.is_empty() and grafo.escombros.is_empty(), "Se puede interrumpir el aviso o la caída sin residuos")
 		await _fisicas(2)
+		_verificar(alfombra.visible and alfombra.transform == reposo_alfombra, "Interrumpir el aviso o la caída conserva la alfombra en reposo")
 	# Más distribuciones, protegiendo también una hoja suelta junto al jugador.
 	for semilla in range(30, 54):
 		jugador.global_position = inicio

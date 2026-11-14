@@ -82,6 +82,10 @@ var _ultimo_reposo: StringName = &"idle_tambaleo"
 var _azar_reposo := RandomNumberGenerator.new()
 var _descanso_sentado: bool = false
 var _taza_en_mano: bool = false
+var chocolate_restante := 0.0
+var dona_restante := 0.0
+var tiempo_detenido := false
+var _peso_dona := 0.0
 
 @onready var visual: Node3D = $Visual
 @onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
@@ -132,6 +136,17 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if not tiempo_detenido:
+		chocolate_restante = maxf(0.0, chocolate_restante - delta)
+		dona_restante = maxf(0.0, dona_restante - delta)
+	_peso_dona = move_toward(_peso_dona, float(dona_restante > 0.0), delta * 3.0)
+	if lava_activa:
+		# Las barreras altas de lava no impiden trepar con dona. Reponerlas al
+		# volver al suelo evita introducir una barrera dentro del cuerpo al caducar.
+		if dona_restante > 0.0:
+			set_collision_mask_value(8, false)
+		elif global_position.y < 0.5:
+			set_collision_mask_value(8, true)
 	if en_relevo:
 		return # La cinemática dirige el cuerpo, conservando las poses del evento.
 	if _descanso_sentado:
@@ -153,13 +168,15 @@ func _physics_process(delta: float) -> void:
 	if not congelado and not nadando and not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
-		if lava_activa:
+		if lava_activa or dona_restante > 0.0:
 			# Compensa el primer paso de integración: la cima queda al 110 % del cajón.
 			velocity.y = sqrt(2.0 * _gravity * altura_bloqueo_lava * MARGEN_SALTO_LAVA) - _gravity * delta * 0.5
 		for borde in get_tree().get_nodes_in_group(&"bordes_grietas_saltables"):
 			if borde.frente_a_los_pies(global_position, direction):
 				velocity.y = maxf(jump_velocity, sqrt(2.0 * _gravity * ALTURA_SALTO_DE_GRIETA))
 				break
+		if dona_restante > 0.0:
+			velocity.y = maxf(velocity.y, sqrt(2.0 * _gravity * 1.65))
 		reproducir_expresion(&"esfuerzo")
 	if moving or input_locked or realizando_gesto() or not is_on_floor():
 		_wave_remaining = 0.0
@@ -167,6 +184,8 @@ func _physics_process(delta: float) -> void:
 		_wave_remaining = maxf(0.0, _wave_remaining - delta)
 
 	var target_speed := run_speed if running else walk_speed
+	if chocolate_restante > 0.0:
+		target_speed *= 1.65
 	if nadando:
 		target_speed = walk_speed * FACTOR_NADO
 	var desired_velocity := direction * target_speed
@@ -342,15 +361,15 @@ func obtener_objetivo_interaccion() -> Node3D:
 		return null
 	if get_tree().paused:
 		return null
-	if is_instance_valid(control_hielo):
+	if not tiempo_detenido and is_instance_valid(control_hielo):
 		var nitrogeno: Node3D = control_hielo.obtener_objetivo(self)
 		if nitrogeno != null:
 			return nitrogeno
-	if is_instance_valid(control_inundacion):
+	if not tiempo_detenido and is_instance_valid(control_inundacion):
 		var tuberia: Node3D = control_inundacion.obtener_objetivo(self)
 		if tuberia != null:
 			return tuberia
-	if is_instance_valid(control_incendio):
+	if not tiempo_detenido and is_instance_valid(control_incendio):
 		var fuego: Node3D = control_incendio.obtener_objetivo(self)
 		if fuego != null:
 			return fuego
@@ -393,6 +412,8 @@ func _buscar_papel_cercano() -> PapelDenuncia:
 
 
 func reset_to_spawn() -> void:
+	chocolate_restante = 0.0
+	dona_restante = 0.0
 	terminar_descanso_sentado(true)
 	establecer_taza_en_mano(false)
 	cancelar_gesto()
@@ -603,6 +624,7 @@ func _actualizar_pose_nado(delta: float) -> void:
 					brazada_agua.emit(lado)
 	var modelo := $Visual/Modelo as Node3D
 	var destino := _pose_modelo
+	destino.basis = destino.basis.scaled(Vector3(1.0 + _peso_dona * 0.48, 1.0, 1.0 + _peso_dona * 0.32))
 	if peso_nado > 0.0:
 		var rumbo := atan2(velocity.x, velocity.z) if _rapidez_real > 0.1 else visual.rotation.y
 		var curva := clampf(angle_difference(visual.rotation.y, rumbo), -0.45, 0.45)
@@ -616,7 +638,7 @@ func _actualizar_pose_nado(delta: float) -> void:
 		var elevacion := maxf(0, nivel_agua - global_position.y - 0.43) if nivel_agua > -INF else 0.0
 		var respirar := sin(fase_nado * 2.0 - 0.4) * lerpf(0.016, 0.010, avance_nado)
 		destino.origin += (pivote - giro * pivote) + Vector3.UP * (elevacion + respirar) * peso_nado / character_scale
-		destino.basis = _pose_modelo.basis * giro
+		destino.basis = destino.basis * giro
 	modelo.transform = modelo.transform.interpolate_with(destino, 1.0 - exp(-delta * 8.0))
 
 

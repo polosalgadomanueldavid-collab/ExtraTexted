@@ -313,7 +313,8 @@ func _process(_delta: float) -> void:
 	if not _turno_anunciado and get_tree().current_scene == self and not MenuGlobal.capa.visible:
 		_turno_anunciado = true
 		anuncios.mostrar_inicio()
-	_duracion_partida += _delta
+	if not sistema_despacho.tiempo_detenido:
+		_duracion_partida += _delta
 	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
 	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
 		_calcular_ruta_a_proxima_estacion()
@@ -637,6 +638,8 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 
 
 func _puede_iniciar_evento() -> bool:
+	if is_instance_valid(sistema_despacho) and sistema_despacho.tiempo_detenido:
+		return false
 	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo) and (not is_instance_valid(evento_lava) or not evento_lava.activo) and (not is_instance_valid(evento_hielo) or not evento_hielo.activo)
 
 
@@ -823,6 +826,8 @@ func _al_caer_escombros() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if is_instance_valid(sistema_despacho) and sistema_despacho.tiempo_detenido:
+		return
 	if partida_finalizada or not evento_terremoto.activo or not is_instance_valid(papel_actual):
 		return
 	if papel_actual.portador == null and evento_terremoto.atrapo_hoja(papel_actual.global_position):

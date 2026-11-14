@@ -267,7 +267,9 @@ func _raices_mobiliario() -> Array[Node]:
 		if _oficina.is_ancestor_of(mesa):
 			raices.append(mesa)
 	raices.append(_oficina.computador)
-	raices.append(_oficina.get_node("ZonaDescanso"))
+	var descanso := _oficina.get_node_or_null("ZonaDescanso")
+	if is_instance_valid(descanso):
+		raices.append(descanso)
 	# Recubrir el pool entero: la nieve sigue al cajón durante su caída y reciclaje.
 	for bloqueo: Node in _oficina._bloqueos_pool:
 		raices.append(bloqueo)
@@ -284,12 +286,17 @@ func _preparar_nieve() -> void:
 				if not is_inside_tree() or activo:
 					return
 		for raiz in _raices_mobiliario():
+			if not is_instance_valid(raiz):
+				continue
 			var mallas := raiz.find_children("*", "MeshInstance3D", true, false)
 			if raiz is MeshInstance3D:
 				mallas.push_front(raiz)
-			for malla: MeshInstance3D in mallas:
+			for candidata in mallas:
 				if activo:
 					return
+				if not is_instance_valid(candidata):
+					continue
+				var malla := candidata as MeshInstance3D
 				_generador_nieve.crear(malla, null, true)
 				await get_tree().process_frame
 				if not is_inside_tree():
@@ -415,3 +422,10 @@ func _crear_tuberia() -> void:
 	acceso.add_to_group("accesos_navegacion")
 	acceso.position = Vector3(1.42, PISO, tuberia.position.z)
 	add_child(acceso)
+
+
+func resolver_con_avatar() -> void:
+	if not activo:
+		return
+	detener()
+	terminado.emit()

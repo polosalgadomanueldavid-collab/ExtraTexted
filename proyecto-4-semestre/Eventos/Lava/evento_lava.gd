@@ -343,3 +343,10 @@ func _crear_barreras() -> void:
 			barrera.add_child(forma)
 			_barreras.add_child(barrera)
 			barrera.global_position = Vector3(limites.get_center().x, base + caja.size.y * 0.5, limites.get_center().z)
+
+
+func resolver_con_avatar() -> void:
+	if not activo:
+		return
+	detener()
+	terminado.emit()

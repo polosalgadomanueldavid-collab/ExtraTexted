@@ -6,7 +6,7 @@ const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
 const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 const TEMA_AJUSTES := preload("res://UI/Menus/tema_ajustes.tres")
-const CATEGORIAS := ["Movimiento", "Acciones", "Menús"]
+const CATEGORIAS := ["Movimiento", "Acciones", "Menús", "Objetos"]
 
 var pestanas: Array[Button] = []
 var paginas: Array[VBoxContainer] = []
@@ -45,6 +45,7 @@ func _ready() -> void:
 	_crear_movimiento(paginas[0])
 	_crear_acciones(paginas[1])
 	_crear_menus(paginas[2])
+	_crear_objetos(paginas[3])
 	seleccionar(0)
 
 
@@ -142,6 +143,15 @@ func _crear_menus(pagina: VBoxContainer) -> void:
 	pagina.add_child(_fila("Opción anterior", ["Mayús", "+", "Tab"]))
 	pagina.add_child(_fila("Confirmar", ["Enter", "o", "Espacio"]))
 	pagina.add_child(_fila("Pausar / volver", ["Esc"], "Regresar a la pantalla anterior"))
+
+
+func _crear_objetos(pagina: VBoxContainer) -> void:
+	pagina.add_child(_texto("MÁQUINA EXPENDEDORA", 38, true))
+	pagina.add_child(_texto("Abre con E en descanso. Compra con puntos y guarda una unidad.", 25))
+	pagina.add_child(_fila("Chocolate", ["Z"], "Corre más rápido durante 25 segundos"))
+	pagina.add_child(_fila("Dona", ["X"], "Barriguita y salto sobre mesas durante 10 segundos"))
+	pagina.add_child(_fila("Papa tiempo", ["V"], "Detiene el mundo 12 segundos; puedes resolver denuncias"))
+	pagina.add_child(_fila("El Avatar", ["N"], "Resuelve el evento activo con su elemento; un solo uso"))
 
 
 func _fila(accion: String, teclas: Array, nota: String = "") -> VBoxContainer:
