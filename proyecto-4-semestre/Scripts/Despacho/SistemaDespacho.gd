@@ -17,6 +17,7 @@ var puntuacion: SistemaPuntuacion = SistemaPuntuacion.new()
 var calma_operativa: int = CALMA_MAXIMA
 var causa_agotamiento: StringName = &""
 var terminada: bool = false
+var tiempo_detenido := false
 var denuncia_activa_id: String = ""
 # Guarda cuánto tiempo le queda a cada denuncia pendiente.
 var tiempos_restantes: Dictionary = {}
@@ -130,7 +131,7 @@ func vencer_denuncia(id: String, motivo := Denuncia.MotivoPerdida.TIEMPO) -> boo
 
 
 func actualizar_tiempos(delta: float) -> void:
-	if terminada:
+	if terminada or tiempo_detenido:
 		return
 	var ids: Array = tiempos_restantes.keys()
 

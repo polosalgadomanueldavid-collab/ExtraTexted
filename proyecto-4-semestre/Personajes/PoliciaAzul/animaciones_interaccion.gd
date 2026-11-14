@@ -6,8 +6,10 @@ signal contacto
 signal terminada
 signal reposo_terminado
 
-const DURACIONES := {&"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8, &"kamehameha": 3.6, &"genkidama": 5.0, &"rasengan": 3.8, &"explosion_final": 6.8}
-const CONTACTOS := {&"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56, &"kamehameha": 0.55, &"genkidama": 0.72, &"rasengan": 0.5, &"explosion_final": 0.72}
+const CoreografiaAvatar := preload("res://Personajes/PoliciaAzul/coreografia_avatar.gd")
+
+const DURACIONES := {&"comer": 1.5, &"za_warudo": 2.4, &"control_agua": 3.6, &"control_fuego": 3.6, &"control_tierra": 3.6, &"control_aire": 3.6, &"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8, &"kamehameha": 3.6, &"genkidama": 5.0, &"rasengan": 3.8, &"explosion_final": 6.8}
+const CONTACTOS := {&"comer": 0.58, &"za_warudo": 0.45, &"control_agua": 0.72, &"control_fuego": 0.72, &"control_tierra": 0.72, &"control_aire": 0.72, &"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56, &"kamehameha": 0.55, &"genkidama": 0.72, &"rasengan": 0.5, &"explosion_final": 0.72}
 const REPOSOS := {&"idle_despistado": 3.4, &"idle_tambaleo": 3.1}
 const ESCALA_GENKIDAMA := 3.0
 const RADIO_GENKIDAMA := 2.38
@@ -40,6 +42,7 @@ var mano_izquierda: Node3D
 var mano_derecha: Node3D
 var pie_izquierdo: Node3D
 var pie_derecho: Node3D
+var direcciones_antebrazos := {"L": Vector3.FORWARD, "R": Vector3.FORWARD}
 var anclaje_taza: Node3D
 var objetivo: Node3D
 var _reloj: float = 0.0
@@ -512,6 +515,10 @@ func _process_modification() -> void:
 	var esqueleto := get_skeleton()
 	mano_izquierda.transform = esqueleto.get_bone_global_pose(_huesos["hand.L"])
 	mano_derecha.transform = esqueleto.get_bone_global_pose(_huesos["hand.R"])
+	for lado: String in ["L", "R"]:
+		var palma := esqueleto.get_bone_global_pose(_huesos["hand." + lado]).origin
+		var codo := esqueleto.get_bone_global_pose(_huesos["forearm." + lado]).origin
+		direcciones_antebrazos[lado] = (esqueleto.global_basis * (palma - codo)).normalized()
 	pie_izquierdo.transform = esqueleto.get_bone_global_pose(_huesos["foot.L"])
 	pie_derecho.transform = esqueleto.get_bone_global_pose(_huesos["foot.R"])
 	var inclinacion := 0.0
@@ -637,9 +644,32 @@ func _aplicar_gesto(t: float) -> void:
 	var salida := 1.0 - smoothstep(0.78, 1.0, t)
 	var peso := entrada * salida
 	var meneo := sin(t * TAU * 2.0) * 0.10 * tambaleo * peso
+	if CoreografiaAvatar.es_elemental(gesto):
+		_aplicar_control_elemental(t)
+		return
 	_sumar("spine", Vector3(0.0, 0.0, meneo))
 	_sumar("head", Vector3(0.04 * sin(t * TAU * 3.0), -meneo * 0.6, -meneo * 1.3))
 	match gesto:
+		&"comer":
+			var bocado := smoothstep(0.04, 0.3, t) * (1.0 - smoothstep(0.67, 0.94, t))
+			var esqueleto := get_skeleton()
+			var boca := esqueleto.get_bone_global_pose(_huesos["head"]).origin + Vector3(-0.10, 0.08, 0.50)
+			_apuntar_mano(esqueleto.to_global(boca), bocado, "R")
+			_pose("hand.R", Vector3(0.25, 0, 0), bocado)
+			_sumar("head", Vector3(sin(t * TAU * 6.0) * 0.025 * bocado, 0, 0))
+		&"za_warudo":
+			# Pecho abierto, cabeza atrás y ambos brazos alzados en una V amplia.
+			var alzar := smoothstep(0.08, 0.43, t) * salida
+			_sumar("spine", Vector3(-0.17, 0, 0) * alzar)
+			_sumar("chest", Vector3(-0.12, 0, 0) * alzar)
+			_pose("head", Vector3(-0.30, 0, 0), alzar)
+			for lado: String in ["L", "R"]:
+				var signo := 1.0 if lado == "L" else -1.0
+				_pose("upper_arm." + lado, Vector3(0.08, 0, -signo * 2.55), alzar)
+				_pose("forearm." + lado, Vector3(-0.08, 0, 0), alzar)
+				_pose("hand." + lado, Vector3(-0.18, 0, signo * 0.25), alzar)
+				_pose("thigh." + lado, Vector3(-0.12, 0, signo * 0.16), peso)
+				_pose("shin." + lado, Vector3(0.20, 0, 0), peso)
 		&"recoger", &"recibir":
 			var alcanzar := smoothstep(0.0, 0.32, t) * (1.0 - smoothstep(0.49, 0.85, t))
 			var suelo := gesto == &"recoger"
@@ -1525,3 +1555,25 @@ func _crear_llave() -> void:
 		pieza.material_override = metal
 		_llave.add_child(pieza)
 	_llave.visible = false
+
+
+func _aplicar_control_elemental(t: float) -> void:
+	var esqueleto := get_skeleton()
+	var pose := CoreografiaAvatar.muestrear(gesto, t)
+	# La entrada y recuperación tienen espacio propio: no se desvanece el golpe
+	# decisivo a mitad de la descarga, que sucede exactamente en 0,72.
+	var mezcla := smoothstep(0.0, 0.10, t) * (1.0 - smoothstep(0.84, 1.0, t))
+	var piso := minf(esqueleto.get_bone_global_pose(_huesos["foot.L"]).origin.y,
+		esqueleto.get_bone_global_pose(_huesos["foot.R"]).origin.y)
+	for nombre: String in pose:
+		if nombre != "desplazamiento":
+			_pose(nombre, pose[nombre], mezcla)
+	var raiz: int = _huesos["root"]
+	var desplazamiento: Vector3 = pose.desplazamiento * mezcla
+	# Mantener el pie de apoyo a su cota original. La otra pierna puede levantar
+	# la rodilla, pisar o patear sin hundir los dos pies al flexionar las rodillas.
+	if not jugador.nadando:
+		var apoyo := minf(esqueleto.get_bone_global_pose(_huesos["foot.L"]).origin.y,
+			esqueleto.get_bone_global_pose(_huesos["foot.R"]).origin.y)
+		desplazamiento.y += piso - apoyo
+	esqueleto.set_bone_pose_position(raiz, esqueleto.get_bone_pose_position(raiz) + desplazamiento)

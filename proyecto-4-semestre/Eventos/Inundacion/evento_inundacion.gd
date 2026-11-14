@@ -148,7 +148,8 @@ func _physics_process(delta: float) -> void:
 		nivel = move_toward(nivel, PISO, delta * (NIVEL_MAXIMO - PISO) / VACIADO)
 	else:
 		nivel = move_toward(nivel, NIVEL_MAXIMO, delta * (NIVEL_MAXIMO - PISO) / SUBIDA)
-	_jugador.establecer_nivel_agua(nivel)
+	if not _jugador.en_relevo:
+		_jugador.establecer_nivel_agua(nivel)
 	for papel: PapelDenuncia in get_tree().get_nodes_in_group("papeles_denuncia"):
 		if _oficina.is_ancestor_of(papel):
 			papel.nivel_agua = nivel + 0.025
@@ -187,13 +188,13 @@ func _process(delta: float) -> void:
 		nodo.transform = pose
 	_valvula.rotation.z = lerp_angle(_valvula.rotation.z, PI * 0.5 if drenando else 0.0, delta * 4)
 	_union.scale.y = move_toward(_union.scale.y, 1.0 if drenando else 0.12, delta * 2.0)
-	_aviso.visible = not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible
+	_aviso.visible = not _oficina.partida_finalizada and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible
 	_aviso.text = "INUNDACIÓN\nEl agua está bajando" if drenando else "INUNDACIÓN · Nadas más lento\nRepara las tuberías en descanso · E"
 	indicador.actualizar(get_viewport().get_camera_3d(), tuberias.global_position + Vector3.UP * 0.5,
 		_jugador.global_position, obtener_objetivo(_jugador) == self,
-		not drenando and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible)
+		not _oficina.partida_finalizada and not drenando and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible)
 	_reloj_ondas -= delta
-	if _jugador.nadando:
+	if _jugador.nadando and _jugador.visible:
 		var recorrido := _jugador.global_position.distance_to(_ultima_posicion_nado)
 		if (recorrido > 0.23 and _reloj_ondas <= 0.0) or _reloj_ondas < -0.9:
 			_reloj_ondas = 0.25
@@ -362,7 +363,7 @@ func _crear_tuberias() -> void:
 	tuberias = Node3D.new()
 	tuberias.name = "TuberiasDescanso"
 	add_child(tuberias)
-	tuberias.position = Vector3(2.12, 1.30, 10.45)
+	tuberias.position = Vector3(2.12, 1.30, 10.60)
 	tuberias.rotation.y = -PI * 0.5
 	var metal := StandardMaterial3D.new()
 	metal.albedo_color = Color("63a8b8")
@@ -439,5 +440,12 @@ func _crear_tuberias() -> void:
 	acceso = Marker3D.new()
 	acceso.name = "AccesoTuberias"
 	acceso.add_to_group("accesos_navegacion")
-	acceso.position = Vector3(1.5, PISO, 10.45)
+	acceso.position = Vector3(1.5, PISO, tuberias.position.z)
 	add_child(acceso)
+
+
+func resolver_con_avatar() -> void:
+	if not activo:
+		return
+	detener()
+	terminado.emit()

@@ -106,7 +106,8 @@ func _physics_process(delta: float) -> void:
 	tiempo += delta
 	var presencia := minf(1.0, tiempo / ENTRADA)
 	var fase := fposmod(tiempo, INTERVALO)
-	_jugador.congelado = not descongelando and tiempo >= INTERVALO and fase < CONGELACION
+	if not _jugador.en_relevo:
+		_jugador.congelado = not descongelando and tiempo >= INTERVALO and fase < CONGELACION
 	if descongelando:
 		_tiempo_deshielo += delta
 		presencia = _presencia_al_reparar * (1.0 - clampf(_tiempo_deshielo / DESHIELO, 0.0, 1.0))
@@ -129,7 +130,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(_delta: float) -> void:
-	var disponible: bool = activo and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible and not _oficina.clasificador_evidencias.visible and not _oficina.escaner_verificacion.visible
+	var disponible: bool = activo and not _oficina.partida_finalizada and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible and not _oficina.clasificador_evidencias.visible and not _oficina.escaner_verificacion.visible
 	aviso.visible = disponible and not descongelando
 	indicador.actualizar(get_viewport().get_camera_3d(), tuberia.global_position + Vector3.UP * 0.45,
 		_jugador.global_position, obtener_objetivo(_jugador) == self, disponible and not descongelando)
@@ -266,7 +267,9 @@ func _raices_mobiliario() -> Array[Node]:
 		if _oficina.is_ancestor_of(mesa):
 			raices.append(mesa)
 	raices.append(_oficina.computador)
-	raices.append(_oficina.get_node("ZonaDescanso"))
+	var descanso := _oficina.get_node_or_null("ZonaDescanso")
+	if is_instance_valid(descanso):
+		raices.append(descanso)
 	# Recubrir el pool entero: la nieve sigue al cajón durante su caída y reciclaje.
 	for bloqueo: Node in _oficina._bloqueos_pool:
 		raices.append(bloqueo)
@@ -280,17 +283,24 @@ func _preparar_nieve() -> void:
 		if pasada == 1:
 			while _oficina._bloqueos_pool.size() < _oficina.BLOQUEOS_SIMULTANEOS:
 				await get_tree().process_frame
-				if activo:
+				if not is_inside_tree() or activo:
 					return
 		for raiz in _raices_mobiliario():
+			if not is_instance_valid(raiz):
+				continue
 			var mallas := raiz.find_children("*", "MeshInstance3D", true, false)
 			if raiz is MeshInstance3D:
 				mallas.push_front(raiz)
-			for malla: MeshInstance3D in mallas:
+			for candidata in mallas:
 				if activo:
 					return
+				if not is_instance_valid(candidata):
+					continue
+				var malla := candidata as MeshInstance3D
 				_generador_nieve.crear(malla, null, true)
 				await get_tree().process_frame
+				if not is_inside_tree():
+					return
 
 
 func _recubrir_mobiliario() -> void:
@@ -359,7 +369,7 @@ func _pieza(malla: Mesh, punto: Vector3, material: Material) -> MeshInstance3D:
 func _crear_tuberia() -> void:
 	tuberia = Node3D.new()
 	tuberia.name = "TuberiaNitrogeno"
-	tuberia.position = Vector3(2.12, 1.15, 8.95)
+	tuberia.position = Vector3(2.12, 1.15, 11.85)
 	tuberia.rotation.y = -PI * 0.5
 	add_child(tuberia)
 	var metal := StandardMaterial3D.new()
@@ -410,5 +420,12 @@ func _crear_tuberia() -> void:
 	acceso = Marker3D.new()
 	acceso.name = "AccesoNitrogeno"
 	acceso.add_to_group("accesos_navegacion")
-	acceso.position = Vector3(1.42, PISO, 8.95)
+	acceso.position = Vector3(1.42, PISO, tuberia.position.z)
 	add_child(acceso)
+
+
+func resolver_con_avatar() -> void:
+	if not activo:
+		return
+	detener()
+	terminado.emit()

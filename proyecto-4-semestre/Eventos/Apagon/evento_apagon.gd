@@ -31,6 +31,9 @@ var luz_jugador: OmniLight3D
 var permiso_inicio: Callable
 var sonidos: SonidosEventos
 var indicador_luz: INDICADOR_LUZ
+var camara_relevo: Camera3D
+var companero_relevo: Node3D
+var luz_companero: OmniLight3D
 
 var _azar := RandomNumberGenerator.new()
 var _visibilidad_luces: Dictionary = {}
@@ -116,6 +119,9 @@ func _process(_delta: float) -> void:
 
 
 func _actualizar_indicador() -> void:
+	if is_instance_valid(camara_relevo):
+		indicador_luz.hide()
+		return
 	indicador_luz.actualizar(
 		camara, taco.to_global(Vector3(0, 1.8, 0)), barra_despacho,
 		estado == Estado.APAGADO and get_viewport().get_camera_3d() == camara,
@@ -125,17 +131,38 @@ func _actualizar_indicador() -> void:
 
 func _actualizar_vision() -> void:
 	luz_jugador.global_position = jugador.global_position + Vector3.UP * 1.4
+	luz_jugador.visible = jugador.visible
+	var vista := camara_relevo if is_instance_valid(camara_relevo) else camara
 	# El primer plano de la PC usa su propia cámara y conserva la interfaz legible.
-	mascara.visible = get_viewport().get_camera_3d() == camara
+	mascara.visible = get_viewport().get_camera_3d() == vista
 	if not mascara.visible:
 		return
 	var centro_mundo := jugador.global_position + Vector3.UP * 0.4
-	var centro := camara.unproject_position(centro_mundo)
-	var extremo := camara.unproject_position(centro_mundo + camara.global_basis.x * radio_vision)
+	var centro := vista.unproject_position(centro_mundo)
+	var extremo := vista.unproject_position(centro_mundo + vista.global_basis.x * radio_vision)
 	var tamano := get_viewport().get_visible_rect().size
 	var material_vision := mascara.material as ShaderMaterial
 	material_vision.set_shader_parameter("centro_uv", centro / tamano)
-	material_vision.set_shader_parameter("radio_pixeles", centro.distance_to(extremo))
+	material_vision.set_shader_parameter("radio_pixeles", centro.distance_to(extremo) if jugador.visible else 0.0)
+	if is_instance_valid(companero_relevo):
+		var foco := companero_relevo.global_position + Vector3.UP * 0.4
+		var centro_relevo := vista.unproject_position(foco)
+		var borde := vista.unproject_position(foco + vista.global_basis.x * radio_vision)
+		material_vision.set_shader_parameter("centro_relevo_uv", centro_relevo / tamano)
+		material_vision.set_shader_parameter("radio_relevo_pixeles", centro_relevo.distance_to(borde))
+		luz_companero.global_position = companero_relevo.global_position + Vector3.UP * 1.15
+
+
+func preparar_relevo(vista: Camera3D, companero: Node3D) -> void:
+	camara_relevo = vista
+	companero_relevo = companero
+	if estado == Estado.RESTAURADO:
+		return
+	luz_companero = luz_jugador.duplicate() as OmniLight3D
+	luz_companero.name = "LuzEmergenciaRelevo"
+	add_child(luz_companero)
+	luz_companero.show()
+	_actualizar_vision()
 
 
 func _al_interactuar_taco(quien: Player) -> void:
@@ -198,3 +225,18 @@ func _exit_tree() -> void:
 	if is_instance_valid(taco) and taco.is_inside_tree():
 		taco.establecer_apagon(false)
 		taco.establecer_abierto(false)
+
+
+func resolver_con_avatar() -> void:
+	if estado == Estado.RESTAURADO:
+		return
+	_restaurar_luces()
+	mascara.hide()
+	luz_jugador.hide()
+	taco.establecer_apagon(false)
+	taco.establecer_abierto(false)
+	sonidos.detener()
+	_cambiar_estado(Estado.RESTAURADO)
+	panel.cerrar()
+	_al_cerrar_panel()
+	luz_restaurada.emit()

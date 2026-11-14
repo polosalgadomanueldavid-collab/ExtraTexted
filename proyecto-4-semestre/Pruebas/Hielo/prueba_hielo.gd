@@ -206,7 +206,7 @@ func _probar() -> void:
 	await _cuadros(8)
 	hielo.interactuar(jugador)
 	oficina._al_terminar_partida()
-	_verificar(not hielo.activo and not hielo.reparando and not hielo.panel.visible and not jugador.hielo_activo and not jugador.congelado and jugador.input_locked, "El final de partida limpia la reparación y mantiene bloqueados los controles")
+	_verificar(hielo.activo and not hielo.reparando and not hielo.panel.visible and jugador.hielo_activo and jugador.input_locked, "El final cierra la reparación y conserva el hielo para el relevo")
 	paused = false
 	oficina.queue_free()
 	await process_frame

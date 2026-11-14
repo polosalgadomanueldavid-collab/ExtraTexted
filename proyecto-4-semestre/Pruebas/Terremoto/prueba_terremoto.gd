@@ -40,6 +40,8 @@ func _probar() -> void:
 	var antes: Dictionary = oficina.bloqueos_visuales.duplicate()
 	var mesa_fija := oficina.get_node("Mesas verticales IZQ/Table_017") as Node3D
 	var original := mesa_fija.global_transform
+	var alfombra := oficina.get_node("AlfombraCentro") as Node3D
+	var reposo_alfombra := alfombra.transform
 	await _fisicas(65)
 	_verificar(evento.activo and evento.etapa == evento.Etapa.AVISO, "El reloj aleatorio inicia el aviso")
 	if not evento.activo:
@@ -61,6 +63,7 @@ func _probar() -> void:
 	_verificar(not desplazamiento.is_zero_approx() and not desplazamiento.is_equal_approx(camara._temblor),
 		"La cámara recibe el movimiento continuo durante el aviso")
 	await _hasta(7.95)
+	_verificar(alfombra.visible and alfombra.transform == reposo_alfombra, "La alfombra permanece en su sitio durante el aviso")
 	_verificar(intensidad > 0.99 and grafo.grietas.is_empty() and evento.grietas.is_empty(), "El suelo sigue entero hasta el pico")
 	_verificar(antes == oficina.bloqueos_visuales and is_equal_approx(iniciales, oficina.temporizador_bloqueos.time_left),
 		"Las mesas y su reloj se congelan desde el aviso")
@@ -68,6 +71,12 @@ func _probar() -> void:
 		var p := Vector3(trazada.centro.x, evento._altura, trazada.centro.y)
 		_verificar(not _suelo_bajo(p).is_empty(), "El futuro hueco aún soporta al jugador")
 	await _hasta(8.10)
+	_verificar(alfombra.visible and alfombra.position.y < reposo_alfombra.origin.y, "La alfombra empieza a caer al abrirse la grieta")
+	var alfombra_en_caida := alfombra.transform
+	paused = true
+	await _fisicas(12)
+	_verificar(alfombra.transform == alfombra_en_caida, "La caída de la alfombra respeta la pausa")
+	paused = false
 	_verificar(is_equal_approx(instante_rotura, 8.0) and evento.etapa == evento.Etapa.RUPTURA and evento.grietas.size() >= 10,
 		"Se abren al menos diez rasgaduras juntas en el segundo ocho")
 	for celda in grafo.grietas:
@@ -90,6 +99,7 @@ func _probar() -> void:
 	_verificar(caidas > 0 and mesa_fija.global_transform == original, "Solo se derriban bloqueos aleatorios")
 	oficina._on_temporizador_bloqueos_timeout()
 	await _fisicas(48)
+	_verificar(not alfombra.visible, "La alfombra se hunde y deja visible la grieta gigante")
 	_verificar(congelado == oficina.bloqueos_visuales and is_equal_approx(restantes, oficina.temporizador_bloqueos.time_left), "La distribución y su plazo permanecen congelados")
 	var rutas := grafo.celdas_alcanzables(grafo.celda_de_acceso(jugador.global_position))
 	for destino: Vector2i in GrafoPiso.DESTINOS.values():
@@ -147,6 +157,7 @@ func _probar() -> void:
 	await _fisicas(14)
 	_verificar(is_equal_approx(evento.tiempo, 24.0) and is_zero_approx(intensidad), "El sismo termina en el segundo veinticuatro")
 	_verificar(not evento.activo and evento.grietas.is_empty() and grafo.grietas.is_empty(), "Se retiran las grietas físicas y lógicas")
+	_verificar(alfombra.visible and alfombra.transform == reposo_alfombra, "La alfombra recupera su posición, giro y escala al cerrarse el suelo")
 	_verificar(not _suelo_bajo(centro).is_empty(), "El piso vuelve a soportar cuerpos")
 	_verificar(not oficina.temporizador_bloqueos.paused and oficina.temporizador_bloqueos.time_left < restantes, "Se reanuda el reloj de bloqueos")
 	oficina.temporizador_bloqueos.start(0.1)
@@ -160,6 +171,7 @@ func _probar() -> void:
 	_verificar(evento.activo, "F3 y T también inician el terremoto desde descanso")
 	if evento.activo:
 		await _hasta(8.85)
+		_verificar(not alfombra.visible, "La alfombra vuelve a caer en el siguiente terremoto")
 		_verificar(intensidad > 0.0 and evento.grietas.size() >= 10, "Descanso también tiembla durante el terremoto")
 		var gigante: Grieta = evento.grieta_gigante
 		var fondo := Vector3(gigante.centro.x, evento._altura, gigante.centro.y)

@@ -135,6 +135,8 @@ func sobre_bloqueo_temporal() -> bool:
 
 
 func tocando_suelo() -> bool:
+	if _jugador.en_relevo:
+		return activo and _jugador.visible and _jugador.quemandose_pies
 	return activo and _tiempo >= DURACION_ENTRADA and _jugador.is_on_floor() and not _jugador.esta_sentado() and not sobre_bloqueo_temporal() and _jugador.global_position.y <= PISO + 0.10
 
 
@@ -341,3 +343,10 @@ func _crear_barreras() -> void:
 			barrera.add_child(forma)
 			_barreras.add_child(barrera)
 			barrera.global_position = Vector3(limites.get_center().x, base + caja.size.y * 0.5, limites.get_center().z)
+
+
+func resolver_con_avatar() -> void:
+	if not activo:
+		return
+	detener()
+	terminado.emit()

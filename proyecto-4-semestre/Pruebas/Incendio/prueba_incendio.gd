@@ -260,7 +260,7 @@ func _probar() -> void:
 	_verificar(is_instance_valid(current_scene) and current_scene.scene_file_path == "res://Mundo/Oficina.tscn" and current_scene.evento_incendio.activo, "F6 prepara el incendio dentro de la oficina real")
 	current_scene.sistema_despacho.calma_operativa = 1
 	current_scene.evento_incendio._physics_process(25.0)
-	_verificar(current_scene.partida_finalizada and current_scene.sistema_despacho.terminada and not current_scene.evento_incendio.activo, "Ignorar el incendio puede agotar la cordura y finalizar la partida")
+	_verificar(current_scene.partida_finalizada and current_scene.sistema_despacho.terminada and current_scene.evento_incendio.activo, "Ignorar el incendio agota la cordura y el fuego continúa durante el relevo")
 	_verificar(current_scene.final_partida._datos.causa.get("incendio", false) and current_scene.sistema_despacho.recuperar_calma(15) == 0, "La derrota identifica el incendio y no permite revivir recuperando calma")
 	paused = false
 	current_scene.queue_free()

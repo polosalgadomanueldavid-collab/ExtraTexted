@@ -313,7 +313,8 @@ func _process(_delta: float) -> void:
 	if not _turno_anunciado and get_tree().current_scene == self and not MenuGlobal.capa.visible:
 		_turno_anunciado = true
 		anuncios.mostrar_inicio()
-	_duracion_partida += _delta
+	if not sistema_despacho.tiempo_detenido:
+		_duracion_partida += _delta
 	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
 	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
 		_calcular_ruta_a_proxima_estacion()
@@ -637,6 +638,8 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 
 
 func _puede_iniciar_evento() -> bool:
+	if is_instance_valid(sistema_despacho) and sistema_despacho.tiempo_detenido:
+		return false
 	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo) and (not is_instance_valid(evento_lava) or not evento_lava.activo) and (not is_instance_valid(evento_hielo) or not evento_hielo.activo)
 
 
@@ -740,7 +743,8 @@ func _al_iniciar_inundacion() -> void:
 
 func _al_terminar_inundacion() -> void:
 	_programar_evento_aleatorio()
-	anuncios.mostrar_evento("OFICINA", "DRENADA", "Movimiento normal restablecido")
+	if not partida_finalizada:
+		anuncios.mostrar_evento("OFICINA", "DRENADA", "Movimiento normal restablecido")
 
 
 func _al_caer_bloqueo_en_agua(punto: Vector3) -> void:
@@ -776,6 +780,8 @@ func _al_recuperar_mesa_incendiada(estacion_id: String) -> void:
 
 
 func _al_terminar_incendio() -> void:
+	if partida_finalizada:
+		return
 	# Recicla las cenizas, preserva al jugador/la hoja y genera cajones normales.
 	temporizador_bloqueos.paused = false
 	_cambiar_bloqueo_temporal()
@@ -820,6 +826,8 @@ func _al_caer_escombros() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if is_instance_valid(sistema_despacho) and sistema_despacho.tiempo_detenido:
+		return
 	if partida_finalizada or not evento_terremoto.activo or not is_instance_valid(papel_actual):
 		return
 	if papel_actual.portador == null and evento_terremoto.atrapo_hoja(papel_actual.global_position):
@@ -882,10 +890,10 @@ func _al_terminar_partida() -> void:
 	if partida_finalizada:
 		return
 	partida_finalizada = true
-	evento_incendio.detener()
-	evento_inundacion.detener()
-	evento_lava.detener()
-	evento_hielo.detener()
+	# El relevo sucede en la misma emergencia; sus efectos siguen activos.
+	evento_incendio.soltar()
+	evento_inundacion._cerrar_reparacion()
+	evento_hielo._cerrar_reparacion()
 	MenuGlobal.final_de_partida_activo = true
 	jugador.input_locked = true
 	if is_instance_valid(temporizador_denuncias):
@@ -932,21 +940,16 @@ func _iniciar_cinematica_relevo() -> void:
 	clasificador_evidencias.cancelar()
 	escaner_verificacion.cancelar()
 	evento_apagon.panel.hide()
-	evento_apagon.mascara.hide()
 	evento_apagon.indicador_luz.hide()
-	evento_apagon._restaurar_luces()
-	# La salida requiere suelo firme incluso si la última hoja se perdió en
-	# una grieta. La simulación permanece pausada y no se generan más eventos.
-	if evento_terremoto.activo:
-		evento_terremoto._cerrar()
-	_limpiar_bloqueos_temporales()
+	evento_apagon._al_cerrar_panel()
 	jugador.input_locked = true
-	jugador.velocity = Vector3.ZERO
+	if not jugador.hielo_activo:
+		jugador.velocity = Vector3.ZERO
 	cinematica_relevo = CinematicaRelevo.new()
 	cinematica_relevo.name = "CinematicaRelevo"
 	add_child(cinematica_relevo)
 	cinematica_relevo.terminada.connect(final_partida.finalizar_relevo)
-	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso)
+	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso, self)
 
 
 func _reiniciar_despues_del_final() -> void:

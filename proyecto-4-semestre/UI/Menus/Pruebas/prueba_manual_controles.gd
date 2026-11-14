@@ -16,7 +16,7 @@ func _probar() -> void:
 	var panel := MenuGlobal.panel_ayuda
 	for dimensiones: Vector2i in [Vector2i(1280, 720), Vector2i(960, 540), Vector2i(1024, 768), Vector2i(1920, 1080)]:
 		get_window().size = dimensiones
-		for indice: int in range(3):
+		for indice: int in range(panel.leyenda.paginas.size()):
 			panel.leyenda.pestanas[indice].grab_focus()
 			for cuadro: int in range(8):
 				await get_tree().process_frame

@@ -52,7 +52,12 @@ const PASOS := [
 @onready var tutorial_evento: HBoxContainer = %TutorialEvento
 @onready var boton_cerrar: Button = %CerrarAyuda
 @onready var pista: Label = %Pista
+@onready var cuerpo: PanelContainer = %Cuerpo
+@onready var navegacion: MarginContainer = %NavegacionTutoriales
+@onready var fila_pestanas: HBoxContainer = %PestanasTutoriales
 
+var pestanas_tutorial: Array[Button] = []
+var tutorial_actual: StringName = &"general"
 var _es_expediente := true
 var _estilos_cierre: Dictionary = {}
 
@@ -61,13 +66,99 @@ func _ready() -> void:
 	_crear_pasos(tutorial, PASOS)
 	_crear_pasos(tutorial_apagon, PASOS_APAGON)
 	_crear_demostracion_circuitos()
+	_crear_pestanas_tutorial()
 	for estado: String in ["normal", "hover", "pressed", "focus"]:
 		_estilos_cierre[estado] = boton_cerrar.get_theme_stylebox(estado)
 
 
 func _draw() -> void:
-	if _es_expediente:
+	if _es_expediente and not navegacion.visible:
 		draw_style_box(estilo_pestana, Rect2(44, -24, 210, 28))
+
+
+func _crear_pestanas_tutorial() -> void:
+	var nombres := {&"general": "General", &"apagon": "Apagón"}
+	for evento: StringName in GuiasEventos.GUIAS:
+		nombres[evento] = GuiasEventos.GUIAS[evento].nombre.capitalize()
+	var grupo := ButtonGroup.new()
+	for evento: StringName in nombres:
+		var boton := Button.new()
+		boton.name = "Pestana_" + evento
+		boton.text = nombres[evento]
+		boton.tooltip_text = "Ver tutorial: " + nombres[evento]
+		boton.set_meta("tutorial", evento)
+		boton.custom_minimum_size.y = 64
+		boton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		boton.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		boton.toggle_mode = true
+		boton.button_group = grupo
+		boton.add_theme_font_override("font", fuente_enfasis)
+		boton.add_theme_font_size_override("font_size", 27)
+		for estado: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			boton.add_theme_color_override(estado, PETROLEO)
+		boton.add_theme_stylebox_override("normal", _estilo_pestana(Color("e1cfa8"), false))
+		boton.add_theme_stylebox_override("hover", _estilo_pestana(Color("f3dfb8"), false))
+		boton.add_theme_stylebox_override("pressed", _estilo_pestana(CREMA, true))
+		boton.add_theme_stylebox_override("hover_pressed", _estilo_pestana(CREMA, true))
+		var foco := _estilo_pestana(Color.TRANSPARENT, true)
+		foco.draw_center = false
+		foco.border_color = Color("c45e47")
+		boton.add_theme_stylebox_override("focus", foco)
+		boton.pressed.connect(_seleccionar_tutorial.bind(evento))
+		boton.gui_input.connect(_entrada_pestana.bind(pestanas_tutorial.size()))
+		fila_pestanas.add_child(boton)
+		pestanas_tutorial.append(boton)
+	_actualizar_pestanas(&"general", false)
+
+
+func _estilo_pestana(color: Color, seleccionada: bool) -> StyleBoxFlat:
+	var estilo := estilo_pestana.duplicate() as StyleBoxFlat
+	estilo.bg_color = color
+	estilo.content_margin_left = 14
+	estilo.content_margin_right = 14
+	estilo.content_margin_top = 10
+	estilo.content_margin_bottom = 10
+	estilo.border_width_bottom = 0 if seleccionada else 4
+	return estilo
+
+
+func _actualizar_pestanas(evento: StringName, mostrar: bool) -> void:
+	tutorial_actual = evento
+	navegacion.visible = mostrar
+	# Reserva el mismo alto para todas las guías y mantiene las pestañas quietas.
+	custom_minimum_size.y = 960.0 if mostrar else 0.0
+	for boton: Button in pestanas_tutorial:
+		boton.set_pressed_no_signal(boton.get_meta("tutorial") == evento)
+	queue_redraw()
+
+
+func _seleccionar_tutorial(evento: StringName) -> void:
+	# Cambia únicamente la página; MenuGlobal conserva el origen y la pausa.
+	if evento == &"general":
+		presentar(false, false)
+	else:
+		presentar_tutorial_evento(evento, true)
+
+
+func _entrada_pestana(evento: InputEvent, indice: int) -> void:
+	if not evento is InputEventKey or not evento.pressed:
+		return
+	var destino := indice
+	match evento.keycode:
+		KEY_LEFT:
+			destino = (indice + pestanas_tutorial.size() - 1) % pestanas_tutorial.size()
+		KEY_RIGHT:
+			destino = (indice + 1) % pestanas_tutorial.size()
+		KEY_HOME:
+			destino = 0
+		KEY_END:
+			destino = pestanas_tutorial.size() - 1
+		_:
+			return
+	get_viewport().set_input_as_handled()
+	var boton := pestanas_tutorial[destino]
+	boton.grab_focus()
+	_seleccionar_tutorial(boton.get_meta("tutorial"))
 
 
 func _crear_pasos(destino: HBoxContainer, pasos: Array) -> void:
@@ -118,12 +209,15 @@ func controles_foco() -> Array[Control]:
 	var controles: Array[Control] = []
 	if leyenda.visible:
 		controles.append_array(leyenda.pestanas)
+	elif navegacion.visible:
+		controles.append_array(pestanas_tutorial)
 	controles.append(boton_cerrar)
 	return controles
 
 
 func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 	_establecer_expediente(not es_leyenda)
+	_actualizar_pestanas(&"general", not es_leyenda and not es_inicio)
 	titulo.add_theme_font_size_override("font_size", 60)
 	custom_minimum_size.x = 1040.0 if es_leyenda else TAMANO_EXPEDIENTE
 	seccion.text = "GUÍA DE DESPACHO"
@@ -144,12 +238,13 @@ func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 		panel.content_margin_right = 32
 		panel.content_margin_top = 32
 		panel.content_margin_bottom = 24
-		add_theme_stylebox_override("panel", panel)
+		cuerpo.add_theme_stylebox_override("panel", panel)
 		leyenda.seleccionar(0)
 
 
 func presentar_tutorial_evento(evento: StringName, desde_pausa: bool) -> void:
 	_establecer_expediente(true)
+	_actualizar_pestanas(evento, desde_pausa)
 	custom_minimum_size.x = TAMANO_EXPEDIENTE
 	titulo.add_theme_font_size_override("font_size", 60)
 	tutorial.hide()
@@ -176,9 +271,9 @@ func presentar_tutorial_evento(evento: StringName, desde_pausa: bool) -> void:
 func _establecer_expediente(activo: bool) -> void:
 	_es_expediente = activo
 	if activo:
-		add_theme_stylebox_override("panel", estilo_expediente)
+		cuerpo.add_theme_stylebox_override("panel", estilo_expediente)
 	else:
-		remove_theme_stylebox_override("panel")
+		cuerpo.remove_theme_stylebox_override("panel")
 	titulo.add_theme_color_override("font_color", PETROLEO if activo else CREMA)
 	seccion.add_theme_color_override("font_color", Color("9d4939") if activo else Color("ff9e8a"))
 	pista.visible = activo

@@ -222,7 +222,7 @@ func _probar() -> void:
 	oficina.sistema_despacho.calma_operativa = 1
 	lava._perdida_acumulada = 0.0
 	lava._physics_process(2.0)
-	_verificar(oficina.partida_finalizada and oficina.sistema_despacho.terminada and not lava.activo, "La pérdida de cordura puede terminar la partida y limpia el evento")
+	_verificar(oficina.partida_finalizada and oficina.sistema_despacho.terminada and lava.activo, "La pérdida de cordura termina la partida y conserva la lava durante el relevo")
 	_verificar(oficina.final_partida._datos.causa.get("lava", false) and oficina.sistema_despacho.recuperar_calma(15) == 0, "El final identifica la lava y no permite revivir con calma")
 	paused = false
 	oficina.queue_free()

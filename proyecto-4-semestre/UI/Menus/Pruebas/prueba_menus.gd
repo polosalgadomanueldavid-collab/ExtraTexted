@@ -28,6 +28,7 @@ func _probar() -> void:
 	tutorial_menu.pressed.emit()
 	_verificar(MenuGlobal.panel_ayuda.tutorial.is_visible_in_tree() and not get_tree().paused, "Tutorial disponible desde el menú principal")
 	await _capturar("00_tutorial_menu")
+	await _probar_pestanas_tutorial(false)
 	_pulsar_escape()
 	await get_tree().process_frame
 	_verificar(not MenuGlobal.capa.visible and tutorial_menu.has_focus(), "ESC cierra el tutorial y devuelve el foco al menú")
@@ -191,6 +192,7 @@ func _probar() -> void:
 	var tutorial_pausa := MenuGlobal.get_node("%TutorialPausa") as Button
 	tutorial_pausa.pressed.emit()
 	_verificar(MenuGlobal.panel_ayuda.tutorial.is_visible_in_tree() and get_tree().paused, "La pausa permite consultar el tutorial")
+	await _probar_pestanas_tutorial(true)
 	_pulsar_escape()
 	await get_tree().process_frame
 	_verificar(MenuGlobal.panel_pausa.is_visible_in_tree() and get_tree().paused and tutorial_pausa.has_focus(), "ESC devuelve el foco a Tutorial en la pausa")
@@ -321,6 +323,38 @@ func _probar() -> void:
 		get_tree().quit(1)
 
 
+func _probar_pestanas_tutorial(desde_pausa: bool) -> void:
+	var panel := MenuGlobal.panel_ayuda
+	var vistos: Dictionary = get_tree().current_scene.tutoriales_vistos.duplicate() if desde_pausa else {}
+	_verificar(panel.pestanas_tutorial.size() == 7 and panel.navegacion.is_visible_in_tree(), "El expediente ofrece General y los seis eventos")
+	for boton: Button in panel.pestanas_tutorial:
+		for cuadro: int in range(4):
+			await get_tree().process_frame
+		_clic_control(boton)
+		await get_tree().process_frame
+		var evento: StringName = boton.get_meta("tutorial")
+		var titulo := "TU PRIMER TURNO"
+		if evento == &"apagon":
+			titulo = "RESTABLECE LA LUZ"
+		elif evento != &"general":
+			titulo = panel.GuiasEventos.GUIAS[evento].titulo
+		_verificar(panel.tutorial_actual == evento and panel.titulo.text == titulo and boton.button_pressed, "La pestaña abre su guía: " + evento)
+		_verificar(get_tree().paused == desde_pausa and panel.boton_cerrar.text == "VOLVER", "Consultar conserva el origen y la pausa: " + evento)
+		await _capturar("tutorial_%s_%s" % ["pausa" if desde_pausa else "menu", evento])
+	if desde_pausa:
+		_verificar(get_tree().current_scene.tutoriales_vistos == vistos and get_tree().current_scene.evento_para_consultar() == &"", "Consultar guías no activa eventos ni marca tutoriales como vistos")
+	_pulsar_tecla(KEY_HOME)
+	await get_tree().process_frame
+	_verificar(panel.tutorial.visible and panel.pestanas_tutorial[0].has_focus(), "Inicio vuelve a la pestaña General")
+	_pulsar_tecla(KEY_RIGHT)
+	await get_tree().process_frame
+	_verificar(panel.tutorial_apagon.visible and panel.pestanas_tutorial[1].has_focus(), "Las flechas cambian la guía seleccionada")
+	_pulsar_tecla(KEY_HOME)
+	_pulsar_tecla(KEY_TAB, true)
+	await get_tree().process_frame
+	_verificar(panel.boton_cerrar.has_focus(), "El foco permanece entre las pestañas y Volver")
+
+
 func _clic_control(control: Control) -> void:
 	var centro := control.get_global_rect().get_center()
 	var movimiento := InputEventMouseMotion.new()
@@ -371,6 +405,10 @@ func _restaurar_archivo() -> void:
 
 
 func _capturar(nombre: String) -> void:
+	# Los contenedores anidados resuelven su tamaño en varios cuadros, también
+	# sin renderizado; el siguiente clic debe usar las posiciones definitivas.
+	for cuadro: int in range(4):
+		await get_tree().process_frame
 	if DisplayServer.get_name() == "headless" or not "--capturas" in OS.get_cmdline_user_args():
 		return
 	await get_tree().process_frame
