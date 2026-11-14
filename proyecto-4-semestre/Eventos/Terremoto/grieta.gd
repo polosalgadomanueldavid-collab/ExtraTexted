@@ -6,6 +6,7 @@ const TRAMOS := 8
 const SEPARACION_ENTRE_BORDES := 0.25
 var centro: Vector2
 var contorno := PackedVector2Array()
+var contorno_hueco := PackedVector2Array()
 var limites: Rect2
 var saltable := false
 var _izquierda := PackedVector2Array()
@@ -38,6 +39,10 @@ func trazar(origen: Vector2, largo: float, ancho: float, angulo: float, azar: Ra
 
 func contiene(punto: Vector2) -> bool:
 	return limites.has_point(punto) and Geometry2D.is_point_in_polygon(punto, contorno)
+
+
+func contiene_hueco(punto: Vector2) -> bool:
+	return not contorno_hueco.is_empty() and Geometry2D.is_point_in_polygon(punto, contorno_hueco)
 
 
 func frente_a_los_pies(pies: Vector3, direccion: Vector3) -> bool:
@@ -85,26 +90,33 @@ func invade_borde(poligono: PackedVector2Array, caja: Rect2) -> bool:
 	return false
 
 
-func abrir(suelo: CSGBox3D, piso_visual: MeshInstance3D) -> void:
-	global_position.y = piso_visual.global_position.y + 0.003 if is_instance_valid(piso_visual) else suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y
+func abrir(suelo: CSGBox3D) -> void:
+	global_position.y = suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y + 0.003
 	_corte = CSGPolygon3D.new()
 	_corte.operation = CSGShape3D.OPERATION_SUBTRACTION
 	var subsuelo := StandardMaterial3D.new()
 	subsuelo.albedo_color = Color("322933")
 	_corte.material = subsuelo
 	var exterior := _contorno_exterior()
+	contorno_hueco = exterior
 	_corte.polygon = exterior
-	_corte.depth = suelo.size.y + 0.4
-	suelo.add_child(_corte)
+	_corte.depth = 2.0
+	# El piso y sus cortes son operandos del mismo CSGCombiner.
+	var combinador := suelo.get_parent() as CSGCombiner3D
+	if combinador == null:
+		push_error("El piso del terremoto debe estar dentro de un CSGCombiner3D.")
+		_corte.free()
+		return
+	combinador.add_child(_corte)
 	_corte.global_transform = Transform3D(Basis(Vector3.RIGHT, PI / 2.0),
-		Vector3(0, global_position.y - suelo.size.y - 0.2, 0))
+		Vector3(0, global_position.y + 0.01, 0))
 	_piedra = StandardMaterial3D.new()
 	_piedra.vertex_color_use_as_albedo = true
 	_piedra.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_modelar_paredes(exterior)
 	if saltable:
 		add_to_group(&"bordes_grietas_saltables")
-	var superficie := (suelo.material as StandardMaterial3D).albedo_color
+	var superficie := Color("32343c")
 	for i in range(TRAMOS):
 		var mitad_a := _izquierda[i].lerp(_derecha[i], 0.46 + 0.09 * sin(i * 3.0))
 		var mitad_b := _izquierda[i + 1].lerp(_derecha[i + 1], 0.46 + 0.09 * sin((i + 1) * 3.0))

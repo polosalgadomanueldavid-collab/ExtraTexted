@@ -43,7 +43,7 @@ func _probar() -> void:
 			continue
 		_jugador = _escena.get("jugador") as CharacterBody3D
 		_grafo = _escena.get("grafo_piso") as GrafoPiso
-		var piso := _escena.get_node("Pared, suelo, techo/Suelo") as CSGBox3D
+		var piso := _escena.get_node("Pared, suelo, techo/PisoTerremoto/Suelo") as CSGBox3D
 		var limites_piso: AABB = piso.global_transform * AABB(-piso.size * 0.5, piso.size)
 		_altura_piso = limites_piso.end.y
 		_verificar(_jugador.is_on_floor(), "El jugador aterriza normalmente con los muebles nuevos")

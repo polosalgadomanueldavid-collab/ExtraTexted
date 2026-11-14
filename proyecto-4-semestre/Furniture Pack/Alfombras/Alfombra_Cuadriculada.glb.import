@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://j2mp3s4s6pkk"
-path="res://.godot/imported/Alfombra_Cuadriculada.glb-16eedf5425cc85c0f4d1505e676e88e2.scn"
+path="res://.godot/imported/Alfombra_Cuadriculada.glb-bdc0453ec208043cec09153800025e37.scn"
 
 [deps]
 
 source_file="res://Furniture Pack/Alfombras/Alfombra_Cuadriculada.glb"
-dest_files=["res://.godot/imported/Alfombra_Cuadriculada.glb-16eedf5425cc85c0f4d1505e676e88e2.scn"]
+dest_files=["res://.godot/imported/Alfombra_Cuadriculada.glb-bdc0453ec208043cec09153800025e37.scn"]
 
 [params]
 

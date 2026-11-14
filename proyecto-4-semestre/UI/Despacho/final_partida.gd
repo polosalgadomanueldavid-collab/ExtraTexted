@@ -205,7 +205,9 @@ func _ajustar() -> void:
 	_tarjeta.size = Vector2(minf(720.0, size.x - 40.0), 260.0)
 	_tarjeta.position = Vector2(20.0, maxf(20.0, size.y - _tarjeta.size.y - 25.0))
 	_escala_libro = minf(size.x / 1350.0, size.y / 765.0)
-	_cuaderno.position = (size - TAMANO_LIBRO * _escala_libro) * 0.5
+	# El pivote central ya compensa la escala; centrar aquí el tamaño escalado
+	# aplicaba ese desplazamiento dos veces y cortaba el cuaderno por arriba/izquierda.
+	_cuaderno.position = (size - TAMANO_LIBRO) * 0.5
 	_cuaderno.scale = Vector2.ONE * _escala_libro
 
 

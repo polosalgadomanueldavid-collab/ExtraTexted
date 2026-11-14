@@ -81,15 +81,15 @@ mesh = SubResource("ArrayMesh_0nvv5")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.010566711, 0.1287098, -0.10739708)
 shape = SubResource("BoxShape3D_18hgq")
 
-[node name="Pantalla" type="MeshInstance3D" parent="." unique_id=1888809002]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0014149472, 0.20278445, 0.0021172762)
-material_override = SubResource("StandardMaterial3D_jr5mb")
-mesh = SubResource("QuadMesh_4xfga")
-
 [node name="SubViewport" type="SubViewport" parent="." unique_id=2071542952]
 size = Vector2i(423, 266)
 
 [node name="Control" parent="SubViewport" unique_id=2075789570 instance=ExtResource("2_18hgq")]
+
+[node name="Pantalla" type="MeshInstance3D" parent="." unique_id=1888809002]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0014149472, 0.20278445, 0.0021172762)
+material_override = SubResource("StandardMaterial3D_jr5mb")
+mesh = SubResource("QuadMesh_4xfga")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=646146611]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00706324, 0.21170448, 0.13046288)

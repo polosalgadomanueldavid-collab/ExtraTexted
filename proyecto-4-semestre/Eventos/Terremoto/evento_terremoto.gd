@@ -9,18 +9,17 @@ enum Etapa { INACTIVO, AVISO, RUPTURA, RECUPERACION }
 
 const Grieta := preload("res://Eventos/Terremoto/grieta.gd")
 const ZONA_MESAS := Rect2(-3.72, 1.04, 5.42, 4.72)
-const ANCHO_PISO := 7.0
-const LARGO_PISO := 12.5
-const TAMANO_CORTE_PISO := 0.125
 const SEGUNDOS_POR_ETAPA := 8.0
 const DURACION := 3.0 * SEGUNDOS_POR_ETAPA
 const TIEMPO_CIERRE := 0.60
 # La base del policía mide 0.45 × 0.31 m y proyecta hasta 0.55 m en diagonal.
 const ANCHOS: Array[float] = [1.33, 0.79, 0.73, 0.69]
 const LARGOS: Array[float] = [2.18, 1.70, 1.42, 1.15]
+const ANCHO_PISO := 7.0
+const LARGO_PISO := 12.5
+const RESOLUCION_MASCARA := 32
 
 @export var suelo: CSGBox3D
-@export var piso_visual: MeshInstance3D
 @export_range(5.0, 120.0, 1.0) var espera_minima := 25.0
 @export_range(5.0, 120.0, 1.0) var espera_maxima := 40.0
 
@@ -45,12 +44,15 @@ var _altura: float
 var _ultimo_apoyo: Vector3
 var _solto_gravilla := false
 var _huella_hoja: Rect2
-var _malla_piso_original: Mesh
+var _material_piso: ShaderMaterial
+var _colision_jugador: CollisionShape3D
 
 
 func _ready() -> void:
-	if is_instance_valid(piso_visual):
-		_malla_piso_original = piso_visual.mesh
+	var material := suelo.material as ShaderMaterial
+	if material != null:
+		_material_piso = material.duplicate() as ShaderMaterial
+		suelo.material = _material_piso
 	_reloj = Timer.new()
 	_reloj.one_shot = true
 	_reloj.process_callback = Timer.TIMER_PROCESS_PHYSICS
@@ -76,6 +78,7 @@ func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoj
 		return false
 	_grafo = grafo
 	_jugador = jugador
+	_colision_jugador = jugador.get_node_or_null("Colision") as CollisionShape3D
 	_bloqueos = bloqueos
 	_huella_hoja = huella_hoja
 	var origen := grafo.celda_de_acceso(jugador.global_position)
@@ -123,8 +126,8 @@ func _abrir_suelo() -> void:
 	_grafo.grietas.assign(_celdas_rotas)
 	_celdas_rotas.clear()
 	for grieta in grietas:
-		grieta.abrir(suelo, piso_visual)
-	_recortar_piso_en_grietas()
+		grieta.abrir(suelo)
+	_actualizar_mascara_huecos()
 	for celda in _celdas_caidas:
 		var bloqueo := _bloqueos[celda] as StaticBody3D
 		bloqueo.call("caer_en_grieta", _celdas_caidas[celda].centro)
@@ -244,7 +247,16 @@ func _physics_process(delta: float) -> void:
 	temblor_actualizado.emit(tiempo, intensidad * _peso_en_zona_de_juego())
 	if etapa == Etapa.AVISO:
 		return
-	if _jugador.global_position.y < _altura - 0.55:
+	var punto_jugador := Vector2(_jugador.global_position.x, _jugador.global_position.z)
+	var dentro_de_hueco := false
+	for grieta in grietas:
+		if grieta.contiene_hueco(punto_jugador):
+			dentro_de_hueco = true
+			break
+	if dentro_de_hueco and _colision_jugador != null and not _colision_jugador.disabled:
+		_colision_jugador.set_deferred("disabled", true)
+		_jugador.velocity.y = minf(_jugador.velocity.y, -2.0)
+	if _jugador.global_position.y < _altura - 1.45:
 		_devolver_a_tierra()
 	elif not _solto_gravilla and _jugador.velocity.y < 0.0 and _jugador.global_position.y < _altura - 0.10:
 		var pies := Vector2(_jugador.global_position.x, _jugador.global_position.z)
@@ -279,19 +291,23 @@ func _peso_en_zona_de_juego() -> float:
 
 func _devolver_a_tierra() -> void:
 	_solto_gravilla = false
+	if _colision_jugador != null:
+		_colision_jugador.set_deferred("disabled", false)
 	_jugador.global_position = _ultimo_apoyo + Vector3.UP * 0.04
 	_jugador.velocity = Vector3.ZERO
 	_jugador.reset_physics_interpolation()
 
 
 func _cerrar() -> void:
+	if _colision_jugador != null:
+		_colision_jugador.set_deferred("disabled", false)
+	if _material_piso != null:
+		_material_piso.set_shader_parameter("usar_mascara_huecos", false)
 	if _jugador.global_position.y < _altura - 0.025:
 		_devolver_a_tierra()
 	for grieta in grietas:
 		grieta.cerrar()
 	grietas.clear()
-	if is_instance_valid(piso_visual) and _malla_piso_original != null:
-		piso_visual.mesh = _malla_piso_original
 	_grafo.grietas.clear()
 	_grafo.construir_adyacencia()
 	set_physics_process(false)
@@ -300,65 +316,24 @@ func _cerrar() -> void:
 	programar()
 
 
-func _recortar_piso_en_grietas() -> void:
-	if not is_instance_valid(piso_visual) or _malla_piso_original == null:
+func _actualizar_mascara_huecos() -> void:
+	if _material_piso == null:
 		return
-	var cortes: Array[Dictionary] = []
+	var ancho := int(ANCHO_PISO * RESOLUCION_MASCARA)
+	var alto := int(LARGO_PISO * RESOLUCION_MASCARA)
+	var imagen := Image.create(ancho, alto, false, Image.FORMAT_R8)
+	imagen.fill(Color.WHITE)
+	var origen := Vector2(GrafoPiso.ORIGEN_X, GrafoPiso.ORIGEN_Z)
 	for grieta in grietas:
-		var corte := PackedVector2Array()
-		var limites := Rect2()
-		for punto in grieta.contorno:
-			var local := piso_visual.to_local(Vector3(punto.x, piso_visual.global_position.y, punto.y))
-			var p := Vector2(local.x, local.z)
-			corte.append(p)
-			limites = Rect2(p, Vector2.ZERO) if corte.size() == 1 else limites.expand(p)
-		cortes.append({"poligono": corte, "limites": limites})
-	var superficie := SurfaceTool.new()
-	superficie.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var vertices_generados := 0
-	var columnas := int(ANCHO_PISO / TAMANO_CORTE_PISO)
-	var filas := int(LARGO_PISO / TAMANO_CORTE_PISO)
-	for fila in range(filas):
-		for columna in range(columnas):
-			var origen := Vector2(-ANCHO_PISO * 0.5 + columna * TAMANO_CORTE_PISO,
-				-LARGO_PISO * 0.5 + fila * TAMANO_CORTE_PISO)
-			var celda := Rect2(origen, Vector2.ONE * TAMANO_CORTE_PISO)
-			var poligonos: Array[PackedVector2Array] = [PackedVector2Array([
-				origen, Vector2(celda.end.x, origen.y), celda.end, Vector2(origen.x, celda.end.y)
-			])]
-			for corte: Dictionary in cortes:
-				if not celda.intersects(corte["limites"]):
-					continue
-				var siguientes: Array[PackedVector2Array] = []
-				for poligono in poligonos:
-					var restos := Geometry2D.clip_polygons(poligono, corte["poligono"])
-					if restos.size() == 2 and Geometry2D.is_polygon_clockwise(restos[0]) != Geometry2D.is_polygon_clockwise(restos[1]):
-						siguientes.clear()
-						break
-					siguientes.append_array(restos)
-				poligonos = siguientes
-				if poligonos.is_empty():
-					break
-			for poligono in poligonos:
-				var triangulos := Geometry2D.triangulate_polygon(poligono)
-				for i in range(0, triangulos.size(), 3):
-					var a := poligono[triangulos[i]]
-					var b := poligono[triangulos[i + 1]]
-					var c := poligono[triangulos[i + 2]]
-					if (b - a).cross(c - a) > 0.0:
-						var intercambio := b
-						b = c
-						c = intercambio
-					_agregar_vertice_piso(superficie, a)
-					_agregar_vertice_piso(superficie, b)
-					_agregar_vertice_piso(superficie, c)
-					vertices_generados += 3
-	if vertices_generados > 0:
-		piso_visual.mesh = superficie.commit()
-
-
-func _agregar_vertice_piso(superficie: SurfaceTool, punto: Vector2) -> void:
-	superficie.set_normal(Vector3.UP)
-	superficie.set_uv(Vector2((punto.x + ANCHO_PISO * 0.5) / ANCHO_PISO,
-		(punto.y + LARGO_PISO * 0.5) / LARGO_PISO))
-	superficie.add_vertex(Vector3(punto.x, 0.0, punto.y))
+		var inicio_x := clampi(int(floor((grieta.limites.position.x - origen.x) * RESOLUCION_MASCARA)), 0, ancho - 1)
+		var fin_x := clampi(int(ceil((grieta.limites.end.x - origen.x) * RESOLUCION_MASCARA)), 0, ancho - 1)
+		var inicio_y := clampi(int(floor((grieta.limites.position.y - origen.y) * RESOLUCION_MASCARA)), 0, alto - 1)
+		var fin_y := clampi(int(ceil((grieta.limites.end.y - origen.y) * RESOLUCION_MASCARA)), 0, alto - 1)
+		for y in range(inicio_y, fin_y + 1):
+			for x in range(inicio_x, fin_x + 1):
+				var punto := origen + Vector2((float(x) + 0.5) / RESOLUCION_MASCARA,
+					(float(y) + 0.5) / RESOLUCION_MASCARA)
+				if Geometry2D.is_point_in_polygon(punto, grieta.contorno_hueco):
+					imagen.set_pixel(x, y, Color.BLACK)
+	_material_piso.set_shader_parameter("mascara_huecos", ImageTexture.create_from_image(imagen))
+	_material_piso.set_shader_parameter("usar_mascara_huecos", true)
