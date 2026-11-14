@@ -105,9 +105,9 @@ func _probar_cafe() -> void:
 	_saldo_y_calma(200, 60)
 	await _colocar(_postura_cafe)
 	var tiempo := _despacho.obtener_tiempo_restante(_caso.id)
-	await _tecla(KEY_E)
-	_verificar(_estado().preparando, "La E normal inicia la preparación de café")
-	await _tecla(KEY_E)
+	await _pedir_cafe()
+	_verificar(_estado().preparando, "E abre la cafetera y el pulsador inicia la preparación")
+	_zona.preparar_cafe()
 	await _segundos(0.25)
 	_verificar(_despacho.calma_operativa == 60, "Preparar café no recupera calma antes de beber")
 	paused = true
@@ -117,7 +117,7 @@ func _probar_cafe() -> void:
 	await _tecla(KEY_F)
 	_verificar(_estado() == anterior and _despacho.puntuacion.puntos == puntos and _despacho.calma_operativa == 60, "Pausar congela la preparación y bloquea el consumo")
 	paused = false
-	await _esperar_estado("tiene_cafe", true, 5.0)
+	await _recibir_cafe()
 	_verificar(not _estado().preparando and _estado().tiene_cafe, "La preparación entrega una taza de café al jugador")
 	_verificar(_despacho.puntuacion.puntos == 150, "La preparación cobra exactamente cincuenta puntos una sola vez")
 	_verificar(_despacho.calma_operativa == 60, "Recibir la taza mantiene pendiente su beneficio")
@@ -141,8 +141,8 @@ func _probar_cafe() -> void:
 	_verificar(_despacho.calma_operativa == 75 and _despacho.puntuacion.puntos == 150, "F sin café no concede calma ni modifica el saldo")
 	_saldo_y_calma(150, 95)
 	await _colocar(_postura_cafe)
-	await _tecla(KEY_E)
-	await _esperar_estado("tiene_cafe", true, 5.0)
+	await _pedir_cafe()
+	await _recibir_cafe()
 	await _tecla(KEY_F)
 	await _esperar_estado("tiene_cafe", false, 4.0)
 	await _segundos(0.8)
@@ -152,7 +152,7 @@ func _probar_cafe() -> void:
 func _probar_cancelar_preparacion() -> void:
 	_saldo_y_calma(200, 60)
 	await _colocar(_postura_cafe)
-	await _tecla(KEY_E)
+	await _pedir_cafe()
 	_verificar(_estado().preparando and _jugador.input_locked, "Preparar café bloquea el movimiento hasta servir o cancelar")
 	await _segundos(0.35)
 	await _tecla(KEY_ESCAPE)
@@ -184,8 +184,8 @@ func _probar_cafetera_sin_luz() -> void:
 func _probar_pausa_antes_de_beber() -> void:
 	_saldo_y_calma(200, 60)
 	await _colocar(_postura_cafe)
-	await _tecla(KEY_E)
-	await _esperar_estado("tiene_cafe", true, 5.0)
+	await _pedir_cafe()
+	await _recibir_cafe()
 	var taza: Node = _zona.get("taza_en_mano")
 	var id_taza := taza.get_instance_id()
 	await _tecla(KEY_F)
@@ -208,8 +208,8 @@ func _probar_reinicio_sentado_con_cafe() -> void:
 	await _colocar(_postura_cafe)
 	var capa := _jugador.collision_layer
 	var mascara := _jugador.collision_mask
-	await _tecla(KEY_E)
-	await _esperar_estado("tiene_cafe", true, 5.0)
+	await _pedir_cafe()
+	await _recibir_cafe()
 	var taza := _zona.get("taza_en_mano") as MeshInstance3D
 	await _colocar(_postura_sofa)
 	await _tecla(KEY_E)
@@ -230,8 +230,8 @@ func _probar_reinicio_sentado_con_cafe() -> void:
 func _probar_cafe_sentado() -> void:
 	_saldo_y_calma(200, 60)
 	await _colocar(_postura_cafe)
-	await _tecla(KEY_E)
-	await _esperar_estado("tiene_cafe", true, 5.0)
+	await _pedir_cafe()
+	await _recibir_cafe()
 	var taza: Node = _zona.get("taza_en_mano")
 	_verificar(taza != null and taza.get_instance_id() in _ids_tazas, "El café usa una de las tazas reales del mueble")
 	await _colocar(_postura_sofa)
@@ -256,7 +256,7 @@ func _probar_papel() -> void:
 	hoja.tomar(_jugador)
 	_oficina.papel_actual = hoja
 	await _colocar(_postura_cafe)
-	await _tecla(KEY_E)
+	await _pedir_cafe()
 	await _segundos(0.2)
 	_verificar(_jugador.papel_en_mano == hoja and hoja.portador == _jugador, "La cafetera conserva el papel de la denuncia que está en la mano")
 	_verificar(not _estado().preparando and not _estado().tiene_cafe and _despacho.puntuacion.puntos == 200, "Tener las manos ocupadas impide otro café sin gastar puntos")
@@ -314,7 +314,7 @@ func _probar_sofa() -> void:
 func _probar_cero_calma() -> void:
 	_saldo_y_calma(200, 0)
 	await _colocar(_postura_cafe)
-	await _tecla(KEY_E)
+	await _pedir_cafe()
 	await _segundos(0.2)
 	_verificar(not _estado().preparando and _despacho.puntuacion.puntos == 200, "Una partida sin calma no se revive comprando café")
 	await _colocar(_postura_sofa)
@@ -341,7 +341,7 @@ func _probar_salida() -> void:
 		_verificar(false, "Reentrar permite volver a alcanzar la cafetera")
 		return
 	await _colocar(_postura_cafe)
-	await _tecla(KEY_E)
+	await _pedir_cafe()
 	_verificar(_estado().preparando and _despacho.puntuacion.puntos == 200, "Una nueva preparación mantiene pendiente el cobro hasta entregar la taza")
 	_oficina.remove_child(_zona)
 	_zona.free()
@@ -404,6 +404,20 @@ func _colocar(postura: Dictionary) -> void:
 	_jugador.set_physics_process(true)
 	await _fisicas(2)
 	_jugador.set_physics_process(false)
+
+
+func _pedir_cafe() -> void:
+	await _tecla(KEY_E)
+	if _zona.panel_cafetera.visible:
+		_zona.panel_cafetera.boton_servir.pressed.emit()
+		await _cuadros(2)
+
+
+func _recibir_cafe() -> void:
+	await _esperar_estado("cafe_listo", true, 5.0)
+	_zona.panel_cafetera.boton_taza.pressed.emit()
+	await _cuadros(2)
+	_verificar(_estado().tiene_cafe, "Recoger entrega la taza preparada")
 
 
 func _esperar_estado(clave: String, valor: bool, segundos: float) -> void:

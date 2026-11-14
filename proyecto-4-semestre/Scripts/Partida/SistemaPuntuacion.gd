@@ -38,3 +38,11 @@ func gastar_puntos(cantidad: int) -> bool:
 	_puntos -= cantidad
 	puntos_actualizados.emit(_puntos)
 	return true
+
+
+func sumar_puntos_debug(cantidad: int) -> void:
+	# Saldo de prueba: no registra denuncias ni altera el puntaje de clasificación.
+	if not OS.is_debug_build() or cantidad <= 0 or cantidad > 1000000000:
+		return
+	_puntos += cantidad
+	puntos_actualizados.emit(_puntos)

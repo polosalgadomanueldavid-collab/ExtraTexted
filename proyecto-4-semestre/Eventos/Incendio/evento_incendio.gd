@@ -400,21 +400,19 @@ func _actualizar_panel() -> void:
 			panel.completadas += 1
 	if panel.completadas == panel.total:
 		panel.progreso = 1.0
-	panel.instruccion = "Acércate al fuego y mantén E para apagarlo" if equipado else "Busca el extintor en la zona de descanso"
 	var cercano := obtener_objetivo(_jugador) as Foco
 	panel.nombre_mesa = cercano.nombre_visible if cercano != null and equipado else ""
 	panel.progreso_mesa = cercano.apagado if cercano != null else 0.0
 	panel.apagando_mesa = rociando and cercano != null
 	if tiempo <= SEGUNDOS_GRACIA_CORDURA:
-		panel.estado_cordura = "Cordura en %d s · Apaga hasta 3 mesas a la vez" % ceili(SEGUNDOS_GRACIA_CORDURA - tiempo)
+		panel.estado_cordura = "Cordura en %d s" % ceili(SEGUNDOS_GRACIA_CORDURA - tiempo)
 	else:
 		var etapa := 0
 		for umbral: float in UMBRALES_DESGASTE:
 			if tiempo >= umbral:
 				etapa += 1
-		panel.estado_cordura = "Pierdes %d de cordura/s · ¡Apaga el incendio!" % (etapa * PERDIDA_BASE_CORDURA)
+		panel.estado_cordura = "Pierdes %d de cordura/s" % (etapa * PERDIDA_BASE_CORDURA)
 	if not activo:
-		panel.instruccion = "Oficina recuperada · vuelven los bloqueos normales"
 		panel.estado_cordura = ""
 	panel.queue_redraw()
 

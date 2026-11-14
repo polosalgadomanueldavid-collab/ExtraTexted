@@ -66,7 +66,7 @@ func _probar() -> void:
 	if not inicio:
 		quit(1)
 		return
-	_verificar(oficina.anuncios.titulo == "¡INUNDACIÓN!", "Se presenta el aviso del evento")
+	_verificar(oficina.anuncios.titulo == "REPARA LA" and oficina.anuncios.segunda_linea == "TUBERÍA", "El aviso presenta el objetivo de reparar la tubería")
 	_verificar(not oficina.evento_apagon.iniciar_apagon() and not oficina._iniciar_incendio(), "El coordinador impide eventos simultáneos")
 	await _cuadros(42)
 	await _capturar("01_aviso")

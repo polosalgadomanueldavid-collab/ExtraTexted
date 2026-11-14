@@ -1,6 +1,6 @@
 extends Node3D
-## La física horizontal y el grafo permanecen anclados; solo el aspecto flota.
-## Así el agua no permite atravesar mesas ni cambia las celdas de los cajones.
+## Los muebles conservan sus obstáculos de navegación mientras flotan.
+## La alfombra tiene una colisión móvil que acompaña su superficie en el agua.
 
 signal iniciado
 signal terminado
@@ -32,13 +32,16 @@ var _oficina: Node3D
 var _jugador: Player
 var _flotantes: Array[Dictionary] = []
 var _colisiones: Array[Dictionary] = []
+var _alfombra: Node3D
+var _colision_alfombra: AnimatableBody3D
+var _forma_alfombra: BoxShape3D
+var _centro_alfombra := Vector3.ZERO
 var _reloj_ondas := 0.0
 var _raton_anterior: Input.MouseMode
 var _bloqueo_anterior := false
 var _chorro: CPUParticles3D
 var _valvula: Node3D
 var _union: MeshInstance3D
-var _aviso: Label
 var _efectos: Node3D
 var _ambiente: AudioStreamPlayer
 var _salpicaduras: Array[AudioStreamPlayer] = []
@@ -52,6 +55,7 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 	_jugador.control_inundacion = self
 	_jugador.reset_performed.connect(_cerrar_reparacion)
 	_jugador.brazada_agua.connect(_al_brazar)
+	_crear_colision_alfombra()
 	_crear_agua()
 	_crear_tuberias()
 	_efectos = Node3D.new()
@@ -66,28 +70,6 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 	panel.reparado.connect(_al_reparar)
 	indicador = Indicador.new()
 	oficina.get_node("CanvasLayer").add_child(indicador)
-	_aviso = Label.new()
-	_aviso.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_aviso.offset_left = -225
-	_aviso.offset_right = 225
-	_aviso.offset_top = 20
-	_aviso.offset_bottom = 88
-	_aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_aviso.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_aviso.add_theme_font_override("font", preload("res://UI/Menus/ArtePiloto/Nunito.ttf"))
-	_aviso.add_theme_font_size_override("font_size", 20)
-	_aviso.add_theme_color_override("font_color", Color("d2faff"))
-	_aviso.add_theme_color_override("font_outline_color", Color("102c42"))
-	_aviso.add_theme_constant_override("outline_size", 2)
-	var fondo_aviso := StyleBoxFlat.new()
-	fondo_aviso.bg_color = Color("173b50")
-	fondo_aviso.border_color = Color("76d7e7")
-	fondo_aviso.set_border_width_all(2)
-	fondo_aviso.set_corner_radius_all(16)
-	_aviso.add_theme_stylebox_override("normal", fondo_aviso)
-	_aviso.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	oficina.get_node("CanvasLayer").add_child(_aviso)
-	_aviso.hide()
 	_ambiente = Sonidos.crear_reproductor(self, "AguaInundacion", preload("res://Audios/Eventos/inundacion_agua.wav"), -26.0, true)
 	for i in 3:
 		_salpicaduras.append(Sonidos.crear_reproductor(self, "Salpicadura%d" % i, preload("res://Audios/Eventos/inundacion_salpicadura.wav"), -20.0))
@@ -111,10 +93,13 @@ func iniciar() -> bool:
 	for mesa: Node3D in get_tree().get_nodes_in_group("mesas_incendiables"):
 		if _oficina.is_ancestor_of(mesa):
 			_registrar_flotante(mesa)
-	for ruta: String in ["ZonaDescanso/SofaL", "ZonaDescanso/RinconCafe"]:
+	for ruta: String in ["ZonaDescanso/SofaL", "ZonaDescanso/RinconCafe", "MaquinaExpendedora/Modelo", "PlantaEsquinaCuadranteInferior"]:
 		var mueble := _oficina.get_node_or_null(ruta) as Node3D
 		if mueble != null:
 			_registrar_flotante(mueble)
+	if is_instance_valid(_alfombra):
+		# El tapete es delgado: debe quedar sobre las olas, no sumergido como las patas.
+		_registrar_flotante(_alfombra, -0.045)
 	# La computadora independiente mantiene su cuerpo y cámara en su lugar.
 	for hijo in _oficina.computador.get_children():
 		if hijo is Node3D and not hijo is CollisionObject3D and not hijo is CollisionShape3D and not hijo is Camera3D:
@@ -124,20 +109,77 @@ func iniciar() -> bool:
 	_chorro.emitting = true
 	_union.scale.y = 0.12
 	_ambiente.play()
-	_aviso.show()
 	set_process(true)
 	set_physics_process(true)
 	iniciado.emit()
 	return true
 
 
-func _registrar_flotante(nodo: Node3D) -> void:
-	_flotantes.append({"nodo": nodo, "pose": nodo.transform, "fase": nodo.global_position.x * 1.3 + nodo.global_position.z * 0.8})
+func _registrar_flotante(nodo: Node3D, calado := 0.12) -> void:
+	_flotantes.append({"nodo": nodo, "pose": nodo.transform, "fase": nodo.global_position.x * 1.3 + nodo.global_position.z * 0.8, "calado": calado})
 	for cuerpo: Node3D in nodo.find_children("*", "CollisionObject3D", true, false):
 		_colisiones.append({"nodo": cuerpo, "pose": cuerpo.transform, "independiente": cuerpo.top_level})
 		var mundo := cuerpo.global_transform
 		cuerpo.top_level = true
 		cuerpo.global_transform = mundo
+
+
+func _crear_colision_alfombra() -> void:
+	_alfombra = _oficina.get_node_or_null("AlfombraCentro") as Node3D
+	if _alfombra == null:
+		return
+	var limites := AABB()
+	var primera := true
+	for malla: MeshInstance3D in _alfombra.find_children("*", "MeshInstance3D", true, false):
+		var local := _alfombra.global_transform.affine_inverse() * malla.global_transform * malla.get_aabb()
+		limites = local if primera else limites.merge(local)
+		primera = false
+	if primera:
+		return
+	_centro_alfombra = limites.get_center()
+	_forma_alfombra = BoxShape3D.new()
+	_forma_alfombra.size = limites.size * _alfombra.global_basis.get_scale().abs()
+	_colision_alfombra = AnimatableBody3D.new()
+	_colision_alfombra.name = "ColisionAlfombraFlotante"
+	_colision_alfombra.sync_to_physics = false
+	_colision_alfombra.collision_layer = 0
+	_colision_alfombra.collision_mask = _jugador.collision_layer
+	add_child(_colision_alfombra)
+	var forma := CollisionShape3D.new()
+	forma.shape = _forma_alfombra
+	_colision_alfombra.add_child(forma)
+	_actualizar_colision_alfombra(0.0)
+
+
+func _actualizar_colision_alfombra(altura: float) -> void:
+	if not is_instance_valid(_colision_alfombra):
+		return
+	# El personaje nada visualmente, pero su cuerpo físico sigue en el suelo.
+	# Cubrir hasta el piso impide que pase por debajo del tapete. La huella se
+	# mantiene horizontal para que el cabeceo no cree rampas en sus bordes.
+	var centro := _alfombra.to_global(_centro_alfombra)
+	_forma_alfombra.size.y = maxf(0.02, centro.y + 0.02 - PISO)
+	centro.y = PISO + _forma_alfombra.size.y * 0.5
+	_colision_alfombra.global_transform = Transform3D(Basis.IDENTITY, centro)
+	_colision_alfombra.collision_layer = 1 if activo and altura > 0.055 else 0
+
+
+func _actualizar_flotantes() -> void:
+	var altura := maxf(0.0, nivel - PISO)
+	var peso := smoothstep(0.0, 0.25, altura)
+	for dato in _flotantes:
+		var nodo: Node3D = dato.nodo
+		if not is_instance_valid(nodo):
+			continue
+		var pose: Transform3D = dato.pose
+		var fase: float = dato.fase
+		var ola := sin(tiempo * 1.8 + fase)
+		var calado: float = dato.calado
+		# Flotan con pequeño cabeceo: ningún mueble deriva horizontalmente.
+		pose.origin.y += maxf(0.0, altura - maxf(calado, 0.0)) + (maxf(-calado, 0.0) + ola * 0.017) * peso
+		pose.basis = pose.basis * Basis.from_euler(Vector3(sin(tiempo * 1.4 + fase) * 0.014, 0, ola * 0.018) * peso)
+		nodo.transform = pose
+	_actualizar_colision_alfombra(altura)
 
 
 func _physics_process(delta: float) -> void:
@@ -148,6 +190,7 @@ func _physics_process(delta: float) -> void:
 		nivel = move_toward(nivel, PISO, delta * (NIVEL_MAXIMO - PISO) / VACIADO)
 	else:
 		nivel = move_toward(nivel, NIVEL_MAXIMO, delta * (NIVEL_MAXIMO - PISO) / SUBIDA)
+	_actualizar_flotantes()
 	if not _jugador.en_relevo:
 		_jugador.establecer_nivel_agua(nivel)
 	for papel: PapelDenuncia in get_tree().get_nodes_in_group("papeles_denuncia"):
@@ -175,21 +218,8 @@ func _process(delta: float) -> void:
 		efecto.global_position.y = nivel + 0.045
 	_volumen.position.y = PISO + altura * 0.5
 	_volumen.scale.y = maxf(0.001, altura)
-	for dato in _flotantes:
-		var nodo: Node3D = dato.nodo
-		if not is_instance_valid(nodo):
-			continue
-		var pose: Transform3D = dato.pose
-		var fase: float = dato.fase
-		var ola := sin(tiempo * 1.8 + fase)
-		# Flotan con pequeño cabeceo: ningún mueble deriva horizontalmente.
-		pose.origin.y += maxf(0, altura - 0.12) + ola * 0.017 * peso
-		pose.basis = pose.basis * Basis.from_euler(Vector3(sin(tiempo * 1.4 + fase) * 0.014, 0, ola * 0.018) * peso)
-		nodo.transform = pose
 	_valvula.rotation.z = lerp_angle(_valvula.rotation.z, PI * 0.5 if drenando else 0.0, delta * 4)
 	_union.scale.y = move_toward(_union.scale.y, 1.0 if drenando else 0.12, delta * 2.0)
-	_aviso.visible = not _oficina.partida_finalizada and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible
-	_aviso.text = "INUNDACIÓN\nEl agua está bajando" if drenando else "INUNDACIÓN · Nadas más lento\nRepara las tuberías en descanso · E"
 	indicador.actualizar(get_viewport().get_camera_3d(), tuberias.global_position + Vector3.UP * 0.5,
 		_jugador.global_position, obtener_objetivo(_jugador) == self,
 		not _oficina.partida_finalizada and not drenando and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible)
@@ -305,6 +335,7 @@ func detener() -> void:
 		if is_instance_valid(dato.nodo):
 			dato.nodo.transform = dato.pose
 	_flotantes.clear()
+	_actualizar_colision_alfombra(0.0)
 	for dato in _colisiones:
 		if is_instance_valid(dato.nodo):
 			dato.nodo.top_level = dato.independiente
@@ -322,7 +353,6 @@ func detener() -> void:
 	_union.scale.y = 1.0
 	for sonido in _salpicaduras:
 		sonido.stop()
-	_aviso.hide()
 	indicador.hide()
 	panel.cerrar()
 	for efecto in _efectos.get_children():

@@ -8,7 +8,6 @@ const CORAL := Color("ff785f")
 var progreso := 0.0
 var completadas := 0
 var total := 0
-var instruccion := "Busca el extintor en la zona de descanso"
 var nombre_mesa := ""
 var progreso_mesa := 0.0
 var apagando_mesa := false

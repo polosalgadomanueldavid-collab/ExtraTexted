@@ -24,6 +24,7 @@ const INDICADOR_PROXIMA_ESTACION_SCRIPT: Script = preload(
 const GUIA_ESTACION_ESCENA := preload("res://UI/Despacho/GuiaEstacion.tscn")
 const PAPEL_DENUNCIA_SCRIPT := preload("res://Scripts/Despacho/papel_denuncia.gd")
 const IndicadorPapel := preload("res://UI/Despacho/indicador_papel.gd")
+const IndicadorBolsillo := preload("res://UI/Descanso/indicador_bolsillo.gd")
 const ProgresoSeguridad := preload("res://UI/Despacho/progreso_seguridad.gd")
 const ClasificadorEvidencias := preload("res://UI/Despacho/clasificador_evidencias.gd")
 const EscanerVerificacion := preload("res://UI/Despacho/escaner_verificacion.gd")
@@ -83,7 +84,9 @@ var guia_estacion: Control
 var clasificacion_partida: ClasificacionPartida
 var _nombre_partida: String = ""
 var _aviso_apagon: Label
+var depurador_recursos: CanvasLayer
 var indicador_papel: IndicadorPapel
+var indicador_bolsillo: Control
 var progreso_seguridad: ProgresoSeguridad
 var temporizador_seguridad: Timer
 var _denuncia_en_descriptado: String = ""
@@ -206,6 +209,9 @@ func _ready() -> void:
 	panel_despacho.configurar_sistema(sistema_despacho)
 	indicador_papel = IndicadorPapel.new()
 	$CanvasLayer.add_child(indicador_papel)
+	indicador_bolsillo = IndicadorBolsillo.new()
+	$CanvasLayer.add_child(indicador_bolsillo)
+	indicador_bolsillo.configurar(self)
 	progreso_seguridad = ProgresoSeguridad.new()
 	$CanvasLayer.add_child(progreso_seguridad)
 	clasificador_evidencias = ClasificadorEvidencias.new()
@@ -334,7 +340,7 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(guia_estacion):
 		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO)
 	_actualizar_indicador_papel()
-	_actualizar_aviso_apagon(objetivo)
+	_actualizar_aviso_apagon()
 	_actualizar_indicador_denuncia_pc(objetivo)
 	if not _denuncia_en_descriptado.is_empty() and is_instance_valid(_mesa_seguridad):
 		var avance := 1.0 if _seguridad_lista else 1.0 - temporizador_seguridad.time_left / DURACION_DESENCRIPTADO
@@ -343,6 +349,8 @@ func _process(_delta: float) -> void:
 
 func _input(evento: InputEvent) -> void:
 	if partida_finalizada:
+		return
+	if is_instance_valid(depurador_recursos) and depurador_recursos.visible:
 		return
 	if evento.is_action_released(VER_CLASIFICACION) and clasificacion_partida.visible:
 		clasificacion_partida.hide()
@@ -373,6 +381,9 @@ func _unhandled_key_input(evento: InputEvent) -> void:
 		_ajustar_calma_para_prueba(PASO_CALMA_PRUEBA)
 	elif not is_instance_valid(depurador_grafo) or not depurador_grafo.visible_debug:
 		return
+	elif tecla == KEY_F4:
+		if is_instance_valid(depurador_recursos):
+			depurador_recursos.abrir()
 	elif tecla == KEY_T:
 		_iniciar_terremoto()
 	elif tecla == KEY_B:
@@ -404,8 +415,15 @@ func _ajustar_calma_para_prueba(cambio: int) -> void:
 
 
 func _crear_aviso_apagon() -> void:
+	if OS.is_debug_build():
+		depurador_recursos = preload("res://UI/Descanso/depurador_recursos.gd").new()
+		add_child(depurador_recursos)
+		depurador_recursos.configurar(self)
 	_aviso_apagon = Label.new()
 	_aviso_apagon.name = "AvisoApagon"
+	# Solo conserva los atajos de desarrollo; las instrucciones están en el tutorial.
+	_aviso_apagon.text = "[B] APAGÓN · [T] TERREMOTO · [I] INCENDIO\n[U] INUNDACIÓN · [L] LAVA · [Ñ] HIELO\n[F4] VIDA Y PUNTOS · TEMPORAL"
+	_aviso_apagon.hide()
 	_aviso_apagon.theme = panel_despacho.theme
 	_aviso_apagon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_aviso_apagon.add_theme_font_size_override("font_size", 22)
@@ -431,11 +449,13 @@ func _ajustar_aviso_apagon() -> void:
 	indicador_papel.ajustar_pantalla(tamano)
 	var factor := minf(tamano.x / 1920.0, tamano.y / 1080.0)
 	_aviso_apagon.scale = Vector2.ONE * factor
-	_aviso_apagon.size = Vector2(590, 80)
-	_aviso_apagon.position = Vector2(28.0 * factor, tamano.y - 108.0 * factor)
+	_aviso_apagon.size = Vector2(590, 112)
+	_aviso_apagon.position = Vector2(28.0 * factor, tamano.y - 140.0 * factor)
 	if indicador_papel.visible:
 		var separacion := 14.0 * indicador_papel.scale.y
 		_aviso_apagon.position = Vector2(indicador_papel.position.x, indicador_papel.position.y - separacion - _aviso_apagon.size.y * factor)
+	if is_instance_valid(indicador_bolsillo) and indicador_bolsillo.visible:
+		_aviso_apagon.position.y = minf(_aviso_apagon.position.y, indicador_bolsillo.position.y - 14.0 * indicador_bolsillo.scale.y - _aviso_apagon.size.y * factor)
 
 
 func _actualizar_indicador_papel() -> void:
@@ -449,16 +469,12 @@ func _actualizar_indicador_papel() -> void:
 		_ajustar_aviso_apagon()
 
 
-func _actualizar_aviso_apagon(objetivo: Node3D) -> void:
+func _actualizar_aviso_apagon() -> void:
 	if not is_instance_valid(_aviso_apagon):
 		return
-	_aviso_apagon.visible = not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and (evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (OS.is_debug_build() and depurador_grafo.visible_debug))
-	if evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO:
-		_aviso_apagon.text = "[B] APAGÓN · [T] TERREMOTO · [I] INCENDIO\n[U] INUNDACIÓN · [L] LAVA · [Ñ] HIELO"
-	elif objetivo == evento_apagon.taco:
-		_aviso_apagon.text = "[E] REPARAR EL CIRCUITO\nTACO DE LUZ"
-	else:
-		_aviso_apagon.text = "APAGÓN  ·  BUSCA EL TACO DE LUZ\nJUNTO A LA PUERTA DE PERSONAL"
+	_aviso_apagon.visible = OS.is_debug_build() and depurador_grafo.visible_debug and not computador.is_using and not clasificador_evidencias.visible and not escaner_verificacion.visible and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO
+	if _aviso_apagon.visible:
+		_ajustar_aviso_apagon()
 
 
 func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
@@ -760,8 +776,8 @@ func _iniciar_inundacion() -> bool:
 
 func _al_iniciar_inundacion() -> void:
 	_al_iniciar_evento()
-	_anunciar_inicio_evento(&"inundacion", "¡INUNDACIÓN!", "", "Repara las tuberías en la zona de descanso")
-	panel_despacho._mostrar_mensaje("El agua te ralentiza. Puedes seguir resolviendo casos mientras nadas.", Color("76d7e7"))
+	_anunciar_inicio_evento(&"inundacion", "REPARA LA", "TUBERÍA", "Busca la válvula en descanso · Pulsa E")
+	panel_despacho._mostrar_mensaje("¡Cierra la fuga! Repara la tubería en descanso.", Color("76d7e7"))
 
 
 func _al_terminar_inundacion() -> void:

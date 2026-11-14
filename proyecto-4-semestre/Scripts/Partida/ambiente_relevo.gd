@@ -38,7 +38,6 @@ func configurar(escenario: Node3D, relevo: Player, vista: Camera3D) -> void:
 	oficina.evento_lava.panel.hide()
 	oficina.evento_hielo.aviso.hide()
 	oficina.evento_hielo.indicador.hide()
-	oficina.evento_inundacion._aviso.hide()
 	oficina.evento_inundacion.indicador.hide()
 	if oficina.evento_hielo.activo:
 		var cristal := Capsula.new()

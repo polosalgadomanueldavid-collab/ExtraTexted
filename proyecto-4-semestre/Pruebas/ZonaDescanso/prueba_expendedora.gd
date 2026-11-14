@@ -60,6 +60,8 @@ func _compras() -> void:
 	var saldo := despacho.puntuacion.puntos
 	for i in 4:
 		_verificar(maquina.comprar(i), "Compra del producto %d" % i)
+		await _cuadros(95)
+		_verificar(maquina.producto_listo and maquina.recoger_producto(), "Recogida del producto %d después de caer" % i)
 	_verificar(despacho.puntuacion.puntos == saldo - 525, "Cobra una vez los cuatro precios")
 	saldo = despacho.puntuacion.puntos
 	_verificar(not maquina.comprar(0) and despacho.puntuacion.puntos == saldo, "No cobra duplicados")
