@@ -1,7 +1,8 @@
 extends Node3D
 ## Interacciones locales. Los casos siguen avanzando y los efectos ocurren una sola vez.
 
-enum Estado { LIBRE, PREPARANDO, SENTADO, BEBIENDO }
+enum Estado { LIBRE, PREPARANDO, SENTADO, BEBIENDO, CAFE_LISTO }
+const PANEL_CAFETERA := preload("res://UI/Descanso/panel_cafetera.gd")
 const AVISO := preload("res://UI/Descanso/aviso_descanso.gd")
 const SONIDOS := preload("res://UI/Despacho/sonidos_mesas.gd")
 const PREPARAR := preload("res://Audios/Descanso/cafetera_preparar.wav")
@@ -41,6 +42,7 @@ var _saliendo: bool = false
 var _asiento_activo: bool = false
 var _asiento_actual: Marker3D
 var _beber_pendiente: bool = false
+var panel_cafetera: Control
 
 func _ready() -> void:
 	_configurar.call_deferred()
@@ -80,16 +82,27 @@ func _configurar() -> void:
 	add_child(capa)
 	_aviso = AVISO.new()
 	capa.add_child(_aviso)
+	panel_cafetera = PANEL_CAFETERA.new()
+	capa.add_child(panel_cafetera)
+	panel_cafetera.servir_solicitado.connect(preparar_cafe)
+	panel_cafetera.recoger_solicitado.connect(recoger_cafe)
+	panel_cafetera.cerrar_solicitado.connect(cerrar_cafetera)
 	_audio = SONIDOS.crear_reproductor(self, "SonidoServicio", SONIDOS.BIENESTAR, -17.0)
 	_maquina = SONIDOS.crear_reproductor(self, "SonidoCafetera", PREPARAR, -14.0)
 	_sorbo = SONIDOS.crear_reproductor(self, "SonidoSorbo", SORBO, -12.0)
 	_jugador.reset_performed.connect(_al_reiniciar_jugador)
 	_despacho.partida_terminada.connect(_al_terminar_partida)
+	_gestor.evento_apagon.estado_cambiado.connect(func(nuevo_estado: int) -> void:
+		if nuevo_estado != 0:
+			cerrar_cafetera()
+	)
 
 func obtener_estado() -> Dictionary:
 	return {"sentado": _asiento_activo and not _entrando, "preparando": estado == Estado.PREPARANDO,
 		"tiene_cafe": is_instance_valid(taza_en_mano), "bebiendo": estado == Estado.BEBIENDO,
-		"tiempo_descanso": _tiempo_descanso, "tiempo_preparacion": _tiempo_preparacion}
+		"tiempo_descanso": _tiempo_descanso, "tiempo_preparacion": _tiempo_preparacion,
+		"cafetera_abierta": is_instance_valid(panel_cafetera) and panel_cafetera.visible,
+		"cafe_listo": estado == Estado.CAFE_LISTO}
 
 func tiene_cafe() -> bool:
 	return is_instance_valid(taza_en_mano)
@@ -126,24 +139,50 @@ func interactuar_cafetera(quien: Player) -> bool:
 	if _despacho.puntuacion.puntos < costo_cafe:
 		mostrar_mensaje("Necesitas %d puntos para pedir café." % costo_cafe)
 		return false
-	if not _jugador.ejecutar_gesto(&"interactuar", Callable(), $RinconCafe/Cafetera, segundos_preparacion):
-		return false
+	_jugador.cerrar_menu_emotes(true)
 	_bloquear_pose()
 	_pose_anterior = _jugador.global_transform
-	_tiempo_preparacion = 0.0
-	estado = Estado.PREPARANDO
-	_maquina.play()
+	panel_cafetera.abrir(costo_cafe, calma_cafe)
+	_aviso.hide()
 	_mensaje_restante = 0.0
 	return true
 
+func _cafetera_valida() -> bool:
+	return _disponible() and not _despacho.terminada and not _gestor.clasificacion_partida.visible and _gestor.evento_apagon.estado == 0 and not is_instance_valid(_jugador.papel_en_mano) and _jugador.global_position.distance_to(_pose_anterior.origin) <= 0.35 and not _jugador.nadando
+
+func preparar_cafe() -> bool:
+	if not panel_cafetera.visible or estado != Estado.LIBRE or not _cafetera_valida():
+		return false
+	if _despacho.calma_operativa >= _despacho.CALMA_MAXIMA:
+		panel_cafetera.mostrar_error("CALMA LLENA")
+		return false
+	if _despacho.puntuacion.puntos < costo_cafe:
+		panel_cafetera.mostrar_error("SIN SALDO")
+		return false
+	_tiempo_preparacion = 0.0
+	estado = Estado.PREPARANDO
+	_maquina.play()
+	panel_cafetera.preparando()
+	return true
+
 func _servir_cafe() -> void:
-	if not _disponible() or _despacho.calma_operativa >= _despacho.CALMA_MAXIMA or _gestor.evento_apagon.estado != 0 or is_instance_valid(_jugador.papel_en_mano) or _jugador.global_position.distance_to(_pose_anterior.origin) > 0.35:
-		_cancelar_preparacion()
+	if not _cafetera_valida() or _despacho.calma_operativa >= _despacho.CALMA_MAXIMA:
+		cerrar_cafetera()
 		return
+	_maquina.stop()
+	estado = Estado.CAFE_LISTO
+	panel_cafetera.lista()
+
+func recoger_cafe() -> bool:
+	if not panel_cafetera.visible or estado != Estado.CAFE_LISTO or not _cafetera_valida():
+		return false
+	if _despacho.calma_operativa >= _despacho.CALMA_MAXIMA:
+		cerrar_cafetera()
+		return false
 	if not _despacho.puntuacion.gastar_puntos(costo_cafe):
-		_cancelar_preparacion()
+		cerrar_cafetera()
 		mostrar_mensaje("No tienes puntos suficientes para este café.")
-		return
+		return false
 	taza_en_mano = _tazas[_siguiente_taza]
 	_siguiente_taza = (_siguiente_taza + 1) % _tazas.size()
 	var anclaje := _jugador.anclaje_taza()
@@ -154,10 +193,19 @@ func _servir_cafe() -> void:
 	(taza_en_mano.get_node("ContenidoCafe") as MeshInstance3D).show()
 	_jugador.establecer_taza_en_mano(true)
 	_jugador.cancelar_gesto()
-	_liberar_pose()
-	_maquina.stop()
-	estado = Estado.LIBRE
+	cerrar_cafetera()
 	_audio.play()
+	_consulta_restante = 0.0
+	return true
+
+func cerrar_cafetera() -> void:
+	if not is_instance_valid(panel_cafetera) or not panel_cafetera.visible:
+		return
+	_maquina.stop()
+	panel_cafetera.cerrar()
+	_liberar_pose()
+	_tiempo_preparacion = 0.0
+	estado = Estado.LIBRE
 	_consulta_restante = 0.0
 
 func beber_cafe() -> bool:
@@ -317,6 +365,9 @@ func _liberar_pose() -> void:
 	_pose_bloqueada = false
 
 func _cancelar_preparacion() -> void:
+	if is_instance_valid(panel_cafetera) and panel_cafetera.visible:
+		cerrar_cafetera()
+		return
 	_maquina.stop()
 	if is_instance_valid(_jugador):
 		_jugador.cancelar_gesto()
@@ -348,8 +399,11 @@ func _process(delta: float) -> void:
 		_mensaje_restante = maxf(0.0, _mensaje_restante - delta)
 	if _despacho.calma_operativa <= 0:
 		return
+	if panel_cafetera.visible and not get_tree().paused and not _cafetera_valida():
+		cerrar_cafetera()
 	if estado == Estado.PREPARANDO:
 		_tiempo_preparacion += delta
+		panel_cafetera.actualizar_progreso(clampf(_tiempo_preparacion / segundos_preparacion, 0.0, 1.0))
 		if _tiempo_preparacion >= segundos_preparacion:
 			_servir_cafe()
 	elif estado == Estado.BEBIENDO and not _jugador.realizando_gesto():
@@ -376,7 +430,7 @@ func _process(delta: float) -> void:
 func _actualizar_aviso() -> void:
 	if not is_instance_valid(_aviso):
 		return
-	if not _disponible() or _gestor.evento_apagon.estado == 2 or _gestor.clasificacion_partida.visible:
+	if not _disponible() or panel_cafetera.visible or _gestor.evento_apagon.estado == 2 or _gestor.clasificacion_partida.visible:
 		_aviso.hide()
 		return
 	var titulo := ""
@@ -406,7 +460,7 @@ func _actualizar_aviso() -> void:
 	else:
 		var objetivo := _jugador.obtener_objetivo_interaccion()
 		if objetivo == $RinconCafe/MuebleCafe:
-			titulo = "[E] PEDIR CAFÉ  ·  %d PTS" % costo_cafe
+			titulo = "[E] USAR CAFETERA  ·  %d PTS" % costo_cafe
 			detalle = "+%d de calma operativa al beberlo" % calma_cafe
 		elif objetivo == $SofaL/Cuerpo:
 			titulo = "[E] SENTARSE Y RELAJARSE"
@@ -431,6 +485,7 @@ func _al_terminar_partida() -> void:
 	_limpiar_interaccion(true)
 
 func _limpiar_interaccion(restaurar_posicion: bool) -> void:
+	cerrar_cafetera()
 	_maquina.stop()
 	_sorbo.stop()
 	_espera_sorbo = -1.0
@@ -462,6 +517,8 @@ func _limpiar_interaccion(restaurar_posicion: bool) -> void:
 		_aviso.hide()
 
 func _exit_tree() -> void:
+	if is_instance_valid(panel_cafetera):
+		panel_cafetera.cerrar()
 	if is_instance_valid(_transicion):
 		_transicion.kill()
 	if is_instance_valid(_jugador):
