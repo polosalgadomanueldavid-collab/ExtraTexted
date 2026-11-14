@@ -24,6 +24,7 @@ const LONGITUD_KAMEHAMEHA := 16.0
 const ESCALA_GROSOR_KAMEHAMEHA := 4.0
 const ESCALA_ORBE_INICIO_KAMEHAMEHA := 1.3
 const ESCALA_AURA_PERSONAJE := Vector3(0.92, 0.92, 0.92)
+const MULTIPLICADOR_TAMANO_ATAQUES_AURA := 1.5
 const COLOR_EXPLOSION_FINAL_PRIMARIO := Color(1.0, 0.91, 0.36)
 const COLOR_EXPLOSION_FINAL_SECUNDARIO := Color(1.0, 0.46, 0.035)
 const COLOR_EXPLOSION_FINAL_TERCIARIO := Color(0.46, 0.085, 0.0)
@@ -240,6 +241,10 @@ func _actualizar_colores_poderes() -> void:
 			(registro["objeto"] as ShaderMaterial).set_shader_parameter(propiedad, color)
 		else:
 			(registro["objeto"] as Object).set(propiedad, color)
+
+
+func _multiplicador_tamano_ataques() -> float:
+	return MULTIPLICADOR_TAMANO_ATAQUES_AURA if aura_persistente_activada else 1.0
 
 
 func _aislar_materiales_vfx(efecto: Node3D) -> void:
@@ -1216,7 +1221,7 @@ func _crear_impacto_azul(posicion_global: Vector3, escala: float, duracion_humo:
 	if not persistir:
 		_impacto_activo = impacto
 	impacto.global_position = posicion_global
-	impacto.scale = Vector3.ONE * escala
+	impacto.scale = Vector3.ONE * escala * _multiplicador_tamano_ataques()
 	(impacto.get_node("AnimationPlayer") as AnimationPlayer).play("main")
 	_liberar_impacto_azul(impacto, duracion_humo if duracion_humo > 0.0 else 0.82, persistir)
 
@@ -1270,7 +1275,7 @@ func _crear_explosion_final_amarilla(posicion_global: Vector3) -> void:
 	material_corrientes.set_shader_parameter("emission", 2.3)
 	get_skeleton().add_child(impacto)
 	impacto.global_position = posicion_global
-	impacto.scale = Vector3.ONE * ESCALA_GENKIDAMA * 1.65
+	impacto.scale = Vector3.ONE * ESCALA_GENKIDAMA * 1.65 * _multiplicador_tamano_ataques()
 	(impacto.get_node("AnimationPlayer") as AnimationPlayer).play("main")
 	_explosion_final_activa = impacto
 	_apagar_explosion_y_dejar_humo(impacto, humo, maxf(0.0, duracion - tiempo))
@@ -1422,6 +1427,7 @@ func _actualizar_energia() -> void:
 		_energia.visible = false
 		return
 	_energia.visible = true
+	var escala_ataques := _multiplicador_tamano_ataques()
 	var t := tiempo / duracion
 	var fuerza_aura := 0.0 if es_rasengan else smoothstep(0.02, 0.18, t) * (1.0 - smoothstep(0.84, 0.99, t))
 	_aura.visible = fuerza_aura > 0.01 and not es_explosion_final
@@ -1469,7 +1475,7 @@ func _actualizar_energia() -> void:
 		else:
 			_rasengan.position = posicion_en_mano
 		_rasengan.visible = aparicion > 0.01
-		_rasengan.scale = Vector3.ONE * 2.1 * aparicion * (1.0 + sin(_reloj * 9.0) * 0.035)
+		_rasengan.scale = Vector3.ONE * 2.1 * escala_ataques * aparicion * (1.0 + sin(_reloj * 9.0) * 0.035)
 		_rasengan_espinas.rotation.z = _reloj * 8.0
 		_rasengan_espinas_inversas.rotation.z = -_reloj * 10.5
 		_orbita_rasengan.rotation.y = _reloj * 1.3
@@ -1488,7 +1494,7 @@ func _actualizar_energia() -> void:
 		var pulso_genki := 1.0 + sin(_reloj * 7.0) * 0.035
 		var altura_genkidama := ALTURA_MODELO_POLICIA + RADIO_GENKIDAMA * ESCALA_GENKIDAMA
 		_esfera_genkidama.position = Vector3(0.0, altura_genkidama, 0.25).lerp(Vector3(0.0, altura_genkidama, RECORRIDO_GENKIDAMA), vuelo)
-		_esfera_genkidama.scale = Vector3.ONE * ESCALA_GENKIDAMA * crecimiento * pulso_genki
+		_esfera_genkidama.scale = Vector3.ONE * ESCALA_GENKIDAMA * escala_ataques * crecimiento * pulso_genki
 		_capa_aura_genkidama.rotation.y = _reloj * 0.46
 		_orbita_genkidama.rotation.y = -_reloj * 0.72
 		_orbita_genkidama.rotation.x = sin(_reloj * 0.55) * 0.22
@@ -1513,18 +1519,18 @@ func _actualizar_energia() -> void:
 	var adelanto_orbe := 0.42 + 1.10 * (ESCALA_GROSOR_KAMEHAMEHA - 1.0) + 1.10 * ESCALA_GROSOR_KAMEHAMEHA * (ESCALA_ORBE_INICIO_KAMEHAMEHA - 1.0)
 	_rayo_vfx.position = centro_manos + Vector3(0.0, 0.0, adelanto_orbe)
 	var pulso := 1.0 + sin(_reloj * 10.0) * (0.08 + carga * 0.14)
-	_esfera_energia.scale = Vector3.ONE * pulso * desvanecer_carga
+	_esfera_energia.scale = Vector3.ONE * escala_ataques * pulso * desvanecer_carga
 	_luz_aura.light_energy = 0.8 + fuerza_aura * (1.0 + carga * 1.2)
 	_rayo_vfx.visible = apertura_rayo > 0.001
 	var largo_rayo := LONGITUD_KAMEHAMEHA * apertura_rayo
 	_orbe_inicio_rayo.visible = apertura_rayo > 0.001
-	_orbe_inicio_rayo.scale = Vector3.ONE * (0.96 + 0.04 * sin(_reloj * 11.0))
+	_orbe_inicio_rayo.scale = Vector3.ONE * escala_ataques * (0.96 + 0.04 * sin(_reloj * 11.0))
 	_orbe_final_rayo.visible = apertura_rayo > 0.08
 	_orbe_final_rayo.position.y = largo_rayo
-	_orbe_final_rayo.scale = Vector3.ONE * smoothstep(0.08, 0.24, apertura_rayo) * (0.96 + 0.04 * sin(_reloj * 13.0))
+	_orbe_final_rayo.scale = Vector3.ONE * escala_ataques * smoothstep(0.08, 0.24, apertura_rayo) * (0.96 + 0.04 * sin(_reloj * 13.0))
 	for tubo: MeshInstance3D in _rayos_malla:
 		tubo.visible = apertura_rayo > 0.001
-		tubo.scale.y = largo_rayo
+		tubo.scale = Vector3(escala_ataques, largo_rayo, escala_ataques)
 		tubo.position.y = largo_rayo * 0.5
 	if t >= 0.89 and not _impacto_disparado:
 		_impacto_disparado = true
