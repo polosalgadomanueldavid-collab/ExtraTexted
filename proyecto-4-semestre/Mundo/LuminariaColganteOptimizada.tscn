@@ -1,0 +1,68 @@
+[gd_scene load_steps=8 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Metal"]
+albedo_color = Color(0.075, 0.085, 0.105, 1)
+metallic = 0.72
+roughness = 0.32
+
+[sub_resource type="StandardMaterial3D" id="Pantalla"]
+albedo_color = Color(0.54, 0.58, 0.64, 1)
+metallic = 0.35
+roughness = 0.36
+
+[sub_resource type="StandardMaterial3D" id="Bombillo"]
+shading_mode = 0
+albedo_color = Color(1, 0.92, 0.76, 1)
+emission_enabled = true
+emission = Color(1, 0.76, 0.42, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="CylinderMesh" id="Cable"]
+material = SubResource("Metal")
+top_radius = 0.012
+bottom_radius = 0.012
+height = 1.3
+radial_segments = 6
+
+[sub_resource type="CylinderMesh" id="Anclaje"]
+material = SubResource("Metal")
+top_radius = 0.13
+bottom_radius = 0.13
+height = 0.06
+radial_segments = 12
+
+[sub_resource type="CylinderMesh" id="PantallaMesh"]
+material = SubResource("Pantalla")
+top_radius = 0.1
+bottom_radius = 0.29
+height = 0.2
+radial_segments = 12
+
+[sub_resource type="SphereMesh" id="BombilloMesh"]
+material = SubResource("Bombillo")
+radius = 0.14
+height = 0.25
+radial_segments = 12
+rings = 6
+
+[node name="LuminariaColganteOptimizada" type="Node3D"]
+
+[node name="AnclajeTecho" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = SubResource("Anclaje")
+
+[node name="Cable" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.67, 0)
+cast_shadow = 0
+mesh = SubResource("Cable")
+
+[node name="Pantalla" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.4, 0)
+cast_shadow = 0
+mesh = SubResource("PantallaMesh")
+
+[node name="Bombillo" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.54, 0)
+cast_shadow = 0
+mesh = SubResource("BombilloMesh")
+

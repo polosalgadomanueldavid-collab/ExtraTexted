@@ -1,0 +1,81 @@
+[gd_scene load_steps=9 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Metal"]
+albedo_color = Color(0.34, 0.23, 0.12, 1)
+metallic = 0.78
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Pantalla"]
+albedo_color = Color(0.72, 0.75, 0.78, 1)
+metallic = 0.22
+roughness = 0.38
+
+[sub_resource type="StandardMaterial3D" id="Bombillo"]
+shading_mode = 0
+albedo_color = Color(1, 0.91, 0.73, 1)
+emission_enabled = true
+emission = Color(1, 0.74, 0.38, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="CylinderMesh" id="Base"]
+material = SubResource("Metal")
+top_radius = 0.17
+bottom_radius = 0.17
+height = 0.06
+radial_segments = 12
+
+[sub_resource type="CylinderMesh" id="Brazo"]
+material = SubResource("Metal")
+top_radius = 0.025
+bottom_radius = 0.025
+height = 0.42
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="Cuello"]
+material = SubResource("Metal")
+top_radius = 0.027
+bottom_radius = 0.027
+height = 0.22
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="PantallaMesh"]
+material = SubResource("Pantalla")
+top_radius = 0.1
+bottom_radius = 0.23
+height = 0.18
+radial_segments = 12
+
+[sub_resource type="SphereMesh" id="BombilloMesh"]
+material = SubResource("Bombillo")
+radius = 0.125
+height = 0.23
+radial_segments = 12
+rings = 6
+
+[node name="LuminariaParedOptimizada" type="Node3D"]
+
+[node name="BasePared" type="MeshInstance3D" parent="."]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 0, 0)
+cast_shadow = 0
+mesh = SubResource("Base")
+
+[node name="BrazoHorizontal" type="MeshInstance3D" parent="."]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0.22, 0.08, 0)
+cast_shadow = 0
+mesh = SubResource("Brazo")
+
+[node name="Cuello" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.43, -0.03, 0)
+cast_shadow = 0
+mesh = SubResource("Cuello")
+
+[node name="Pantalla" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.43, -0.2, 0)
+cast_shadow = 0
+mesh = SubResource("PantallaMesh")
+
+[node name="Bombillo" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.43, -0.33, 0)
+cast_shadow = 0
+mesh = SubResource("BombilloMesh")
+
