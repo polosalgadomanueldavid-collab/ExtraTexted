@@ -565,10 +565,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.33, 0.475, 6.1997457)
 size = Vector3(0.075, 0.22, 12.379492)
 material = SubResource("MaterialZocalo")
 
+[node name="HuecoPuertaRelevo" type="CSGBox3D" parent="Pared, suelo, techo/ZocaloDerecho"]
+position = Vector3(0, 0, 1.3802543)
+operation = 2
+size = Vector3(0.3, 0.5, 1.114)
+
 [node name="MolduraDerecha" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1292897087]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.33, 0.58, 6.1927366)
 size = Vector3(0.09, 0.045, 12.405474)
 material = SubResource("MaterialMoldura")
+
+[node name="HuecoPuertaRelevo" type="CSGBox3D" parent="Pared, suelo, techo/MolduraDerecha"]
+position = Vector3(0, 0, 1.3872634)
+operation = 2
+size = Vector3(0.3, 0.5, 1.114)
 
 [node name="Techo" type="CSGBox3D" parent="Pared, suelo, techo" unique_id=1880558723]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0452919, 6.201772, 6.162117)

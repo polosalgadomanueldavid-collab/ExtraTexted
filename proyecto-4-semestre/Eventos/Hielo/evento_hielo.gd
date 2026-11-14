@@ -362,7 +362,7 @@ func _pieza(malla: Mesh, punto: Vector3, material: Material) -> MeshInstance3D:
 func _crear_tuberia() -> void:
 	tuberia = Node3D.new()
 	tuberia.name = "TuberiaNitrogeno"
-	tuberia.position = Vector3(2.12, 1.15, 8.95)
+	tuberia.position = Vector3(2.12, 1.15, 11.85)
 	tuberia.rotation.y = -PI * 0.5
 	add_child(tuberia)
 	var metal := StandardMaterial3D.new()
@@ -413,5 +413,5 @@ func _crear_tuberia() -> void:
 	acceso = Marker3D.new()
 	acceso.name = "AccesoNitrogeno"
 	acceso.add_to_group("accesos_navegacion")
-	acceso.position = Vector3(1.42, PISO, 8.95)
+	acceso.position = Vector3(1.42, PISO, tuberia.position.z)
 	add_child(acceso)

@@ -363,7 +363,7 @@ func _crear_tuberias() -> void:
 	tuberias = Node3D.new()
 	tuberias.name = "TuberiasDescanso"
 	add_child(tuberias)
-	tuberias.position = Vector3(2.12, 1.30, 10.45)
+	tuberias.position = Vector3(2.12, 1.30, 10.60)
 	tuberias.rotation.y = -PI * 0.5
 	var metal := StandardMaterial3D.new()
 	metal.albedo_color = Color("63a8b8")
@@ -440,5 +440,5 @@ func _crear_tuberias() -> void:
 	acceso = Marker3D.new()
 	acceso.name = "AccesoTuberias"
 	acceso.add_to_group("accesos_navegacion")
-	acceso.position = Vector3(1.5, PISO, 10.45)
+	acceso.position = Vector3(1.5, PISO, tuberias.position.z)
 	add_child(acceso)
