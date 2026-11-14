@@ -4,10 +4,10 @@ extends RefCounted
 const GUIAS := {
 	&"terremoto": {
 		"nombre": "TERREMOTO", "titulo": "PROTEGE LA DENUNCIA",
-		"pista": "La zona de descanso tiene suelo firme.",
+		"pista": "¡Descanso también se rompe! Rodea la grieta gigante.",
 		"pasos": [
 			["Reconoce el aviso", "Cuando empiece el temblor, busca suelo firme antes de que se abran las grietas.", preload("res://UI/Menus/ArtePiloto/Eventos/sismo_aviso.webp")],
-			["Busca otro paso", "Caen escombros sobre las marcas naranjas y bloquean pasos entre grietas. Rodéalos; salta las grietas estrechas con Espacio.", preload("res://UI/Menus/ArtePiloto/Eventos/sismo_grieta.webp")],
+			["Busca otro paso", "Caen más escombros en la oficina. Sal de las marcas rayadas: el borde se consume y se vuelve rojo antes del impacto. Salta solo las grietas estrechas con Espacio.", preload("res://UI/Menus/ArtePiloto/Eventos/sismo_grieta.webp")],
 			["Cuida la hoja", "Si la hoja cae en una grieta, sola o contigo, pierdes ese caso. Espera al cierre para volver a cruzar.", preload("res://UI/Menus/ArtePiloto/Eventos/sismo_hoja.webp")],
 		],
 	},

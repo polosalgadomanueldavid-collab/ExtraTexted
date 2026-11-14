@@ -810,8 +810,7 @@ func _al_iniciar_terremoto() -> void:
 func _al_romper_suelo() -> void:
 	if is_instance_valid(papel_actual) and papel_actual.portador == null:
 		papel_actual.sleeping = false
-	if not grafo_piso.es_zona_segura(grafo_piso.posicion_a_celda(jugador.global_position)):
-		panel_despacho._mostrar_mensaje("¡Caen escombros! Aléjate de las marcas y busca otro paso entre las grietas.", PanelDespacho.CORAL)
+	panel_despacho._mostrar_mensaje("¡Derrumbes en oleadas! Descanso también se abre: rodea la grieta gigante.", PanelDespacho.CORAL)
 	_al_caer_escombros()
 
 
