@@ -5,7 +5,7 @@ signal aviso(mensaje: String)
 signal respuesta_recibida(numero: int, resultado: Dictionary)
 
 const PUERTO := 7000
-const VERSION := "extratexted-lan-1"
+const VERSION := "extratexted-lan-2"
 const OFICINA := "res://Mundo/Oficina.tscn"
 var activa := false
 var en_partida := false

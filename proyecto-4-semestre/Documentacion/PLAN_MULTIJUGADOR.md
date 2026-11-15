@@ -1,6 +1,6 @@
 # Multijugador LAN de ExtraTexted: dos jugadores
 
-Actualizado: 14 de noviembre de 2026. Sustituye el plan preliminar del 7 de noviembre.
+Actualizado: 15 de noviembre de 2026. Sustituye el plan preliminar del 7 de noviembre.
 
 ## Reglas acordadas e implementadas
 
@@ -15,6 +15,8 @@ Actualizado: 14 de noviembre de 2026. Sustituye el plan preliminar del 7 de novi
 | Saldo compartido | Cada recompensa entra una sola vez. Todas las compras descuentan del mismo fondo en el anfitrión. La primera compra válida gana cuando no alcanza para ambas. |
 | Inventario | Bolsillo y café personales; solo recibe el producto quien compra. El cobro ocurre al recoger el producto. Cancelar antes no cobra. |
 | Descanso | Café y sofá recuperan solo al usuario. Los dos asientos del sofá se reservan por separado. |
+| Herramientas | Dos extintores en incendio y dos llaves en el atasco de impresora, con portadores independientes y máximo uno de cada tipo por jugador. Al eliminarse el portador, su unidad vuelve al punto de recogida. Individual mantiene una unidad. |
+| Contacto | Los personajes activos chocan y pueden bloquearse el paso; el movimiento remoto también respeta el contacto. |
 | Eliminación | Cordura cero elimina hasta la próxima ronda, libera interacciones y deja la hoja recuperable. La cámara sigue al compañero; el personaje no bloquea pasos. |
 | Derrota | Solo cuando ambos están eliminados. El anfitrión continúa sirviendo aunque esté eliminado. |
 | Pausa y guías | Pausan el mundo para ambos; se reanuda cuando ninguno conserva una pantalla que pausa. El transporte continúa funcionando. |
@@ -28,7 +30,7 @@ Actualizado: 14 de noviembre de 2026. Sustituye el plan preliminar del 7 de novi
 1. **Reglas y casos** — `Scripts/Despacho/SistemaDespacho.gd` mantiene jugadores identificados, casos, participantes, último portador, cordura y eliminación. `SistemaPuntuacion` conserva un saldo de equipo y un total ganado independiente. El AVL continúa priorizando las denuncias.
 2. **Sesión y personajes** — `Scripts/Red/sesion_lan.gd`, autoload persistente, administra sala, alias, versión de protocolo, preparación, carga coordinada, pausas, desconexión y reinicio. `UI/Menus/panel_lan.gd` agrega Individual, Crear partida y Unirse por IP. Solo el personaje local procesa controles y cámara.
 3. **Autoridad de juego** — `Scripts/Red/partida_lan.gd` conecta la oficina existente con las reglas compartidas. El anfitrión valida identidad, estado, alcance, hoja, caso, reservas y saldo; ejecuta acciones y publica confirmaciones. Los minijuegos existentes se abren exclusivamente para quien reserva la estación.
-4. **Eventos y poderes** — Se integraron apagón, terremoto, incendio, inundación, lava e hielo. El anfitrión publica las celdas de obstáculos, el trazado exacto del terremoto y los charcos de lava. Las reparaciones y el extintor se reservan; Avatar no consume una carga si otra resolución ya ganó. Se protegen ambos personajes y las hojas al generar obstáculos y peligros.
+4. **Eventos y poderes** — Se integraron apagón, terremoto, incendio, inundación, lava e hielo. El anfitrión publica las celdas de obstáculos, el trazado exacto del terremoto y los charcos de lava. Las reparaciones y cada unidad de herramienta se reservan por separado; Avatar no consume una carga si otra resolución ya ganó. Se protegen ambos personajes, accesos a herramientas y las hojas al generar obstáculos y peligros. La llave recogible y el gesto de reparación usan el mismo modelo procedural.
 5. **Final y nueva ronda** — Se cancelan tareas del eliminado, se liberan reservas y se conserva la capacidad de continuar con el superviviente. El anfitrión coordina el final y la recarga. La nueva ronda limpia saldo, casos, objetos, pausas y poderes.
 
 ### Mensajes y concurrencia
@@ -47,7 +49,7 @@ Motor utilizado: Godot 4.7 estable para Windows. Los registros quedan en `.godot
 | --- | --- |
 | Protocolo individual | 1.300 comprobaciones, 0 errores. |
 | Reglas LAN | 17 comprobaciones, 0 errores. |
-| Dos procesos ENet | 69 comprobaciones, 0 errores y cierre limpio de ambos procesos. Incluye minijuegos reales, saldo, compras concurrentes, transferencia, reservas, seis eventos, reparaciones, poderes, eliminación, reinicio y desconexión. |
+| Dos procesos ENet | 111 comprobaciones, 0 errores y cierre limpio de ambos procesos. Incluye minijuegos reales, saldo, compras concurrentes, transferencia, herramientas dobles, exclusión de doble portador, colisiones en ambos equipos, seis eventos, reparaciones, poderes sin audio duplicado, eliminación, reinicio y desconexión. |
 | Puntuación y clasificación individual | 88 comprobaciones, 0 errores. La prueba se adaptó a la selección Individual/LAN y a la espera real de la presentación. |
 | Descanso y expendedora individual | 75 y 99 comprobaciones, 0 errores. |
 | Final individual e integración de eventos | Pasaron. |
@@ -56,6 +58,8 @@ Motor utilizado: Godot 4.7 estable para Windows. Los registros quedan en `.godot
 | Presentación LAN | Oficina de ambos jugadores inspeccionada con renderizado real: saldo compartido, dos corduras, caso local y alias/número legibles. |
 | Menú LAN | Verificados IP inválida, creación, inicio bloqueado sin compañero, cierre y sesión nueva. Sala inspeccionada con renderizado real. |
 | Terremoto individual | **13 fallos preexistentes reproducidos también en HEAD sin la implementación LAN**, en el mismo Godot 4.7: colisión de huecos, hoja lanzada y segundo inicio desde descanso. No se declara esta prueba aprobada. La prueba LAN comprueba igualdad del trazado, inicio y limpieza, pero no sustituye estos casos físicos. |
+| Interacción de marcadores individual (15/11) | 118 comprobaciones, 23 fallos de alcance/interacción. Se reprodujeron los mismos 23 en una copia limpia de HEAD anterior a las herramientas dobles; no hay fallos adicionales en esta modificación. Registros: `qa_llaves_individual_fijo.log` y `qa_llaves_baseline.log`. |
+| Modelo y gestos (15/11) | Llave inspeccionada con renderizado real. Gestos del policía e incendio individual: 0 errores de comprobación. |
 
 La prueba automatizada opera dos procesos en un solo equipo. No representa latencia real entre equipos ni acredita una demostración con dos ejecutables exportados.
 

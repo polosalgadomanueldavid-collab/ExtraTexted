@@ -18,6 +18,8 @@ Para jugar solo se conserva **Jugar → Individual** y la identificación de la 
 - Comprar desde los dos equipos. Solo el comprador recibe el producto; ambos ven el descuento en **Saldo del equipo**. La clasificación conserva los puntos ganados. Con saldo para un solo producto, la segunda compra debe rechazarse sin cobrar.
 - Probar café, los dos asientos, chocolate y dona. La cordura o el efecto personal solo cambia para quien los usa.
 - En cada evento, comprobar en ambos equipos el escenario, sonidos, efectos y reparación: apagón, terremoto, incendio, inundación, lava e hielo. Usar el extintor desde el cliente y comprobar la recuperación de las mesas en el anfitrión.
+- En incendio aparecen dos extintores: recoger uno por jugador y apagar mesas distintas. En un atasco de impresora aparecen dos llaves numeradas; cualquiera que tenga una puede reparar llevando la hoja correspondiente. No se pueden acaparar ambas herramientas del mismo tipo. Al agotarse un portador, su herramienta vuelve al punto de recogida y la del compañero se conserva. Individual mantiene una unidad.
+- Caminar de frente al compañero: ambos cuerpos deben bloquearse. Probar también desde el cliente, rodearse y saltar. Un compañero agotado deja libre el paso.
 - Usar papa tiempo: ambos pueden moverse mientras se detienen los plazos del mundo durante 12 segundos. Intentar otro uso y comprobar que conserva la carga. Probar reparación frente a Avatar: una resolución ya confirmada impide consumir la segunda carga.
 - Abrir pausa o guía en ambos equipos. Cerrar solo una no debe reanudar el mundo. Cerrar las dos sí.
 - Agotar al anfitrión. Debe observar al compañero y seguir funcionando el servidor; el superviviente puede recuperar la hoja y continuar. Agotar al segundo debe producir un único final compartido.
@@ -42,6 +44,8 @@ Para ejecutar la partida de prueba manualmente, abrir dos terminales y lanzar un
 ```
 
 `$Godot` debe contener la ruta del ejecutable. La prueba mueve personajes y resuelve minijuegos automáticamente; no es el modo de demostración para jugadores. Para revisar la sala con renderizado real, ejecutar `prueba_menu_lan.gd` sin `--headless`; guarda `lan_menu.png` y `lan_sala.png` en `.godot/`.
+
+El protocolo de estas herramientas es `extratexted-lan-2`: actualizar ambos equipos antes de jugar. Para previsualizar la nueva llave compartida por el objeto y la animación, ejecutar `vista_herramientas.gd` sin `--headless`; guarda `.godot/vista_llave.png`.
 
 ## Registro pendiente de dos equipos reales
 
