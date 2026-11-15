@@ -35,6 +35,10 @@ const ClasificacionPartida := preload("res://UI/Despacho/clasificacion_partida.g
 const FinalPartidaScript := preload("res://UI/Despacho/final_partida.gd")
 const CinematicaRelevo := preload("res://Scripts/Partida/cinematica_relevo.gd")
 const VER_CLASIFICACION := &"VerClasificacion"
+const TECLA_BAJAR_CALMA_PRUEBA := KEY_P
+const TECLA_SUBIR_CALMA_PRUEBA := KEY_O
+const PASO_CALMA_PRUEBA := 10
+const CALMA_MINIMA_PRUEBA := 10
 const ALTURA_INDICADOR_ESTACION: float = 1.25
 const DURACION_DESENCRIPTADO: float = 6.0
 @export_range(0.0, 1.0, 0.05) var probabilidad_atasco_reporte: float = 0.35
@@ -370,30 +374,50 @@ func _input(evento: InputEvent) -> void:
 func _unhandled_key_input(evento: InputEvent) -> void:
 	if partida_finalizada:
 		return
-	if not OS.is_debug_build() or not is_instance_valid(depurador_grafo) or not depurador_grafo.visible_debug:
+	if not OS.is_debug_build():
 		return
 	if not evento is InputEventKey or not evento.pressed or evento.echo:
 		return
 	if get_tree().paused or computador.is_using or jugador.input_locked or clasificacion_partida.visible or MenuGlobal.capa.visible:
 		return
-	if evento.physical_keycode == KEY_F4 or evento.keycode == KEY_F4:
-		depurador_recursos.abrir()
-	elif evento.physical_keycode == KEY_T or evento.keycode == KEY_T:
+	var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
+	if tecla == TECLA_BAJAR_CALMA_PRUEBA:
+		_ajustar_calma_para_prueba(-PASO_CALMA_PRUEBA)
+	elif tecla == TECLA_SUBIR_CALMA_PRUEBA:
+		_ajustar_calma_para_prueba(PASO_CALMA_PRUEBA)
+	elif not is_instance_valid(depurador_grafo) or not depurador_grafo.visible_debug:
+		return
+	elif tecla == KEY_F4:
+		if is_instance_valid(depurador_recursos):
+			depurador_recursos.abrir()
+	elif tecla == KEY_T:
 		_iniciar_terremoto()
-	elif evento.physical_keycode == KEY_B or evento.keycode == KEY_B:
+	elif tecla == KEY_B:
 		if not evento_terremoto.activo:
 			evento_apagon.iniciar_apagon()
-	elif evento.physical_keycode == KEY_I or evento.keycode == KEY_I:
+	elif tecla == KEY_I:
 		_iniciar_incendio()
-	elif evento.physical_keycode == KEY_U or evento.keycode == KEY_U:
+	elif tecla == KEY_U:
 		_iniciar_inundacion()
-	elif evento.physical_keycode == KEY_L or evento.keycode == KEY_L:
+	elif tecla == KEY_L:
 		_iniciar_lava()
 	elif evento.unicode in ["ñ".unicode_at(0), "Ñ".unicode_at(0)] or evento.keycode == "Ñ".unicode_at(0):
 		_iniciar_hielo()
 	else:
 		return
 	get_viewport().set_input_as_handled()
+
+
+func _ajustar_calma_para_prueba(cambio: int) -> void:
+	if not is_instance_valid(sistema_despacho) or cambio == 0:
+		return
+	if cambio < 0:
+		var perdida := mini(-cambio, maxi(sistema_despacho.calma_operativa - CALMA_MINIMA_PRUEBA, 0))
+		if perdida > 0:
+			sistema_despacho.perder_calma(perdida, &"prueba_musica")
+	else:
+		sistema_despacho.recuperar_calma(cambio)
+	print("[PRUEBA MÚSICA] Cordura: %d / 100" % sistema_despacho.calma_operativa)
 
 
 func _crear_aviso_apagon() -> void:

@@ -1,5 +1,4 @@
 shader_type spatial;
-render_mode unshaded;
 
 uniform sampler2D textura_piso : source_color, repeat_enable, filter_nearest;
 uniform sampler2D mascara_huecos : repeat_disable, filter_nearest;
@@ -22,4 +21,6 @@ void fragment() {
 		}
 	}
 	ALBEDO = texture(textura_piso, uv).rgb;
+	ROUGHNESS = 0.92;
+	SPECULAR = 0.08;
 }

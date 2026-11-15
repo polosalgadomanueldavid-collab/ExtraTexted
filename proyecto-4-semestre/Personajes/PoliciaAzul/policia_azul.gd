@@ -295,7 +295,9 @@ func _input(event: InputEvent) -> void:
 		control_incendio.soltar()
 	if event.is_action_pressed(EMOTE_MENU) and not (event is InputEventKey and event.echo):
 		get_viewport().set_input_as_handled()
-		if _emote_menu_active:
+		if nadando:
+			_rechazar_emote_nadando()
+		elif _emote_menu_active:
 			_finish_emote_menu(false)
 		elif not input_locked and not realizando_gesto() and not usando_extintor:
 			_emote_menu_active = true

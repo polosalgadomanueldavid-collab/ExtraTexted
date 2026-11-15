@@ -3,21 +3,34 @@ class_name RuletaEmotes
 
 signal emote_seleccionado(tipo: StringName)
 
-const PETROLEO := Color("102b3a")
-const AZUL := Color("15b7c0")
+const PETROLEO := Color("173b50")
+const PETROLEO_OSCURO := Color("0c2634")
+const TURQUESA := Color("15b7c0")
 const CREMA := Color("fff1d8")
+const CORAL := Color("ff785f")
 const FUENTE_TITULO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const FUENTE_TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
+const ICONO_KAMEHAMEHA := preload("res://UI/Menus/ArtePiloto/Emotes/kamehameha.png")
+const ICONO_RASENGAN := preload("res://UI/Menus/ArtePiloto/Emotes/rasengan.png")
+const ICONO_EXPLOSION := preload("res://UI/Menus/ArtePiloto/Emotes/explosion_final.png")
+const ICONO_GENKIDAMA := preload("res://UI/Menus/ArtePiloto/Emotes/genkidama.png")
+const ICONO_AURA := preload("res://UI/Menus/ArtePiloto/Emotes/aura.png")
+const TAMANO_LIENZO := Vector2(780.0, 780.0)
+const TAMANO_BOTON := Vector2(172.0, 172.0)
+const RADIO_BOTONES := 232.0
+
 var _modo_mouse_previo: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
-var _aura_activada: bool = false
+var _aura_activada := false
+var _lienzo: Control
 var _rotulo_centro: Label
+var _botones: Array[Button] = []
 
 var _selecciones: Array[Dictionary] = [
-	{"tipo": &"kamehameha", "nombre": "KAMEHAMEHA", "color": Color(0.15, 0.72, 1.0)},
-	{"tipo": &"genkidama", "nombre": "GENKIDAMA", "color": Color(0.26, 0.72, 1.0)},
-	{"tipo": &"rasengan", "nombre": "RASENGAN", "color": Color(0.18, 0.65, 1.0)},
-	{"tipo": &"explosion_final", "nombre": "EXPLOSIÓN FINAL", "color": Color(1.0, 0.68, 0.12)},
-	{"tipo": &"aura_persistente", "nombre": "AURA", "color": Color(1.0, 0.48, 0.12)},
+	{"tipo": &"kamehameha", "nombre": "KAMEHAMEHA", "icono": ICONO_KAMEHAMEHA},
+	{"tipo": &"rasengan", "nombre": "RASENGAN", "icono": ICONO_RASENGAN},
+	{"tipo": &"explosion_final", "nombre": "EXPLOSIÓN FINAL", "icono": ICONO_EXPLOSION},
+	{"tipo": &"genkidama", "nombre": "GENKIDAMA", "icono": ICONO_GENKIDAMA},
+	{"tipo": &"aura_persistente", "nombre": "AURA", "icono": ICONO_AURA},
 ]
 
 
@@ -26,21 +39,17 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
-	resized.connect(queue_redraw)
-	_crear_rotulo("EMOTES", Vector2(0.0, -250.0), Vector2(260.0, 42.0), 29, CREMA)
-	_crear_rotulo("Haz clic para elegir  ·  G o Esc para cerrar", Vector2(0.0, 245.0), Vector2(430.0, 34.0), 16, Color("c5dcdd"))
-	_rotulo_centro = _crear_rotulo("AURA\nDESACTIVADA", Vector2.ZERO, Vector2(138.0, 58.0), 14, CREMA)
-	for indice: int in range(_selecciones.size()):
-		_crear_boton(indice)
+	resized.connect(_ajustar_presentacion)
+	_crear_interfaz()
+	_ajustar_presentacion()
 
 
 func abrir(aura_activa: bool = false) -> void:
 	_modo_mouse_previo = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_aura_activada = aura_activa
-	_rotulo_centro.text = "AURA\nACTIVADA" if _aura_activada else "AURA\nDESACTIVADA"
+	_actualizar_estado_aura()
 	visible = true
-	queue_redraw()
 
 
 func cerrar() -> void:
@@ -48,72 +57,150 @@ func cerrar() -> void:
 	Input.mouse_mode = _modo_mouse_previo
 
 
-func _draw() -> void:
-	var centro := size * 0.5
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.028, 0.04, 0.38), true)
-	draw_circle(centro + Vector2(0, 6), 282.0, Color(0.008, 0.025, 0.035, 0.52), true, -1.0, true)
-	draw_arc(centro, 278.0, 0.0, TAU, 128, Color(PETROLEO.lightened(0.55), 0.96), 5.0, true)
-	draw_arc(centro, 267.0, 0.0, TAU, 128, Color(AZUL, 0.9), 2.0, true)
-	draw_circle(centro, 76.0, Color(PETROLEO, 0.97), true, -1.0, true)
-	draw_arc(centro, 75.0, 0.0, TAU, 64, Color(AZUL, 0.95), 3.0, true)
-	for angulo: float in [-PI * 0.5, -PI * 0.1, PI * 0.3, PI * 0.7, PI * 1.1]:
-		var vector := Vector2.from_angle(angulo)
-		draw_line(centro + vector * 76.0, centro + vector * 218.0, Color(CREMA, 0.14), 2.0, true)
+func _crear_interfaz() -> void:
+	var fondo_general := ColorRect.new()
+	fondo_general.color = Color(0.015, 0.055, 0.075, 0.74)
+	fondo_general.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fondo_general.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(fondo_general)
+
+	_lienzo = Control.new()
+	_lienzo.custom_minimum_size = TAMANO_LIENZO
+	_lienzo.size = TAMANO_LIENZO
+	_lienzo.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(_lienzo)
+
+	var rueda := FondoRuleta.new()
+	rueda.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rueda.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_lienzo.add_child(rueda)
+
+	_crear_cabecera()
+	_crear_centro()
+	for indice: int in range(_selecciones.size()):
+		_crear_boton(indice)
+	_crear_pie()
+
+
+func _crear_cabecera() -> void:
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", _estilo_capsula(CREMA, CORAL, 4, 18))
+	_lienzo.add_child(panel)
+	_centrar(panel, Vector2(0.0, -344.0), Vector2(292.0, 66.0))
+
+	var titulo := Label.new()
+	titulo.text = "EMOTES"
+	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	titulo.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	titulo.add_theme_color_override("font_color", PETROLEO_OSCURO)
+	titulo.add_theme_font_override("font", FUENTE_TITULO)
+	titulo.add_theme_font_size_override("font_size", 38)
+	titulo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(titulo)
+
+
+func _crear_centro() -> void:
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", _estilo_circular(CREMA, TURQUESA, 5, 12))
+	_lienzo.add_child(panel)
+	_centrar(panel, Vector2.ZERO, Vector2(154.0, 154.0))
+
+	_rotulo_centro = Label.new()
+	_rotulo_centro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rotulo_centro.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_rotulo_centro.add_theme_color_override("font_color", PETROLEO_OSCURO)
+	_rotulo_centro.add_theme_font_override("font", FUENTE_TITULO)
+	_rotulo_centro.add_theme_font_size_override("font_size", 18)
+	_rotulo_centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(_rotulo_centro)
+	_actualizar_estado_aura()
 
 
 func _crear_boton(indice: int) -> void:
 	var item: Dictionary = _selecciones[indice]
 	var boton := Button.new()
-	boton.custom_minimum_size = Vector2(168, 82)
+	boton.custom_minimum_size = TAMANO_BOTON
+	boton.size = TAMANO_BOTON
 	boton.focus_mode = Control.FOCUS_ALL
 	boton.tooltip_text = "Activar o desactivar el aura" if item["tipo"] == &"aura_persistente" else "Elegir %s" % item["nombre"]
-	boton.add_theme_stylebox_override("normal", _estilo_boton(Color("183b4a"), Color("f2ddba")))
-	boton.add_theme_stylebox_override("hover", _estilo_boton(Color("22596a"), Color("17c1c4")))
-	boton.add_theme_stylebox_override("pressed", _estilo_boton(Color("0c2735"), Color("17c1c4")))
-	boton.add_theme_color_override("font_color", CREMA)
-	boton.add_theme_color_override("font_hover_color", Color.WHITE)
-	boton.add_theme_font_override("font", FUENTE_TEXTO)
-	boton.add_theme_font_size_override("font_size", 17)
-	var fila := HBoxContainer.new()
-	fila.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fila.alignment = BoxContainer.ALIGNMENT_CENTER
-	fila.add_theme_constant_override("separation", 10)
-	fila.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	boton.add_child(fila)
-	var icono := IconoPoder.new()
-	icono.tipo = item["tipo"]
-	icono.color = item["color"]
-	icono.custom_minimum_size = Vector2(50, 54)
-	icono.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fila.add_child(icono)
-	var texto := Label.new()
-	texto.text = item["nombre"]
-	texto.custom_minimum_size.x = 112
-	texto.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	texto.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	texto.add_theme_color_override("font_color", CREMA)
-	texto.add_theme_font_size_override("font_size", 16)
-	texto.add_theme_font_override("font", FUENTE_TEXTO)
-	fila.add_child(texto)
-	add_child(boton)
+	boton.add_theme_stylebox_override("normal", _estilo_circular(PETROLEO, CREMA, 5, 10))
+	boton.add_theme_stylebox_override("hover", _estilo_circular(Color("22596a"), TURQUESA, 7, 15))
+	boton.add_theme_stylebox_override("focus", _estilo_circular(Color("22596a"), CORAL, 7, 15))
+	boton.add_theme_stylebox_override("pressed", _estilo_circular(PETROLEO_OSCURO, CORAL, 7, 5))
+	boton.pivot_offset = TAMANO_BOTON * 0.5
+	_lienzo.add_child(boton)
+
 	var angulo := -PI * 0.5 + TAU * float(indice) / float(_selecciones.size())
-	var desplazamiento := Vector2.from_angle(angulo) * 169.0
-	_centrar(boton, desplazamiento, boton.custom_minimum_size)
+	_centrar(boton, Vector2.from_angle(angulo) * RADIO_BOTONES, TAMANO_BOTON)
+
+	var icono := TextureRect.new()
+	icono.texture = item["icono"]
+	icono.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icono.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# Los medallones contienen ilustración y texto fino: el filtrado lineal directo
+	# conserva mejor sus bordes que solicitar mipmaps que estos recursos no usan.
+	icono.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	icono.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icono.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	icono.offset_left = 8.0
+	icono.offset_top = 8.0
+	icono.offset_right = -8.0
+	icono.offset_bottom = -8.0
+	boton.add_child(icono)
+
 	boton.pressed.connect(_seleccionar.bind(item["tipo"]))
+	boton.mouse_entered.connect(_animar_boton.bind(boton, Vector2(1.08, 1.08)))
+	boton.mouse_exited.connect(_animar_boton.bind(boton, Vector2.ONE))
+	boton.focus_entered.connect(_animar_boton.bind(boton, Vector2(1.08, 1.08)))
+	boton.focus_exited.connect(_animar_boton.bind(boton, Vector2.ONE))
+	_botones.append(boton)
 
 
-func _crear_rotulo(contenido: String, desplazamiento: Vector2, dimensiones: Vector2, tamano: int, color: Color) -> Label:
-	var rotulo := Label.new()
-	rotulo.text = contenido
-	rotulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	rotulo.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	rotulo.add_theme_color_override("font_color", color)
-	rotulo.add_theme_font_size_override("font_size", tamano)
-	rotulo.add_theme_font_override("font", FUENTE_TITULO if contenido == "EMOTES" else FUENTE_TEXTO)
-	rotulo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(rotulo)
-	_centrar(rotulo, desplazamiento, dimensiones)
-	return rotulo
+func _crear_pie() -> void:
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", _estilo_capsula(CREMA, TURQUESA, 3, 12))
+	_lienzo.add_child(panel)
+	_centrar(panel, Vector2(0.0, 350.0), Vector2(470.0, 50.0))
+
+	var texto := Label.new()
+	texto.text = "HAZ CLIC PARA ELEGIR  •  G O ESC PARA CERRAR"
+	texto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	texto.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	texto.add_theme_color_override("font_color", PETROLEO_OSCURO)
+	texto.add_theme_font_override("font", FUENTE_TEXTO)
+	texto.add_theme_font_size_override("font_size", 16)
+	texto.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(texto)
+
+
+func _ajustar_presentacion() -> void:
+	if not is_instance_valid(_lienzo):
+		return
+	var escala := minf(1.0, minf(size.x / TAMANO_LIENZO.x, size.y / TAMANO_LIENZO.y))
+	_lienzo.scale = Vector2.ONE * escala
+	_lienzo.position = (size - TAMANO_LIENZO * escala) * 0.5
+
+
+func _actualizar_estado_aura() -> void:
+	if not is_instance_valid(_rotulo_centro):
+		return
+	_rotulo_centro.text = "AURA\nACTIVA" if _aura_activada else "AURA\nINACTIVA"
+	_rotulo_centro.add_theme_color_override("font_color", CORAL if _aura_activada else PETROLEO_OSCURO)
+
+
+func _animar_boton(boton: Button, escala_objetivo: Vector2) -> void:
+	if not is_instance_valid(boton):
+		return
+	var tween := boton.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(boton, "scale", escala_objetivo, 0.16)
+
+
+func _seleccionar(tipo: StringName) -> void:
+	emote_seleccionado.emit(tipo)
 
 
 func _centrar(control: Control, desplazamiento: Vector2, dimensiones: Vector2) -> void:
@@ -127,64 +214,39 @@ func _centrar(control: Control, desplazamiento: Vector2, dimensiones: Vector2) -
 	control.offset_bottom = desplazamiento.y + dimensiones.y * 0.5
 
 
-func _estilo_boton(fondo: Color, borde: Color) -> StyleBoxFlat:
+func _estilo_circular(fondo: Color, borde: Color, grosor: int, sombra: int) -> StyleBoxFlat:
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = fondo
 	estilo.border_color = borde
-	estilo.set_border_width_all(2)
-	estilo.set_corner_radius_all(16)
-	estilo.shadow_color = Color(0.0, 0.025, 0.04, 0.62)
-	estilo.shadow_size = 8
-	estilo.content_margin_left = 12.0
-	estilo.content_margin_right = 12.0
-	estilo.content_margin_top = 8.0
-	estilo.content_margin_bottom = 8.0
+	estilo.set_border_width_all(grosor)
+	estilo.set_corner_radius_all(96)
+	estilo.shadow_color = Color(0.0, 0.03, 0.05, 0.70)
+	estilo.shadow_size = sombra
 	return estilo
 
 
-func _seleccionar(tipo: StringName) -> void:
-	emote_seleccionado.emit(tipo)
+func _estilo_capsula(fondo: Color, borde: Color, grosor: int, sombra: int) -> StyleBoxFlat:
+	var estilo := StyleBoxFlat.new()
+	estilo.bg_color = fondo
+	estilo.border_color = borde
+	estilo.set_border_width_all(grosor)
+	estilo.set_corner_radius_all(28)
+	estilo.shadow_color = Color(0.0, 0.03, 0.05, 0.65)
+	estilo.shadow_size = sombra
+	return estilo
 
 
-class IconoPoder extends Control:
-	var tipo: StringName = &""
-	var color: Color = Color.CYAN
-
+class FondoRuleta extends Control:
 	func _draw() -> void:
 		var centro := size * 0.5
-		var radio := minf(size.x, size.y) * 0.34
-		if tipo == &"kamehameha":
-			draw_colored_polygon(PackedVector2Array([centro + Vector2(-4, -8), centro + Vector2(22, -14), centro + Vector2(22, 14), centro + Vector2(-4, 8)]), Color(color, 0.70))
-			_dibujar_esfera(centro + Vector2(-9, 0), radio * 0.78)
-		elif tipo == &"explosion_final":
-			var puntos := PackedVector2Array()
-			for punta: int in range(16):
-				var r := radio * (1.36 if punta % 2 == 0 else 0.66)
-				puntos.append(centro + Vector2.from_angle(TAU * float(punta) / 16.0) * r)
-			draw_colored_polygon(puntos, Color(color, 0.82))
-			draw_circle(centro, radio * 0.52, Color(1.0, 0.95, 0.62), true, -1.0, true)
-		elif tipo == &"aura_persistente":
-			for llama: int in range(8):
-				var direccion := Vector2.from_angle(-PI * 0.5 + TAU * float(llama) / 8.0)
-				var lateral := direccion.orthogonal() * radio * 0.28
-				var base := centro + direccion * radio * 0.42
-				var punta := centro + direccion * radio * (1.2 if llama % 2 == 0 else 0.92)
-				draw_colored_polygon(PackedVector2Array([base - lateral, punta, base + lateral]), Color(color.lightened(0.12), 0.82))
-			_dibujar_esfera(centro, radio * 0.52)
-		else:
-			var escala := 1.0 if tipo == &"genkidama" else 0.82
-			_dibujar_esfera(centro, radio * escala)
-			if tipo == &"rasengan":
-				for punta: int in range(8):
-					var a := TAU * float(punta) / 8.0
-					var direccion := Vector2.from_angle(a)
-					draw_line(centro + direccion * radio * 0.72, centro + direccion * radio * 1.42, Color(0.68, 0.93, 1.0), 2.5, true)
-			else:
-				draw_arc(centro, radio * 1.12, 0.4, 5.2, 36, Color(0.78, 0.96, 1.0, 0.88), 2.0, true)
-
-	func _dibujar_esfera(centro: Vector2, radio: float) -> void:
-		draw_circle(centro + Vector2(1, 2), radio + 3.0, Color(color, 0.22), true, -1.0, true)
-		draw_circle(centro, radio, color, true, -1.0, true)
-		draw_circle(centro + Vector2(-radio * 0.24, -radio * 0.30), radio * 0.56, color.lightened(0.42), true, -1.0, true)
-		draw_circle(centro + Vector2(-radio * 0.34, -radio * 0.42), radio * 0.18, Color.WHITE, true, -1.0, true)
-		draw_arc(centro, radio, 0.0, TAU, 48, Color(0.78, 0.96, 1.0, 0.85), 1.8, true)
+		draw_circle(centro + Vector2(0.0, 12.0), 336.0, Color(0.0, 0.02, 0.03, 0.48), true, -1.0, true)
+		draw_circle(centro, 330.0, Color("0c2634"), true, -1.0, true)
+		draw_arc(centro, 330.0, 0.0, TAU, 160, Color("fff1d8"), 8.0, true)
+		draw_arc(centro, 316.0, 0.0, TAU, 160, Color("ff785f"), 4.0, true)
+		draw_circle(centro, 292.0, Color("173b50"), true, -1.0, true)
+		for indice: int in range(5):
+			var angulo := -PI * 0.5 + TAU * float(indice) / 5.0
+			var direccion := Vector2.from_angle(angulo)
+			draw_line(centro + direccion * 92.0, centro + direccion * 142.0, Color(1.0, 0.945, 0.847, 0.22), 3.0, true)
+		draw_circle(centro, 92.0, Color("0c2634"), true, -1.0, true)
+		draw_arc(centro, 92.0, 0.0, TAU, 80, Color("15b7c0"), 4.0, true)
