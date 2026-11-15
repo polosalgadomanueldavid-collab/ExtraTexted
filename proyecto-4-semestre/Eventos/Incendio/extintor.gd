@@ -2,6 +2,7 @@ extends Node3D
 ## Modelo procedural: depósito rojo, banda, manómetro, asa, manguera y boquilla.
 
 var evento: Node
+var clave_red := "extintor"
 var recogido := false
 var deposito: Node3D
 var boquilla: Node3D
@@ -59,7 +60,7 @@ func _ready() -> void:
 
 func interactuar(jugador: Player) -> void:
 	if not recogido:
-		evento.recoger_extintor(jugador)
+		evento.recoger_extintor(jugador, self)
 
 
 func actualizar(jugador: Player, rociando: bool, destino: Vector3) -> void:

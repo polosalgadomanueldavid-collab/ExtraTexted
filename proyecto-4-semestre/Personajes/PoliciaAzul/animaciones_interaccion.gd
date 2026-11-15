@@ -1542,27 +1542,11 @@ func _actualizar_energia() -> void:
 
 
 func _crear_llave() -> void:
-	_llave = Node3D.new()
+	_llave = preload("res://Scripts/Despacho/modelo_llave.gd").new()
 	_llave.name = "LlaveReparacion"
 	mano_derecha.add_child(_llave)
 	_llave.position.y = 0.10
 	_llave.rotation.x = -1.25
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color("9fb8ca")
-	metal.metallic = 0.55
-	metal.roughness = 0.35
-	for datos: Array in [
-		[Vector3(0.0, 0.20, 0.0), Vector3(0.065, 0.32, 0.065)],
-		[Vector3(0.0, 0.38, 0.0), Vector3(0.16, 0.07, 0.065)],
-		[Vector3(-0.06, 0.45, 0.0), Vector3(0.04, 0.10, 0.065)],
-		[Vector3(0.06, 0.45, 0.0), Vector3(0.04, 0.10, 0.065)]]:
-		var pieza := MeshInstance3D.new()
-		var caja := BoxMesh.new()
-		caja.size = datos[1]
-		pieza.mesh = caja
-		pieza.position = datos[0]
-		pieza.material_override = metal
-		_llave.add_child(pieza)
 	_llave.visible = false
 
 

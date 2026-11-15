@@ -97,6 +97,7 @@ var clasificador_evidencias: ClasificadorEvidencias
 var escaner_verificacion: EscanerVerificacion
 var sonidos_mesas: SonidosMesas
 var herramienta_reporte: HerramientaReporte
+var herramientas_reporte: Array[HerramientaReporte] = []
 var _aviso_reporte_atasco: Label3D
 var _reporte_atascado_id: String = ""
 var _reporte_herramienta_recogida: bool = false
@@ -226,6 +227,18 @@ func _ready() -> void:
 	herramienta_reporte = HerramientaReporte.new()
 	herramienta_reporte.position = grafo_piso.celda_a_posicion(Vector2i(7, 15)) + Vector3.UP * 0.26
 	add_child(herramienta_reporte)
+	herramientas_reporte.append(herramienta_reporte)
+	if SesionLAN.activa:
+		var segunda := HerramientaReporte.new()
+		segunda.indice_red = 1
+		segunda.position = herramienta_reporte.position + Vector3(0.65, 0, 0)
+		add_child(segunda)
+		herramientas_reporte.append(segunda)
+		for unidad in herramientas_reporte:
+			var acceso := Marker3D.new()
+			acceso.position = unidad.position
+			acceso.add_to_group("accesos_navegacion")
+			add_child(acceso)
 	_aviso_reporte_atasco = Label3D.new()
 	_aviso_reporte_atasco.text = "IMPRESORA ATASCADA"
 	_aviso_reporte_atasco.font = preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
@@ -487,7 +500,8 @@ func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
 	var mostrar := nuevo_estado == EventoApagonScript.Estado.RESTAURADO and not partida_finalizada
 	_actualizar_indicadores_estaciones()
 	progreso_seguridad.mostrar_indicador = mostrar
-	herramienta_reporte.mostrar_indicador = mostrar
+	for unidad in herramientas_reporte:
+		unidad.mostrar_indicador = mostrar
 	_aviso_reporte_atasco.visible = mostrar and not _reporte_atascado_id.is_empty()
 	if is_instance_valid(papel_actual):
 		papel_actual.mostrar_indicador = mostrar
@@ -1137,9 +1151,9 @@ func _interactuar_reporte() -> bool:
 	return false
 
 
-func recoger_herramienta_reporte(portador: Player) -> void:
+func recoger_herramienta_reporte(portador: Player, indice := 0) -> void:
 	if is_instance_valid(red):
-		SesionLAN.solicitar("herramienta")
+		SesionLAN.solicitar("herramienta", {"indice": indice})
 		return
 	if portador != jugador or _reporte_atascado_id.is_empty() or not herramienta_reporte.activa:
 		return
@@ -1151,7 +1165,8 @@ func recoger_herramienta_reporte(portador: Player) -> void:
 func _limpiar_atasco_reporte() -> void:
 	_reporte_atascado_id = ""
 	_reporte_herramienta_recogida = false
-	herramienta_reporte.establecer_activa(false)
+	for unidad in herramientas_reporte:
+		unidad.establecer_activa(false)
 	_aviso_reporte_atasco.visible = false
 
 

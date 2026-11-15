@@ -93,6 +93,9 @@ func _run() -> void:
 	await _al_cliente("cerrar_guia")
 	await _esperar()
 	comprobar(red.jugadores.size() == 2 and not get_tree().paused, "Dos jugadores y barrera de carga completada")
+	comprobar(await _probar_colision(), "El cuerpo local choca y la interpolación remota no lo atraviesa")
+	var colision_cliente := await _al_cliente("colision")
+	comprobar(colision_cliente.ok, "La colisión entre jugadores funciona también en el cliente")
 	for evento in ["apagon", "terremoto", "incendio", "inundacion", "lava", "hielo"]:
 		oficina.tutoriales_vistos[StringName(evento)] = true
 	await _al_cliente("tutoriales")
@@ -226,6 +229,7 @@ func _run() -> void:
 	await _mover_cliente(red._buscar_estacion("bienestar").global_position + Vector3(0, 0, 0.6))
 	await _al_cliente("accion", {"tipo": "estacion", "datos": {"caso": colaborativo.id, "estacion": "bienestar"}})
 	comprobar(despacho.obtener_cordura(1) == mini(100, corduras[0] + 5) and despacho.obtener_cordura(cliente) == mini(100, corduras[1] + 5), "Colaborar recupera cordura para ambos participantes")
+	await _probar_llaves()
 	oficina.bloqueos_iniciados = true
 	oficina.temporizador_eventos.stop()
 	await _mover_host(Vector3(-0.5, 0.4, 5.0))
@@ -247,13 +251,30 @@ func _run() -> void:
 			r = await _pedir("consumir", {"indice": 3, "evento": red._evento_id})
 			comprobar(not r.get("ok", true) and red.bolsillos[1][3] == 1, "Avatar conserva su carga si la reparación ganó en " + tipo)
 		if tipo == "incendio":
+			comprobar(oficina.evento_incendio.extintores.size() == 2 and int(r.extintores) == 2, "Dos extintores visibles en ambos equipos")
 			await _mover_cliente(red._objeto("extintor").global_position + Vector3(0, 0, 0.5))
 			r = await _al_cliente("accion", {"tipo": "reservar", "datos": {"objetivo": "extintor"}})
-			comprobar(r.get("ok", false), "El cliente reserva el extintor compartido")
+			comprobar(r.get("ok", false), "El cliente reserva el primer extintor")
+			await _mover_host(red._objeto("extintor:1").global_position + Vector3(0, 0, 0.5))
+			r = await _pedir("reservar", {"objetivo": "extintor"})
+			comprobar(not r.ok, "Dos jugadores no pueden tomar el mismo extintor")
+			r = await _al_cliente("accion", {"tipo": "reservar", "datos": {"objetivo": "extintor:1"}})
+			comprobar(not r.ok, "Un jugador no puede acaparar los dos extintores")
+			r = await _pedir("reservar", {"objetivo": "extintor:1"})
+			comprobar(r.ok and red.tiene_extintor(1) and red.tiene_extintor(cliente), "Ambos jugadores llevan un extintor independiente")
+			await _esperar()
+			r = await _al_cliente("inspeccionar")
+			comprobar(int(r.extintores_recogidos) == 2, "Ambos extintores siguen a sus portadores en el cliente")
 			var foco: Node3D = oficina.evento_incendio.focos[0]
 			await _mover_cliente(foco.acceso.global_position + Vector3.UP * 0.02)
 			r = await _al_cliente("rociar", {"foco": 0})
 			comprobar(r.get("ok", false) and foco.apagado >= 1.0, "El extintor del cliente apaga la mesa en el anfitrión")
+			var otro_foco: Node3D = oficina.evento_incendio.focos[oficina.evento_incendio.focos.size() / 2]
+			await _mover_host(otro_foco.acceso.global_position + Vector3.UP * 0.02)
+			var hacia: Vector3 = otro_foco.global_position - oficina.jugador.global_position
+			oficina.jugador.visual.rotation.y = atan2(hacia.x, hacia.z)
+			r = await _pedir("rociar", {"foco": oficina.evento_incendio.focos.find(otro_foco), "delta": 0.1})
+			comprobar(r.ok and otro_foco.apagado > 0, "El segundo extintor también apaga fuego")
 		if tipo == "lava":
 			r = await _al_cliente("charcos")
 			comprobar(r.charcos == oficina.evento_lava.charcos, "El anfitrión publica los charcos exactos de lava")
@@ -265,6 +286,8 @@ func _run() -> void:
 		oficina.temporizador_eventos.stop()
 		r = await _al_cliente("inspeccionar")
 		comprobar(str(r.evento).is_empty(), "Avatar limpia " + tipo + " en ambos")
+		if tipo == "incendio":
+			comprobar(not red.tiene_extintor(1) and not red.tiene_extintor(cliente) and int(r.extintores) == 0, "Avatar retira ambos extintores y libera sus reservas")
 	red.bolsillos[cliente][2] = 1
 	r = await _al_cliente("accion", {"tipo": "consumir", "datos": {"indice": 2}})
 	comprobar(r.get("ok", false), "El cliente activa papa tiempo mediante la acción autorizada")
@@ -286,10 +309,23 @@ func _run() -> void:
 	await _esperar(0.3)
 	r = await _al_cliente("inspeccionar")
 	comprobar(not despacho.tiempo_detenido and not audio_host.playing and not r.tiempo and int(r.audios_tiempo) == 0, "Confirmación tardía: no vuelve a activar ni reproducir Za Warudo")
+	await _probar_llaves(false)
+	comprobar(red.iniciar_evento("incendio"), "Nuevo incendio repone las dos herramientas")
+	await _mover_host(red._objeto("extintor").global_position + Vector3(0, 0, 0.5))
+	await _pedir("reservar", {"objetivo": "extintor"})
+	await _mover_cliente(red._objeto("extintor:1").global_position + Vector3(0, 0, 0.5))
+	await _al_cliente("accion", {"tipo": "reservar", "datos": {"objetivo": "extintor:1"}})
 	despacho.perder_calma(100, &"prueba", 1)
 	await _esperar()
 	r = await _al_cliente("inspeccionar")
 	comprobar(not despacho.terminada and bool(r.activo_local), "El anfitrión eliminado mantiene vivo al cliente")
+	comprobar(not red.tiene_extintor(1) and red.tiene_extintor(cliente), "Eliminar al anfitrión libera solo su extintor")
+	comprobar(red.reservas["estacion:reporte"].herramientas == [0, cliente] and int(r.llaves) == 1, "La llave del eliminado reaparece sin quitar la del compañero")
+	comprobar(oficina.jugador.collision_layer == 0, "El eliminado deja de bloquear al compañero")
+	await _al_cliente("accion", {"tipo": "liberar", "datos": {"objetivo": "extintor:1"}})
+	await _mover_cliente(red._objeto("extintor").global_position + Vector3(0, 0, 0.5))
+	r = await _al_cliente("accion", {"tipo": "reservar", "datos": {"objetivo": "extintor"}})
+	comprobar(r.ok, "El superviviente puede recuperar el extintor liberado")
 	despacho.perder_calma(100, &"prueba", cliente)
 	red.publicar()
 	await _esperar()
@@ -328,6 +364,7 @@ func _run() -> void:
 func _orden(orden: String, datos: Dictionary = {}) -> void:
 	var resultado := {"ok": true}
 	match orden:
+		"colision": resultado = {"ok": await _probar_colision()}
 		"capturar": await _capturar("cliente")
 		"cerrar_guia": MenuGlobal.cerrar_ayuda()
 		"preparar_reinicio": MenuGlobal.omitir_tutorial_siguiente_partida = true
@@ -378,6 +415,14 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 				if reproductor.stream == poderes.SONIDO_DETENER and reproductor.playing:
 					resultado.audios_tiempo += 1
 			resultado["posicion_audio"] = poderes._sonido_detener.get_playback_position()
+			resultado["extintores"] = 0
+			resultado["extintores_recogidos"] = 0
+			for unidad in oficina.evento_incendio.extintores:
+				if unidad.visible: resultado.extintores += 1
+				if unidad.visible and unidad.recogido: resultado.extintores_recogidos += 1
+			resultado["llaves"] = 0
+			for unidad in oficina.herramientas_reporte:
+				if unidad.activa: resultado.llaves += 1
 		"pausar": SesionLAN.pedir_pausa(bool(datos.valor))
 		"terminar":
 			_terminando = true
@@ -388,6 +433,75 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 func _respuesta(resultado: Dictionary) -> void:
 	if multiplayer.get_remote_sender_id() == cliente:
 		respuesta_cliente.emit(resultado)
+
+func _probar_colision() -> bool:
+	# Dos cuerpos con las escenas y máscaras reales, aislados del transporte
+	# para que un paquete de movimiento no altere la geometría durante la prueba.
+	var local: Player = red.POLICIA.instantiate()
+	var remoto: Player = red.POLICIA.instantiate()
+	oficina.add_child(local)
+	oficina.add_child(remoto)
+	local.set_physics_process(false)
+	remoto.set_physics_process(false)
+	red._preparar_colision(local)
+	red._preparar_colision(remoto)
+	local.collision_mask = oficina.jugador.collision_mask
+	remoto.collision_mask = oficina.jugador.collision_mask
+	local.global_position = Vector3(0, 20, 5)
+	remoto.global_position = Vector3(1, 20, 5)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var choque := KinematicCollision3D.new()
+	var bloquea := local.test_move(local.global_transform, Vector3(2, 0, 0), choque) and choque.get_collider() == remoto
+	print("[LAN COLISION] máscara=%d contacto=%s" % [local.collision_mask, bloquea])
+	red._mover_cuerpo_remoto(remoto, Vector3(-1, 20, 5))
+	print("[LAN COLISION] posición remota tras barrido=%s" % remoto.global_position)
+	bloquea = bloquea and remoto.global_position.x > local.global_position.x
+	var capa := remoto.collision_layer
+	remoto.collision_layer = 0
+	await get_tree().physics_frame
+	bloquea = bloquea and not local.test_move(local.global_transform, Vector3(2, 0, 0))
+	remoto.collision_layer = capa
+	local.queue_free()
+	remoto.queue_free()
+	return bloquea
+
+func _probar_llaves(resolver := true) -> void:
+	var caso := Denuncia.new()
+	caso.id = "LAN-DOS-LLAVES"
+	caso.tiempo_limite_segundos = 300
+	caso.protocolo_estaciones.assign(["reporte"])
+	var probabilidad: float = oficina.probabilidad_atasco_reporte
+	oficina.probabilidad_atasco_reporte = 1.0
+	oficina.sistema_despacho.recibir_denuncia(caso)
+	await _mover_host(oficina.computador.global_position + Vector3(0, 0, 1))
+	await _pedir("tomar")
+	await _mover_host(red._buscar_estacion("reporte").global_position + Vector3(0, 0, 0.6))
+	var r := await _pedir("estacion", {"caso": caso.id, "estacion": "reporte"})
+	comprobar(r.get("tarea", "") == "atasco", "El atasco genera las herramientas")
+	await _esperar()
+	r = await _al_cliente("inspeccionar")
+	comprobar(int(r.llaves) == 2 and oficina.herramientas_reporte.size() == 2, "Dos llaves recogibles en ambos equipos")
+	await _mover_host(oficina.herramientas_reporte[0].global_position + Vector3(0, 0, 0.5))
+	await _mover_cliente(oficina.herramientas_reporte[1].global_position + Vector3(0, 0, 0.5))
+	r = await _pedir("herramienta", {"indice": 0})
+	comprobar(r.ok, "El anfitrión recoge la primera llave")
+	r = await _al_cliente("accion", {"tipo": "herramienta", "datos": {"indice": 0}})
+	comprobar(not r.ok, "La misma llave no tiene dos portadores")
+	r = await _pedir("herramienta", {"indice": 1})
+	comprobar(not r.ok, "Un jugador no puede acaparar ambas llaves")
+	r = await _al_cliente("accion", {"tipo": "herramienta", "datos": {"indice": 1}})
+	comprobar(r.ok and red.reservas["estacion:reporte"].herramientas == [1, cliente], "Cada jugador recoge una llave independiente")
+	if not resolver:
+		oficina.probabilidad_atasco_reporte = probabilidad
+		return
+	await _mover_host(red._buscar_estacion("reporte").global_position + Vector3(0, 0, 0.6))
+	r = await _pedir("estacion", {"caso": caso.id, "estacion": "reporte"})
+	comprobar(r.get("tarea", "") == "completada", "La llave permite reparar el caso reservado")
+	await _esperar()
+	r = await _al_cliente("inspeccionar")
+	comprobar(int(r.llaves) == 0 and not red.reservas.has("estacion:reporte"), "Resolver el atasco limpia ambas llaves")
+	oficina.probabilidad_atasco_reporte = probabilidad
 
 func _salir_limpio() -> void:
 	await _esperar(0.2)

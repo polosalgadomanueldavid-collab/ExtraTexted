@@ -56,6 +56,7 @@ func configurar(mundo: Node3D) -> void:
 			jugador.remoto_red = true
 			oficina.get_node("Gameplay").add_child(jugador)
 		jugador.id_red = id
+		_preparar_colision(jugador)
 		jugadores[id] = jugador
 		jugador.global_position = oficina.jugador._spawn_transform.origin + Vector3(0.72 * ids.find(id), 0, 0)
 		jugador._spawn_transform = jugador.global_transform
@@ -69,8 +70,7 @@ func configurar(mundo: Node3D) -> void:
 		etiqueta.outline_size = 8
 		etiqueta.no_depth_test = true
 		etiqueta.modulate = Color("83e0ed") if ids.find(id) == 0 else Color("ffd28e")
-		etiqueta.scale = Vector3.ONE / jugador.character_scale
-		etiqueta.position.y = 1.2 / jugador.character_scale
+		etiqueta.position.y = 1.2
 		jugador.add_child(etiqueta)
 	despacho.jugador_eliminado.connect(_eliminar)
 	despacho.denuncia_resuelta.connect(func(caso: Denuncia): _resueltos[caso.id] = _serializar_caso(caso))
@@ -139,7 +139,7 @@ func recibir_movimiento(id: int, datos: Dictionary, validar: bool) -> bool:
 	if validar:
 		# La validación de interacciones usa la posición más reciente; el modelo se suaviza aparte.
 		var visual_anterior := j.visual.global_position
-		j.global_position = posicion
+		_mover_cuerpo_remoto(j, posicion)
 		j.visual.global_position = visual_anterior
 		j.velocity = datos.vel
 	return true
@@ -150,7 +150,7 @@ func _interpolar(delta: float) -> void:
 			continue
 		var j: Player = jugadores[id]
 		var datos: Dictionary = _remotos[id]
-		j.global_position = j.global_position.lerp(datos.pos, minf(1.0, delta / 0.1))
+		_mover_cuerpo_remoto(j, j.global_position.lerp(datos.pos, minf(1.0, delta / 0.1)))
 		j.visual.position = j.visual.position.lerp(Vector3.ZERO, minf(1.0, delta / 0.1))
 		j.visual.rotation.y = lerp_angle(j.visual.rotation.y, float(datos.giro), minf(1.0, delta / 0.1))
 		j.velocity = datos.vel
@@ -171,6 +171,33 @@ func _interpolar(delta: float) -> void:
 		var anim := StringName(str(datos.get("anim", "idle")))
 		if j.animation_player.has_animation(anim):
 			j._play_animation(anim)
+
+func _preparar_colision(j: Player) -> void:
+	# Mantener el cuerpo físico a escala 1: las consultas de movimiento de Jolt
+	# no detectan bien el contacto entre estos cuerpos con escala 0.3.
+	# Trasladar la escala a los hijos conserva exactamente el aspecto y tamaño.
+	var factor := j.scale.x
+	if not is_equal_approx(factor, 1.0):
+		for hijo: Node in j.get_children():
+			if hijo is CollisionShape3D and hijo.shape is BoxShape3D:
+				hijo.shape = hijo.shape.duplicate()
+				hijo.shape.size *= factor
+				hijo.position *= factor
+			elif hijo is Node3D:
+				hijo.position *= factor
+				hijo.scale *= factor
+		j.scale = Vector3.ONE
+	j.set_collision_mask_value(2, true)
+
+func _mover_cuerpo_remoto(j: Player, destino: Vector3) -> void:
+	# El remoto ya resuelve el escenario en su equipo. Aquí barrer su cuerpo
+	# contra jugadores evita que la interpolación atraviese al jugador local.
+	var mascara := j.collision_mask
+	j.collision_mask = 2
+	var choque := j.move_and_collide(destino - j.global_position)
+	if choque != null:
+		j.move_and_collide(choque.get_remainder().slide(choque.get_normal()))
+	j.collision_mask = mascara
 
 func procesar(id: int, tipo: String, datos: Dictionary) -> Dictionary:
 	if not _listo or not jugadores.has(id):
@@ -246,12 +273,16 @@ func procesar(id: int, tipo: String, datos: Dictionary) -> Dictionary:
 		"rociar":
 			return _rociar(id, int(datos.get("foco", -1)), float(datos.get("delta", 0.0)))
 		"herramienta":
-			if not _cerca(j, oficina.herramienta_reporte):
+			var indice := int(datos.get("indice", 0))
+			if indice < 0 or indice >= oficina.herramientas_reporte.size():
+				return _error("Herramienta desconocida.")
+			if not _cerca(j, oficina.herramientas_reporte[indice]):
 				return _error("Acércate a la herramienta.")
 			var reserva: Dictionary = reservas.get("estacion:reporte", {})
-			if reserva.is_empty() or not reserva.get("atasco", false) or int(reserva.get("herramienta", 0)) != 0:
+			var portadores: Array = reserva.get("herramientas", [])
+			if not reserva.get("atasco", false) or indice >= portadores.size() or int(portadores[indice]) != 0 or portadores.has(id):
 				return _error("La herramienta no está disponible.")
-			reserva.herramienta = id
+			portadores[indice] = id
 			return {"ok": true}
 	return _error("Acción desconocida.")
 
@@ -269,7 +300,7 @@ func _estacion(id: int, tipo: String, datos: Dictionary) -> Dictionary:
 		return _error("Estación ocupada por otro caso.")
 	if tipo == "estacion":
 		if reserva.is_empty():
-			reserva = {"jugador": id, "caso": caso_id, "inicio": _reloj, "atasco": false, "herramienta": 0}
+			reserva = {"jugador": id, "caso": caso_id, "inicio": _reloj, "atasco": false, "herramientas": [0, 0]}
 			if estacion == "reporte":
 				reserva.atasco = oficina.generador_aleatorio.randf() < oficina.probabilidad_atasco_reporte
 			reservas[clave] = reserva
@@ -279,7 +310,7 @@ func _estacion(id: int, tipo: String, datos: Dictionary) -> Dictionary:
 			if _reloj - float(reserva.inicio) < oficina.DURACION_DESENCRIPTADO:
 				return {"ok": true, "tarea": "esperar", "restante": oficina.DURACION_DESENCRIPTADO - (_reloj - float(reserva.inicio))}
 		elif estacion == "reporte" and reserva.atasco:
-			if int(reserva.herramienta) != id:
+			if not reserva.herramientas.has(id):
 				return {"ok": true, "tarea": "atasco"}
 		elif estacion in ["evidencias", "verificacion"]:
 			return {"ok": true, "tarea": estacion}
@@ -297,6 +328,8 @@ func _reservar_objeto(id: int, clave: String) -> Dictionary:
 		return _error("Acércate al objeto.")
 	if not _objeto_disponible(clave):
 		return _error("El objeto ya no necesita atención.")
+	if clave in ["extintor", "extintor:1"] and (cafes.get(id, false) or (tiene_extintor(id) and int(reservas.get(clave, {}).get("jugador", 0)) != id)):
+		return _error("Solo puedes llevar un extintor y necesitas las manos sin café.")
 	if despacho.tiempo_detenido and not clave.begins_with("sofa:"):
 		return _error("El mundo está detenido.")
 	var actual: Dictionary = reservas.get(clave, {})
@@ -310,8 +343,14 @@ func _objeto_disponible(clave: String) -> bool:
 		"apagon": return oficina.evento_apagon.estado != 0
 		"inundacion": return oficina.evento_inundacion.activo and not oficina.evento_inundacion.drenando
 		"hielo": return oficina.evento_hielo.activo and not oficina.evento_hielo.descongelando
-		"extintor": return oficina.evento_incendio.activo
+		"extintor", "extintor:1": return oficina.evento_incendio.activo
 	return true
+
+func tiene_extintor(id: int) -> bool:
+	for clave: String in ["extintor", "extintor:1"]:
+		if int(reservas.get(clave, {}).get("jugador", 0)) == id:
+			return true
+	return false
 
 func _comprar(id: int, producto: String, indice: int) -> Dictionary:
 	var clave := "cafetera" if producto == "cafe" else "tienda"
@@ -385,7 +424,8 @@ func _objeto(clave: String) -> Node3D:
 		"apagon": return oficina.evento_apagon.taco
 		"inundacion": return oficina.evento_inundacion.tuberias
 		"hielo": return oficina.evento_hielo.tuberia
-		"extintor": return oficina.evento_incendio.extintor
+		"extintor": return oficina.evento_incendio.extintores[0]
+		"extintor:1": return oficina.evento_incendio.extintores[1] if oficina.evento_incendio.extintores.size() > 1 else null
 	if clave in ["sofa:AsientoTramo", "sofa:AsientoRetorno"]:
 		return oficina.get_node("ZonaDescanso/SofaL/" + clave.get_slice(":", 1))
 	return null
@@ -439,8 +479,10 @@ func _actualizar_contexto() -> void:
 		oficina._on_denuncias_actualizadas(despacho.obtener_denuncias_ordenadas())
 	var reporte: Dictionary = reservas.get("estacion:reporte", {})
 	oficina._reporte_atascado_id = str(reporte.get("caso", "")) if reporte.get("atasco", false) else ""
-	oficina._reporte_herramienta_recogida = int(reporte.get("herramienta", 0)) == SesionLAN.id_local()
-	oficina.herramienta_reporte.establecer_activa(not oficina._reporte_atascado_id.is_empty() and int(reporte.get("herramienta", 0)) == 0)
+	var portadores: Array = reporte.get("herramientas", [0, 0])
+	oficina._reporte_herramienta_recogida = portadores.has(SesionLAN.id_local())
+	for indice in oficina.herramientas_reporte.size():
+		oficina.herramientas_reporte[indice].establecer_activa(not oficina._reporte_atascado_id.is_empty() and int(portadores[indice]) == 0)
 	oficina._aviso_reporte_atasco.visible = not oficina._reporte_atascado_id.is_empty() and oficina.evento_apagon.estado == 0
 
 func _actualizar_hud() -> void:
@@ -566,9 +608,13 @@ func _eliminar(id: int) -> void:
 		despacho.establecer_portador(hoja.denuncia_id, 0)
 		aplicando = false
 	for clave: String in reservas.keys():
+		if clave == "estacion:reporte":
+			var portadores: Array = reservas[clave].get("herramientas", [])
+			for indice in portadores.size():
+				if int(portadores[indice]) == id:
+					portadores[indice] = 0
 		if int(reservas[clave].jugador) == id:
 			if clave == "estacion:reporte" and reservas[clave].get("atasco", false):
-				reservas[clave].herramienta = 0
 				reservas[clave].jugador = 0
 			elif clave == "estacion:privacidad":
 				reservas[clave].jugador = 0
@@ -735,6 +781,7 @@ func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 			reservas.erase("inundacion")
 			reservas.erase("hielo")
 			reservas.erase("extintor")
+			reservas.erase("extintor:1")
 		"reparado":
 			_evento_resuelto_id = _evento_id
 			aplicando = true
@@ -784,7 +831,7 @@ func _reparar(id: int, clave: String) -> Dictionary:
 
 func _rociar(id: int, indice: int, paso: float) -> Dictionary:
 	var evento: Node = oficina.evento_incendio
-	if not evento.activo or int(reservas.get("extintor", {}).get("jugador", 0)) != id or indice < 0 or indice >= evento.focos.size() or despacho.tiempo_detenido:
+	if not evento.activo or not tiene_extintor(id) or indice < 0 or indice >= evento.focos.size() or despacho.tiempo_detenido:
 		return _error("El extintor no está disponible.")
 	var foco: Node3D = evento.focos[indice]
 	var p: Vector3 = jugadores[id].global_position
