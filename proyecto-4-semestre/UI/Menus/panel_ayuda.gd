@@ -51,6 +51,7 @@ const PASOS := [
 @onready var tutorial_apagon: HBoxContainer = %TutorialApagon
 @onready var tutorial_evento: HBoxContainer = %TutorialEvento
 @onready var boton_cerrar: Button = %CerrarAyuda
+@onready var contador_confirmaciones: Label = %ContadorConfirmaciones
 @onready var pista: Label = %Pista
 @onready var cuerpo: PanelContainer = %Cuerpo
 @onready var navegacion: MarginContainer = %NavegacionTutoriales
@@ -219,6 +220,7 @@ func controles_foco() -> Array[Control]:
 
 
 func presentar(es_leyenda: bool, es_inicio: bool) -> void:
+	_restablecer_confirmaciones()
 	_establecer_expediente(not es_leyenda)
 	_actualizar_pestanas(&"general", not es_leyenda and not es_inicio)
 	titulo.add_theme_font_size_override("font_size", 60)
@@ -246,6 +248,7 @@ func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 
 
 func presentar_tutorial_evento(evento: StringName, desde_pausa: bool) -> void:
+	_restablecer_confirmaciones()
 	_establecer_expediente(true)
 	_actualizar_pestanas(evento, desde_pausa)
 	custom_minimum_size.x = TAMANO_EXPEDIENTE
@@ -269,6 +272,19 @@ func presentar_tutorial_evento(evento: StringName, desde_pausa: bool) -> void:
 		tutorial_evento.remove_child(columna)
 		columna.queue_free()
 	_crear_pasos(tutorial_evento, guia.pasos)
+
+
+func actualizar_confirmaciones(confirmados: int, total: int, confirmado: bool, sincronizado: bool) -> void:
+	contador_confirmaciones.text = "(%d/%d)" % [confirmados, total]
+	contador_confirmaciones.show()
+	boton_cerrar.disabled = confirmado or not sincronizado
+	if confirmado:
+		pista.text = "Esperando a tu compañero para continuar…"
+
+
+func _restablecer_confirmaciones() -> void:
+	contador_confirmaciones.hide()
+	boton_cerrar.disabled = false
 
 
 func _establecer_expediente(activo: bool) -> void:

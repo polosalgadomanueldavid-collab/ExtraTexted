@@ -28,6 +28,10 @@ function Esperar-Prueba($Prueba) {
 if (-not $SoloConexion) {
     Esperar-Prueba (Iniciar-Prueba 'reglas' 'prueba_reglas_lan.gd')
     Esperar-Prueba (Iniciar-Prueba 'menu' 'prueba_menu_lan.gd')
+    $salaAnfitrion = Iniciar-Prueba 'sala_anfitrion' 'prueba_menu_lan.gd' @('--sala-host')
+    $salaCliente = Iniciar-Prueba 'sala_cliente' 'prueba_menu_lan.gd' @('--sala-client')
+    Esperar-Prueba $salaAnfitrion
+    Esperar-Prueba $salaCliente
     $anfitrion = Iniciar-Prueba 'anfitrion' 'prueba_lan.gd' @('--host')
     $cliente = Iniciar-Prueba 'cliente' 'prueba_lan.gd' @('--client')
     Esperar-Prueba $anfitrion

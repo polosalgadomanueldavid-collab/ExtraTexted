@@ -3,9 +3,10 @@ extends Node
 signal sala_actualizada
 signal aviso(mensaje: String)
 signal respuesta_recibida(numero: int, resultado: Dictionary)
+signal tutorial_actualizado
 
 const PUERTO := 7000
-const VERSION := "extratexted-lan-2"
+const VERSION := "extratexted-lan-3"
 const OFICINA := "res://Mundo/Oficina.tscn"
 var activa := false
 var en_partida := false
@@ -13,6 +14,8 @@ var cargando := false
 var participantes: Dictionary = {}
 var puente: Node
 var ultimo_aviso := ""
+var tutorial_actual: StringName = &""
+var confirmaciones_tutorial: Dictionary = {}
 var _alias := ""
 var _pausas: Dictionary = {}
 var _cargados: Dictionary = {}
@@ -144,6 +147,8 @@ func _cargar(nueva_ronda: int) -> void:
 	_limite_carga = 60.0
 	_cargados.clear()
 	_pausas.clear()
+	tutorial_actual = &""
+	confirmaciones_tutorial.clear()
 	_respuestas.clear()
 	_ultima_solicitud.clear()
 	_cancelar_pendientes()
@@ -213,6 +218,39 @@ func _guardar_pausa(id: int, valor: bool) -> void:
 func _pausa_confirmada(datos: Dictionary) -> void:
 	_pausas = datos.duplicate()
 	get_tree().paused = cargando or not datos.is_empty() or MenuGlobal.final_de_partida_activo
+
+func iniciar_tutorial(tutorial: StringName) -> void:
+	if not es_anfitrion() or not en_partida or tutorial == &"" or tutorial == tutorial_actual:
+		return
+	_estado_tutorial.rpc(ronda, tutorial, {})
+
+func confirmar_tutorial(tutorial: StringName) -> void:
+	if not en_partida or tutorial != tutorial_actual or confirmaciones_tutorial.has(id_local()):
+		return
+	if es_anfitrion():
+		_guardar_confirmacion_tutorial(1, tutorial)
+	else:
+		_confirmar_tutorial.rpc_id(1, ronda, tutorial)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _confirmar_tutorial(ronda_cliente: int, tutorial: StringName) -> void:
+	if es_anfitrion() and ronda_cliente == ronda:
+		_guardar_confirmacion_tutorial(multiplayer.get_remote_sender_id(), tutorial)
+
+func _guardar_confirmacion_tutorial(id: int, tutorial: StringName) -> void:
+	if not en_partida or not participantes.has(id) or tutorial == &"" or tutorial != tutorial_actual or confirmaciones_tutorial.has(id):
+		return
+	var confirmaciones := confirmaciones_tutorial.duplicate()
+	confirmaciones[id] = true
+	_estado_tutorial.rpc(ronda, tutorial, confirmaciones)
+
+@rpc("authority", "call_local", "reliable")
+func _estado_tutorial(ronda_servidor: int, tutorial: StringName, confirmaciones: Dictionary) -> void:
+	if not en_partida or ronda_servidor != ronda:
+		return
+	tutorial_actual = tutorial
+	confirmaciones_tutorial = confirmaciones.duplicate()
+	tutorial_actualizado.emit()
 
 func solicitar(tipo: String, datos: Dictionary = {}, al_terminar: Callable = Callable()) -> void:
 	if not en_partida or not is_instance_valid(puente):
@@ -330,6 +368,8 @@ func cerrar(motivo: String = "") -> void:
 	_limite_carga = 0.0
 	participantes.clear()
 	_pausas.clear()
+	tutorial_actual = &""
+	confirmaciones_tutorial.clear()
 	_cargados.clear()
 	_respuestas.clear()
 	_cancelar_pendientes()

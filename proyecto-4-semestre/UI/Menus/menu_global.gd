@@ -47,6 +47,8 @@ var _raton_anterior: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _cambiando_escena: bool = false
 var _origen_ayuda := OrigenAyuda.MENU
 var _partida_con_tutorial: int = 0
+var _tutorial_lan: StringName = &""
+var _confirmacion_tutorial_enviada := false
 var _carga_juego_activa := false
 var _oficina_precargada: PackedScene
 var _oficina_en_preparacion: Node
@@ -76,6 +78,7 @@ func _ready() -> void:
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
+	SesionLAN.tutorial_actualizado.connect(_actualizar_tutorial_lan)
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.volver_expediente.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.nombre_confirmado.connect(_iniciar_partida)
@@ -288,6 +291,7 @@ func mostrar_tutorial_evento(evento: StringName) -> bool:
 	_guardar_entrada()
 	_establecer_pausa(true)
 	_abrir_guia_evento(evento, OrigenAyuda.EVENTO)
+	_preparar_tutorial_lan(evento)
 	return true
 
 
@@ -324,6 +328,7 @@ func _abrir_tutorial_inicial() -> void:
 	_guardar_entrada()
 	_establecer_pausa(true)
 	_mostrar_ayuda(false, OrigenAyuda.INICIO)
+	_preparar_tutorial_lan(&"inicio")
 
 
 func _mostrar_ayuda(es_leyenda: bool, origen: OrigenAyuda) -> void:
@@ -340,6 +345,39 @@ func _mostrar_ayuda(es_leyenda: bool, origen: OrigenAyuda) -> void:
 func cerrar_ayuda() -> void:
 	if not panel_ayuda.visible:
 		return
+	if _tutorial_lan != &"":
+		if _confirmacion_tutorial_enviada or SesionLAN.tutorial_actual != _tutorial_lan:
+			return
+		_confirmacion_tutorial_enviada = true
+		_actualizar_tutorial_lan()
+		SesionLAN.confirmar_tutorial(_tutorial_lan)
+		return
+	_cerrar_ayuda()
+
+
+func _preparar_tutorial_lan(tutorial: StringName) -> void:
+	if not SesionLAN.en_partida:
+		return
+	_tutorial_lan = tutorial
+	_confirmacion_tutorial_enviada = false
+	SesionLAN.iniciar_tutorial(tutorial)
+	_actualizar_tutorial_lan()
+
+
+func _actualizar_tutorial_lan() -> void:
+	if _tutorial_lan == &"" or not panel_ayuda.visible:
+		return
+	var sincronizado := SesionLAN.tutorial_actual == _tutorial_lan
+	var confirmados := SesionLAN.confirmaciones_tutorial.size() if sincronizado else 0
+	var total := SesionLAN.participantes.size()
+	var confirmado := _confirmacion_tutorial_enviada or (sincronizado and SesionLAN.confirmaciones_tutorial.has(SesionLAN.id_local()))
+	panel_ayuda.actualizar_confirmaciones(confirmados, total, confirmado, sincronizado)
+	if total > 0 and confirmados == total:
+		_tutorial_lan = &""
+		_cerrar_ayuda()
+
+
+func _cerrar_ayuda() -> void:
 	if _origen_ayuda in [OrigenAyuda.INICIO, OrigenAyuda.EVENTO]:
 		_establecer_pausa(false)
 		capa.hide()
@@ -525,6 +563,8 @@ func _al_cambiar_escena() -> void:
 	panel_confirmacion.hide()
 	panel_ayuda.hide()
 	panel_clasificacion.hide()
+	_tutorial_lan = &""
+	_confirmacion_tutorial_enviada = false
 	_foco_anterior = null
 	_opciones_desde_pausa = false
 	_cambiando_escena = false
