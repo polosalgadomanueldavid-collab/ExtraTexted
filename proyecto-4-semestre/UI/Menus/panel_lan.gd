@@ -51,10 +51,9 @@ func _ready() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_theme_stylebox_override("panel", _estilo(CREMA, TINTA, 24, 4))
 	_lienzo.add_child(panel)
-	_etiqueta(_lienzo, "EXTRATEXTED  /  TURNO COMPARTIDO", Vector2(48, 25), Vector2(680, 26), 17, false)
-	_titulo = _etiqueta(_lienzo, "ARMA TU EQUIPO", Vector2(46, 61), Vector2(765, 58), 48)
-	_subtitulo = _etiqueta(_lienzo, "Dos policías. Una oficina. El mismo saldo.", Vector2(48, 119), Vector2(790, 28), 20, false)
-	_plazas = _etiqueta(_lienzo, "LAN / 2", Vector2(824, 65), Vector2(128, 44), 24)
+	_titulo = _etiqueta(_lienzo, "ARMA TU EQUIPO", Vector2(46, 35), Vector2(765, 58), 48)
+	_subtitulo = _etiqueta(_lienzo, "Dos policías. Una oficina. El mismo saldo.", Vector2(48, 101), Vector2(904, 28), 20, false)
+	_plazas = _etiqueta(_lienzo, "", Vector2(824, 39), Vector2(128, 44), 17)
 	_plazas.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_plazas.add_theme_stylebox_override("normal", _estilo(Color("d7e9e6"), TINTA, 12, 2))
 	_conexion = Control.new()
@@ -93,15 +92,24 @@ func _ready() -> void:
 	fondo.hide()
 
 func _crear_conexion() -> void:
-	_etiqueta(_conexion, "01  TU IDENTIFICACIÓN", Vector2(48, 188), Vector2(420, 32), 24)
+	_encabezado_conexion("TU IDENTIFICACIÓN", Vector2(48, 188))
 	_etiqueta(_conexion, "Así te verá tu compañero en la oficina.", Vector2(48, 229), Vector2(425, 28), 18, false)
 	alias_jugador = _campo(_conexion, "Tu alias", Vector2(48, 274), Vector2(432, 54))
 	alias_jugador.max_length = 10
 	crear = _boton(_conexion, "CREAR PARTIDA", Vector2(48, 354), Vector2(432, 60), func(): SesionLAN.crear(alias_jugador.text), true)
-	_etiqueta(_conexion, "02  ¿YA HAY UNA SALA?", Vector2(520, 188), Vector2(432, 32), 24)
+	_encabezado_conexion("¿YA HAY UNA SALA?", Vector2(520, 188))
 	_etiqueta(_conexion, "Escribe la IP que te comparte el anfitrión.", Vector2(520, 229), Vector2(432, 28), 18, false)
 	direccion = _campo(_conexion, "Ej. 192.168.1.10", Vector2(520, 274), Vector2(432, 54))
 	unir = _boton(_conexion, "UNIRSE POR IP", Vector2(520, 354), Vector2(432, 60), func(): SesionLAN.unirse(direccion.text, alias_jugador.text))
+
+func _encabezado_conexion(texto: String, punto: Vector2) -> void:
+	var vineta := Panel.new()
+	vineta.position = punto + Vector2(2, 10)
+	vineta.size = Vector2(10, 10)
+	vineta.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vineta.add_theme_stylebox_override("panel", _estilo(TINTA, TINTA, 5, 0))
+	_conexion.add_child(vineta)
+	_etiqueta(_conexion, texto, punto + Vector2(24, 0), Vector2(408, 32), 24)
 
 func _crear_tarjeta(indice: int) -> void:
 	var tarjeta := Panel.new()
@@ -235,7 +243,7 @@ func _actualizar() -> void:
 	listo.visible = activa and SesionLAN.participantes.has(SesionLAN.id_local())
 	var local_listo: bool = SesionLAN.participantes.get(SesionLAN.id_local(), {}).get("listo", false)
 	listo.set_pressed_no_signal(local_listo)
-	listo.text = "LISTO · CAMBIAR" if local_listo else "ESTOY LISTO"
+	listo.text = "LISTO" if local_listo else "ESTOY LISTO"
 	iniciar.visible = activa
 	iniciar.text = "INICIAR TURNO" if SesionLAN.es_anfitrion() else "ESPERA AL ANFITRIÓN"
 	var ids: Array = SesionLAN.participantes.keys()
@@ -253,8 +261,8 @@ func _actualizar() -> void:
 		if ocupado and ids[indice] == SesionLAN.id_local(): tarjeta.sello.text += " · TÚ"
 		tarjeta.sello.add_theme_color_override("font_color", CREMA if preparado else TINTA)
 		tarjeta.sello.add_theme_stylebox_override("normal", _estilo(VERDE if preparado else Color("e7dfca"), Color.TRANSPARENT, 10, 0))
-	_plazas.text = "%d / 2 LISTOS" % SesionLAN.participantes.values().filter(func(j: Dictionary): return j.listo).size() if activa else "LAN / 2"
-	_plazas.add_theme_font_size_override("font_size", 17 if activa else 24)
+	_plazas.visible = activa
+	_plazas.text = "%d / 2 LISTOS" % SesionLAN.participantes.values().filter(func(j: Dictionary): return j.listo).size()
 	lista.text = "Saldo compartido · Cordura y bolsillo personales"
 	iniciar.disabled = not preparados or not SesionLAN.es_anfitrion() or SesionLAN.cargando
 	estado.text = SesionLAN.ultimo_aviso if not SesionLAN.ultimo_aviso.is_empty() else "Crea una sala o únete a tu compañero en la misma red."

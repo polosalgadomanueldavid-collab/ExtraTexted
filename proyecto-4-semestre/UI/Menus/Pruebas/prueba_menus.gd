@@ -326,7 +326,7 @@ func _probar() -> void:
 func _probar_pestanas_tutorial(desde_pausa: bool) -> void:
 	var panel := MenuGlobal.panel_ayuda
 	var vistos: Dictionary = get_tree().current_scene.tutoriales_vistos.duplicate() if desde_pausa else {}
-	_verificar(panel.pestanas_tutorial.size() == 7 and panel.navegacion.is_visible_in_tree(), "El expediente ofrece General y los seis eventos")
+	_verificar(panel.pestanas_tutorial.size() == 8 and panel.navegacion.is_visible_in_tree(), "El expediente ofrece General, los seis eventos e Ítems")
 	for boton: Button in panel.pestanas_tutorial:
 		for cuadro: int in range(4):
 			await get_tree().process_frame
@@ -336,6 +336,9 @@ func _probar_pestanas_tutorial(desde_pausa: bool) -> void:
 		var titulo := "TU PRIMER TURNO"
 		if evento == &"apagon":
 			titulo = "RESTABLECE LA LUZ"
+		elif evento == &"items":
+			titulo = "ÍTEMS Y CAFÉ"
+			_verificar(panel.tutorial_evento.get_node("GuiaItems").get_child_count() == 6, "La guía contiene los cinco consumibles y las instrucciones de compra")
 		elif evento != &"general":
 			titulo = panel.GuiasEventos.GUIAS[evento].titulo
 		_verificar(panel.tutorial_actual == evento and panel.titulo.text == titulo and boton.button_pressed, "La pestaña abre su guía: " + evento)

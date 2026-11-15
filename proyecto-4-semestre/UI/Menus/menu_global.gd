@@ -98,6 +98,8 @@ func _ready() -> void:
 	panel_opciones.visibility_changed.connect(_ajustar_presentacion)
 	panel_accesibilidad.visibility_changed.connect(_ajustar_presentacion)
 	panel_confirmacion.visibility_changed.connect(_ajustar_presentacion)
+	panel_clasificacion.visibility_changed.connect(_ajustar_presentacion)
+	panel_clasificacion.formulario.visibility_changed.connect(_ajustar_presentacion)
 	_sincronizar_ajustes()
 	_ajustar_presentacion()
 	_abrir_tutorial_inicial.call_deferred()
@@ -185,13 +187,18 @@ func _exit_tree() -> void:
 
 func _ajustar_presentacion() -> void:
 	var tutorial_evento := panel_ayuda.is_visible_in_tree() and _origen_ayuda == OrigenAyuda.EVENTO
-	fondo_modal.visible = not tutorial_evento
+	var ingreso_turno := panel_clasificacion.is_visible_in_tree() and panel_clasificacion.formulario.visible
+	fondo_modal.visible = not tutorial_evento and not ingreso_turno
 	var escala_panel := ESCALA_PAUSA if panel_pausa.visible or panel_confirmacion.visible else 1.0
 	var factor := minf(capa.size.x / TAMANO_DISENO.x, capa.size.y / TAMANO_DISENO.y)
 	margen.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	margen.size = TAMANO_DISENO / escala_panel
 	margen.scale = Vector2.ONE * factor * escala_panel
 	margen.position = (capa.size - margen.size * margen.scale) * 0.5
+	if ingreso_turno:
+		# La ficha ocupa la franja superior; los consejos y la carga quedan libres abajo.
+		margen.size.y = 460.0
+		margen.position.y = 24.0 * factor
 
 
 func es_escena_de_juego() -> bool:
