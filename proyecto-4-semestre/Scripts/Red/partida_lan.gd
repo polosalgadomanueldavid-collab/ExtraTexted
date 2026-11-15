@@ -26,6 +26,7 @@ var _vencidos: Dictionary = {}
 var _eliminados: Dictionary = {}
 var _esperas: Dictionary = {}
 var _evento_id := 0
+var _activacion_tiempo := 0
 var _evento_resuelto_id := -1
 var _ultima_distribucion: Array = []
 var _ultimo_fuego := 0.0
@@ -346,7 +347,8 @@ func _consumir(id: int, indice: int, evento: int) -> Dictionary:
 		return _error("El evento ya terminó; conservas el Avatar.")
 	bolsillos[id][indice] = 0
 	if indice == 2:
-		SesionLAN.difundir("tiempo", {"jugador": id})
+		_activacion_tiempo += 1
+		SesionLAN.difundir("tiempo", {"jugador": id, "activacion": _activacion_tiempo})
 	elif indice == 3:
 		SesionLAN.difundir("avatar", {"jugador": id, "evento": _evento_id})
 	return {"ok": true}
@@ -721,7 +723,7 @@ func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 				oficina._anunciar_inicio_evento.callv(anuncio_pendiente)
 				anuncio_pendiente.clear()
 		"tiempo":
-			oficina.get_node("MaquinaExpendedora").poderes.detener_tiempo()
+			oficina.get_node("MaquinaExpendedora").poderes.detener_tiempo(int(datos.get("activacion", 0)))
 		"avatar":
 			_evento_resuelto_id = _evento_id
 			var evento: Node = oficina.get_node("MaquinaExpendedora").poderes.evento_actual()

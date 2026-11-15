@@ -265,12 +265,27 @@ func _run() -> void:
 		oficina.temporizador_eventos.stop()
 		r = await _al_cliente("inspeccionar")
 		comprobar(str(r.evento).is_empty(), "Avatar limpia " + tipo + " en ambos")
-	SesionLAN.difundir("tiempo", {"jugador": 1})
+	red.bolsillos[cliente][2] = 1
+	r = await _al_cliente("accion", {"tipo": "consumir", "datos": {"indice": 2}})
+	comprobar(r.get("ok", false), "El cliente activa papa tiempo mediante la acción autorizada")
 	await _esperar()
 	r = await _al_cliente("inspeccionar")
 	comprobar(bool(r.tiempo) and despacho.tiempo_detenido, "Papa tiempo compartida")
+	var audio_host: AudioStreamPlayer = oficina.get_node("MaquinaExpendedora").poderes._sonido_detener
+	comprobar(audio_host.playing and int(r.audios_tiempo) == 1, "Za Warudo tiene un solo reproductor activo por equipo")
+	var posicion_audio := audio_host.get_playback_position()
+	var posicion_cliente := float(r.posicion_audio)
+	# Reenviar la misma confirmación no reinicia la pista, ni ahora ni al terminar.
+	SesionLAN.difundir("tiempo", {"jugador": cliente, "activacion": red._activacion_tiempo})
+	await _esperar(0.3)
+	r = await _al_cliente("inspeccionar")
+	comprobar(audio_host.get_playback_position() >= posicion_audio and float(r.posicion_audio) >= posicion_cliente and int(r.audios_tiempo) == 1, "Confirmación repetida: Za Warudo continúa sin volver a empezar")
 	await _esperar(12.4)
 	comprobar(not despacho.tiempo_detenido, "El tiempo se restaura")
+	SesionLAN.difundir("tiempo", {"jugador": cliente, "activacion": red._activacion_tiempo})
+	await _esperar(0.3)
+	r = await _al_cliente("inspeccionar")
+	comprobar(not despacho.tiempo_detenido and not audio_host.playing and not r.tiempo and int(r.audios_tiempo) == 0, "Confirmación tardía: no vuelve a activar ni reproducir Za Warudo")
 	despacho.perder_calma(100, &"prueba", 1)
 	await _esperar()
 	r = await _al_cliente("inspeccionar")
@@ -357,6 +372,12 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 			for tipo in ["incendio", "inundacion", "lava", "hielo", "terremoto"]:
 				if oficina.get("evento_" + tipo).activo: evento = tipo
 			resultado = {"saldo": oficina.sistema_despacho.puntuacion.puntos, "casos": oficina.sistema_despacho.casos_en_proceso.size(), "hojas": red.papeles.size(), "evento": evento, "tiempo": oficina.sistema_despacho.tiempo_detenido, "activo_local": oficina.sistema_despacho.esta_activo(SesionLAN.id_local()), "final": oficina.sistema_despacho.terminada, "guia": MenuGlobal.panel_ayuda.visible}
+			var poderes: Node = oficina.get_node("MaquinaExpendedora").poderes
+			resultado["audios_tiempo"] = 0
+			for reproductor: AudioStreamPlayer in oficina.find_children("*", "AudioStreamPlayer", true, false):
+				if reproductor.stream == poderes.SONIDO_DETENER and reproductor.playing:
+					resultado.audios_tiempo += 1
+			resultado["posicion_audio"] = poderes._sonido_detener.get_playback_position()
 		"pausar": SesionLAN.pedir_pausa(bool(datos.valor))
 		"terminar":
 			_terminando = true
