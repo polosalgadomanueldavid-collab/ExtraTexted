@@ -1,6 +1,7 @@
 extends Node
 ## Adaptador de la oficina: reglas compartidas en el anfitrión, presentación local.
 const POLICIA := preload("res://Personajes/PoliciaAzul/Policia.tscn")
+const CONTENIDO_CAFE := preload("res://Objetos/ZonaDescanso/contenido_cafe.gd")
 const CAMPOS_CASO := ["id", "titulo", "descripcion_despacho", "nivel_riesgo", "hora_reporte", "tiempo_limite_segundos", "penalidad_calma", "puntaje_recompensa", "protocolo_estaciones", "estado", "motivo_perdida", "estaciones_completadas"]
 var oficina: Node3D
 var despacho: SistemaDespacho
@@ -9,6 +10,7 @@ var papeles: Dictionary = {}
 var reservas: Dictionary = {}
 var bolsillos: Dictionary = {}
 var cafes: Dictionary = {}
+var tazas_cafe: Dictionary = {}
 var _remotos: Dictionary = {}
 var _ultimo_movimiento: Dictionary = {}
 var _reloj := 0.0
@@ -319,6 +321,8 @@ func _comprar(id: int, producto: String, indice: int) -> Dictionary:
 	if producto == "cafe":
 		if cafes.get(id, false) or is_instance_valid(jugadores[id].papel_en_mano) or despacho.obtener_cordura(id) >= 100 or oficina.evento_apagon.estado != 0:
 			return _error("No puedes recoger este café.")
+		if indice < -1 or indice >= oficina.get_node("ZonaDescanso")._tazas.size():
+			return _error("Taza no válida.")
 		precio = oficina.get_node("ZonaDescanso").costo_cafe
 	else:
 		if indice < 0 or indice > 3 or bolsillos[id][indice] != 0:
@@ -328,6 +332,8 @@ func _comprar(id: int, producto: String, indice: int) -> Dictionary:
 		return _error("Saldo compartido insuficiente.")
 	if producto == "cafe":
 		cafes[id] = true
+		tazas_cafe[id] = maxi(0, indice)
+		return {"ok": true, "taza": tazas_cafe[id]}
 	else:
 		bolsillos[id][indice] = 1
 	return {"ok": true}
@@ -472,7 +478,7 @@ func publicar() -> void:
 		var papel: PapelDenuncia = papeles[caso]
 		if is_instance_valid(papel):
 			hojas[caso] = {"portador": papel.portador.id_red if is_instance_valid(papel.portador) else 0, "transform": papel.global_transform, "velocidad": papel.linear_velocity}
-	SesionLAN.publicar({"revision": _revision, "jugadores": despacho.jugadores, "casos": casos, "tiempos": despacho.tiempos_restantes, "activos": despacho.casos_en_proceso, "participantes": despacho.participantes, "portadores": despacho.ultimos_portadores, "asignados": despacho.casos_por_jugador, "saldo": despacho.puntuacion.puntos, "ganados": despacho.puntuacion.puntos_ganados, "terminada": despacho.terminada, "causa": str(despacho.causa_agotamiento), "hojas": hojas, "reservas": reservas, "bolsillos": bolsillos, "cafes": cafes, "resueltos": _resueltos, "vencidos": _vencidos, "duracion": oficina._duracion_partida, "mundo": _estado_mundo()})
+	SesionLAN.publicar({"revision": _revision, "jugadores": despacho.jugadores, "casos": casos, "tiempos": despacho.tiempos_restantes, "activos": despacho.casos_en_proceso, "participantes": despacho.participantes, "portadores": despacho.ultimos_portadores, "asignados": despacho.casos_por_jugador, "saldo": despacho.puntuacion.puntos, "ganados": despacho.puntuacion.puntos_ganados, "terminada": despacho.terminada, "causa": str(despacho.causa_agotamiento), "hojas": hojas, "reservas": reservas, "bolsillos": bolsillos, "cafes": cafes, "tazas_cafe": tazas_cafe, "resueltos": _resueltos, "vencidos": _vencidos, "duracion": oficina._duracion_partida, "mundo": _estado_mundo()})
 
 func aplicar(datos: Dictionary) -> void:
 	if int(datos.revision) <= _revision_recibida:
@@ -491,6 +497,7 @@ func aplicar(datos: Dictionary) -> void:
 	reservas = datos.reservas.duplicate(true)
 	bolsillos = datos.bolsillos.duplicate(true)
 	cafes = datos.cafes.duplicate()
+	tazas_cafe = datos.get("tazas_cafe", {}).duplicate()
 	var saldo_anterior := despacho.puntuacion.puntos
 	despacho.puntuacion._puntos = int(datos.saldo)
 	despacho.puntuacion._puntos_ganados = int(datos.ganados)
@@ -870,24 +877,41 @@ func _actualizar_objetos_remotos() -> void:
 		if id == SesionLAN.id_local():
 			continue
 		var j: Player = jugadores[id]
-		var tiene_cafe := bool(cafes.get(id, false)) and despacho.esta_activo(id)
+		var activo := despacho.esta_activo(id)
+		var tiene_cafe := bool(cafes.get(id, false)) and activo
+		var bebiendo: bool = activo and is_instance_valid(j.gestos) and j.gestos.gesto == &"beber"
 		if not _capsulas_remotas.has(id):
 			var capsula := preload("res://Eventos/Hielo/capsula_hielo.gd").new()
 			capsula.jugador = j
 			oficina.add_child(capsula)
 			_capsulas_remotas[id] = capsula
-		j.establecer_taza_en_mano(tiene_cafe)
+		var indice_taza := int(tazas_cafe.get(id, 0))
+		if _tazas_remotas.has(id) and int(_tazas_remotas[id].get_meta("indice_taza", 0)) != indice_taza:
+			_tazas_remotas[id].queue_free()
+			_tazas_remotas.erase(id)
 		if tiene_cafe and not _tazas_remotas.has(id):
 			var descanso: Node = oficina.get_node("ZonaDescanso")
 			if not descanso._tazas.is_empty():
-				var taza: Node3D = descanso._tazas[0].duplicate()
+				var taza: Node3D = descanso._tazas[clampi(indice_taza, 0, descanso._tazas.size() - 1)].duplicate()
+				taza.set_meta("indice_taza", indice_taza)
 				j.anclaje_taza().add_child(taza)
 				taza.position = Vector3.ZERO
 				taza.rotation = Vector3.ZERO
 				taza.scale = Vector3.ONE / j.anclaje_taza().global_basis.get_scale()
 				taza.show()
-				taza.get_node("ContenidoCafe").show()
+				var contenido_nuevo := taza.get_node("ContenidoCafe") as MeshInstance3D
+				# Cada jugador vacía su propia taza, sin alterar el material del mueble.
+				contenido_nuevo.material_override = contenido_nuevo.material_override.duplicate()
 				_tazas_remotas[id] = taza
-		elif not tiene_cafe and _tazas_remotas.has(id):
+		if not tiene_cafe and not bebiendo and _tazas_remotas.has(id):
 			_tazas_remotas[id].queue_free()
 			_tazas_remotas.erase(id)
+		if _tazas_remotas.has(id):
+			var contenido := _tazas_remotas[id].get_node("ContenidoCafe") as MeshInstance3D
+			contenido.visible = tiene_cafe
+			if tiene_cafe and bebiendo:
+				CONTENIDO_CAFE.actualizar_sorbo(contenido, j.gestos.tiempo / j.gestos.duracion)
+			else:
+				CONTENIDO_CAFE.establecer_llenado(contenido, 1.0 if tiene_cafe else 0.0)
+		# Conserva el agarre de la taza vacía hasta que el brazo termina de bajar.
+		j.establecer_taza_en_mano(_tazas_remotas.has(id))

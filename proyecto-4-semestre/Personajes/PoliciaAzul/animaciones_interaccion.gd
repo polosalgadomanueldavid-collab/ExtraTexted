@@ -529,8 +529,11 @@ func _process_modification() -> void:
 	var inclinacion := 0.0
 	if gesto == &"beber":
 		var t := tiempo / duracion
-		inclinacion = -0.55 * smoothstep(0.22, 0.42, t) * (1.0 - smoothstep(0.66, 0.90, t))
-	anclaje_taza.transform = Transform3D(Basis.from_euler(Vector3(inclinacion, 0.0, 0.0)), mano_derecha.position + Vector3(0.13, -0.15, 0.05))
+		# Acerca primero la taza; enderézala antes de completar el descenso.
+		inclinacion = -0.55 * smoothstep(0.30, 0.46, t) * (1.0 - smoothstep(0.64, 0.78, t))
+	var base_taza := Basis.from_euler(Vector3(inclinacion, 0.0, 0.0))
+	# Gira el desplazamiento para mantener el agarre del asa sobre la mano.
+	anclaje_taza.transform = Transform3D(base_taza, mano_derecha.position + base_taza * Vector3(0.13, -0.15, 0.05))
 
 
 func _aplicar_pies_quemados(peso: float) -> void:

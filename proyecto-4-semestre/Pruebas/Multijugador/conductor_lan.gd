@@ -176,6 +176,7 @@ func _run() -> void:
 	comprobar(int(red.bolsillos[1][0]) + int(red.cafes[cliente]) == 1 and int(red.bolsillos[cliente][0]) == 0, "Cada producto pertenece exclusivamente a su comprador")
 	await _pedir("liberar", {"objetivo": "tienda"})
 	await _al_cliente("accion", {"tipo": "liberar", "datos": {"objetivo": "cafetera"}})
+	await _probar_colores_cafe()
 	SesionLAN.pedir_pausa(true)
 	await _esperar()
 	r = await _al_cliente("pausar", {"valor": true})
@@ -347,6 +348,9 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 			resultado = {"ok": foco.apagado >= 1.0}
 		"trazado": resultado = oficina.evento_terremoto.exportar_trazado_red()
 		"accion": resultado = await _pedir(str(datos.tipo), datos.get("datos", {}))
+		"taza_remota":
+			var taza = red._tazas_remotas.get(1)
+			resultado = {"ok": true, "indice": taza.get_meta("indice_taza", -1) if is_instance_valid(taza) else -1}
 		"inspeccionar":
 			var evento := ""
 			if oficina.evento_apagon.estado != 0: evento = "apagon"
@@ -390,3 +394,43 @@ func _resolver_minijuego(estacion: String) -> void:
 		var panel: Control = oficina.escaner_verificacion
 		panel.marcador = panel.zona_centro
 		panel._detener()
+
+func _probar_colores_cafe() -> void:
+	var despacho: SistemaDespacho = oficina.sistema_despacho
+	var anterior_host := despacho.obtener_cordura(1)
+	var anterior_cliente := despacho.obtener_cordura(cliente)
+	if red.cafes.get(cliente, false):
+		await _al_cliente("accion", {"tipo": "beber"})
+	# Dinero solo para estas compras; se conserva el saldo previo al terminar.
+	var saldo_anterior := despacho.puntuacion.puntos
+	despacho.puntuacion._puntos += 200
+	await _mover_host(red._objeto("cafetera").global_position + Vector3(0.5, 0, 0.6))
+	for id in [cliente, 1]:
+		for indice in [0, 1]:
+			despacho.perder_calma(20, &"prueba", id)
+			if id == cliente:
+				await _al_cliente("accion", {"tipo": "reservar", "datos": {"objetivo": "cafetera"}})
+				var compra := await _al_cliente("accion", {"tipo": "comprar", "datos": {"producto": "cafe", "indice": indice}})
+				comprobar(compra.get("ok", false) and compra.get("taza", -1) == indice, "El servidor confirma el color elegido por el cliente")
+				await _esperar()
+				var taza = red._tazas_remotas.get(cliente)
+				comprobar(is_instance_valid(taza) and taza.mesh == oficina.get_node("ZonaDescanso")._tazas[indice].mesh, "El anfitrión ve la taza correcta del cliente")
+				await _al_cliente("accion", {"tipo": "beber"})
+				await _al_cliente("accion", {"tipo": "liberar", "datos": {"objetivo": "cafetera"}})
+			else:
+				await _pedir("reservar", {"objetivo": "cafetera"})
+				var compra := await _pedir("comprar", {"producto": "cafe", "indice": indice})
+				comprobar(compra.get("ok", false) and compra.get("taza", -1) == indice, "El anfitrión conserva el color elegido")
+				await _esperar()
+				var remoto := await _al_cliente("taza_remota")
+				comprobar(remoto.get("indice", -1) == indice, "El cliente ve la taza correcta del anfitrión")
+				await _pedir("beber")
+				await _pedir("liberar", {"objetivo": "cafetera"})
+			await _esperar()
+	comprobar(not red._tazas_remotas.has(cliente), "Al beber desaparece la taza remota")
+	comprobar(despacho.puntuacion.puntos == saldo_anterior, "Las cuatro compras de café cobran exactamente 200 puntos compartidos")
+	for id in [1, cliente]:
+		var diferencia: int = (anterior_host if id == 1 else anterior_cliente) - despacho.obtener_cordura(id)
+		if diferencia > 0: despacho.recuperar_calma(diferencia, id)
+		elif diferencia < 0: despacho.perder_calma(-diferencia, &"prueba", id)
+	red.publicar()

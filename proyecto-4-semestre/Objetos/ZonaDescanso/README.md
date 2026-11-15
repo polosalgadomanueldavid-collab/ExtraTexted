@@ -1,20 +1,25 @@
 # Zona de descanso
 
-La oficina instancia `ZonaDescanso.tscn` junto a la pared lateral y `MaquinaExpendedora.tscn` en la parte inferior del mapa, conservando los modelos del Furniture Pack.
+La oficina instancia `ZonaDescanso.tscn` junto a la pared lateral y `MaquinaExpendedora.tscn` en la parte inferior del mapa, conservando el mobiliario del Furniture Pack.
 
-- **E frente a la cafetera:** prepara una taza en 1,8 segundos. Cobra 50 puntos al entregarla; **Esc** permite cancelar antes sin cobro. Requiere luz, calma menor a 100 y no llevar un papel u otro café.
+- **E frente a la cafetera:** abre la máquina 3D sobre el escenario traslúcido. El pulsador SERVIR prepara una taza en 1,8 segundos; se recoge haciendo clic en la taza o en la pantalla RETIRA. Cobra 50 puntos al entregarla; **Esc** permite cancelar antes sin cobro. Requiere luz, calma menor a 100 y no llevar un papel u otro café.
 - **F llevando café:** toma el café, recupera hasta 15 de calma y devuelve la taza vacía al mueble. Puede beberse de pie o sentado.
 - **E frente al sofá:** se sienta en el tramo más cercano. Recupera 1 de calma cada 2 segundos. **E o Esc** permiten levantarse hacia un punto libre.
 
 Los casos continúan durante la preparación y el descanso. La pausa global congela estas acciones. Reiniciar o salir limpia gestos, taza y colisiones; no reembolsa cafés ya entregados ni recupera calma después de terminar la partida.
 
-`zona_descanso.gd` expone el precio, la recuperación y los tiempos para ajustar el equilibrio desde el inspector. El saldo gastable está separado del puntaje ganado para la clasificación. Las tazas blanca y amarilla se alternan y usan el anclaje de la mano derecha del personaje.
+`zona_descanso.gd` expone el precio, la recuperación y los tiempos para ajustar el equilibrio desde el inspector. El saldo gastable está separado del puntaje ganado para la clasificación. Las tazas blanca y amarilla se alternan y usan el anclaje de la mano derecha del personaje. La animación comparte la malla y los materiales de la taza seleccionada; al recogerla, esa taza sale físicamente de la mesa. Con el café en la mano solo se muestra el medallón del bolsillo, sin un aviso azul duplicado. El líquido se ajusta al interior de la taza y usa un material independiente para cada preparación y jugador. La cafetera usa crema y azul petróleo del modelo del escenario, sin título ni rótulo de salida. En LAN, el servidor confirma el índice de la taza al comprar y lo replica para que ambos jugadores vean el mismo color; las compras siguen usando el saldo compartido.
 
 Los sonidos de `Audios/Descanso` son síntesis originales PCM mono: preparación de 1,8 s y sorbo de 0,7 s. Se pausan con la partida.
 
+Las tazas tienen paredes interiores, fondo y borde redondeado, con asas curvas integradas. `Editor/generar_tazas.gd` hornea ambas mallas conservando sus medidas y colores. `contenido_cafe.gd` y `superficie_cafe.gdshader` cubren todo el interior con un plano horizontal ajustado al centro y al perfil de cada recipiente; el nivel baja al beber sin atravesar el borde ni el fondo. La taza pivota desde el agarre, se endereza y vuelve vacía al mueble después de bajar el brazo. Las copias de la cafetera y de otros jugadores tienen materiales de café independientes.
+
 Validación: ejecutar Godot con `--headless --fixed-fps 60 --script` y una de estas rutas:
 
+- `res://Pruebas/ZonaDescanso/prueba_panel_cafetera.gd` (añadir `-- --capturas`, sin `--headless`, para las vistas de ambas tazas)
 - `res://Pruebas/ZonaDescanso/prueba_interacciones_descanso.gd`
+- `res://Pruebas/ZonaDescanso/prueba_taza_cafe.gd` (añadir `-- --capturas`, sin `--headless`, para sostener, sorbo y descenso de pie y sentado)
+- `res://Pruebas/ZonaDescanso/prueba_taza_remota.gd` (presentación remota con datos locales, sin abrir una conexión)
 - `res://Pruebas/ZonaDescanso/prueba_economia_descanso.gd`
 - `res://Pruebas/ZonaDescanso/prueba_zona_descanso.gd`
 
