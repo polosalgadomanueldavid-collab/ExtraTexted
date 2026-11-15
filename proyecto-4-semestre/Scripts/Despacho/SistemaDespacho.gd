@@ -8,23 +8,45 @@ signal denuncia_vencida(denuncia: Denuncia)
 signal partida_terminada
 signal estacion_completada(denuncia: Denuncia, estacion_id: String)
 signal estacion_incorrecta(denuncia: Denuncia, estacion_usada: String)
+signal cordura_jugador_actualizada(jugador_id: int, valor: int)
+signal jugador_eliminado(jugador_id: int)
+signal estado_compartido_actualizado
 
 const CALMA_MAXIMA: int = 100
 const CALMA_RECUPERADA_AL_RESOLVER: int = 5
 
 var arbol: ArbolDenunciasAVL = ArbolDenunciasAVL.new()
 var puntuacion: SistemaPuntuacion = SistemaPuntuacion.new()
-var calma_operativa: int = CALMA_MAXIMA
+var jugador_local_id: int = 1
+var jugadores: Dictionary = {1: {"cordura": 100, "eliminado": false}}
+var casos_en_proceso: Dictionary = {}
+var participantes: Dictionary = {}
+var ultimos_portadores: Dictionary = {}
+var casos_por_jugador: Dictionary = {}
+var max_casos_en_proceso: int = 1
+var autoridad: bool = true
+var solicitar_cambio: Callable
+var calma_operativa: int:
+	get:
+		return obtener_cordura(jugador_local_id)
+	set(valor):
+		if jugadores.has(jugador_local_id):
+			jugadores[jugador_local_id].cordura = clampi(valor, 0, CALMA_MAXIMA)
 var causa_agotamiento: StringName = &""
 var terminada: bool = false
 var tiempo_detenido := false
-var denuncia_activa_id: String = ""
+var denuncia_activa_id: String:
+	get:
+		return str(casos_por_jugador.get(jugador_local_id, ""))
+	set(valor):
+		casos_por_jugador[jugador_local_id] = valor
 # Guarda cuánto tiempo le queda a cada denuncia pendiente.
 var tiempos_restantes: Dictionary = {}
 
 
 func _process(delta: float) -> void:
-	actualizar_tiempos(delta)
+	if autoridad:
+		actualizar_tiempos(delta)
 
 
 func recibir_denuncia(denuncia: Denuncia) -> bool:
@@ -47,19 +69,27 @@ func recibir_denuncia(denuncia: Denuncia) -> bool:
 	return true
 
 
-func iniciar_denuncia_prioritaria() -> Denuncia:
-	if terminada:
+func iniciar_denuncia_prioritaria(jugador_id: int = 0) -> Denuncia:
+	jugador_id = jugador_local_id if jugador_id == 0 else jugador_id
+	if terminada or not esta_activo(jugador_id):
 		return null
-	if not denuncia_activa_id.is_empty():
-		return arbol.buscar_por_id(denuncia_activa_id)
-
-	var denuncia: Denuncia = arbol.obtener_prioritaria()
+	var actual: String = str(casos_por_jugador.get(jugador_id, ""))
+	if not actual.is_empty():
+		return arbol.buscar_por_id(actual)
+	if casos_en_proceso.size() >= max_casos_en_proceso:
+		return null
+	var denuncia: Denuncia = null
+	for candidata: Denuncia in arbol.recorrido_inorden():
+		if candidata.estado == Denuncia.Estado.PENDIENTE:
+			denuncia = candidata
+			break
 
 	if denuncia == null:
 		return null
 
 	denuncia.estado = Denuncia.Estado.EN_PROCESO
-	denuncia_activa_id = denuncia.id
+	casos_en_proceso[denuncia.id] = true
+	establecer_portador(denuncia.id, jugador_id)
 
 	_notificar_cambios()
 	return denuncia
@@ -83,17 +113,14 @@ func resolver_denuncia(id: String) -> bool:
 	arbol.eliminar_por_id(id)
 	tiempos_restantes.erase(id)
 
-	calma_operativa = min(
-		CALMA_MAXIMA,
-		calma_operativa + CALMA_RECUPERADA_AL_RESOLVER
-	)
+	for id_jugador: int in responsables(id):
+		recuperar_calma(CALMA_RECUPERADA_AL_RESOLVER, id_jugador)
 
 	# El saldo ya está actualizado cuando el HUD recibe la resolución.
 	puntuacion.registrar_resolucion(denuncia)
 	denuncia_resuelta.emit(denuncia)
 	
-	if denuncia_activa_id == id:
-		denuncia_activa_id = ""
+	_limpiar_caso(id)
 	
 	_notificar_cambios()
 	return true
@@ -112,20 +139,16 @@ func vencer_denuncia(id: String, motivo := Denuncia.MotivoPerdida.TIEMPO) -> boo
 	arbol.eliminar_por_id(id)
 	tiempos_restantes.erase(id)
 
-	calma_operativa = max(
-		0,
-		calma_operativa - denuncia.penalidad_calma
-	)
+	# Aplicar todo el resultado antes de emitir el final de equipo.
+	for id_jugador: int in responsables(id):
+		_cambiar_cordura(id_jugador, -denuncia.penalidad_calma)
 
 	denuncia_vencida.emit(denuncia)
-	if denuncia_activa_id == id:
-		denuncia_activa_id = ""
+	_limpiar_caso(id)
 	
 	_notificar_cambios()
 
-	if calma_operativa <= 0:
-		terminada = true
-		partida_terminada.emit()
+	_comprobar_final()
 
 	return true
 
@@ -157,39 +180,45 @@ func obtener_denuncias_ordenadas() -> Array[Denuncia]:
 	return arbol.recorrido_inorden()
 
 
-func perder_calma(cantidad: int, causa: StringName = &"") -> int:
-	if terminada or cantidad <= 0 or calma_operativa <= 0:
+func perder_calma(cantidad: int, causa: StringName = &"", jugador_id: int = 0) -> int:
+	jugador_id = jugador_local_id if jugador_id == 0 else jugador_id
+	if not autoridad and solicitar_cambio.is_valid():
+		solicitar_cambio.call("cordura", {"cantidad": -cantidad, "causa": str(causa)})
 		return 0
-	var perdida := mini(cantidad, calma_operativa)
-	calma_operativa -= perdida
-	# Marcar antes de emitir: ningún observador puede revivir una partida terminada.
-	terminada = calma_operativa == 0
-	if terminada:
-		causa_agotamiento = causa
-	calma_actualizada.emit(calma_operativa)
-	if terminada:
-		partida_terminada.emit()
+	if terminada or cantidad <= 0 or not esta_activo(jugador_id):
+		return 0
+	var perdida := mini(cantidad, obtener_cordura(jugador_id))
+	causa_agotamiento = causa
+	_cambiar_cordura(jugador_id, -perdida)
+	_comprobar_final()
 	return perdida
 
 
-func recuperar_calma(cantidad: int) -> int:
-	# Descansar o beber no puede reactivar una partida que llegó a cero de calma.
-	if terminada or cantidad <= 0 or calma_operativa <= 0 or calma_operativa >= CALMA_MAXIMA:
+func recuperar_calma(cantidad: int, jugador_id: int = 0) -> int:
+	jugador_id = jugador_local_id if jugador_id == 0 else jugador_id
+	if not autoridad and solicitar_cambio.is_valid():
+		solicitar_cambio.call("cordura", {"cantidad": cantidad})
 		return 0
-	var recuperada := mini(cantidad, CALMA_MAXIMA - calma_operativa)
-	calma_operativa += recuperada
-	calma_actualizada.emit(calma_operativa)
+	# Descansar o beber no puede reactivar una partida que llegó a cero de calma.
+	if terminada or cantidad <= 0 or not esta_activo(jugador_id):
+		return 0
+	var recuperada := mini(cantidad, CALMA_MAXIMA - obtener_cordura(jugador_id))
+	_cambiar_cordura(jugador_id, recuperada)
 	return recuperada
 
 
 func _notificar_cambios() -> void:
 	denuncias_actualizadas.emit(arbol.recorrido_inorden())
 	calma_actualizada.emit(calma_operativa)
+	estado_compartido_actualizado.emit()
 
-func interactuar_estacion(estacion_id: String) -> bool:
-	if terminada:
+func interactuar_estacion(estacion_id: String, caso_id: String = "", jugador_id: int = 0) -> bool:
+	jugador_id = jugador_local_id if jugador_id == 0 else jugador_id
+	if terminada or not esta_activo(jugador_id):
 		return false
-	var denuncia: Denuncia = obtener_denuncia_activa()
+	if caso_id.is_empty():
+		caso_id = str(casos_por_jugador.get(jugador_id, ""))
+	var denuncia: Denuncia = arbol.buscar_por_id(caso_id)
 
 	if denuncia == null:
 		return false
@@ -197,6 +226,10 @@ func interactuar_estacion(estacion_id: String) -> bool:
 	if not denuncia.completar_estacion(estacion_id):
 		estacion_incorrecta.emit(denuncia, estacion_id)
 		return false
+	if not participantes.has(caso_id):
+		participantes[caso_id] = []
+	if not participantes[caso_id].has(jugador_id):
+		participantes[caso_id].append(jugador_id)
 
 	estacion_completada.emit(denuncia, estacion_id)
 
@@ -205,3 +238,66 @@ func interactuar_estacion(estacion_id: String) -> bool:
 		resolver_denuncia(denuncia.id)
 
 	return true
+
+
+func configurar_jugadores(ids: Array, local_id: int) -> void:
+	jugadores.clear()
+	for id: int in ids:
+		jugadores[id] = {"cordura": 100, "eliminado": false}
+	jugador_local_id = local_id
+	max_casos_en_proceso = mini(2, ids.size())
+
+
+func obtener_cordura(id: int) -> int:
+	return int(jugadores.get(id, {}).get("cordura", 0))
+
+
+func esta_activo(id: int) -> bool:
+	return jugadores.has(id) and not jugadores[id].eliminado and obtener_cordura(id) > 0
+
+
+func establecer_portador(caso: String, id: int) -> void:
+	for otro: int in casos_por_jugador.keys():
+		if casos_por_jugador[otro] == caso:
+			casos_por_jugador.erase(otro)
+	if id != 0:
+		casos_por_jugador[id] = caso
+		ultimos_portadores[caso] = id
+
+
+func responsables(caso: String) -> Array:
+	var lista: Array = participantes.get(caso, [])
+	if not lista.is_empty():
+		return lista.duplicate()
+	if ultimos_portadores.has(caso):
+		return [ultimos_portadores[caso]]
+	return jugadores.keys()
+
+
+func _limpiar_caso(id: String) -> void:
+	casos_en_proceso.erase(id)
+	establecer_portador(id, 0)
+	participantes.erase(id)
+	ultimos_portadores.erase(id)
+
+
+func _cambiar_cordura(id: int, cambio: int) -> void:
+	if not esta_activo(id):
+		return
+	jugadores[id].cordura = clampi(obtener_cordura(id) + cambio, 0, CALMA_MAXIMA)
+	if jugadores[id].cordura == 0:
+		jugadores[id].eliminado = true
+		jugador_eliminado.emit(id)
+	cordura_jugador_actualizada.emit(id, obtener_cordura(id))
+	calma_actualizada.emit(calma_operativa)
+	estado_compartido_actualizado.emit()
+
+
+func _comprobar_final() -> void:
+	if terminada:
+		return
+	for id: int in jugadores:
+		if esta_activo(id):
+			return
+	terminada = true
+	partida_terminada.emit()

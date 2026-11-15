@@ -121,8 +121,9 @@ func _archivar() -> void:
 		caso_id = ""
 		objetivos.clear()
 		papeles.clear()
-		cerrado.emit()
+		# Confirmar el resultado antes de liberar la reserva de la estación.
 		terminado.emit(id_terminado)
+		cerrado.emit()
 	else:
 		seleccion = mini(seleccion, papeles.size() - 1)
 

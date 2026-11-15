@@ -20,6 +20,9 @@ var activo := false
 var tiempo_restante := 0.0
 var permiso_inicio: Callable
 var charcos: Array[Vector3] = [] # x, z, longitud de los ramales desde la unión.
+var posiciones_protegidas_red: Array[Vector3] = []
+var charcos_red: Array[Vector3] = []
+var usar_charcos_red := false
 var panel: PanelLava
 var superficie: MeshInstance3D
 var _oficina: Node3D
@@ -54,7 +57,7 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 
 
 func iniciar() -> bool:
-	if activo or get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto() or _jugador.esta_sentado():
+	if activo or (not (SesionLAN.en_partida and SesionLAN.puente.iniciando_evento) and (get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto() or _jugador.esta_sentado())):
 		return false
 	if permiso_inicio.is_valid() and not permiso_inicio.call():
 		return false
@@ -226,7 +229,7 @@ func _crear_visuales() -> void:
 			var celda := Vector2i(columna, fila)
 			if _oficina.grafo_piso.es_transitable(celda) and not GrafoPiso.DESTINOS.values().has(celda):
 				candidatos.append(celda)
-	while charcos.size() < CANTIDAD_CHARCOS and not candidatos.is_empty():
+	while not usar_charcos_red and charcos.size() < CANTIDAD_CHARCOS and not candidatos.is_empty():
 		var indice: int = _oficina.generador_aleatorio.randi_range(0, candidatos.size() - 1)
 		var punto: Vector3 = _oficina.grafo_piso.celda_a_posicion(candidatos.pop_at(indice))
 		var cruce: Vector2 = _patron.cruce_cercano(Vector2(punto.x, punto.z))
@@ -240,6 +243,9 @@ func _crear_visuales() -> void:
 		if punto.distance_to(_jugador.global_position) < 1.2:
 			continue
 		var separado := true
+		for protegido: Vector3 in posiciones_protegidas_red:
+			if Vector2(punto.x - protegido.x, punto.z - protegido.z).length() < 1.2:
+				separado = false
 		for charco in charcos:
 			if Vector2(punto.x - charco.x, punto.z - charco.y).length() < 1.35:
 				separado = false
@@ -248,8 +254,11 @@ func _crear_visuales() -> void:
 		var extension: float = _oficina.generador_aleatorio.randf_range(0.88, 1.04)
 		var charco := Vector3(punto.x, punto.z, extension)
 		charcos.append(charco)
-		_patron.agregar_charco(cruce, extension)
-		_chispas_suelo.append(_crear_chispas(Vector3(punto.x, PISO + 0.05, punto.z), Vector3(0.20, 0, 0.20), 9))
+	if usar_charcos_red:
+		charcos.assign(charcos_red)
+	for charco: Vector3 in charcos:
+		_patron.agregar_charco(Vector2(charco.x, charco.y), charco.z)
+		_chispas_suelo.append(_crear_chispas(Vector3(charco.x, PISO + 0.05, charco.y), Vector3(0.20, 0, 0.20), 9))
 	_patron.aplicar(_material)
 	_chispas_pies = _crear_chispas(_jugador.global_position, Vector3(0.16, 0.015, 0.12), 16)
 	_chispas_pies.emitting = false

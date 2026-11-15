@@ -58,6 +58,8 @@ var control_incendio: Node
 var control_inundacion: Node
 var control_hielo: Node
 var hielo_activo := false
+var remoto_red := false
+var id_red := 1
 var congelado := false
 var en_relevo := false
 const ACELERACION_HIELO := 2.4
@@ -136,6 +138,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if remoto_red:
+		return
 	if not tiempo_detenido:
 		chocolate_restante = maxf(0.0, chocolate_restante - delta)
 		dona_restante = maxf(0.0, dona_restante - delta)
@@ -285,6 +289,8 @@ func reproducir_expresion(expresion: StringName) -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	if remoto_red:
+		return
 	if event.is_action_released(interaction_action) and is_instance_valid(control_incendio):
 		control_incendio.soltar()
 	if event.is_action_pressed(EMOTE_MENU) and not (event is InputEventKey and event.echo):
@@ -460,6 +466,8 @@ func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: N
 			visual.rotation.y = atan2(direccion.x, direccion.z)
 	_play_animation(&"idle")
 	animation_state_changed.emit(tipo)
+	if SesionLAN.en_partida and not remoto_red:
+		SesionLAN.solicitar("gesto", {"tipo": str(tipo), "segundos": segundos})
 	return true
 
 

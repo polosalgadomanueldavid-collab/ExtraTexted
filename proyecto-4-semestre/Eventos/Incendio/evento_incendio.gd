@@ -157,7 +157,7 @@ func obtener_adyacentes(foco: Foco) -> Array[Foco]:
 
 
 func iniciar(bloqueos: Dictionary) -> bool:
-	if activo or focos.is_empty() or get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto():
+	if activo or focos.is_empty() or (not (SesionLAN.en_partida and SesionLAN.puente.iniciando_evento) and (get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto())):
 		return false
 	if permiso_inicio.is_valid() and not permiso_inicio.call():
 		return false
@@ -219,16 +219,17 @@ func obtener_objetivo(jugador: Player) -> Node3D:
 	return cercano
 
 
-func _al_alcance(punto: Vector3, foco: Foco) -> bool:
-	var origen := _jugador.global_position + Vector3.UP * 0.42
+func _al_alcance(punto: Vector3, foco: Foco, quien: Player = null) -> bool:
+	quien = _jugador if quien == null else quien
+	var origen := quien.global_position + Vector3.UP * 0.42
 	var diferencia := punto - origen
 	var horizontal := Vector3(diferencia.x, 0, diferencia.z)
 	if horizontal.length() > ALCANCE or absf(diferencia.y) > 0.8:
 		return false
-	if horizontal.length() > 0.08 and _jugador.visual.global_basis.z.normalized().dot(horizontal.normalized()) < 0.25:
+	if horizontal.length() > 0.08 and quien.visual.global_basis.z.normalized().dot(horizontal.normalized()) < 0.25:
 		return false
 	var consulta := PhysicsRayQueryParameters3D.create(origen, punto, 1)
-	consulta.exclude = [_jugador.get_rid()]
+	consulta.exclude = [quien.get_rid()]
 	var impacto := get_world_3d().direct_space_state.intersect_ray(consulta)
 	if impacto.is_empty():
 		return true
@@ -242,7 +243,11 @@ func recoger_extintor(jugador: Player) -> void:
 	if jugador._taza_en_mano:
 		_oficina.panel_despacho._mostrar_mensaje("Termina el café con F antes de tomar el extintor.", Color("ff9b44"))
 		return
-	jugador.ejecutar_gesto(&"recoger", _equipar, extintor)
+	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("extintor"):
+		SesionLAN.puente.reservar_local("extintor", func(): recoger_extintor(jugador))
+		return
+	if not jugador.ejecutar_gesto(&"recoger", _equipar, extintor) and SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("extintor")
 
 
 func _equipar() -> void:
@@ -317,8 +322,10 @@ func _physics_process(delta: float) -> void:
 				_jugador.gestos.rociando_extintor = true
 			if not _chorro.playing:
 				_chorro.play()
-			if objetivo.rociar(delta, SEGUNDOS_POR_MESA):
-				_recuperar_mesa_y_adyacentes(objetivo)
+			var completada: bool = SesionLAN.puente.rociar_local(objetivo, delta) if SesionLAN.en_partida else objetivo.rociar(delta, SEGUNDOS_POR_MESA)
+			if completada:
+				if not SesionLAN.en_partida:
+					_recuperar_mesa_y_adyacentes(objetivo)
 				soltar()
 	if _todas_apagadas():
 		_finalizar()
@@ -338,6 +345,8 @@ func _recuperar_mesa_y_adyacentes(foco: Foco) -> void:
 
 
 func _aplicar_desgaste_cordura(tiempo_anterior: float) -> void:
+	if SesionLAN.en_partida and not SesionLAN.es_anfitrion():
+		return
 	# Integra únicamente el tiempo posterior a cada umbral, incluso si un
 	# cuadro cruza varios: 1 punto/s tras 24 s, 2 tras 60 s y 3 tras 90 s.
 	for umbral: float in UMBRALES_DESGASTE:
@@ -345,7 +354,11 @@ func _aplicar_desgaste_cordura(tiempo_anterior: float) -> void:
 	var puntos := floori(_perdida_acumulada + 0.00001)
 	if puntos > 0:
 		_perdida_acumulada = maxf(0.0, _perdida_acumulada - puntos)
-		_oficina.sistema_despacho.perder_calma(puntos, &"incendio")
+		if SesionLAN.en_partida:
+			for id: int in _oficina.sistema_despacho.jugadores:
+				_oficina.sistema_despacho.perder_calma(puntos, &"incendio", id)
+		else:
+			_oficina.sistema_despacho.perder_calma(puntos, &"incendio")
 
 
 func _process(_delta: float) -> void:
@@ -353,7 +366,18 @@ func _process(_delta: float) -> void:
 		return
 	_actualizar_indicador_extintor()
 	var destino := objetivo.global_position if is_instance_valid(objetivo) else Vector3.ZERO
-	extintor.actualizar(_jugador, rociando, destino)
+	var portador := _jugador
+	var rociado := rociando
+	if SesionLAN.en_partida:
+		var propietario := int(SesionLAN.puente.reservas.get("extintor", {}).get("jugador", 0))
+		portador = SesionLAN.puente.jugadores.get(propietario, _jugador)
+		extintor.recogido = propietario != 0
+		if propietario != SesionLAN.id_local():
+			equipado = false
+			rociado = portador.usando_extintor and propietario != 0
+			destino = portador.global_position + Vector3.UP * 0.6 + portador.visual.global_basis.z * 1.1
+		extintor.espuma.emitting = rociado
+	extintor.actualizar(portador, rociado, destino)
 	if rociando and is_instance_valid(_jugador.papel_en_mano):
 		if _papel_guardado != _jugador.papel_en_mano:
 			_papel_guardado = _jugador.papel_en_mano
@@ -363,7 +387,7 @@ func _process(_delta: float) -> void:
 
 
 func _actualizar_indicador_extintor() -> void:
-	if not activo or equipado or _oficina.partida_finalizada:
+	if not activo or equipado or _oficina.partida_finalizada or (SesionLAN.en_partida and SesionLAN.puente.reservas.has("extintor")):
 		indicador_extintor.hide()
 		return
 	indicador_extintor.actualizar(

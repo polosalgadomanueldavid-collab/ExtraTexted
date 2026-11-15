@@ -78,7 +78,7 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 
 
 func iniciar() -> bool:
-	if activo or get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto() or _jugador.esta_sentado():
+	if activo or (not (SesionLAN.en_partida and SesionLAN.puente.iniciando_evento) and (get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto() or _jugador.esta_sentado())):
 		return false
 	if permiso_inicio.is_valid() and not permiso_inicio.call():
 		return false
@@ -268,7 +268,12 @@ func obtener_objetivo(jugador: Player) -> Node3D:
 
 
 func interactuar(jugador: Player) -> void:
+	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("inundacion"):
+		SesionLAN.puente.reservar_local("inundacion", func(): interactuar(jugador))
+		return
 	if jugador.input_locked or jugador.realizando_gesto() or get_tree().paused or obtener_objetivo(jugador) != self:
+		if SesionLAN.en_partida:
+			SesionLAN.puente.liberar_local("inundacion")
 		return
 	_bloqueo_anterior = jugador.input_locked
 	_raton_anterior = Input.mouse_mode
@@ -285,12 +290,17 @@ func _cerrar_reparacion() -> void:
 	if not reparando:
 		return
 	reparando = false
+	if SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("inundacion")
 	panel.cerrar()
 	_jugador.input_locked = _bloqueo_anterior or _oficina.partida_finalizada
 	Input.mouse_mode = _raton_anterior
 
 
 func _al_reparar() -> void:
+	if SesionLAN.en_partida and not SesionLAN.puente.aplicando:
+		SesionLAN.solicitar("reparar", {"objetivo": "inundacion"})
+		return
 	if not activo or drenando or not panel.red.resuelta:
 		return
 	_cerrar_reparacion()

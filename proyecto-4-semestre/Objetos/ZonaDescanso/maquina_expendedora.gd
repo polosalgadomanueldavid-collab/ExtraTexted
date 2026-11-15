@@ -24,6 +24,8 @@ var _tiempo_entrega := 0.0
 var _precio_entrega := 0
 var _pendiente := -1
 var _objeto_mano: Node3D
+var _pago_red_pendiente := false
+var _consumo_red_pendiente := false
 
 func _ready() -> void:
 	_configurar.call_deferred()
@@ -44,13 +46,17 @@ func _configurar() -> void:
 	despacho.partida_terminada.connect(_reiniciar)
 
 func _disponible() -> bool:
-	return is_instance_valid(despacho) and not despacho.terminada and not get_tree().paused and not MenuGlobal.capa.visible and not oficina.clasificacion_partida.visible
+	return is_instance_valid(despacho) and despacho.esta_activo(despacho.jugador_local_id) and not despacho.terminada and not get_tree().paused and not MenuGlobal.capa.visible and not oficina.clasificacion_partida.visible
 
 func interactuar(quien: Player) -> void:
 	if quien != jugador or not _disponible() or jugador.obtener_objetivo_interaccion() != self or jugador.realizando_gesto() or jugador.input_locked:
+		if SesionLAN.en_partida: SesionLAN.puente.liberar_local("tienda")
 		return
 	if despacho.tiempo_detenido:
 		_mostrar("La máquina también está detenida.")
+		return
+	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("tienda"):
+		SesionLAN.puente.reservar_local("tienda", func(): interactuar(quien))
 		return
 	jugador.cerrar_menu_emotes(true)
 	jugador.input_locked = true
@@ -66,6 +72,8 @@ func cerrar() -> void:
 	if not is_instance_valid(panel) or not panel.visible:
 		return
 	panel.cerrar()
+	if SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("tienda")
 	producto_en_entrega = -1
 	producto_listo = false
 	_tiempo_entrega = 0.0
@@ -93,16 +101,32 @@ func comprar(indice: int) -> bool:
 	return true
 
 func recoger_producto() -> bool:
+	if _pago_red_pendiente:
+		return false
 	if not _disponible() or not panel.visible or not producto_listo or producto_en_entrega < 0 or despacho.tiempo_detenido:
 		return false
 	if global_position.distance_to(jugador.global_position) > 2.4:
 		cerrar()
 		return false
 	var indice := producto_en_entrega
+	if SesionLAN.en_partida:
+		_pago_red_pendiente = true
+		SesionLAN.solicitar("comprar", {"producto": "snack", "indice": indice}, func(resultado: Dictionary):
+			_pago_red_pendiente = false
+			if resultado.get("ok", false):
+				_entregar_producto(indice)
+			else:
+				cerrar()
+		)
+		return true
 	if inventario[indice] > 0 or not despacho.puntuacion.gastar_puntos(_precio_entrega):
 		cerrar()
 		_mostrar("No se pudo recoger el producto; conservas tu saldo.")
 		return false
+	_entregar_producto(indice)
+	return true
+
+func _entregar_producto(indice: int) -> void:
 	inventario[indice] = 1
 	producto_en_entrega = -1
 	producto_listo = false
@@ -110,9 +134,10 @@ func recoger_producto() -> bool:
 	_actualizar_tienda()
 	panel.recogido(indice, ATAJOS[indice])
 	_mostrar("%s guardado. Pulsa %s al salir para usarlo." % [NOMBRES[indice], ATAJOS[indice]])
-	return true
 
 func usar(indice: int) -> bool:
+	if _consumo_red_pendiente:
+		return false
 	if not _disponible() or panel.visible or indice < 0 or indice >= 4 or inventario[indice] == 0:
 		return false
 	if jugador.input_locked or jugador.realizando_gesto() or jugador.esta_sentado() or jugador.usando_extintor or jugador._taza_en_mano or not jugador.is_on_floor():
@@ -149,13 +174,31 @@ func _consumir(indice: int, evento: Node) -> void:
 		_mostrar("El evento ya terminó; conservas el Avatar.")
 		_pendiente = -1
 		return
+	if SesionLAN.en_partida:
+		if _consumo_red_pendiente:
+			return
+		_consumo_red_pendiente = true
+		SesionLAN.solicitar("consumir", {"indice": indice, "evento": SesionLAN.puente._evento_id}, func(resultado: Dictionary):
+			_consumo_red_pendiente = false
+			if resultado.get("ok", false):
+				_aplicar_consumo(indice, evento)
+			else:
+				_pendiente = -1
+				_limpiar_snack()
+		)
+		return
+	_aplicar_consumo(indice, evento)
+
+func _aplicar_consumo(indice: int, evento: Node) -> void:
 	inventario[indice] = 0
 	_pendiente = -1
 	match indice:
 		0: jugador.chocolate_restante = 25.0
 		1: jugador.dona_restante = 10.0
-		2: poderes.detener_tiempo()
-		3: evento.resolver_con_avatar()
+		2:
+			if not SesionLAN.en_partida: poderes.detener_tiempo()
+		3:
+			if not SesionLAN.en_partida: evento.resolver_con_avatar()
 	_limpiar_snack()
 	_mostrar("%s activado" % NOMBRES[indice])
 

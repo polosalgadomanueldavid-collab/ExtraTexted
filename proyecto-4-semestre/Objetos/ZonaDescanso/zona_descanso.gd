@@ -16,6 +16,8 @@ var estado: Estado = Estado.LIBRE
 var taza_en_mano: MeshInstance3D
 var _gestor: Node3D
 var _jugador: Player
+var _pago_red_pendiente := false
+var _consumo_cafe_pendiente := false
 var _despacho: SistemaDespacho
 var _aviso: PanelContainer
 var _audio: AudioStreamPlayer
@@ -139,6 +141,11 @@ func interactuar_cafetera(quien: Player) -> bool:
 	if _despacho.puntuacion.puntos < costo_cafe:
 		mostrar_mensaje("Necesitas %d puntos para pedir café." % costo_cafe)
 		return false
+	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("cafetera"):
+		SesionLAN.puente.reservar_local("cafetera", func():
+			if not interactuar_cafetera(quien): SesionLAN.puente.liberar_local("cafetera")
+		)
+		return true
 	_jugador.cerrar_menu_emotes(true)
 	_bloquear_pose()
 	_pose_anterior = _jugador.global_transform
@@ -174,15 +181,31 @@ func _servir_cafe() -> void:
 	panel_cafetera.lista()
 
 func recoger_cafe() -> bool:
+	if _pago_red_pendiente:
+		return false
 	if not panel_cafetera.visible or estado != Estado.CAFE_LISTO or not _cafetera_valida():
 		return false
 	if _despacho.calma_operativa >= _despacho.CALMA_MAXIMA:
 		cerrar_cafetera()
 		return false
+	if SesionLAN.en_partida:
+		_pago_red_pendiente = true
+		SesionLAN.solicitar("comprar", {"producto": "cafe"}, func(resultado: Dictionary):
+			_pago_red_pendiente = false
+			if resultado.get("ok", false):
+				_recibir_cafe_visual()
+			else:
+				cerrar_cafetera()
+		)
+		return true
 	if not _despacho.puntuacion.gastar_puntos(costo_cafe):
 		cerrar_cafetera()
 		mostrar_mensaje("No tienes puntos suficientes para este café.")
 		return false
+	_recibir_cafe_visual()
+	return true
+
+func _recibir_cafe_visual() -> void:
 	taza_en_mano = _tazas[_siguiente_taza]
 	_siguiente_taza = (_siguiente_taza + 1) % _tazas.size()
 	var anclaje := _jugador.anclaje_taza()
@@ -196,13 +219,14 @@ func recoger_cafe() -> bool:
 	cerrar_cafetera()
 	_audio.play()
 	_consulta_restante = 0.0
-	return true
 
 func cerrar_cafetera() -> void:
 	if not is_instance_valid(panel_cafetera) or not panel_cafetera.visible:
 		return
 	_maquina.stop()
 	panel_cafetera.cerrar()
+	if SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("cafetera")
 	_liberar_pose()
 	_tiempo_preparacion = 0.0
 	estado = Estado.LIBRE
@@ -228,9 +252,20 @@ func beber_cafe() -> bool:
 	return true
 
 func _consumir_cafe() -> void:
-	if estado != Estado.BEBIENDO or not tiene_cafe() or not is_instance_valid(_despacho) or _despacho.calma_operativa <= 0:
+	if _consumo_cafe_pendiente or estado != Estado.BEBIENDO or not tiene_cafe() or not is_instance_valid(_despacho) or _despacho.calma_operativa <= 0:
 		return
-	var recuperada := _despacho.recuperar_calma(calma_cafe)
+	var recuperada := mini(calma_cafe, 100 - _despacho.calma_operativa)
+	if SesionLAN.en_partida:
+		_consumo_cafe_pendiente = true
+		SesionLAN.solicitar("beber", {}, func(resultado: Dictionary):
+			_consumo_cafe_pendiente = false
+			if resultado.get("ok", false): _terminar_cafe_visual(recuperada)
+		)
+		return
+	recuperada = _despacho.recuperar_calma(calma_cafe)
+	_terminar_cafe_visual(recuperada)
+
+func _terminar_cafe_visual(recuperada: int) -> void:
 	_devolver_taza()
 	mostrar_mensaje("Café terminado  ·  +%d de calma operativa" % recuperada)
 	_audio.play()
@@ -247,6 +282,15 @@ func _devolver_taza() -> void:
 		_jugador.establecer_taza_en_mano(false)
 
 func interactuar_sofa(quien: Player) -> bool:
+	if estado != Estado.LIBRE or not _objetivo_valido(quien, $SofaL/Cuerpo):
+		return false
+	if SesionLAN.en_partida:
+		var asiento_red := "AsientoTramo" if quien.global_position.distance_squared_to($SofaL/AsientoTramo.global_position) <= quien.global_position.distance_squared_to($SofaL/AsientoRetorno.global_position) else "AsientoRetorno"
+		if not SesionLAN.puente.reservar_confirmada("sofa:" + asiento_red):
+			SesionLAN.puente.reservar_local("sofa:" + asiento_red, func():
+				if not interactuar_sofa(quien): SesionLAN.puente.liberar_local("sofa:" + asiento_red)
+			)
+			return true
 	if estado != Estado.LIBRE or not _objetivo_valido(quien, $SofaL/Cuerpo):
 		return false
 	if not _jugador.iniciar_descanso_sentado():
@@ -339,6 +383,9 @@ func _buscar_salida() -> Vector3:
 	return Vector3.INF
 
 func _terminar_salida() -> void:
+	if SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("sofa:AsientoTramo")
+		SesionLAN.puente.liberar_local("sofa:AsientoRetorno")
 	if is_instance_valid(_jugador):
 		# Mantener la física sentada hasta aquí evita gravedad mientras el tween
 		# mueve un cuerpo que todavía tiene sus colisiones suspendidas.

@@ -56,6 +56,10 @@ var _celdas_rotas: Dictionary[Vector2i, bool] = {}
 var _celdas_caidas: Dictionary[Vector2i, Grieta] = {}
 var _reservas_escombros: Dictionary[Vector2i, bool] = {}
 var _azar := RandomNumberGenerator.new()
+var posiciones_red: Array[Vector3] = []
+var hojas_red: Array[Vector3] = []
+var _estado_escombros_red: int = 0
+var _espacios_red: Array[Rect2i] = []
 var _cerrando := false
 var _grafo: GrafoPiso
 var _jugador: Player
@@ -98,6 +102,10 @@ func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoj
 	var origen := grafo.celda_de_acceso(jugador.global_position)
 	var alcanzables := grafo.celdas_alcanzables(origen)
 	var destinos := GrafoPiso.DESTINOS.values()
+	for punto: Vector3 in posiciones_red:
+		var acceso_red := grafo.celda_de_acceso(punto)
+		if not destinos.has(acceso_red):
+			destinos.append(acceso_red)
 	for acceso: Node3D in get_tree().get_nodes_in_group("accesos_navegacion"):
 		destinos.append(grafo.posicion_a_celda(acceso.global_position))
 	var protegidos: Array[Vector2i] = []
@@ -156,6 +164,8 @@ func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoj
 	# Mantener primero la grieta grande de oficina, luego las saltables.
 	_trazado.erase(grieta_gigante)
 	_trazado.append(grieta_gigante)
+	_estado_escombros_red = _azar.state
+	_espacios_red.assign(espacios_escombros)
 	_preparar_escombros(espacios_escombros)
 	for grieta in _trazado:
 		add_child(grieta)
@@ -332,6 +342,12 @@ func _elegir_espacios_escombros(origen: Vector2i, destinos: Array[Vector2i], ens
 				if (not arriba and not ZONA_SISMO.encloses(huella)) or huella.grow(0.32).has_point(Vector2(_jugador.global_position.x, _jugador.global_position.z)):
 					continue
 				if _huella_hoja.has_area() and huella.grow(0.12).intersects(_huella_hoja):
+					continue
+				for protegido: Vector3 in posiciones_red + hojas_red:
+					if huella.grow(0.35).has_point(Vector2(protegido.x, protegido.z)):
+						valida = false
+						break
+				if not valida:
 					continue
 				var bordes: Array[Vector2] = []
 				for grieta in _trazado:
@@ -533,6 +549,13 @@ func _elegir_grieta(indice: int, origen: Vector2i, destinos: Array[Vector2i], en
 
 
 func _validar_trazado(candidata: Grieta, origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarGrid2D, avisar_bajo_jugador: bool = false) -> bool:
+	for hoja: Vector3 in hojas_red:
+		if candidata.toca_cuadro(Vector2(hoja.x, hoja.z), 0.35):
+			return false
+	if not avisar_bajo_jugador:
+		for punto: Vector3 in posiciones_red:
+			if candidata.toca_cuadro(Vector2(punto.x, punto.z), 0.32):
+				return false
 	var p := _jugador.global_position
 	if not avisar_bajo_jugador and candidata.toca_cuadro(Vector2(p.x, p.z), 0.32):
 		return false
@@ -737,3 +760,54 @@ func resolver_con_avatar() -> void:
 		return
 	temblor_actualizado.emit(DURACION, 0.0)
 	_cerrar()
+
+
+func exportar_trazado_red() -> Dictionary:
+	var formas: Array = []
+	for grieta: Grieta in _trazado:
+		formas.append({"centro": grieta.centro, "contorno": grieta.contorno, "limites": grieta.limites, "saltable": grieta.saltable, "izquierda": grieta._izquierda, "derecha": grieta._derecha})
+	var caidas := {}
+	for celda: Vector2i in _celdas_caidas:
+		caidas[celda] = _trazado.find(_celdas_caidas[celda])
+	return {"formas": formas, "gigante": _trazado.find(grieta_gigante), "rotas": _celdas_rotas, "caidas": caidas, "reservas": _reservas_escombros, "espacios": _espacios_red, "azar_escombros": _estado_escombros_red, "origen": _origen_seguro}
+
+
+func importar_trazado_red(datos: Dictionary, grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary) -> bool:
+	if activo:
+		return false
+	_grafo = grafo
+	_jugador = jugador
+	_colision_jugador = jugador.get_node_or_null("Colision") as CollisionShape3D
+	_bloqueos = bloqueos
+	_origen_seguro = datos.origen
+	_celdas_rotas.assign(datos.rotas)
+	_reservas_escombros.assign(datos.reservas)
+	_trazado.clear()
+	for forma: Dictionary in datos.formas:
+		var grieta := Grieta.new()
+		grieta.centro = forma.centro
+		grieta.contorno = forma.contorno
+		grieta.limites = forma.limites
+		grieta.saltable = forma.saltable
+		grieta._izquierda = forma.izquierda
+		grieta._derecha = forma.derecha
+		_trazado.append(grieta)
+	grieta_gigante = _trazado[int(datos.gigante)]
+	_celdas_caidas.clear()
+	for celda: Vector2i in datos.caidas:
+		_celdas_caidas[celda] = _trazado[int(datos.caidas[celda])]
+	_azar.state = int(datos.azar_escombros)
+	var espacios: Array[Rect2i] = []
+	espacios.assign(datos.espacios)
+	_preparar_escombros(espacios)
+	for grieta: Grieta in _trazado:
+		add_child(grieta)
+	_mostrar_aviso_gigante()
+	etapa = Etapa.AVISO
+	tiempo = 0.0
+	_cerrando = false
+	_jugador_en_grieta = false
+	set_physics_process(true)
+	sonidos.iniciar_terremoto()
+	iniciado.emit()
+	return true

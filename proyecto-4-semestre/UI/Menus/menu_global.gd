@@ -203,7 +203,7 @@ func abrir_pausa() -> void:
 	if not es_escena_de_juego() or capa.visible or _cambiando_escena or final_de_partida_activo:
 		return
 	_guardar_entrada()
-	get_tree().paused = true
+	_establecer_pausa(true)
 	capa.show()
 	_mostrar_pausa()
 
@@ -213,7 +213,7 @@ func reanudar_juego() -> void:
 		return
 	capa.hide()
 	panel_pausa.hide()
-	get_tree().paused = false
+	_establecer_pausa(false)
 	_restaurar_entrada()
 
 
@@ -276,10 +276,10 @@ func abrir_tutorial() -> void:
 
 
 func mostrar_tutorial_evento(evento: StringName) -> bool:
-	if not es_escena_de_juego() or get_tree().paused or capa.visible or _cambiando_escena or final_de_partida_activo:
+	if not es_escena_de_juego() or (get_tree().paused and not SesionLAN.en_partida) or capa.visible or _cambiando_escena or final_de_partida_activo:
 		return false
 	_guardar_entrada()
-	get_tree().paused = true
+	_establecer_pausa(true)
 	_abrir_guia_evento(evento, OrigenAyuda.EVENTO)
 	return true
 
@@ -302,6 +302,8 @@ func abrir_controles() -> void:
 
 
 func _abrir_tutorial_inicial() -> void:
+	if SesionLAN.cargando:
+		return
 	if capa.visible or _cambiando_escena or not es_escena_de_juego():
 		return
 	var id_partida := get_tree().current_scene.get_instance_id()
@@ -313,7 +315,7 @@ func _abrir_tutorial_inicial() -> void:
 		return
 	_partida_con_tutorial = id_partida
 	_guardar_entrada()
-	get_tree().paused = true
+	_establecer_pausa(true)
 	_mostrar_ayuda(false, OrigenAyuda.INICIO)
 
 
@@ -332,7 +334,7 @@ func cerrar_ayuda() -> void:
 	if not panel_ayuda.visible:
 		return
 	if _origen_ayuda in [OrigenAyuda.INICIO, OrigenAyuda.EVENTO]:
-		get_tree().paused = false
+		_establecer_pausa(false)
 		capa.hide()
 	panel_ayuda.hide()
 	if _origen_ayuda == OrigenAyuda.OPCIONES:
@@ -421,15 +423,18 @@ func _iniciar_partida(nombre: String, nombre_companero: String = "") -> void:
 
 
 func volver_al_menu() -> void:
+	if SesionLAN.activa:
+		SesionLAN.cerrar()
+		return
 	if _cambiando_escena:
 		return
 	_cambiando_escena = true
 	AjustesAccesibilidad.guardar()
-	get_tree().paused = false
+	_establecer_pausa(false)
 	var error := get_tree().change_scene_to_file(ESCENA_MENU)
 	if error != OK:
 		_cambiando_escena = false
-		get_tree().paused = true
+		_establecer_pausa(true)
 		_mostrar_pausa()
 		push_error("No se pudo abrir el menu principal: %s" % error)
 
@@ -613,3 +618,10 @@ func _confinar_foco(controles: Array[Control]) -> void:
 		control.focus_neighbor_bottom = control.focus_next
 		control.focus_neighbor_left = NodePath(".")
 		control.focus_neighbor_right = NodePath(".")
+
+
+func _establecer_pausa(valor: bool) -> void:
+	if SesionLAN.activa:
+		SesionLAN.pedir_pausa(valor)
+	else:
+		get_tree().paused = valor

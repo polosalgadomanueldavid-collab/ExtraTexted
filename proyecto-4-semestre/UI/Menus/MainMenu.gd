@@ -46,6 +46,7 @@ var _tiempo_dialogo := 0.0
 var _nombres := PackedStringArray()
 var _lineas_activas := PackedInt32Array()
 var _indice_activo := 0
+var panel_lan: CanvasLayer
 
 
 func _ready() -> void:
@@ -53,6 +54,10 @@ func _ready() -> void:
 	_ajustar_escala()
 	play_button.grab_focus()
 	_revelar_menu.call_deferred()
+	panel_lan = preload("res://UI/Menus/panel_lan.gd").new()
+	add_child(panel_lan)
+	if not SesionLAN.ultimo_aviso.is_empty():
+		panel_lan.abrir(self)
 
 
 func _revelar_menu() -> void:
@@ -167,6 +172,10 @@ func _ajustar_escala() -> void:
 
 
 func _on_play_button_pressed() -> void:
+	panel_lan.abrir(self)
+
+
+func jugar_individual() -> void:
 	MenuGlobal.pedir_nombre_partida()
 	if MenuGlobal.panel_clasificacion.visible:
 		iniciar_discusion()

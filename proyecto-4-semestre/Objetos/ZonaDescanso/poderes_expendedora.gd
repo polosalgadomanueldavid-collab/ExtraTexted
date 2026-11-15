@@ -96,6 +96,11 @@ func detener_tiempo() -> void:
 	jugador.congelado = false
 	jugador.quemandose_pies = false
 	_exentos.assign([self, get_parent(), jugador, oficina.get_node("Gameplay/Camera3D"), oficina.get_node("CanvasLayer"), oficina.computador, oficina.sistema_despacho, oficina.temporizador_seguridad, oficina.sonidos_mesas])
+	if SesionLAN.en_partida:
+		_exentos.append(SesionLAN.puente)
+		for otro: Player in SesionLAN.puente.jugadores.values():
+			if not _exentos.has(otro):
+				_exentos.append(otro)
 	# Los tweens ya existentes pertenecen al mundo anterior al gesto. Las nuevas
 	# animaciones de completar tareas se crean después y continúan normalmente.
 	for tween: Tween in get_tree().get_processed_tweens():
@@ -171,7 +176,7 @@ func _physics_process(delta: float) -> void:
 	if is_instance_valid(_burbuja):
 		_burbuja.scale = Vector3.ONE * maxf(0.01, transcurrido * 16.0)
 		_burbuja.visible = transcurrido < 1.7
-	if restante <= 0.0:
+	if restante <= 0.0 and (not SesionLAN.en_partida or SesionLAN.es_anfitrion()):
 		reanudar_tiempo()
 
 func _actualizar_pantalla(tiempo: float) -> void:

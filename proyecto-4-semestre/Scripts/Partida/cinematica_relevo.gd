@@ -71,6 +71,9 @@ func _preparar_jugador() -> void:
 		_jugador.gestos.active = true
 	# Solo el modelo se anima durante la pausa; no se reactiva el controlador.
 	var esqueleto := _jugador.visual.find_child("Skeleton3D", true, false) as Skeleton3D
+	var agotamiento_red := esqueleto.get_node_or_null("AgotamientoLAN")
+	if agotamiento_red != null:
+		agotamiento_red.queue_free()
 	esqueleto.process_mode = Node.PROCESS_MODE_ALWAYS
 	_pose = POSE_AGOTADA.new()
 	esqueleto.add_child(_pose)
