@@ -80,6 +80,7 @@ func _crear_pestanas_tutorial() -> void:
 	var nombres := {&"general": "General", &"apagon": "Apagón"}
 	for evento: StringName in GuiasEventos.GUIAS:
 		nombres[evento] = GuiasEventos.GUIAS[evento].nombre.capitalize()
+	nombres[&"items"] = "Ítems"
 	var grupo := ButtonGroup.new()
 	for evento: StringName in nombres:
 		var boton := Button.new()
@@ -136,6 +137,8 @@ func _seleccionar_tutorial(evento: StringName) -> void:
 	# Cambia únicamente la página; MenuGlobal conserva el origen y la pausa.
 	if evento == &"general":
 		presentar(false, false)
+	elif evento == &"items":
+		presentar_items()
 	else:
 		presentar_tutorial_evento(evento, true)
 
@@ -325,3 +328,58 @@ func _crear_texto(texto: String, fuente: Font, tamano: int, color: Color) -> Lab
 	etiqueta.add_theme_color_override("font_color", color)
 	etiqueta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return etiqueta
+
+
+func presentar_items() -> void:
+	presentar(false, false)
+	_actualizar_pestanas(&"items", true)
+	tutorial.hide()
+	tutorial_evento.show()
+	seccion.text = "GUÍA DE DESPACHO  ·  ÍTEMS"
+	titulo.text = "ÍTEMS Y CAFÉ"
+	pista.text = "En LAN, el saldo es compartido y cada compra va al bolsillo de quien la recoge."
+	for columna in tutorial_evento.get_children():
+		tutorial_evento.remove_child(columna)
+		columna.queue_free()
+	var rejilla := GridContainer.new()
+	rejilla.name = "GuiaItems"
+	rejilla.columns = 2
+	rejilla.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rejilla.add_theme_constant_override("h_separation", 24)
+	rejilla.add_theme_constant_override("v_separation", 18)
+	tutorial_evento.add_child(rejilla)
+	var fichas := [
+		["CHOCOLATE  ·  Z", "Camina y corre a ×1,65 de velocidad durante 25 segundos.", preload("res://UI/Descanso/Arte/chocolate.png")],
+		["DONA  ·  X", "Aumenta tu tamaño y permite saltar hasta 1,65 m durante 10 segundos para subir a las mesas.", preload("res://UI/Descanso/Arte/dona.png")],
+		["PAPA TIEMPO  ·  V", "Detiene el mundo y los plazos de los casos durante 12 segundos. Puedes seguir moviéndote y trabajando.", preload("res://UI/Descanso/Arte/papa_tiempo.png")],
+		["EL AVATAR  ·  N", "Resuelve un evento activo con los cuatro elementos. Sin evento, conserva la carga.", preload("res://UI/Descanso/Arte/avatar.png")],
+		["CAFÉ  ·  F", "Se prepara en la cafetera. Recoge la taza y bebe para recuperar hasta 15 de calma, de pie o sentado.", preload("res://UI/Descanso/Arte/cafe.png")],
+		["COMPRAR Y USAR", "Pulsa E frente a la máquina, elige un producto y espera su caída. Recógelo con RETIRA o clic en el objeto. Sal para usarlo; puedes llevar uno de cada tipo.", null],
+	]
+	for ficha: Array in fichas:
+		var tarjeta := PanelContainer.new()
+		tarjeta.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var fondo_ficha := estilo_marco_foto.duplicate() as StyleBox
+		fondo_ficha.content_margin_left = 14
+		fondo_ficha.content_margin_right = 14
+		fondo_ficha.content_margin_top = 12
+		fondo_ficha.content_margin_bottom = 12
+		tarjeta.add_theme_stylebox_override("panel", fondo_ficha)
+		rejilla.add_child(tarjeta)
+		var fila := HBoxContainer.new()
+		fila.add_theme_constant_override("separation", 16)
+		tarjeta.add_child(fila)
+		if ficha[2] != null:
+			var icono := TextureRect.new()
+			icono.texture = ficha[2]
+			icono.custom_minimum_size = Vector2(90, 90)
+			icono.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icono.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icono.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			fila.add_child(icono)
+		var textos := VBoxContainer.new()
+		textos.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		textos.add_theme_constant_override("separation", 8)
+		fila.add_child(textos)
+		textos.add_child(_crear_texto(ficha[0], fuente_enfasis, 28, CREMA))
+		textos.add_child(_crear_texto(ficha[1], fuente_texto, 24, Color("e3e7e3")))

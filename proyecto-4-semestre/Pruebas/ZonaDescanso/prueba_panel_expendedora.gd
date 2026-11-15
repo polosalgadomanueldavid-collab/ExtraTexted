@@ -32,6 +32,13 @@ func _probar() -> void:
 	_verificar(panel.visible and jugador.input_locked, "E abre la expendedora 3D")
 	_verificar(panel.vista.transparent_bg and panel.vista.own_world_3d, "El modelo no tiene fondo ni escenario propios")
 	_verificar(despacho.puntuacion.puntos == 1000 and maquina.producto_en_entrega == -1, "Abrir no compra ni dispensa")
+	var rotulos := ""
+	for letrero in panel._modelo.find_children("*", "Label3D", true, false):
+		rotulos += letrero.text
+	_verificar(not "REFUERZOS DE TURNO" in rotulos and not "RECOGE AQUÍ" in rotulos and not "SALIR" in rotulos, "La expendedora conserva solo los rótulos de uso")
+	_verificar(not panel.boton_retirar.visible and not panel.boton_recoger.visible, "Las dos recogidas están ocultas sin producto listo")
+	_verificar(not "VELOCIDAD" in rotulos and not "SALTO ALTO" in rotulos and not "DETIENE EL TIEMPO" in rotulos and not "RESUELVE UN EVENTO" in rotulos, "Los efectos se explican en la guía, no en la máquina")
+	_verificar(panel._etiquetas[0].text == "A1 · 50 PTS", "La etiqueta inicial conserva código y precio")
 	await _captura("01_abierta")
 	await _clic(panel.botones[0])
 	_verificar(maquina.producto_en_entrega == 0 and not maquina.producto_listo, "Pulsar A1 inicia la caída")
@@ -52,12 +59,15 @@ func _probar() -> void:
 	await _cuadros(3)
 	await _clic(panel.botones[0])
 	await _cuadros(100)
-	_verificar(maquina.producto_listo and panel.boton_recoger.visible, "El producto queda en la bandeja")
+	_verificar(maquina.producto_listo and panel.boton_recoger.visible and panel.boton_retirar.visible, "El producto en la bandeja habilita ambas recogidas")
 	_verificar(despacho.puntuacion.puntos == 1000 and maquina.inventario[0] == 0, "La bandeja espera la recogida sin cobrar")
 	await _captura("03_bandeja")
 	await _clic(panel.boton_recoger)
 	_verificar(maquina.inventario[0] == 1 and despacho.puntuacion.puntos == 950, "Recoger guarda y cobra exactamente el chocolate")
+	_verificar(panel._etiquetas[0].text == "A1 · COMPRADO", "COMPRADO aparece junto al código interior")
+	await _captura("03_comprado")
 	_verificar(not maquina.recoger_producto() and not maquina.comprar(0) and despacho.puntuacion.puntos == 950, "Recogidas y compras repetidas no duplican cobros")
+	_verificar(not panel.boton_retirar.visible and not panel.boton_recoger.visible, "Recoger oculta las dos zonas de recogida")
 	_verificar(not maquina.usar(0), "El consumo espera salir de la máquina")
 	await _clic(panel.botones[1])
 	await _cuadros(100)
@@ -69,8 +79,8 @@ func _probar() -> void:
 	_tecla(KEY_3)
 	await _cuadros(100)
 	_verificar(maquina.producto_listo and maquina.producto_en_entrega == 2, "Atajo 3 acciona B1")
-	await _clic(panel.boton_recoger)
-	_verificar(maquina.inventario[2] == 1 and despacho.puntuacion.puntos == 800, "Papa recogida conserva precio y atajo")
+	await _clic(panel.boton_retirar)
+	_verificar(maquina.inventario[2] == 1 and despacho.puntuacion.puntos == 800, "RETIRA entrega la papa y cobra una sola vez")
 	await _clic(panel.botones[3])
 	await _cuadros(100)
 	despacho.puntuacion.gastar_puntos(800)
@@ -84,6 +94,7 @@ func _probar() -> void:
 		await _cuadros(5)
 		for boton: Button in panel.botones:
 			_verificar(panel.get_global_rect().encloses(boton.get_global_rect()), "Botón físico accesible a %s" % dimensiones)
+		_verificar(panel.get_global_rect().encloses(panel.boton_retirar.get_global_rect()), "RETIRA accesible a %s" % dimensiones)
 		await _captura("04_%dx%d" % [dimensiones.x, dimensiones.y])
 	await _clic(panel.botones[1])
 	jugador.reset_to_spawn()
@@ -124,6 +135,8 @@ func _clic(boton: Button) -> void:
 	mover.position = centro
 	mover.global_position = centro
 	Input.parse_input_event(mover)
+	Input.flush_buffered_events()
+	await _cuadros(2)
 	for pulsado: bool in [true, false]:
 		var evento := InputEventMouseButton.new()
 		evento.position = centro
@@ -131,6 +144,7 @@ func _clic(boton: Button) -> void:
 		evento.button_index = MOUSE_BUTTON_LEFT
 		evento.pressed = pulsado
 		Input.parse_input_event(evento)
+		Input.flush_buffered_events()
 		await _cuadros(2)
 
 

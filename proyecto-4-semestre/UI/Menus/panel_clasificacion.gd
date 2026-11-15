@@ -33,6 +33,7 @@ func _ready() -> void:
 	nombre_jugador.text_changed.connect(_actualizar_nombre)
 	nombre_jugador.text_submitted.connect(_confirmar_nombre)
 	boton_continuar.pressed.connect(func() -> void: _confirmar_nombre(nombre_jugador.text))
+	_preparar_botones_ingreso()
 	lista.gui_input.connect(_desplazar_tabla)
 	resized.connect(queue_redraw)
 	for etiqueta: Label in $Contenido/Tabla/Cabecera.get_children():
@@ -63,6 +64,45 @@ func _draw() -> void:
 		Arte.marco(self, Arte.EXPEDIENTE, 221, 169)
 		draw_string(FUENTE_TITULO, Vector2(50, 58), "RÉCORDS",
 			HORIZONTAL_ALIGNMENT_CENTER, 220, 42, Arte.TINTA)
+	else:
+		# Una ficha de comisaría: papel, pinza e insignia con la paleta del juego.
+		draw_style_box(Arte.caja(Color("102c3b66"), Color.TRANSPARENT, 0, 24), Rect2(Vector2(0, 7), size))
+		draw_style_box(Arte.caja(CREMA, Arte.TINTA, 4, 24), Rect2(Vector2.ZERO, size))
+		draw_style_box(Arte.caja(Color.TRANSPARENT, Color("d8c5a5"), 2, 17), Rect2(Vector2(12, 12), size - Vector2(24, 24)))
+		var pinza := Rect2(size.x * 0.5 - 48, 4, 96, 25)
+		draw_style_box(Arte.caja(Arte.TINTA, Arte.TINTA, 2, 8), pinza)
+		draw_style_box(Arte.caja(Color("8eafb0"), Color.TRANSPARENT, 0, 4), pinza.grow(-7))
+		var origen := Vector2(size.x - 104, 53)
+		var escudo := PackedVector2Array([Vector2(0, 8), Vector2(25, 0), Vector2(50, 8), Vector2(46, 37), Vector2(25, 55), Vector2(4, 37), Vector2(0, 8)])
+		for i in escudo.size():
+			escudo[i] += origen
+		draw_colored_polygon(escudo, Color("e9b95e"))
+		draw_polyline(escudo, Arte.TINTA, 3, true)
+		var estrella := PackedVector2Array()
+		for i in 10:
+			var angulo := -PI * 0.5 + i * PI / 5.0
+			estrella.append(origen + Vector2(25, 24) + Vector2(cos(angulo), sin(angulo)) * (14 if i % 2 == 0 else 6))
+		draw_colored_polygon(estrella, Arte.TINTA)
+
+
+func _preparar_botones_ingreso() -> void:
+	for boton: Button in [boton_volver, boton_continuar]:
+		var principal := boton == boton_continuar
+		for modo: String in ["normal", "hover", "pressed", "disabled"]:
+			var color := Arte.CORAL if principal else Color("d5e9e6")
+			if modo == "hover": color = color.lightened(0.12)
+			if modo == "pressed": color = color.darkened(0.08)
+			if modo == "disabled": color = Color("ded7c9")
+			var estilo := Arte.caja(color, Arte.TINTA, 3, 22)
+			estilo.shadow_color = Color("173b5033")
+			estilo.shadow_offset = Vector2(0, 4)
+			boton.add_theme_stylebox_override(modo, estilo)
+		for modo: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			boton.add_theme_color_override(modo, CREMA if principal else Arte.TINTA)
+		boton.add_theme_color_override("font_disabled_color", Color("657875"))
+		var foco := Arte.caja(Color.TRANSPARENT, Color("bd8533"), 3, 24)
+		foco.set_expand_margin_all(4)
+		boton.add_theme_stylebox_override("focus", foco)
 
 
 func _establecer_diseno(es_tabla: bool) -> void:
@@ -73,16 +113,16 @@ func _establecer_diseno(es_tabla: bool) -> void:
 	volver_expediente.visible = es_tabla
 	boton_volver.visible = not es_tabla
 	marca.hide()
-	titulo.add_theme_color_override("font_color", Arte.TINTA if es_tabla else CREMA)
-	titulo.add_theme_font_size_override("font_size", 86 if es_tabla else 60)
-	custom_minimum_size.x = 1100 if es_tabla else 1040
+	titulo.add_theme_color_override("font_color", Arte.TINTA)
+	titulo.add_theme_font_size_override("font_size", 86 if es_tabla else 48)
+	custom_minimum_size.x = 1100 if es_tabla else 880
 	if es_tabla:
 		add_theme_stylebox_override("panel", Arte.margenes(101, 98, 100, 17))
 		$Contenido.add_theme_constant_override("separation", 27)
 		$Contenido/Encabezado.custom_minimum_size.y = 122
 	else:
-		remove_theme_stylebox_override("panel")
-		$Contenido.add_theme_constant_override("separation", 20)
+		add_theme_stylebox_override("panel", Arte.margenes(42, 48, 42, 28))
+		$Contenido.add_theme_constant_override("separation", 14)
 		$Contenido/Encabezado.custom_minimum_size.y = 0
 	queue_redraw()
 

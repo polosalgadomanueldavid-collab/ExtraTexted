@@ -3,7 +3,6 @@
 [ext_resource type="Script" path="res://UI/Menus/panel_clasificacion.gd" id="1_panel"]
 [ext_resource type="Theme" path="res://UI/Menus/tema_piloto.tres" id="2_tema"]
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="3_texto"]
-[ext_resource type="Script" path="res://UI/Menus/boton_piloto.gd" id="4_boton"]
 
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/volver.svg" id="5_volver"]
 
@@ -50,7 +49,12 @@ content_margin_left = 22.0
 content_margin_top = 14.0
 content_margin_right = 22.0
 content_margin_bottom = 14.0
-bg_color = Color(1, 0.945, 0.847, 1)
+bg_color = Color(1, 0.98, 0.94, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5, 0.65, 0.67, 1)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_left = 16
@@ -69,7 +73,7 @@ corner_radius_bottom_left = 16
 corner_radius_bottom_right = 16
 
 [node name="PanelClasificacion" type="PanelContainer"]
-custom_minimum_size = Vector2(1040, 0)
+custom_minimum_size = Vector2(880, 0)
 theme = ExtResource("2_tema")
 script = ExtResource("1_panel")
 fuente_tabla = SubResource("Font_records")
@@ -84,10 +88,10 @@ theme_override_constants/separation = 2
 
 [node name="Seccion" type="Label" parent="Contenido/Encabezado"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.62, 0.54, 1)
+theme_override_colors/font_color = Color(0.44, 0.33, 0.22, 1)
 theme_override_fonts/font = SubResource("Font_tabla")
 theme_override_font_sizes/font_size = 22
-text = "RÉCORDS LOCALES"
+text = "FICHA DE INGRESO · TURNO INDIVIDUAL"
 
 [node name="Titulo" type="Label" parent="Contenido/Encabezado"]
 unique_name_in_owner = true
@@ -99,13 +103,15 @@ text = "CLASIFICACIÓN"
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="Instrucciones" type="Label" parent="Contenido/Formulario"]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("3_texto")
-theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
+theme_override_fonts/font = SubResource("Font_tabla")
+theme_override_font_sizes/font_size = 24
 text = "Usa el mismo nombre para mejorar tu récord."
+autowrap_mode = 3
 
 [node name="NombreJugador" type="LineEdit" parent="Contenido/Formulario"]
 unique_name_in_owner = true
@@ -114,7 +120,7 @@ theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
 theme_override_colors/font_placeholder_color = Color(0.31, 0.41, 0.47, 1)
 theme_override_colors/caret_color = Color(0.09, 0.231, 0.314, 1)
 theme_override_fonts/font = SubResource("Font_tabla")
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("Style_entrada")
 theme_override_styles/focus = SubResource("Style_foco")
 placeholder_text = "Escribe tu nombre o alias"
@@ -125,10 +131,11 @@ select_all_on_focus = true
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.62, 0.54, 1)
+theme_override_colors/font_color = Color(0.65, 0.18, 0.11, 1)
 theme_override_fonts/font = ExtResource("3_texto")
-theme_override_font_sizes/font_size = 25
+theme_override_font_sizes/font_size = 22
 text = "No se pudo abrir la partida. Inténtalo de nuevo."
+autowrap_mode = 3
 
 [node name="Tabla" type="VBoxContainer" parent="Contenido"]
 unique_name_in_owner = true
@@ -264,19 +271,16 @@ icon_alignment = 0
 
 [node name="Volver" type="Button" parent="Contenido/Botones"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(350, 88)
+custom_minimum_size = Vector2(260, 64)
 layout_mode = 2
 mouse_default_cursor_shape = 2
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 30
 text = "VOLVER"
-script = ExtResource("4_boton")
 
 [node name="Continuar" type="Button" parent="Contenido/Botones"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(350, 88)
+custom_minimum_size = Vector2(260, 64)
 layout_mode = 2
 mouse_default_cursor_shape = 2
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 30
 text = "CONTINUAR"
-script = ExtResource("4_boton")
-principal = true
