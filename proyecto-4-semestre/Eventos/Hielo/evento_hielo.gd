@@ -2,6 +2,7 @@ extends Node3D
 
 signal iniciado
 signal terminado
+const TuberiaRompible := preload("res://Eventos/Tuberias/tuberia_rompible.gd")
 const PanelNitrogeno := preload("res://Eventos/Hielo/panel_nitrogeno.gd")
 const PanelHielo := preload("res://Eventos/Hielo/panel_hielo.gd")
 const Capsula := preload("res://Eventos/Hielo/capsula_hielo.gd")
@@ -25,7 +26,7 @@ var permiso_inicio: Callable
 var panel: PanelNitrogeno
 var aviso: PanelHielo
 var indicador: Indicador
-var tuberia: Node3D
+var tuberia: TuberiaRompible
 var acceso: Marker3D
 var superficie: MeshInstance3D
 var capsula: Capsula
@@ -41,7 +42,6 @@ var _recubiertos: Array[Dictionary] = []
 var _visuales: Node3D
 var _nieve: CPUParticles3D
 var _fuga: CPUParticles3D
-var _tuercas: Array[MeshInstance3D] = []
 var _luces: Array[Dictionary] = []
 var _tiempo_deshielo := 0.0
 var _presencia_al_reparar := 1.0
@@ -91,7 +91,7 @@ func iniciar() -> bool:
 	_recubrir_mobiliario()
 	for luz: Node in _oficina.find_children("*", "Light3D", true, false):
 		_luces.append({"nodo": luz, "color": luz.light_color})
-	_fuga.emitting = true
+	tuberia.romper()
 	set_physics_process(true)
 	set_process(true)
 	aviso.actualizar(INTERVALO, false, false, INTERVALO)
@@ -123,8 +123,6 @@ func _physics_process(delta: float) -> void:
 	if not _jugador.congelado and tiempo >= INTERVALO:
 		duracion = INTERVALO - CONGELACION
 	aviso.actualizar(restante, _jugador.congelado, descongelando, duracion)
-	for i in _tuercas.size():
-		_tuercas[i].rotation.z = lerp_angle(_tuercas[i].rotation.z, panel.aprietes[i] * PI / 3.0, minf(1.0, delta * 8))
 	if descongelando and _tiempo_deshielo >= DESHIELO:
 		detener()
 		terminado.emit()
@@ -147,10 +145,11 @@ func obtener_objetivo(jugador: Player) -> Node3D:
 	if diferencia.length() > 0.1 and jugador.visual.global_basis.z.normalized().dot(diferencia.normalized()) < 0.2:
 		return null
 	var origen := jugador.global_position + Vector3.UP * 0.45
-	var destino := Vector3(tuberia.global_position.x, origen.y, tuberia.global_position.z)
+	var destino := tuberia.cuerpo.global_position
 	var consulta := PhysicsRayQueryParameters3D.create(origen, destino, 1)
 	consulta.exclude = [jugador.get_rid()]
-	return self if get_world_3d().direct_space_state.intersect_ray(consulta).is_empty() else null
+	var impacto := get_world_3d().direct_space_state.intersect_ray(consulta)
+	return self if impacto.is_empty() or tuberia.is_ancestor_of(impacto.collider) else null
 
 
 func interactuar(jugador: Player) -> void:
@@ -195,7 +194,7 @@ func _al_reparar() -> void:
 	_tiempo_deshielo = 0.0
 	_presencia_al_reparar = minf(1.0, tiempo / ENTRADA)
 	_jugador.congelado = false
-	_fuga.emitting = false
+	tuberia.sellar()
 	_nieve.emitting = false
 	_oficina.anuncios.mostrar_evento("¡FUGA", "SELLADA!", "El hielo se está derritiendo")
 
@@ -225,7 +224,7 @@ func detener() -> void:
 		if is_instance_valid(dato.nodo):
 			dato.nodo.light_color = dato.color
 	_luces.clear()
-	_fuga.emitting = false
+	tuberia.restablecer()
 	_visuales.hide()
 	_visuales.queue_free()
 	aviso.hide()
@@ -239,6 +238,8 @@ func _crear_visuales() -> void:
 	add_child(_visuales)
 	_material = ShaderMaterial.new()
 	_material.shader = SUELO
+	var origen_fuga := tuberia.salida.global_position
+	_material.set_shader_parameter("origen", Vector2(origen_fuga.x, origen_fuga.z))
 	# El plano transparente se dibuja antes que la cápsula y la nieve.
 	# Evita que el suelo tape las caras del iceberg que no tienen al policía detrás.
 	_material.render_priority = -20
@@ -379,66 +380,16 @@ func _particulas(cantidad: int, color: Color, radio: float) -> CPUParticles3D:
 	return particulas
 
 
-func _pieza(malla: Mesh, punto: Vector3, material: Material) -> MeshInstance3D:
-	var pieza := MeshInstance3D.new()
-	pieza.mesh = malla
-	pieza.material_override = material
-	pieza.position = punto
-	tuberia.add_child(pieza)
-	return pieza
-
-
 func _crear_tuberia() -> void:
-	tuberia = Node3D.new()
+	tuberia = TuberiaRompible.new()
+	tuberia.nitrogeno = true
 	tuberia.name = "TuberiaNitrogeno"
-	tuberia.position = Vector3(2.12, 1.15, 11.85)
+	# El respaldo queda encastrado 2 mm en la cara interior de Pared3.
+	tuberia.position = Vector3(2.368, 1.12, 10.08)
+	tuberia.scale = Vector3.ONE * 0.52
 	tuberia.rotation.y = -PI * 0.5
 	add_child(tuberia)
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color("91abc9")
-	metal.metallic = 0.75
-	metal.roughness = 0.28
-	var azul := StandardMaterial3D.new()
-	azul.albedo_color = Color("3d69b1")
-	azul.metallic = 0.35
-	var tubo := CylinderMesh.new()
-	tubo.height = 1.40
-	tubo.top_radius = 0.07
-	tubo.bottom_radius = 0.07
-	_pieza(tubo, Vector3.ZERO, metal)
-	for y: float in [-0.50, 0.50]:
-		var abrazadera := CylinderMesh.new()
-		abrazadera.height = 0.10
-		abrazadera.top_radius = 0.10
-		abrazadera.bottom_radius = 0.10
-		_pieza(abrazadera, Vector3(0, y, 0), azul)
-	var brida := BoxMesh.new()
-	brida.size = Vector3(0.38, 0.36, 0.18)
-	_pieza(brida, Vector3(0, 0, 0.015), azul)
-	for i in 4:
-		var tuerca := CylinderMesh.new()
-		tuerca.top_radius = 0.045
-		tuerca.bottom_radius = 0.045
-		tuerca.height = 0.045
-		tuerca.radial_segments = 6
-		var pieza := _pieza(tuerca, Vector3(-0.13 + (i % 2) * 0.26, 0.12 - (i / 2) * 0.24, 0.125), metal)
-		pieza.rotation.x = PI * 0.5
-		_tuercas.append(pieza)
-	var rotulo := Label3D.new()
-	rotulo.text = "N₂ · NITRÓGENO"
-	rotulo.font_size = 38
-	rotulo.pixel_size = 0.0024
-	rotulo.position = Vector3(0, 0.88, 0.05)
-	rotulo.modulate = Color("cfddff")
-	tuberia.add_child(rotulo)
-	_fuga = _particulas(32, Color(0.65, 0.8, 1.0, 0.55), 0.065)
-	_fuga.lifetime = 1.1
-	_fuga.position = Vector3(0, 0, 0.14)
-	_fuga.direction = Vector3(0, -0.4, 1)
-	_fuga.initial_velocity_min = 0.5
-	_fuga.initial_velocity_max = 1.2
-	_fuga.gravity = Vector3(0, -0.2, 0)
-	tuberia.add_child(_fuga)
+	_fuga = tuberia.chorro
 	acceso = Marker3D.new()
 	acceso.name = "AccesoNitrogeno"
 	acceso.add_to_group("accesos_navegacion")

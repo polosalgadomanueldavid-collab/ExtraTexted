@@ -814,7 +814,7 @@ func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 					var evento: Node = oficina.evento_inundacion
 					evento._cerrar_reparacion()
 					evento.drenando = true
-					evento._chorro.emitting = false
+					evento.tuberias.sellar()
 					evento.indicador.hide()
 					oficina.anuncios.mostrar_evento("TUBERÍAS", "REPARADAS", "El agua está bajando")
 				"hielo":
@@ -824,7 +824,7 @@ func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 					evento._tiempo_deshielo = 0.0
 					evento._presencia_al_reparar = minf(1.0, evento.tiempo / evento.ENTRADA)
 					evento._jugador.congelado = false
-					evento._fuga.emitting = false
+					evento.tuberia.sellar()
 					evento._nieve.emitting = false
 					oficina.anuncios.mostrar_evento("¡FUGA", "SELLADA!", "El hielo se está derritiendo")
 			aplicando = false

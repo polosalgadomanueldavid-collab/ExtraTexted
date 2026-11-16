@@ -2,7 +2,8 @@ shader_type spatial;
 render_mode blend_mix, cull_back;
 
 uniform float presencia : hint_range(0.0, 1.0) = 0.0;
-uniform vec2 origen = vec2(2.12, 8.95);
+// El evento proporciona la posición real de la boca de la tubería.
+uniform vec2 origen = vec2(0.0);
 varying vec3 mundo;
 
 vec2 azar(vec2 p) {
