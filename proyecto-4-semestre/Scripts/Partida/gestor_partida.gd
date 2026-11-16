@@ -123,6 +123,9 @@ var _evento_con_guia: StringName = &""
 var ruleta_emotes: RuletaEmotes
 
 
+signal preparacion_terminada
+var oficina_preparada := false
+
 func _ready() -> void:
 	add_to_group("gestor_partida")
 	anuncios = AnuncioPartida.new()
@@ -167,6 +170,8 @@ func _ready() -> void:
 	evento_incendio.iniciado.connect(_al_iniciar_incendio)
 	evento_incendio.terminado.connect(_al_terminar_incendio)
 	evento_incendio.mesa_recuperada.connect(_al_recuperar_mesa_incendiada)
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	evento_inundacion = EventoInundacion.new()
 	evento_inundacion.name = "EventoInundacion"
 	add_child(evento_inundacion)
@@ -174,13 +179,17 @@ func _ready() -> void:
 	evento_inundacion.permiso_inicio = _puede_iniciar_evento
 	evento_inundacion.iniciado.connect(_al_iniciar_inundacion)
 	evento_inundacion.terminado.connect(_al_terminar_inundacion)
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	evento_lava = EventoLava.new()
 	evento_lava.name = "EventoLava"
 	add_child(evento_lava)
-	evento_lava.configurar(self, jugador)
+	await evento_lava.configurar(self, jugador)
 	evento_lava.permiso_inicio = _puede_iniciar_evento
 	evento_lava.iniciado.connect(_al_iniciar_lava)
 	evento_lava.terminado.connect(_al_terminar_lava)
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	evento_hielo = EventoHielo.new()
 	evento_hielo.name = "EventoHielo"
 	add_child(evento_hielo)
@@ -209,6 +218,8 @@ func _ready() -> void:
 	sistema_despacho.partida_terminada.connect(_al_terminar_partida)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	indicador_papel = IndicadorPapel.new()
 	$CanvasLayer.add_child(indicador_papel)
 	indicador_bolsillo = IndicadorBolsillo.new()
@@ -253,6 +264,8 @@ func _ready() -> void:
 		if estacion_reporte.estacion_id == "reporte":
 			_aviso_reporte_atasco.global_position = estacion_reporte.global_position + Vector3.UP * 2.0
 			break
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	final_partida = FinalPartidaScript.new() as FinalPartida
 	$CanvasLayer.add_child(final_partida)
 	final_partida.relevo_iniciado.connect(_mostrar_companero_relevo)
@@ -289,12 +302,19 @@ func _ready() -> void:
 	temporizador_eventos.process_callback = Timer.TIMER_PROCESS_PHYSICS
 	temporizador_eventos.timeout.connect(_intentar_evento_aleatorio)
 	add_child(temporizador_eventos)
-	_preparar_pool_bloqueos.call_deferred()
+	await _preparar_pool_bloqueos()
+	if CargaEscenas.activa:
+		while not evento_hielo.nieve_preparada:
+			await get_tree().process_frame
 	if SesionLAN.activa:
 		red = preload("res://Scripts/Red/partida_lan.gd").new()
 		red.name = "PartidaLAN"
 		add_child(red)
 		red.configurar(self)
+	oficina_preparada = true
+	preparacion_terminada.emit()
+	if SesionLAN.activa and not CargaEscenas.activa:
+		SesionLAN.oficina_lista(red)
 
 
 func _abrir_ruleta_emotes() -> void:
@@ -323,8 +343,11 @@ func _preparar_pool_bloqueos() -> void:
 
 func preparar_lote_de_cajones() -> bool:
 	# También se puede llamar desde la pantalla de carga, con la oficina fuera del árbol.
-	for i in mini(3, BLOQUEOS_SIMULTANEOS - _bloqueos_pool.size()):
+	var limite := Time.get_ticks_usec() + 3000
+	while _bloqueos_pool.size() < BLOQUEOS_SIMULTANEOS:
 		_bloqueos_disponibles.append(_crear_bloqueo_pool())
+		if Time.get_ticks_usec() >= limite:
+			break
 	return _bloqueos_pool.size() >= BLOQUEOS_SIMULTANEOS
 
 
@@ -337,7 +360,7 @@ func _crear_bloqueo_pool() -> StaticBody3D:
 
 
 func _process(_delta: float) -> void:
-	if partida_finalizada:
+	if not oficina_preparada or partida_finalizada:
 		return
 	if not _turno_anunciado and get_tree().current_scene == self and not MenuGlobal.capa.visible:
 		_turno_anunciado = true
@@ -1059,11 +1082,7 @@ func _reiniciar_despues_del_final() -> void:
 		return
 	MenuGlobal.final_de_partida_activo = false
 	MenuGlobal.omitir_tutorial_siguiente_partida = true
-	get_tree().paused = false
-	var error := get_tree().reload_current_scene()
-	if error != OK:
-		MenuGlobal.omitir_tutorial_siguiente_partida = false
-		push_error("No se pudo reiniciar la partida: %s" % error_string(error))
+	CargaEscenas.cargar(MenuGlobal.ESCENA_JUEGO)
 
 
 func _volver_al_menu_despues_del_final() -> void:

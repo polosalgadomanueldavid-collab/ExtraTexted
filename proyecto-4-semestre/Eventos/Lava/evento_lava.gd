@@ -52,7 +52,9 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 	panel = PanelLava.new()
 	_oficina.get_node("CanvasLayer").add_child(panel)
 	# Preparar las placas al cargar la oficina, antes del aviso del evento.
-	_patron = PatronMagma.new()
+	_patron = PatronMagma.new(CargaEscenas.activa)
+	while not _patron.preparar_lote():
+		await get_tree().process_frame
 	set_physics_process(false)
 
 

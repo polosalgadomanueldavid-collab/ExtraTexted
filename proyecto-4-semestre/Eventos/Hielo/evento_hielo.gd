@@ -36,6 +36,7 @@ var _escarcha: ShaderMaterial
 var _material_nieve: ShaderMaterial
 var _monticulos: Array[MeshInstance3D] = []
 var _generador_nieve := NieveAcumulada.new()
+var nieve_preparada := false
 var _recubiertos: Array[Dictionary] = []
 var _visuales: Node3D
 var _nieve: CPUParticles3D
@@ -289,6 +290,7 @@ func _raices_mobiliario() -> Array[Node]:
 func _preparar_nieve() -> void:
 	# Preparar entre cuadros al cargar la oficina, antes de sortear el evento.
 	# La segunda pasada incluye el pool que se construye gradualmente.
+	var limite := Time.get_ticks_usec() + 3000
 	for pasada in 2:
 		if pasada == 1:
 			while _oficina._bloqueos_pool.size() < _oficina.BLOQUEOS_SIMULTANEOS:
@@ -308,9 +310,12 @@ func _preparar_nieve() -> void:
 					continue
 				var malla := candidata as MeshInstance3D
 				_generador_nieve.crear(malla, null, true)
-				await get_tree().process_frame
+				if Time.get_ticks_usec() >= limite:
+					await get_tree().process_frame
+					limite = Time.get_ticks_usec() + 3000
 				if not is_inside_tree():
 					return
+	nieve_preparada = true
 
 
 func _recubrir_mobiliario() -> void:

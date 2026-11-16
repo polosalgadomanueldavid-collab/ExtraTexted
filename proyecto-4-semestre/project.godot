@@ -22,6 +22,8 @@ config/icon="res://icon.svg"
 AjustesAccesibilidad="*res://UI/Menus/ajustes_accesibilidad.gd"
 SesionLAN="*res://Scripts/Red/sesion_lan.gd"
 MenuGlobal="*res://UI/Menus/MenuGlobal.tscn"
+CargaEscenas="*res://UI/Menus/carga_escenas.gd"
+CalidadVisual="*res://UI/Menus/calidad_visual.gd"
 
 [display]
 

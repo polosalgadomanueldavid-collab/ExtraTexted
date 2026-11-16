@@ -28,6 +28,7 @@ var _calma_mostrada: float = 100.0
 var _calma_inicial: float = 100.0
 var _tiempo_cambio: float = DURACION_CAMBIO
 var _destello: float = 0.0
+var _inicializada := false
 
 
 func _init() -> void:
@@ -63,6 +64,9 @@ func _ready() -> void:
 
 
 func actualizar(indice: int, nueva_calma: int) -> void:
+	if _inicializada and indice_jugador == indice and calma == clampi(nueva_calma, 0, 100):
+		return
+	_inicializada = is_instance_valid(_nombre)
 	if indice_jugador != indice:
 		indice_jugador = indice
 		establecer_retrato(null)
@@ -82,6 +86,8 @@ func actualizar(indice: int, nueva_calma: int) -> void:
 
 
 func establecer_nombre(nombre: String) -> void:
+	if nombre_jugador == nombre.strip_edges():
+		return
 	nombre_jugador = nombre.strip_edges()
 	if is_instance_valid(_nombre):
 		_actualizar_nombre()

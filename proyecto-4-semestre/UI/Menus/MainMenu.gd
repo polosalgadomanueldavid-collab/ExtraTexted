@@ -50,6 +50,7 @@ var panel_lan: CanvasLayer
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	resized.connect(_ajustar_escala)
 	_ajustar_escala()
 	play_button.grab_focus()
@@ -61,6 +62,8 @@ func _ready() -> void:
 
 
 func _revelar_menu() -> void:
+	if CargaEscenas.activa:
+		await CargaEscenas.terminada
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return
@@ -147,7 +150,7 @@ func confirmar_discusion(nombre_1: String, nombre_2: String = "") -> void:
 
 
 func actualizar_carga(avance: float) -> void:
-	progreso_carga.value = clampf(avance * 90.0, 0.0, 90.0)
+	progreso_carga.value = clampf(avance * 100.0, 0.0, 100.0)
 
 
 func oficina_lista() -> void:

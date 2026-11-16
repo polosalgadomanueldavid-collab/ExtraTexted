@@ -4,7 +4,6 @@ const ESCENA_JUEGO := "res://Mundo/Oficina.tscn"
 const ESCENA_MENU := "res://UI/Menus/MainMenu.tscn"
 const TAMANO_DISENO := Vector2(1920, 1080)
 const ESCALA_PAUSA := 0.8
-const DURACION_MINIMA_DISCUSION := 2.5
 const PanelAyuda = preload("res://UI/Menus/panel_ayuda.gd")
 const PanelClasificacion := preload("res://UI/Menus/panel_clasificacion.gd")
 const ClasificacionLocalScript := preload("res://Scripts/Partida/ClasificacionLocal.gd")
@@ -47,15 +46,12 @@ var _raton_anterior: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _cambiando_escena: bool = false
 var _origen_ayuda := OrigenAyuda.MENU
 var _partida_con_tutorial: int = 0
-var _carga_juego_activa := false
-var _oficina_precargada: PackedScene
-var _oficina_en_preparacion: Node
-var _inicio_confirmado := false
-var _momento_confirmacion := 0.0
+
 
 
 func _ready() -> void:
 	musica_menu.bus = "Musica"
+	_crear_selector_calidad.call_deferred()
 	%Reanudar.pressed.connect(reanudar_juego)
 	%OpcionesPausa.pressed.connect(abrir_opciones)
 	%TutorialPausa.pressed.connect(abrir_tutorial)
@@ -106,83 +102,8 @@ func _ready() -> void:
 	_actualizar_musica_menu.call_deferred()
 
 
-func _process(_delta: float) -> void:
-	if _carga_juego_activa:
-		var avance: Array = []
-		var estado := ResourceLoader.load_threaded_get_status(ESCENA_JUEGO, avance)
-		var menu := get_tree().current_scene
-		if is_instance_valid(menu) and menu.has_method("actualizar_carga") and not avance.is_empty():
-			menu.actualizar_carga(float(avance[0]))
-		match estado:
-			ResourceLoader.THREAD_LOAD_LOADED:
-				_carga_juego_activa = false
-				_oficina_precargada = ResourceLoader.load_threaded_get(ESCENA_JUEGO) as PackedScene
-				if _oficina_precargada == null:
-					_fallo_carga("La oficina no está disponible.")
-				elif is_instance_valid(menu) and menu.has_method("oficina_lista"):
-					menu.oficina_lista()
-			ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
-				_carga_juego_activa = false
-				_fallo_carga("No se pudo preparar la oficina.")
-	if _inicio_confirmado and _oficina_precargada != null:
-		_preparar_entrada()
-
-
 func preparar_oficina() -> void:
-	if _oficina_precargada != null:
-		var menu := get_tree().current_scene
-		if is_instance_valid(menu) and menu.has_method("oficina_lista"):
-			menu.oficina_lista()
-		return
-	if _carga_juego_activa:
-		return
-	var error := ResourceLoader.load_threaded_request(ESCENA_JUEGO)
-	if error != OK:
-		_fallo_carga("No se pudo preparar la oficina.")
-		push_error("Error al solicitar la oficina: %s" % error_string(error))
-		return
-	_carga_juego_activa = true
-
-
-func _fallo_carga(mensaje: String) -> void:
-	_inicio_confirmado = false
-	_cambiando_escena = false
-	_oficina_precargada = null
-	_descartar_oficina_en_preparacion()
-	panel_clasificacion.error_inicio.text = mensaje
-	panel_clasificacion.error_inicio.show()
-	panel_clasificacion.show()
-	capa.show()
-	push_error(mensaje)
-
-
-func _preparar_entrada() -> void:
-	if _oficina_en_preparacion == null:
-		_oficina_en_preparacion = _oficina_precargada.instantiate()
-		if _oficina_en_preparacion == null:
-			_fallo_carga("No se pudo crear la oficina.")
-		return
-	if not _oficina_en_preparacion.preparar_lote_de_cajones():
-		return
-	if Time.get_ticks_msec() / 1000.0 - _momento_confirmacion < DURACION_MINIMA_DISCUSION:
-		return
-	_inicio_confirmado = false
-	var error := get_tree().change_scene_to_node(_oficina_en_preparacion)
-	if error == OK:
-		_oficina_en_preparacion = null
-	else:
-		_fallo_carga("No se pudo abrir la oficina.")
-		push_error("Error al abrir la oficina: %s" % error_string(error))
-
-
-func _descartar_oficina_en_preparacion() -> void:
-	if _oficina_en_preparacion != null:
-		_oficina_en_preparacion.free()
-		_oficina_en_preparacion = null
-
-
-func _exit_tree() -> void:
-	_descartar_oficina_en_preparacion()
+	CargaEscenas.precargar(ESCENA_JUEGO)
 
 
 func _ajustar_presentacion() -> void:
@@ -309,7 +230,7 @@ func abrir_controles() -> void:
 
 
 func _abrir_tutorial_inicial() -> void:
-	if SesionLAN.cargando:
+	if SesionLAN.cargando or CargaEscenas.activa:
 		return
 	if capa.visible or _cambiando_escena or not es_escena_de_juego():
 		return
@@ -419,14 +340,12 @@ func _iniciar_partida(nombre: String, nombre_companero: String = "") -> void:
 	_cambiando_escena = true
 	nombre_partida = nombre
 	_ultimo_nombre = nombre
-	_momento_confirmacion = Time.get_ticks_msec() / 1000.0
-	_inicio_confirmado = true
 	panel_clasificacion.hide()
 	capa.hide()
 	var menu := get_tree().current_scene
 	if is_instance_valid(menu) and menu.has_method("confirmar_discusion"):
 		menu.confirmar_discusion(nombre, nombre_companero)
-	preparar_oficina()
+	CargaEscenas.cargar(ESCENA_JUEGO)
 
 
 func volver_al_menu() -> void:
@@ -438,12 +357,7 @@ func volver_al_menu() -> void:
 	_cambiando_escena = true
 	AjustesAccesibilidad.guardar()
 	_establecer_pausa(false)
-	var error := get_tree().change_scene_to_file(ESCENA_MENU)
-	if error != OK:
-		_cambiando_escena = false
-		_establecer_pausa(true)
-		_mostrar_pausa()
-		push_error("No se pudo abrir el menu principal: %s" % error)
+	CargaEscenas.cargar(ESCENA_MENU)
 
 
 func _input(event: InputEvent) -> void:
@@ -456,6 +370,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if CargaEscenas.activa:
+		return
 	if not event.is_action_pressed("Cancel") or event.is_echo() or _cambiando_escena or final_de_partida_activo:
 		return
 	if panel_ayuda.visible:
@@ -528,9 +444,6 @@ func _al_cambiar_escena() -> void:
 	_foco_anterior = null
 	_opciones_desde_pausa = false
 	_cambiando_escena = false
-	_inicio_confirmado = false
-	_oficina_precargada = null
-	_descartar_oficina_en_preparacion()
 	if not es_escena_de_juego():
 		nombre_partida = ""
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -632,3 +545,23 @@ func _establecer_pausa(valor: bool) -> void:
 		SesionLAN.pedir_pausa(valor)
 	else:
 		get_tree().paused = valor
+
+
+func _crear_selector_calidad() -> void:
+	var fila := HBoxContainer.new()
+	var etiqueta := Label.new()
+	etiqueta.text = "CALIDAD VISUAL"
+	etiqueta.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fila.add_child(etiqueta)
+	var selector := OptionButton.new()
+	selector.name = "CalidadVisual"
+	for texto in ["Baja", "Media", "Alta"]:
+		selector.add_item(texto)
+	selector.select(CalidadVisual.nivel)
+	selector.item_selected.connect(CalidadVisual.establecer)
+	selector.tooltip_text = "Sombras, partículas y resolución 3D. La interfaz conserva su nitidez."
+	fila.add_child(selector)
+	var contenido := panel_opciones.get_node("Contenido")
+	contenido.add_child(fila)
+	contenido.move_child(fila, contenido.get_child_count() - 2)
+	_confinar_foco([control_volumen_general, control_volumen_musica, control_volumen_interacciones, selector, %AccesibilidadOpciones, %ControlesOpciones, %VolverOpciones])

@@ -33,10 +33,25 @@ var _ultimo_fuego := 0.0
 var anuncio_pendiente: Array = []
 var _tazas_remotas: Dictionary = {}
 var _capsulas_remotas: Dictionary = {}
+var _estaciones := {}
+var _casos_recibidos := {}
+var _estado_enviado := {}
+var _estado_recibido := {}
+var _base_recibida := 0
+var _finales_pendientes: Array = []
+var _numero_final := 0
+var _ultimo_final := 0
+var bytes_estado := 0
+var snapshots_completos := 0
+var snapshots_delta := 0
+var _hud_previo := {}
+var _contexto_previo: Array = []
 
 func configurar(mundo: Node3D) -> void:
 	oficina = mundo
 	despacho = oficina.sistema_despacho
+	for estacion in oficina.find_children("*", "Estacion", true, false):
+		_estaciones[estacion.estacion_id] = estacion
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var ids: Array = SesionLAN.participantes.keys()
 	ids.sort()
@@ -73,14 +88,13 @@ func configurar(mundo: Node3D) -> void:
 		etiqueta.position.y = 1.2
 		jugador.add_child(etiqueta)
 	despacho.jugador_eliminado.connect(_eliminar)
-	despacho.denuncia_resuelta.connect(func(caso: Denuncia): _resueltos[caso.id] = _serializar_caso(caso))
-	despacho.denuncia_vencida.connect(func(caso: Denuncia): _vencidos[caso.id] = _serializar_caso(caso))
+	despacho.denuncia_resuelta.connect(_registrar_final.bind("resuelto"))
+	despacho.denuncia_vencida.connect(_registrar_final.bind("vencido"))
 	if not SesionLAN.es_anfitrion():
 		oficina.temporizador_denuncias.stop()
 		oficina.temporizador_bloqueos.stop()
 		oficina.temporizador_eventos.stop()
 	_actualizar_hud()
-	SesionLAN.oficina_lista(self)
 
 func comenzar() -> void:
 	_listo = true
@@ -412,10 +426,7 @@ func _cordura(id: int, datos: Dictionary) -> Dictionary:
 	return _error("Recuperación o daño no disponible.")
 
 func _buscar_estacion(id: String) -> Node3D:
-	for nodo: Node in oficina.find_children("*", "Estacion", true, false):
-		if nodo.estacion_id == id:
-			return nodo
-	return null
+	return _estaciones.get(id)
 
 func _objeto(clave: String) -> Node3D:
 	match clave:
@@ -481,6 +492,10 @@ func _actualizar_contexto() -> void:
 	oficina._reporte_atascado_id = str(reporte.get("caso", "")) if reporte.get("atasco", false) else ""
 	var portadores: Array = reporte.get("herramientas", [0, 0])
 	oficina._reporte_herramienta_recogida = portadores.has(SesionLAN.id_local())
+	var contexto := [oficina._reporte_atascado_id, portadores.duplicate(), oficina.evento_apagon.estado]
+	if contexto == _contexto_previo:
+		return
+	_contexto_previo = contexto
 	for indice in oficina.herramientas_reporte.size():
 		oficina.herramientas_reporte[indice].establecer_activa(not oficina._reporte_atascado_id.is_empty() and int(portadores[indice]) == 0)
 	oficina._aviso_reporte_atasco.visible = not oficina._reporte_atascado_id.is_empty() and oficina.evento_apagon.estado == 0
@@ -493,7 +508,10 @@ func _actualizar_hud() -> void:
 		var nombre := str(SesionLAN.participantes[id].alias)
 		if not despacho.esta_activo(id):
 			nombre += " · FUERA"
-		oficina.panel_despacho.calma_jugadores.actualizar_jugador(indice + 1, despacho.obtener_cordura(id), nombre)
+		var estado_hud := [despacho.obtener_cordura(id), nombre]
+		if _hud_previo.get(id, []) != estado_hud:
+			_hud_previo[id] = estado_hud
+			oficina.panel_despacho.calma_jugadores.actualizar_jugador(indice + 1, estado_hud[0], nombre)
 
 func _serializar_caso(caso: Denuncia) -> Dictionary:
 	var datos := {}
@@ -522,17 +540,17 @@ func publicar() -> void:
 		var papel: PapelDenuncia = papeles[caso]
 		if is_instance_valid(papel):
 			hojas[caso] = {"portador": papel.portador.id_red if is_instance_valid(papel.portador) else 0, "transform": papel.global_transform, "velocidad": papel.linear_velocity}
-	SesionLAN.publicar({"revision": _revision, "jugadores": despacho.jugadores, "casos": casos, "tiempos": despacho.tiempos_restantes, "activos": despacho.casos_en_proceso, "participantes": despacho.participantes, "portadores": despacho.ultimos_portadores, "asignados": despacho.casos_por_jugador, "saldo": despacho.puntuacion.puntos, "ganados": despacho.puntuacion.puntos_ganados, "terminada": despacho.terminada, "causa": str(despacho.causa_agotamiento), "hojas": hojas, "reservas": reservas, "bolsillos": bolsillos, "cafes": cafes, "tazas_cafe": tazas_cafe, "resueltos": _resueltos, "vencidos": _vencidos, "duracion": oficina._duracion_partida, "mundo": _estado_mundo()})
+	var estado_actual := {"revision": _revision, "jugadores": despacho.jugadores, "casos": casos, "tiempos": despacho.tiempos_restantes, "activos": despacho.casos_en_proceso, "participantes": despacho.participantes, "portadores": despacho.ultimos_portadores, "asignados": despacho.casos_por_jugador, "saldo": despacho.puntuacion.puntos, "ganados": despacho.puntuacion.puntos_ganados, "terminada": despacho.terminada, "causa": str(despacho.causa_agotamiento), "hojas": hojas, "reservas": reservas, "bolsillos": bolsillos, "cafes": cafes, "tazas_cafe": tazas_cafe, "resueltos": {}, "vencidos": {}, "duracion": oficina._duracion_partida, "mundo": _estado_mundo()}
+	_enviar_estado(estado_actual)
 
 func aplicar(datos: Dictionary) -> void:
 	if int(datos.revision) <= _revision_recibida:
 		return
 	_revision_recibida = int(datos.revision)
 	aplicando = true
+	_cambio_interfaz = despacho.jugadores != datos.jugadores or despacho.casos_en_proceso != datos.activos or despacho.casos_por_jugador != datos.asignados
 	despacho.jugadores = datos.jugadores.duplicate(true)
-	despacho.arbol = ArbolDenunciasAVL.new()
-	for dato: Dictionary in datos.casos:
-		despacho.arbol.insertar(_leer_caso(dato))
+	_actualizar_casos(datos.casos)
 	despacho.tiempos_restantes = datos.tiempos.duplicate()
 	despacho.casos_en_proceso = datos.activos.duplicate()
 	despacho.participantes = datos.participantes.duplicate(true)
@@ -577,7 +595,10 @@ func aplicar(datos: Dictionary) -> void:
 	for id: int in despacho.jugadores:
 		if not despacho.esta_activo(id):
 			_eliminar(id)
-	despacho._notificar_cambios()
+	if _cambio_interfaz:
+		despacho._notificar_cambios()
+	_cambio_interfaz = false
+	_actualizar_hud()
 	if datos.terminada and not despacho.terminada:
 		despacho.terminada = true
 		despacho.causa_agotamiento = StringName(datos.causa)
@@ -964,3 +985,97 @@ func _actualizar_objetos_remotos() -> void:
 				CONTENIDO_CAFE.establecer_llenado(contenido, 1.0 if tiene_cafe else 0.0)
 		# Conserva el agarre de la taza vacía hasta que el brazo termina de bajar.
 		j.establecer_taza_en_mano(_tazas_remotas.has(id))
+
+
+var _cambio_interfaz := false
+
+func _actualizar_casos(casos: Array) -> void:
+	var presentes := {}
+	for dato: Dictionary in casos:
+		var id := str(dato.id)
+		presentes[id] = true
+		if _casos_recibidos.get(id, {}) == dato:
+			continue
+		_cambio_interfaz = true
+		var caso := despacho.arbol.buscar_por_id(id)
+		if caso == null:
+			caso = _leer_caso(dato)
+			despacho.arbol.insertar(caso)
+		else:
+			var reordenar: bool = caso.nivel_riesgo != dato.nivel_riesgo or caso.hora_reporte != dato.hora_reporte
+			if reordenar:
+				despacho.arbol.eliminar_por_id(id)
+			for campo: String in CAMPOS_CASO:
+				if campo in ["protocolo_estaciones", "estaciones_completadas"]:
+					caso.get(campo).assign(dato[campo])
+				else:
+					caso.set(campo, dato[campo])
+			if reordenar:
+				despacho.arbol.insertar(caso)
+		_casos_recibidos[id] = dato.duplicate(true)
+	for id: String in _casos_recibidos.keys():
+		if not presentes.has(id):
+			despacho.arbol.eliminar_por_id(id)
+			_casos_recibidos.erase(id)
+			_cambio_interfaz = true
+
+func _registrar_final(caso: Denuncia, tipo: String) -> void:
+	if not SesionLAN.es_anfitrion():
+		return
+	_numero_final += 1
+	_finales_pendientes.append({"numero": _numero_final, "tipo": tipo, "caso": _serializar_caso(caso).duplicate(true)})
+
+func confirmar_finales(numero: int) -> void:
+	if numero > _numero_final:
+		return
+	while not _finales_pendientes.is_empty() and int(_finales_pendientes[0].numero) <= numero:
+		_finales_pendientes.pop_front()
+
+func _enviar_estado(actual: Dictionary) -> void:
+	var completo := _estado_enviado.is_empty() or _revision % 20 == 0
+	var paquete := {"revision": _revision, "completo": completo, "finales": _finales_pendientes}
+	if completo:
+		paquete.datos = actual
+		snapshots_completos += 1
+	else:
+		var cambios := {}
+		for clave in actual:
+			if actual[clave] != _estado_enviado.get(clave):
+				cambios[clave] = actual[clave]
+		paquete.base = int(_estado_enviado.revision)
+		paquete.datos = cambios
+		snapshots_delta += 1
+	_estado_enviado = actual.duplicate(true)
+	if "--perfil" in OS.get_cmdline_user_args():
+		bytes_estado += var_to_bytes(paquete).size()
+	SesionLAN.publicar(paquete)
+
+func recibir_estado(paquete: Dictionary) -> void:
+	if int(paquete.revision) <= _revision_recibida:
+		return
+	if paquete.completo:
+		_estado_recibido = paquete.datos.duplicate(true)
+	elif int(paquete.base) == _base_recibida:
+		_estado_recibido.merge(paquete.datos, true)
+	else:
+		SesionLAN.pedir_estado_completo()
+		return
+	_base_recibida = int(paquete.revision)
+	var resueltos := {}
+	var vencidos := {}
+	for final: Dictionary in paquete.finales:
+		if int(final.numero) <= _ultimo_final:
+			continue
+		_ultimo_final = int(final.numero)
+		if final.tipo == "resuelto":
+			resueltos[str(final.caso.id)] = final.caso
+		else:
+			vencidos[str(final.caso.id)] = final.caso
+	_estado_recibido.resueltos = resueltos
+	_estado_recibido.vencidos = vencidos
+	aplicar(_estado_recibido)
+	# La revisión monotónica evita duplicados; no conservar historial por caso.
+	_resueltos.clear()
+	_vencidos.clear()
+	if not paquete.finales.is_empty():
+		SesionLAN.confirmar_finales(_ultimo_final)

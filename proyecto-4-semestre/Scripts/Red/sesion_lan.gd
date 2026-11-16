@@ -5,7 +5,7 @@ signal aviso(mensaje: String)
 signal respuesta_recibida(numero: int, resultado: Dictionary)
 
 const PUERTO := 7000
-const VERSION := "extratexted-lan-2"
+const VERSION := "extratexted-lan-3"
 const OFICINA := "res://Mundo/Oficina.tscn"
 var activa := false
 var en_partida := false
@@ -141,7 +141,7 @@ func _cargar(nueva_ronda: int) -> void:
 	puente = null
 	en_partida = false
 	cargando = true
-	_limite_carga = 60.0
+	_limite_carga = Time.get_ticks_msec() / 1000.0 + 60.0
 	_cargados.clear()
 	_pausas.clear()
 	_respuestas.clear()
@@ -153,9 +153,7 @@ func _cargar(nueva_ronda: int) -> void:
 	_cambiar_a_oficina.call_deferred()
 
 func _cambiar_a_oficina() -> void:
-	var error := get_tree().change_scene_to_file(OFICINA)
-	if error != OK:
-		cerrar("No se pudo cargar la oficina.")
+	CargaEscenas.cargar(OFICINA)
 
 func oficina_lista(nuevo_puente: Node) -> void:
 	puente = nuevo_puente
@@ -167,7 +165,7 @@ func oficina_lista(nuevo_puente: Node) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _cargado(ronda_cliente: int) -> void:
-	if es_anfitrion() and ronda_cliente == ronda:
+	if es_anfitrion() and cargando and ronda_cliente == ronda:
 		_marcar_cargado(multiplayer.get_remote_sender_id())
 
 func _marcar_cargado(id: int) -> void:
@@ -183,6 +181,7 @@ func _comenzar() -> void:
 	_limite_carga = 0.0
 	en_partida = true
 	get_tree().paused = not _pausas.is_empty()
+	CargaEscenas.finalizar_espera()
 	puente.comenzar()
 	MenuGlobal._abrir_tutorial_inicial.call_deferred()
 
@@ -269,10 +268,10 @@ func publicar(datos: Dictionary) -> void:
 	if es_anfitrion() and en_partida:
 		_estado.rpc(ronda, datos)
 
-@rpc("authority", "call_remote", "reliable", 0)
+@rpc("authority", "call_remote", "reliable", 2)
 func _estado(ronda_servidor: int, datos: Dictionary) -> void:
 	if ronda_servidor == ronda and is_instance_valid(puente):
-		puente.aplicar(datos)
+		puente.recibir_estado(datos)
 
 func enviar_movimiento(datos: Dictionary) -> void:
 	if not en_partida:
@@ -361,6 +360,22 @@ func _process(delta: float) -> void:
 		if _limite_conexion <= 0.0:
 			cerrar("La conexión agotó el tiempo de espera.")
 	if _limite_carga > 0.0:
-		_limite_carga -= delta
-		if _limite_carga <= 0.0:
+		if Time.get_ticks_msec() / 1000.0 >= _limite_carga:
 			cerrar("El compañero no terminó de cargar la oficina.")
+
+
+func confirmar_finales(numero: int) -> void:
+	_acuse_finales.rpc_id(1, ronda, numero)
+
+@rpc("any_peer", "call_remote", "reliable", 2)
+func _acuse_finales(ronda_cliente: int, numero: int) -> void:
+	if es_anfitrion() and ronda_cliente == ronda and participantes.has(multiplayer.get_remote_sender_id()) and is_instance_valid(puente):
+		puente.confirmar_finales(numero)
+
+func pedir_estado_completo() -> void:
+	_pedir_estado_completo.rpc_id(1, ronda)
+
+@rpc("any_peer", "call_remote", "reliable", 2)
+func _pedir_estado_completo(ronda_cliente: int) -> void:
+	if es_anfitrion() and ronda_cliente == ronda and participantes.has(multiplayer.get_remote_sender_id()) and is_instance_valid(puente):
+		puente._estado_enviado.clear()
