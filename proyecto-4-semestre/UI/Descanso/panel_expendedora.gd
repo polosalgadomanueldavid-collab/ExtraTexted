@@ -8,17 +8,19 @@ signal cerrar_solicitado
 const CREMA := Color("fff1d8")
 const PETROLEO := Color("173b50")
 const CORAL := Color("ff785f")
-const METAL := Color("a0b5ba")
-const OSCURO := Color("0b2533")
+const METAL := Color("8c9198")
+# Carcasa plateada y paneles de grafito de MaquinaExpendedora.glb.
+const CARCASA := Color("b7b9bd")
+const OSCURO := Color("242a33")
 const CODIGOS := ["A1", "A2", "B1", "B2"]
 const NOMBRES := ["CHOCOLATE", "DONA", "PAPA TIEMPO", "EL AVATAR"]
-const EFECTOS := ["VELOCIDAD · 25 s", "SALTO ALTO · 10 s", "DETIENE EL TIEMPO", "RESUELVE UN EVENTO"]
 const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 
 var vista: SubViewport
 var camara: Camera3D
 var botones: Array[Button] = []
 var boton_recoger: Button
+var boton_retirar: Button
 var _modelo: Node3D
 var _productos: Array[Node3D] = []
 var _pulsadores: Array[MeshInstance3D] = []
@@ -65,15 +67,15 @@ func _ready() -> void:
 	ambiente.environment.background_mode = Environment.BG_CLEAR_COLOR
 	ambiente.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	ambiente.environment.ambient_light_color = Color("dce9ee")
-	ambiente.environment.ambient_light_energy = 0.65
+	ambiente.environment.ambient_light_energy = 0.45
 	vista.add_child(ambiente)
 	for i in 2:
 		var luz := DirectionalLight3D.new()
 		vista.add_child(luz)
 		luz.position = Vector3(-3, 6, 5) if i == 0 else Vector3(4, 4, 2)
 		luz.look_at(Vector3(0, 2, 0))
-		luz.light_energy = 1.5 if i == 0 else 0.75
-		luz.light_color = Color("fff1da") if i == 0 else Color("c5e5ff")
+		luz.light_energy = 0.9 if i == 0 else 0.4
+		luz.light_color = Color("fffaf2") if i == 0 else Color("e0e8f2")
 		luz.shadow_enabled = i == 0
 	_crear_maquina()
 	for i in 4:
@@ -84,7 +86,9 @@ func _ready() -> void:
 		boton.focus_exited.connect(_resaltar.bind(i, false))
 		botones.append(boton)
 	boton_recoger = _boton("RecogerProducto", "Recoger el producto de la bandeja", recoger_solicitado.emit)
+	boton_retirar = _boton("RetirarProducto", "Retirar el producto desde la pantalla", recoger_solicitado.emit)
 	boton_recoger.hide()
+	boton_retirar.hide()
 	resized.connect(_ajustar)
 	visibility_changed.connect(_actualizar_render)
 	hide()
@@ -127,22 +131,22 @@ func _letrero(padre: Node3D, texto: String, posicion: Vector3, escala: float, co
 
 
 func _crear_maquina() -> void:
-	_caja(_modelo, Vector3(3.1, 0.2, 1.6), Vector3(0, 0.13, 0), PETROLEO)
-	_caja(_modelo, Vector3(3.0, 4.1, 0.3), Vector3(0, 2.23, -0.6), PETROLEO)
-	_caja(_modelo, Vector3(0.17, 4.05, 1.42), Vector3(-1.42, 2.23, 0), PETROLEO)
-	_caja(_modelo, Vector3(0.72, 4.05, 1.42), Vector3(1.14, 2.23, 0), CORAL)
-	_caja(_modelo, Vector3(3, 0.43, 1.5), Vector3(0, 4.13, 0), CREMA)
-	_letrero(_modelo, "REFUERZOS DE TURNO", Vector3(0, 4.15, 0.762), 0.0025)
+	_caja(_modelo, Vector3(3.1, 0.2, 1.6), Vector3(0, 0.13, 0), CARCASA)
+	_caja(_modelo, Vector3(3.0, 4.1, 0.3), Vector3(0, 2.23, -0.6), CARCASA)
+	_caja(_modelo, Vector3(0.17, 4.05, 1.42), Vector3(-1.42, 2.23, 0), CARCASA)
+	_caja(_modelo, Vector3(0.72, 4.05, 1.42), Vector3(1.14, 2.23, 0), CARCASA)
+	_caja(_modelo, Vector3(3, 0.43, 1.5), Vector3(0, 4.13, 0), CARCASA)
 	_caja(_modelo, Vector3(2.08, 3.0, 0.05), Vector3(-0.32, 2.4, -0.4), OSCURO)
 	for x: float in [-1.3, 0.66]:
-		var luz_interior := _caja(_modelo, Vector3(0.035, 2.9, 0.05), Vector3(x, 2.4, 0.25), Color("c8ece3"))
+		var luz_interior := _caja(_modelo, Vector3(0.035, 2.9, 0.05), Vector3(x, 2.4, 0.25), Color("dfe4e8"))
 		var mat := luz_interior.material_override as StandardMaterial3D
 		mat.emission_enabled = true
-		mat.emission = Color("8dbab2")
+		mat.emission = Color("afb9c4")
 		mat.emission_energy_multiplier = 0.5
 	for y: float in [1.91, 3.12]:
 		# El estante termina antes del canal frontal por donde cae el producto.
 		_caja(_modelo, Vector3(2.0, 0.08, 0.52), Vector3(-0.32, y, -0.09), METAL, 0.6)
+	_caja(_modelo, Vector3(0.60, 2.0, 0.025), Vector3(1.14, 2.13, 0.724), OSCURO)
 	for i in 4:
 		var centro := _origen_producto(i)
 		_crear_espiral(centro + Vector3(0, -0.07, -0.45))
@@ -154,9 +158,8 @@ func _crear_maquina() -> void:
 		_caja(_modelo, Vector3(0.94, 0.19, 0.03), Vector3(centro.x, y, 0.25), CREMA)
 		_etiquetas.append(_letrero(_modelo, CODIGOS[i], Vector3(centro.x, y, 0.272), 0.00185))
 		_letrero(_modelo, NOMBRES[i], Vector3(centro.x, y - 0.21, 0.26), 0.0014, CREMA)
-		_letrero(_modelo, EFECTOS[i], Vector3(centro.x, y - 0.36, 0.26), 0.0012, Color("b8d3d5"))
 		var boton_y := 2.85 - i * 0.48
-		_pulsadores.append(_caja(_modelo, Vector3(0.5, 0.34, 0.09), Vector3(1.14, boton_y, 0.76), CREMA))
+		_pulsadores.append(_caja(_modelo, Vector3(0.5, 0.34, 0.09), Vector3(1.14, boton_y, 0.76), Color("d5d6d8")))
 		_letrero(_modelo, CODIGOS[i], Vector3(1.14, boton_y, 0.815), 0.0027)
 	for x: float in [-1.38, 0.74]:
 		_caja(_modelo, Vector3(0.065, 2.65, 0.1), Vector3(x, 2.575, 0.77), METAL, 0.7)
@@ -165,16 +168,14 @@ func _crear_maquina() -> void:
 	var cristal := _caja(_modelo, Vector3(2.05, 2.56, 0.005), Vector3(-0.32, 2.575, 0.79), Color(0.65, 0.85, 0.91, 0.045))
 	(cristal.material_override as StandardMaterial3D).transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	cristal.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_caja(_modelo, Vector3(2.17, 0.16, 1.36), Vector3(-0.32, 0.39, 0.06), PETROLEO)
+	_caja(_modelo, Vector3(2.17, 0.16, 1.36), Vector3(-0.32, 0.39, 0.06), CARCASA)
 	_caja(_modelo, Vector3(2.08, 0.4, 0.05), Vector3(-0.32, 0.65, -0.35), OSCURO)
 	_bandeja = _caja(_modelo, Vector3(2.12, 0.08, 0.12), Vector3(-0.32, 0.48, 0.77), METAL, 0.6)
-	_letrero(_modelo, "RECOGE AQUÍ", Vector3(-0.32, 0.3, 0.765), 0.0018, CREMA)
 	_caja(_modelo, Vector3(0.57, 0.7, 0.08), Vector3(1.14, 3.42, 0.76), OSCURO)
-	_caja(_modelo, Vector3(0.49, 0.6, 0.01), Vector3(1.14, 3.42, 0.808), Color("bfd5b4"))
+	_caja(_modelo, Vector3(0.49, 0.6, 0.01), Vector3(1.14, 3.42, 0.808), Color("c7ced0"))
 	_saldo = _letrero(_modelo, "0 PTS", Vector3(1.14, 3.57, 0.82), 0.0016)
 	_pantalla = _letrero(_modelo, "ELIGE", Vector3(1.14, 3.29, 0.82), 0.0016)
 	_caja(_modelo, Vector3(0.35, 0.04, 0.02), Vector3(1.14, 0.95, 0.722), OSCURO)
-	_letrero(_modelo, "ESC / E\nSALIR", Vector3(1.14, 0.61, 0.725), 0.0014)
 
 
 func _crear_espiral(posicion: Vector3) -> void:
@@ -287,7 +288,8 @@ func actualizar(saldo: int, precios: Array[int], inventario: Array[int], ocupado
 	_saldo.text = "%d\nPTS" % saldo
 	_saldo.pixel_size = minf(0.0016, 0.44 / maxf(1.0, _saldo.font.get_string_size(str(saldo), HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x))
 	for i in 4:
-		_etiquetas[i].text = "%s · %s" % [CODIGOS[i], "BOLSILLO" if inventario[i] > 0 else "%d PTS" % precios[i]]
+		_etiquetas[i].text = "%s · %s" % [CODIGOS[i], "COMPRADO" if inventario[i] > 0 else "%d PTS" % precios[i]]
+		_etiquetas[i].pixel_size = minf(0.00185, 0.86 / maxf(1.0, _etiquetas[i].font.get_string_size(_etiquetas[i].text, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x))
 		botones[i].disabled = ocupado or inventario[i] > 0 or saldo < precios[i]
 		if botones[i].disabled:
 			_resaltar(i, false)
@@ -297,6 +299,7 @@ func dispensar(indice: int) -> void:
 	_indice = indice
 	_pantalla.text = "ESPERA"
 	boton_recoger.hide()
+	boton_retirar.hide()
 
 
 func actualizar_caida(avance: float) -> void:
@@ -323,6 +326,7 @@ func listo() -> void:
 	actualizar_caida(1.0)
 	_pantalla.text = "RETIRA"
 	boton_recoger.show()
+	boton_retirar.show()
 	boton_recoger.grab_focus()
 	var mat := _bandeja.material_override as StandardMaterial3D
 	mat.emission_enabled = true
@@ -346,6 +350,7 @@ func mostrar_error(texto: String) -> void:
 func _cancelar_visual() -> void:
 	_indice = -1
 	boton_recoger.hide()
+	boton_retirar.hide()
 	_pantalla.text = "ELIGE"
 	(_bandeja.material_override as StandardMaterial3D).emission_enabled = false
 	for i in 4:
@@ -370,6 +375,7 @@ func _ajustar() -> void:
 	for i in botones.size():
 		_colocar_boton(botones[i], Vector3(1.14, 2.85 - i * 0.48, 0.82), Vector2(0.52, 0.35))
 	_colocar_boton(boton_recoger, Vector3(-0.32, 0.85, 0.79), Vector2(1.9, 0.65))
+	_colocar_boton(boton_retirar, Vector3(1.14, 3.29, 0.82), Vector2(0.49, 0.25))
 
 
 func _colocar_boton(boton: Button, centro: Vector3, medidas: Vector2) -> void:

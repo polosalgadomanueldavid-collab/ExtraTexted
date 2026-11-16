@@ -112,8 +112,8 @@ func _detener() -> void:
 	var id_terminado := caso_id
 	hide()
 	caso_id = ""
-	cerrado.emit()
 	verificacion_terminada.emit(id_terminado)
+	cerrado.emit()
 
 
 func _al_cambiar_visibilidad() -> void:

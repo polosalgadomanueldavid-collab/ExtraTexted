@@ -216,6 +216,10 @@ func _construir_interfaz() -> void:
 	_siguiente.pressed.connect(_ir_a_pagina.bind(-2))
 	_cuaderno.add_child(_siguiente)
 	var reiniciar := _boton("Reintentar", Color("5f9d88"), 17)
+	var sesion: Node = get_node_or_null("/root/SesionLAN")
+	if sesion != null and sesion.activa and not sesion.es_anfitrion():
+		reiniciar.text = "Espera al anfitrión"
+		reiniciar.disabled = true
 	reiniciar.position = Vector2(868, 609)
 	reiniciar.size = Vector2(139, 43)
 	reiniciar.pressed.connect(func() -> void: reiniciar_solicitado.emit())

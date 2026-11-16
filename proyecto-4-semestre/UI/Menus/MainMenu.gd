@@ -46,16 +46,24 @@ var _tiempo_dialogo := 0.0
 var _nombres := PackedStringArray()
 var _lineas_activas := PackedInt32Array()
 var _indice_activo := 0
+var panel_lan: CanvasLayer
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	resized.connect(_ajustar_escala)
 	_ajustar_escala()
 	play_button.grab_focus()
 	_revelar_menu.call_deferred()
+	panel_lan = preload("res://UI/Menus/panel_lan.gd").new()
+	add_child(panel_lan)
+	if not SesionLAN.ultimo_aviso.is_empty():
+		panel_lan.abrir(self)
 
 
 func _revelar_menu() -> void:
+	if CargaEscenas.activa:
+		await CargaEscenas.terminada
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return
@@ -120,6 +128,7 @@ func iniciar_discusion() -> void:
 	_dialogo_activo = true
 	presentacion.hide()
 	pantalla_discusion.show()
+	fila_carga.show()
 	estado_carga.text = "Preparando el turno..."
 	progreso_carga.value = 0.0
 	fondo.call("establecer_discusion", true)
@@ -138,11 +147,12 @@ func cancelar_discusion() -> void:
 
 func confirmar_discusion(nombre_1: String, nombre_2: String = "") -> void:
 	_preparar_frases(nombre_1, nombre_2)
-	estado_carga.text = "Abriendo la oficina..."
+	# El coordinador persistente presenta el único progreso real de la carga.
+	fila_carga.hide()
 
 
 func actualizar_carga(avance: float) -> void:
-	progreso_carga.value = clampf(avance * 90.0, 0.0, 90.0)
+	progreso_carga.value = clampf(avance * 100.0, 0.0, 100.0)
 
 
 func oficina_lista() -> void:
@@ -167,6 +177,10 @@ func _ajustar_escala() -> void:
 
 
 func _on_play_button_pressed() -> void:
+	panel_lan.abrir(self)
+
+
+func jugar_individual() -> void:
 	MenuGlobal.pedir_nombre_partida()
 	if MenuGlobal.panel_clasificacion.visible:
 		iniciar_discusion()

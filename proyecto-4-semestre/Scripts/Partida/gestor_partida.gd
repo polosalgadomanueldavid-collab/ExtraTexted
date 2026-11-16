@@ -54,6 +54,7 @@ const RuletaEmotesScript := preload("res://UI/Menus/ruleta_emotes.gd")
 
 
 var sistema_despacho: SistemaDespacho
+var red: Node
 var temporizador_denuncias: Timer
 var generador_aleatorio: RandomNumberGenerator = RandomNumberGenerator.new()
 var contador_denuncias: int = 0
@@ -96,6 +97,7 @@ var clasificador_evidencias: ClasificadorEvidencias
 var escaner_verificacion: EscanerVerificacion
 var sonidos_mesas: SonidosMesas
 var herramienta_reporte: HerramientaReporte
+var herramientas_reporte: Array[HerramientaReporte] = []
 var _aviso_reporte_atasco: Label3D
 var _reporte_atascado_id: String = ""
 var _reporte_herramienta_recogida: bool = false
@@ -119,6 +121,25 @@ var evento_hielo: EventoHielo
 var tutoriales_vistos: Dictionary[StringName, bool] = {}
 var _evento_con_guia: StringName = &""
 var ruleta_emotes: RuletaEmotes
+
+
+signal preparacion_terminada
+var oficina_preparada := false
+
+
+func _enter_tree() -> void:
+	if not SesionLAN.activa or SesionLAN.es_anfitrion():
+		return
+	# El invitado conserva su cuerpo y las referencias de cámara y eventos.
+	# Cambiar el modelo antes de _ready enlaza animaciones y gestos al rig correcto.
+	var visual := $Gameplay/Node3D/Visual
+	var anterior := visual.get_node("Modelo")
+	visual.remove_child(anterior)
+	anterior.free()
+	var modelo := preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn").instantiate()
+	modelo.name = "Modelo"
+	visual.add_child(modelo)
+	visual.move_child(modelo, 0)
 
 
 func _ready() -> void:
@@ -165,6 +186,8 @@ func _ready() -> void:
 	evento_incendio.iniciado.connect(_al_iniciar_incendio)
 	evento_incendio.terminado.connect(_al_terminar_incendio)
 	evento_incendio.mesa_recuperada.connect(_al_recuperar_mesa_incendiada)
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	evento_inundacion = EventoInundacion.new()
 	evento_inundacion.name = "EventoInundacion"
 	add_child(evento_inundacion)
@@ -172,13 +195,17 @@ func _ready() -> void:
 	evento_inundacion.permiso_inicio = _puede_iniciar_evento
 	evento_inundacion.iniciado.connect(_al_iniciar_inundacion)
 	evento_inundacion.terminado.connect(_al_terminar_inundacion)
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	evento_lava = EventoLava.new()
 	evento_lava.name = "EventoLava"
 	add_child(evento_lava)
-	evento_lava.configurar(self, jugador)
+	await evento_lava.configurar(self, jugador)
 	evento_lava.permiso_inicio = _puede_iniciar_evento
 	evento_lava.iniciado.connect(_al_iniciar_lava)
 	evento_lava.terminado.connect(_al_terminar_lava)
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	evento_hielo = EventoHielo.new()
 	evento_hielo.name = "EventoHielo"
 	add_child(evento_hielo)
@@ -207,6 +234,8 @@ func _ready() -> void:
 	sistema_despacho.partida_terminada.connect(_al_terminar_partida)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	indicador_papel = IndicadorPapel.new()
 	$CanvasLayer.add_child(indicador_papel)
 	indicador_bolsillo = IndicadorBolsillo.new()
@@ -225,6 +254,18 @@ func _ready() -> void:
 	herramienta_reporte = HerramientaReporte.new()
 	herramienta_reporte.position = grafo_piso.celda_a_posicion(Vector2i(7, 15)) + Vector3.UP * 0.26
 	add_child(herramienta_reporte)
+	herramientas_reporte.append(herramienta_reporte)
+	if SesionLAN.activa:
+		var segunda := HerramientaReporte.new()
+		segunda.indice_red = 1
+		segunda.position = herramienta_reporte.position + Vector3(0.65, 0, 0)
+		add_child(segunda)
+		herramientas_reporte.append(segunda)
+		for unidad in herramientas_reporte:
+			var acceso := Marker3D.new()
+			acceso.position = unidad.position
+			acceso.add_to_group("accesos_navegacion")
+			add_child(acceso)
 	_aviso_reporte_atasco = Label3D.new()
 	_aviso_reporte_atasco.text = "IMPRESORA ATASCADA"
 	_aviso_reporte_atasco.font = preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
@@ -239,6 +280,8 @@ func _ready() -> void:
 		if estacion_reporte.estacion_id == "reporte":
 			_aviso_reporte_atasco.global_position = estacion_reporte.global_position + Vector3.UP * 2.0
 			break
+	if CargaEscenas.activa:
+		await get_tree().process_frame
 	final_partida = FinalPartidaScript.new() as FinalPartida
 	$CanvasLayer.add_child(final_partida)
 	final_partida.relevo_iniciado.connect(_mostrar_companero_relevo)
@@ -275,7 +318,19 @@ func _ready() -> void:
 	temporizador_eventos.process_callback = Timer.TIMER_PROCESS_PHYSICS
 	temporizador_eventos.timeout.connect(_intentar_evento_aleatorio)
 	add_child(temporizador_eventos)
-	_preparar_pool_bloqueos.call_deferred()
+	await _preparar_pool_bloqueos()
+	if CargaEscenas.activa:
+		while not evento_hielo.nieve_preparada:
+			await get_tree().process_frame
+	if SesionLAN.activa:
+		red = preload("res://Scripts/Red/partida_lan.gd").new()
+		red.name = "PartidaLAN"
+		add_child(red)
+		red.configurar(self)
+	oficina_preparada = true
+	preparacion_terminada.emit()
+	if SesionLAN.activa and not CargaEscenas.activa:
+		SesionLAN.oficina_lista(red)
 
 
 func _abrir_ruleta_emotes() -> void:
@@ -304,8 +359,11 @@ func _preparar_pool_bloqueos() -> void:
 
 func preparar_lote_de_cajones() -> bool:
 	# También se puede llamar desde la pantalla de carga, con la oficina fuera del árbol.
-	for i in mini(3, BLOQUEOS_SIMULTANEOS - _bloqueos_pool.size()):
+	var limite := Time.get_ticks_usec() + 3000
+	while _bloqueos_pool.size() < BLOQUEOS_SIMULTANEOS:
 		_bloqueos_disponibles.append(_crear_bloqueo_pool())
+		if Time.get_ticks_usec() >= limite:
+			break
 	return _bloqueos_pool.size() >= BLOQUEOS_SIMULTANEOS
 
 
@@ -318,7 +376,7 @@ func _crear_bloqueo_pool() -> StaticBody3D:
 
 
 func _process(_delta: float) -> void:
-	if partida_finalizada:
+	if not oficina_preparada or partida_finalizada:
 		return
 	if not _turno_anunciado and get_tree().current_scene == self and not MenuGlobal.capa.visible:
 		_turno_anunciado = true
@@ -481,7 +539,8 @@ func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
 	var mostrar := nuevo_estado == EventoApagonScript.Estado.RESTAURADO and not partida_finalizada
 	_actualizar_indicadores_estaciones()
 	progreso_seguridad.mostrar_indicador = mostrar
-	herramienta_reporte.mostrar_indicador = mostrar
+	for unidad in herramientas_reporte:
+		unidad.mostrar_indicador = mostrar
 	_aviso_reporte_atasco.visible = mostrar and not _reporte_atascado_id.is_empty()
 	if is_instance_valid(papel_actual):
 		papel_actual.mostrar_indicador = mostrar
@@ -546,6 +605,8 @@ func _asegurar_temporizador_denuncias() -> void:
 
 
 func _recibir_denuncia_aleatoria() -> void:
+	if SesionLAN.activa and not SesionLAN.es_anfitrion():
+		return
 	if partida_finalizada:
 		return
 	_asegurar_temporizador_denuncias()
@@ -606,6 +667,9 @@ func _on_computador_despacho_abierto() -> void:
 
 
 func _entregar_papel(portador: Player) -> void:
+	if is_instance_valid(red):
+		portador.ejecutar_gesto(&"recibir", func(): SesionLAN.solicitar("tomar"), computador)
+		return
 	if _rechazar_estacion_incendiada("computador"):
 		return
 	if not is_instance_valid(portador):
@@ -633,6 +697,11 @@ func _entregar_papel(portador: Player) -> void:
 
 
 func recoger_papel(portador: Player, papel: PapelDenuncia) -> void:
+	if is_instance_valid(red):
+		portador.ejecutar_gesto(&"recoger", func():
+			if is_instance_valid(papel): SesionLAN.solicitar("recoger", {"caso": papel.denuncia_id})
+		, papel)
+		return
 	if _manos_ocupadas_con_cafe():
 		return
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
@@ -667,7 +736,7 @@ func _tomar_papel_si_vigente(portador: Player, papel_id: int) -> void:
 
 
 func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
-	if papel != papel_actual:
+	if papel != papel_actual and not is_instance_valid(red):
 		return
 	papel.freeze = true
 	papel.linear_velocity = Vector3.ZERO
@@ -683,6 +752,8 @@ func _puede_iniciar_evento() -> bool:
 
 
 func _programar_evento_aleatorio() -> void:
+	if SesionLAN.activa and not SesionLAN.es_anfitrion():
+		return
 	if partida_finalizada or not bloqueos_iniciados or not _puede_iniciar_evento():
 		return
 	_evento_aleatorio_pendiente = -1
@@ -700,6 +771,9 @@ func evento_para_consultar() -> StringName:
 
 
 func _anunciar_inicio_evento(evento: StringName, titulo: String, segunda_linea: String, detalle: String) -> void:
+	if is_instance_valid(red) and red.iniciando_evento:
+		red.anuncio_pendiente = [evento, titulo, segunda_linea, detalle]
+		return
 	_evento_con_guia = evento
 	if not tutoriales_vistos.has(evento) and MenuGlobal.mostrar_tutorial_evento(evento):
 		tutoriales_vistos[evento] = true
@@ -709,13 +783,15 @@ func _anunciar_inicio_evento(evento: StringName, titulo: String, segunda_linea: 
 
 
 func _intentar_evento_aleatorio() -> void:
+	if SesionLAN.activa and not SesionLAN.es_anfitrion():
+		return
 	if not _puede_iniciar_evento():
 		return
 	if _evento_aleatorio_pendiente < 0:
 		_evento_aleatorio_pendiente = generador_aleatorio.randi_range(0, 5)
 	# Conservar la elección hasta poder iniciarla: no favorecer al apagón
 	# mientras el jugador está en la zona segura o atendiendo una mesa.
-	if not get_tree().paused and not computador.is_using and not jugador.input_locked and not clasificacion_partida.visible and not MenuGlobal.capa.visible:
+	if not get_tree().paused and not computador.is_using and (not jugador.input_locked or (is_instance_valid(red) and not sistema_despacho.esta_activo(jugador.id_red))) and not clasificacion_partida.visible and not MenuGlobal.capa.visible:
 		if _evento_aleatorio_pendiente == 0:
 			_iniciar_terremoto()
 		elif _evento_aleatorio_pendiente == 1:
@@ -733,6 +809,8 @@ func _intentar_evento_aleatorio() -> void:
 
 
 func _iniciar_hielo() -> bool:
+	if is_instance_valid(red) and not red.iniciando_evento:
+		return red.iniciar_evento("hielo")
 	if not bloqueos_iniciados or computador.is_using or jugador.input_locked or jugador.realizando_gesto():
 		return false
 	return evento_hielo.iniciar()
@@ -751,6 +829,8 @@ func _al_terminar_hielo() -> void:
 
 
 func _iniciar_lava() -> bool:
+	if is_instance_valid(red) and not red.iniciando_evento:
+		return red.iniciar_evento("lava")
 	if not bloqueos_iniciados or computador.is_using or jugador.input_locked or jugador.realizando_gesto():
 		return false
 	return evento_lava.iniciar()
@@ -769,6 +849,8 @@ func _al_terminar_lava() -> void:
 
 
 func _iniciar_inundacion() -> bool:
+	if is_instance_valid(red) and not red.iniciando_evento:
+		return red.iniciar_evento("inundacion")
 	if not bloqueos_iniciados or computador.is_using or jugador.input_locked or jugador.realizando_gesto():
 		return false
 	return evento_inundacion.iniciar()
@@ -792,6 +874,8 @@ func _al_caer_bloqueo_en_agua(punto: Vector3) -> void:
 
 
 func _iniciar_incendio() -> bool:
+	if is_instance_valid(red) and not red.iniciando_evento:
+		return red.iniciar_evento("incendio")
 	if not bloqueos_iniciados or computador.is_using or jugador.input_locked or jugador.realizando_gesto():
 		return false
 	return evento_incendio.iniciar(bloqueos_visuales)
@@ -837,6 +921,9 @@ func _rechazar_estacion_incendiada(estacion_id: String) -> bool:
 
 
 func _iniciar_terremoto() -> void:
+	if is_instance_valid(red) and not red.iniciando_evento:
+		red.iniciar_evento("terremoto")
+		return
 	if partida_finalizada or not bloqueos_iniciados or computador.is_using or jugador.input_locked:
 		return
 	if evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO:
@@ -865,6 +952,12 @@ func _al_caer_escombros() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if is_instance_valid(red):
+		if SesionLAN.es_anfitrion() and evento_terremoto.activo:
+			for papel: PapelDenuncia in red.papeles.values():
+				if is_instance_valid(papel) and papel.portador == null and evento_terremoto.atrapo_hoja(papel.global_position):
+					sistema_despacho.vencer_denuncia(papel.denuncia_id, Denuncia.MotivoPerdida.TERREMOTO)
+		return
 	if is_instance_valid(sistema_despacho) and sistema_despacho.tiempo_detenido:
 		return
 	if partida_finalizada or not evento_terremoto.activo or not is_instance_valid(papel_actual):
@@ -874,6 +967,10 @@ func _physics_process(_delta: float) -> void:
 
 
 func _al_caer_jugador_en_grieta(portador: Player) -> void:
+	if is_instance_valid(red):
+		if is_instance_valid(portador.papel_en_mano):
+			red.perder_por_grieta(portador.papel_en_mano.denuncia_id)
+		return
 	if partida_finalizada or not is_instance_valid(papel_actual) or papel_actual.portador != portador:
 		return
 	sistema_despacho.vencer_denuncia(papel_actual.denuncia_id, Denuncia.MotivoPerdida.TERREMOTO)
@@ -907,7 +1004,7 @@ func _on_caso_finalizado(denuncia: Denuncia) -> void:
 		clasificador_evidencias.cancelar()
 	if escaner_verificacion.caso_id == denuncia.id:
 		escaner_verificacion.cancelar()
-	if is_instance_valid(papel_actual) and papel_actual.denuncia_id == denuncia.id:
+	if not is_instance_valid(red) and is_instance_valid(papel_actual) and papel_actual.denuncia_id == denuncia.id:
 		if is_instance_valid(papel_actual.portador):
 			papel_actual.portador.papel_en_mano = null
 		papel_actual.queue_free()
@@ -991,16 +1088,19 @@ func _iniciar_cinematica_relevo() -> void:
 	add_child(cinematica_relevo)
 	cinematica_relevo.terminada.connect(final_partida.finalizar_relevo)
 	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso, self)
+	if is_instance_valid(red):
+		for otro: Player in red.jugadores.values():
+			if otro != jugador:
+				otro.hide()
 
 
 func _reiniciar_despues_del_final() -> void:
+	if SesionLAN.activa:
+		SesionLAN.reiniciar()
+		return
 	MenuGlobal.final_de_partida_activo = false
 	MenuGlobal.omitir_tutorial_siguiente_partida = true
-	get_tree().paused = false
-	var error := get_tree().reload_current_scene()
-	if error != OK:
-		MenuGlobal.omitir_tutorial_siguiente_partida = false
-		push_error("No se pudo reiniciar la partida: %s" % error_string(error))
+	CargaEscenas.cargar(MenuGlobal.ESCENA_JUEGO)
 
 
 func _volver_al_menu_despues_del_final() -> void:
@@ -1022,6 +1122,9 @@ func interactuar_estacion_con_papel(portador: Player, estacion_id: String, objet
 
 
 func _resolver_gesto_estacion(portador: Player, estacion_id: String, caso_id: String) -> void:
+	if is_instance_valid(red):
+		red.solicitar_estacion(estacion_id, caso_id)
+		return
 	# Un caso puede vencer durante el gesto: no completar ni puntuar uno distinto.
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
 	if not is_instance_valid(portador) or denuncia == null or denuncia.id != caso_id:
@@ -1085,7 +1188,10 @@ func _interactuar_reporte() -> bool:
 	return false
 
 
-func recoger_herramienta_reporte(portador: Player) -> void:
+func recoger_herramienta_reporte(portador: Player, indice := 0) -> void:
+	if is_instance_valid(red):
+		SesionLAN.solicitar("herramienta", {"indice": indice})
+		return
 	if portador != jugador or _reporte_atascado_id.is_empty() or not herramienta_reporte.activa:
 		return
 	_reporte_herramienta_recogida = true
@@ -1096,7 +1202,8 @@ func recoger_herramienta_reporte(portador: Player) -> void:
 func _limpiar_atasco_reporte() -> void:
 	_reporte_atascado_id = ""
 	_reporte_herramienta_recogida = false
-	herramienta_reporte.establecer_activa(false)
+	for unidad in herramientas_reporte:
+		unidad.establecer_activa(false)
 	_aviso_reporte_atasco.visible = false
 
 
@@ -1133,10 +1240,16 @@ func _al_terminar_verificacion(caso_id: String) -> void:
 
 
 func _al_cerrar_tarea_estacion() -> void:
+	if is_instance_valid(red):
+		red.liberar_local("estacion:evidencias")
+		red.liberar_local("estacion:verificacion")
 	jugador.input_locked = computador.is_using or evento_apagon.estado == EventoApagonScript.Estado.REPARANDO
 
 
 func _aplicar_estacion(estacion_id: String) -> void:
+	if is_instance_valid(red):
+		SesionLAN.solicitar("completar", {"estacion": estacion_id, "caso": sistema_despacho.denuncia_activa_id})
+		return
 	print("[Despacho] Se solicitó usar la estación: ", estacion_id)
 	var fue_correcta: bool = sistema_despacho.interactuar_estacion(estacion_id)
 
@@ -1149,7 +1262,7 @@ func _aplicar_estacion(estacion_id: String) -> void:
 
 
 func _completar_descriptado() -> void:
-	var denuncia := sistema_despacho.obtener_denuncia_activa()
+	var denuncia := sistema_despacho.arbol.buscar_por_id(_denuncia_en_descriptado)
 	var validar := denuncia != null and denuncia.id == _denuncia_en_descriptado and denuncia.obtener_estaciones_pendientes().has("privacidad")
 	if validar:
 		_seguridad_lista = true
@@ -1246,6 +1359,8 @@ func _on_temporizador_bloqueos_timeout() -> void:
 	_cambiar_bloqueo_temporal()
 	
 func _cambiar_bloqueo_temporal() -> void:
+	if SesionLAN.activa and not SesionLAN.es_anfitrion():
+		return
 	if evento_terremoto.activo or evento_incendio.activo or evento_incendio.bloqueos_fijos:
 		return
 	_limpiar_bloqueos_temporales()
@@ -1322,6 +1437,9 @@ func _cambiar_bloqueo_temporal() -> void:
 		candidatos.remove_at(indice)
 
 		ensayo.set_point_solid(candidata)
+		if is_instance_valid(red) and not red.proteger_celda(candidata, ensayo):
+			ensayo.set_point_solid(candidata, false)
+			continue
 		if _conserva_accesos(ensayo, celda_jugador, candidata, rutas_protegidas, necesita_salida):
 			grafo_piso.bloqueos_temporales[candidata] = true
 			_mostrar_bloqueo_temporal(candidata)

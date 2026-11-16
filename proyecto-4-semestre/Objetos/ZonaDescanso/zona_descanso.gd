@@ -7,6 +7,7 @@ const AVISO := preload("res://UI/Descanso/aviso_descanso.gd")
 const SONIDOS := preload("res://UI/Despacho/sonidos_mesas.gd")
 const PREPARAR := preload("res://Audios/Descanso/cafetera_preparar.wav")
 const SORBO := preload("res://Audios/Descanso/cafe_beber.wav")
+const CONTENIDO_CAFE := preload("res://Objetos/ZonaDescanso/contenido_cafe.gd")
 @export var costo_cafe: int = 50
 @export var calma_cafe: int = 15
 @export var segundos_preparacion: float = 1.8
@@ -16,6 +17,9 @@ var estado: Estado = Estado.LIBRE
 var taza_en_mano: MeshInstance3D
 var _gestor: Node3D
 var _jugador: Player
+var _pago_red_pendiente := false
+var _consumo_cafe_pendiente := false
+var _devolver_al_terminar := false
 var _despacho: SistemaDespacho
 var _aviso: PanelContainer
 var _audio: AudioStreamPlayer
@@ -61,19 +65,7 @@ func _configurar() -> void:
 	_tazas.assign([$RinconCafe/TazaBlanca, $RinconCafe/TazaAmarilla])
 	for taza: MeshInstance3D in _tazas:
 		_origenes.append(taza.transform)
-		var contenido := MeshInstance3D.new()
-		contenido.name = "ContenidoCafe"
-		var cilindro := CylinderMesh.new()
-		cilindro.top_radius = 0.031
-		cilindro.bottom_radius = 0.031
-		cilindro.height = 0.002
-		cilindro.radial_segments = 16
-		contenido.mesh = cilindro
-		contenido.position.y = 0.074 if taza.name == "TazaAmarilla" else 0.068
-		var material := StandardMaterial3D.new()
-		material.albedo_color = Color("422417")
-		material.roughness = 0.3
-		contenido.material_override = material
+		var contenido := CONTENIDO_CAFE.crear(taza.name == "TazaAmarilla")
 		contenido.hide()
 		taza.add_child(contenido)
 	var capa := CanvasLayer.new()
@@ -99,13 +91,13 @@ func _configurar() -> void:
 
 func obtener_estado() -> Dictionary:
 	return {"sentado": _asiento_activo and not _entrando, "preparando": estado == Estado.PREPARANDO,
-		"tiene_cafe": is_instance_valid(taza_en_mano), "bebiendo": estado == Estado.BEBIENDO,
+		"tiene_cafe": tiene_cafe(), "bebiendo": estado == Estado.BEBIENDO,
 		"tiempo_descanso": _tiempo_descanso, "tiempo_preparacion": _tiempo_preparacion,
 		"cafetera_abierta": is_instance_valid(panel_cafetera) and panel_cafetera.visible,
 		"cafe_listo": estado == Estado.CAFE_LISTO}
 
 func tiene_cafe() -> bool:
-	return is_instance_valid(taza_en_mano)
+	return is_instance_valid(taza_en_mano) and not _devolver_al_terminar
 
 func mostrar_mensaje(texto: String) -> void:
 	_mensaje = texto
@@ -139,10 +131,15 @@ func interactuar_cafetera(quien: Player) -> bool:
 	if _despacho.puntuacion.puntos < costo_cafe:
 		mostrar_mensaje("Necesitas %d puntos para pedir café." % costo_cafe)
 		return false
+	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("cafetera"):
+		SesionLAN.puente.reservar_local("cafetera", func():
+			if not interactuar_cafetera(quien): SesionLAN.puente.liberar_local("cafetera")
+		)
+		return true
 	_jugador.cerrar_menu_emotes(true)
 	_bloquear_pose()
 	_pose_anterior = _jugador.global_transform
-	panel_cafetera.abrir(costo_cafe, calma_cafe)
+	panel_cafetera.abrir(costo_cafe, _tazas[_siguiente_taza])
 	_aviso.hide()
 	_mensaje_restante = 0.0
 	return true
@@ -174,15 +171,33 @@ func _servir_cafe() -> void:
 	panel_cafetera.lista()
 
 func recoger_cafe() -> bool:
+	if _pago_red_pendiente:
+		return false
 	if not panel_cafetera.visible or estado != Estado.CAFE_LISTO or not _cafetera_valida():
 		return false
 	if _despacho.calma_operativa >= _despacho.CALMA_MAXIMA:
 		cerrar_cafetera()
 		return false
+	if SesionLAN.en_partida:
+		_pago_red_pendiente = true
+		SesionLAN.solicitar("comprar", {"producto": "cafe", "indice": _siguiente_taza}, func(resultado: Dictionary):
+			_pago_red_pendiente = false
+			if resultado.get("ok", false):
+				_recibir_cafe_visual(int(resultado.get("taza", _siguiente_taza)))
+			else:
+				cerrar_cafetera()
+		)
+		return true
 	if not _despacho.puntuacion.gastar_puntos(costo_cafe):
 		cerrar_cafetera()
 		mostrar_mensaje("No tienes puntos suficientes para este café.")
 		return false
+	_recibir_cafe_visual()
+	return true
+
+func _recibir_cafe_visual(indice: int = -1) -> void:
+	if indice >= 0 and indice < _tazas.size():
+		_siguiente_taza = indice
 	taza_en_mano = _tazas[_siguiente_taza]
 	_siguiente_taza = (_siguiente_taza + 1) % _tazas.size()
 	var anclaje := _jugador.anclaje_taza()
@@ -190,19 +205,23 @@ func recoger_cafe() -> bool:
 	taza_en_mano.position = Vector3.ZERO
 	taza_en_mano.rotation = Vector3.ZERO
 	taza_en_mano.scale = Vector3.ONE / anclaje.global_basis.get_scale()
-	(taza_en_mano.get_node("ContenidoCafe") as MeshInstance3D).show()
+	var contenido := taza_en_mano.get_node("ContenidoCafe") as MeshInstance3D
+	CONTENIDO_CAFE.establecer_llenado(contenido, 1.0)
+	contenido.show()
+	_devolver_al_terminar = false
 	_jugador.establecer_taza_en_mano(true)
 	_jugador.cancelar_gesto()
 	cerrar_cafetera()
 	_audio.play()
 	_consulta_restante = 0.0
-	return true
 
 func cerrar_cafetera() -> void:
 	if not is_instance_valid(panel_cafetera) or not panel_cafetera.visible:
 		return
 	_maquina.stop()
 	panel_cafetera.cerrar()
+	if SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("cafetera")
 	_liberar_pose()
 	_tiempo_preparacion = 0.0
 	estado = Estado.LIBRE
@@ -228,18 +247,38 @@ func beber_cafe() -> bool:
 	return true
 
 func _consumir_cafe() -> void:
-	if estado != Estado.BEBIENDO or not tiene_cafe() or not is_instance_valid(_despacho) or _despacho.calma_operativa <= 0:
+	if _consumo_cafe_pendiente or _devolver_al_terminar or estado != Estado.BEBIENDO or not tiene_cafe() or not is_instance_valid(_despacho) or _despacho.calma_operativa <= 0:
 		return
-	var recuperada := _despacho.recuperar_calma(calma_cafe)
-	_devolver_taza()
+	var recuperada := mini(calma_cafe, 100 - _despacho.calma_operativa)
+	if SesionLAN.en_partida:
+		_consumo_cafe_pendiente = true
+		SesionLAN.solicitar("beber", {}, func(resultado: Dictionary):
+			_consumo_cafe_pendiente = false
+			if resultado.get("ok", false): _terminar_cafe_visual(recuperada)
+		)
+		return
+	recuperada = _despacho.recuperar_calma(calma_cafe)
+	_terminar_cafe_visual(recuperada)
+
+func _terminar_cafe_visual(recuperada: int) -> void:
+	if not is_instance_valid(taza_en_mano):
+		return
+	# El consumo ocurre en la boca; la taza vacía acompaña el descenso del brazo.
+	_devolver_al_terminar = true
+	(taza_en_mano.get_node("ContenidoCafe") as MeshInstance3D).hide()
+	if not _jugador.realizando_gesto():
+		_devolver_taza()
 	mostrar_mensaje("Café terminado  ·  +%d de calma operativa" % recuperada)
 	_audio.play()
 	_jugador.reproducir_expresion(&"alegria")
 
 func _devolver_taza() -> void:
+	_devolver_al_terminar = false
 	if is_instance_valid(taza_en_mano):
 		var indice := _tazas.find(taza_en_mano)
-		(taza_en_mano.get_node("ContenidoCafe") as MeshInstance3D).hide()
+		var contenido := taza_en_mano.get_node("ContenidoCafe") as MeshInstance3D
+		contenido.hide()
+		CONTENIDO_CAFE.establecer_llenado(contenido, 1.0)
 		taza_en_mano.reparent($RinconCafe, false)
 		taza_en_mano.transform = _origenes[indice]
 		taza_en_mano = null
@@ -247,6 +286,15 @@ func _devolver_taza() -> void:
 		_jugador.establecer_taza_en_mano(false)
 
 func interactuar_sofa(quien: Player) -> bool:
+	if estado != Estado.LIBRE or not _objetivo_valido(quien, $SofaL/Cuerpo):
+		return false
+	if SesionLAN.en_partida:
+		var asiento_red := "AsientoTramo" if quien.global_position.distance_squared_to($SofaL/AsientoTramo.global_position) <= quien.global_position.distance_squared_to($SofaL/AsientoRetorno.global_position) else "AsientoRetorno"
+		if not SesionLAN.puente.reservar_confirmada("sofa:" + asiento_red):
+			SesionLAN.puente.reservar_local("sofa:" + asiento_red, func():
+				if not interactuar_sofa(quien): SesionLAN.puente.liberar_local("sofa:" + asiento_red)
+			)
+			return true
 	if estado != Estado.LIBRE or not _objetivo_valido(quien, $SofaL/Cuerpo):
 		return false
 	if not _jugador.iniciar_descanso_sentado():
@@ -339,6 +387,9 @@ func _buscar_salida() -> Vector3:
 	return Vector3.INF
 
 func _terminar_salida() -> void:
+	if SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("sofa:AsientoTramo")
+		SesionLAN.puente.liberar_local("sofa:AsientoRetorno")
 	if is_instance_valid(_jugador):
 		# Mantener la física sentada hasta aquí evita gravedad mientras el tween
 		# mueve un cuerpo que todavía tiene sus colisiones suspendidas.
@@ -407,9 +458,15 @@ func _process(delta: float) -> void:
 		if _tiempo_preparacion >= segundos_preparacion:
 			_servir_cafe()
 	elif estado == Estado.BEBIENDO and not _jugador.realizando_gesto():
+		if _devolver_al_terminar:
+			_devolver_taza()
+		elif tiene_cafe():
+			CONTENIDO_CAFE.establecer_llenado(taza_en_mano.get_node("ContenidoCafe"), 1.0)
 		_sorbo.stop()
 		_espera_sorbo = -1.0
 		estado = Estado.SENTADO if _jugador.esta_sentado() else Estado.LIBRE
+	if estado == Estado.BEBIENDO and tiene_cafe():
+		CONTENIDO_CAFE.actualizar_sorbo(taza_en_mano.get_node("ContenidoCafe"), _jugador.gestos.tiempo / _jugador.gestos.duracion)
 	if estado == Estado.BEBIENDO and _espera_sorbo >= 0.0:
 		_espera_sorbo -= delta
 		if _espera_sorbo < 0.0:
@@ -440,17 +497,16 @@ func _actualizar_aviso() -> void:
 		titulo = "PREPARANDO CAFÉ"
 		detalle = "%d puntos al recibir la taza  ·  Esc cancelar" % costo_cafe
 		progreso = _tiempo_preparacion / segundos_preparacion
-	elif estado == Estado.BEBIENDO:
-		titulo = "BEBIENDO CAFÉ"
-		detalle = "Recuperas calma al tomarlo."
 	elif _jugador.esta_sentado():
 		titulo = "DESCANSANDO  ·  [E] LEVANTARSE"
 		detalle = "+1 calma cada 2 s  ·  los casos siguen corriendo"
-		if tiene_cafe():
-			detalle = "[F] Beber café  ·  +1 calma cada 2 s al descansar"
-		if _mensaje_restante > 0.0:
+		if _mensaje_restante > 0.0 and not tiene_cafe():
 			detalle = _mensaje
 		progreso = _tiempo_descanso / segundos_descanso
+	elif tiene_cafe() or estado == Estado.BEBIENDO:
+		# El medallón del bolsillo ya indica F / BEBIENDO.
+		_aviso.hide()
+		return
 	elif _mensaje_restante > 0.0:
 		titulo = "ZONA DE DESCANSO"
 		detalle = _mensaje
@@ -458,7 +514,7 @@ func _actualizar_aviso() -> void:
 		var objetivo := _jugador.obtener_objetivo_interaccion()
 		if objetivo == $RinconCafe/MuebleCafe:
 			titulo = "[E] USAR CAFETERA  ·  %d PTS" % costo_cafe
-			detalle = "+%d de calma operativa al beberlo" % calma_cafe
+			detalle = "Prepara y recoge tu café"
 		elif objetivo == $SofaL/Cuerpo:
 			titulo = "[E] SENTARSE Y RELAJARSE"
 			detalle = "+1 de calma cada 2 segundos"

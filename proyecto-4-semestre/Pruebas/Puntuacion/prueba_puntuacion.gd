@@ -227,6 +227,9 @@ func _jugar_desde_menu(nombre: String) -> bool:
 	if boton == null:
 		return false
 	boton.pressed.emit()
+	var modos: CanvasLayer = get_tree().current_scene.panel_lan
+	_verificar(modos.fondo.visible, "Jugar permite elegir Individual o LAN")
+	modos.individual.pressed.emit()
 	var campo := MenuGlobal.panel_clasificacion.nombre_jugador
 	_verificar(campo.is_visible_in_tree(), "Jugar permite identificar al jugador")
 	campo.text = nombre
@@ -268,7 +271,10 @@ func _cargar_escena(ruta: String) -> bool:
 
 
 func _esperar_escena(ruta: String) -> bool:
-	for cuadro: int in range(120):
+	# La carga incluye 2,5 segundos reales de presentación; 120 cuadros headless
+	# pueden terminar antes de ese plazo, incluso con --fixed-fps.
+	var limite := Time.get_ticks_msec() + 30000
+	while Time.get_ticks_msec() < limite:
 		await get_tree().process_frame
 		var escena := get_tree().current_scene
 		if is_instance_valid(escena) and escena.scene_file_path == ruta:

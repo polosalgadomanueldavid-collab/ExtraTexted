@@ -1,6 +1,6 @@
 # ExtraTexted
 
-Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) para editar o ejecutar el juego. `UI/Menus/CargaInicial.tscn` muestra una pantalla negra mientras se prepara el menú, que aparece con un fundido. `UI/Menus/MainMenu.tscn` presenta la oficina real con perspectiva y dos policías animados; al pulsar Jugar, los policías discuten mientras aparecen frases y consejos a la izquierda y se prepara la partida. La oficina jugable está en `Mundo/Oficina.tscn`. Sus 30 cajones temporales se preparan de forma gradual y se reutilizan en las siguientes distribuciones.
+Proyecto de Godot 4.7. Abre [project.godot](proyecto-4-semestre/project.godot) para editar o ejecutar el juego. `UI/Menus/CargaInicial.tscn` inicia el coordinador de carga con progreso; el menú aparece con un fundido. `UI/Menus/MainMenu.tscn` presenta un decorado de la oficina con perspectiva y dos policías animados; al pulsar Jugar, los policías discuten mientras aparecen frases y consejos a la izquierda y se prepara la partida. La oficina jugable está en `Mundo/Oficina.tscn`. Sus 30 cajones temporales se preparan de forma gradual y se reutilizan en las siguientes distribuciones. Individual, LAN, reinicio y regreso al menú comparten el cargador. Consulta el [estado del plan de optimización](proyecto-4-semestre/Documentacion/PLAN_OPTIMIZACION.md) y sus comprobaciones pendientes.
 
 ## Organización
 

@@ -16,11 +16,24 @@ var _centros: Dictionary = {}
 var _placas: Dictionary = {}
 var _uniones: Dictionary = {}
 var _aristas: Dictionary = {}
+static var _geometria: Dictionary = {}
+var _fila := 2
+var _columna := 2
+var preparado := false
 
 
-func _init() -> void:
+func _init(diferir := false) -> void:
 	origen = Vector2i((LIMITES.position * ESCALA).floor()) - Vector2i(3, 3)
 	tamano = Vector2i((LIMITES.end * ESCALA).ceil()) - origen + Vector2i(3, 3)
+	if not _geometria.is_empty():
+		semillas = _geometria.semillas
+		_centros = _geometria.centros
+		_placas = _geometria.placas
+		_uniones = _geometria.uniones
+		_aristas = _geometria.aristas
+		preparado = true
+		reiniciar()
+		return
 	var imagen := Image.create(tamano.x, tamano.y, false, Image.FORMAT_RGF)
 	var azar := RandomNumberGenerator.new()
 	azar.seed = 6812
@@ -31,20 +44,39 @@ func _init() -> void:
 			_centros[celda] = (Vector2(celda) + desfase) / ESCALA
 			imagen.set_pixel(x, y, Color(desfase.x, desfase.y, 0.0))
 	semillas = ImageTexture.create_from_image(imagen)
-	for y in range(2, tamano.y - 2):
-		for x in range(2, tamano.x - 2):
-			var celda := origen + Vector2i(x, y)
-			var centro: Vector2 = _centros[celda]
-			var poligono := PackedVector2Array([centro + Vector2(-1, -1), centro + Vector2(1, -1), centro + Vector2(1, 1), centro + Vector2(-1, 1)])
-			for dy in range(-2, 3):
-				for dx in range(-2, 3):
-					if dx == 0 and dy == 0:
-						continue
-					var vecino: Vector2 = _centros[celda + Vector2i(dx, dy)]
-					poligono = _recortar(poligono, vecino - centro, (vecino.length_squared() - centro.length_squared()) * 0.5)
-			_placas[celda] = poligono
-			_registrar_aristas(celda, poligono)
 	reiniciar()
+	if not diferir:
+		while not preparar_lote():
+			pass
+
+
+func preparar_lote() -> bool:
+	if preparado:
+		return true
+	var limite := Time.get_ticks_usec() + 3000
+	while _fila < tamano.y - 2:
+		var celda := origen + Vector2i(_columna, _fila)
+		var centro: Vector2 = _centros[celda]
+		var poligono := PackedVector2Array([centro + Vector2(-1, -1), centro + Vector2(1, -1), centro + Vector2(1, 1), centro + Vector2(-1, 1)])
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				if dx == 0 and dy == 0:
+					continue
+				var vecino: Vector2 = _centros[celda + Vector2i(dx, dy)]
+				poligono = _recortar(poligono, vecino - centro, (vecino.length_squared() - centro.length_squared()) * 0.5)
+		_placas[celda] = poligono
+		_registrar_aristas(celda, poligono)
+		_columna += 1
+		if _columna >= tamano.x - 2:
+			_columna = 2
+			_fila += 1
+		if Time.get_ticks_usec() >= limite:
+			return false
+	preparado = true
+	# Solo datos geométricos inmutables; cada evento conserva su máscara/daño.
+	_geometria = {"semillas": semillas, "centros": _centros, "placas": _placas, "uniones": _uniones, "aristas": _aristas}
+	return true
+
 
 
 func reiniciar() -> void:

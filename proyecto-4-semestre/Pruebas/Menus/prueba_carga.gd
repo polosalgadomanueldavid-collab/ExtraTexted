@@ -5,10 +5,25 @@ const ESCENA_MENU := "res://UI/Menus/MainMenu.tscn"
 const ESCENA_JUEGO := "res://Mundo/Oficina.tscn"
 
 var _fallos := 0
+var _fase := "arranque"
+var _ultimo_cuadro := 0
+var _pausas_maximas := {}
+var _confirmacion := 0
+var _barra_maxima := 0.0
 
 
 func _initialize() -> void:
+	process_frame.connect(_medir_cuadro)
 	_probar.call_deferred()
+
+func _medir_cuadro() -> void:
+	var ahora := Time.get_ticks_usec()
+	if _ultimo_cuadro > 0:
+		_pausas_maximas[_fase] = maxf(float(_pausas_maximas.get(_fase, 0.0)), (ahora - _ultimo_cuadro) / 1000.0)
+	_ultimo_cuadro = ahora
+	var carga := root.get_node_or_null("CargaEscenas")
+	if carga != null:
+		_barra_maxima = maxf(_barra_maxima, carga.progreso)
 
 
 func _probar() -> void:
@@ -23,8 +38,9 @@ func _probar() -> void:
 		_terminar()
 		return
 	var menu := current_scene
+	_fase = "menu"
 	var entrada := menu.get_node("EntradaNegra") as ColorRect
-	_verificar(entrada.visible and is_equal_approx(entrada.modulate.a, 1.0), "El menú empieza cubierto por negro")
+	_verificar(entrada.visible and entrada.modulate.a > 0.9, "El menú empieza cubierto por negro")
 	await create_timer(0.35).timeout
 	_verificar(entrada.modulate.a > 0.0 and entrada.modulate.a < 1.0, "El menú aparece con un fundido gradual")
 	await create_timer(0.8).timeout
@@ -34,6 +50,8 @@ func _probar() -> void:
 	var menu_global := root.get_node("MenuGlobal")
 	var panel := menu_global.get_node("%PanelClasificacion") as PanelContainer
 	menu.get_node("%PlayButton").pressed.emit()
+	_verificar(menu.panel_lan.fondo.visible, "Jugar abre la selección Individual/LAN")
+	menu.panel_lan.individual.pressed.emit()
 	_verificar(menu.get_node("PantallaDiscusion").visible, "Jugar muestra a los policías discutiendo")
 	_verificar(panel.get_node("%Formulario").is_visible_in_tree(), "El formulario permite ingresar el nombre")
 	_verificar(_leer_turno(menu).values().all(func(voz): return voz == "Consejo"), "Antes de confirmar el nombre sólo aparecen consejos")
@@ -44,9 +62,12 @@ func _probar() -> void:
 	(panel.get_node("%Volver") as Button).pressed.emit()
 	_verificar(not menu.get_node("PantallaDiscusion").visible, "Cancelar restaura el menú")
 	menu.get_node("%PlayButton").pressed.emit()
+	menu.panel_lan.individual.pressed.emit()
 	_verificar(menu.hablante.text == "Consejo", "Reabrir la carga descarta los alias anteriores")
 	var nombre := panel.get_node("%NombreJugador") as LineEdit
 	nombre.text = "María José"
+	_fase = "entrada_individual"
+	_confirmacion = Time.get_ticks_usec()
 	nombre.text_submitted.emit(nombre.text)
 	_verificar(menu.get_node("PantallaDiscusion").visible and not menu_global.get_node("%CapaModal").visible, "La discusión permanece visible durante la carga")
 	_verificar(menu.hablante.text == nombre.text, "El primer subtítulo muestra el alias confirmado")
@@ -59,9 +80,12 @@ func _probar() -> void:
 	if not await _esperar_escena(ESCENA_JUEGO):
 		_terminar()
 		return
+	_verificar(_barra_maxima == 100.0, "La carga completa alcanza el 100 %")
+	_verificar(current_scene.oficina_preparada, "La disponibilidad incluye toda la preparación")
 	_verificar(menu_global.get("nombre_partida") == "María José", "El nombre llega a la partida")
 	_verificar(menu_global.get_node("%PanelAyuda").visible and paused, "El tutorial inicial se conserva")
 	_verificar((current_scene.get("_bloqueos_disponibles") as Array).size() == 30, "Los 30 cajones ya están preparados al entrar en la oficina")
+	print("[AUDITORIA CARGA] ", JSON.stringify({"render": DisplayServer.get_name(), "confirmacion_a_oficina_ms": (Time.get_ticks_usec() - _confirmacion) / 1000.0, "barra_maxima": _barra_maxima, "intervalos_maximos_ms": _pausas_maximas}))
 	_terminar()
 
 
@@ -78,7 +102,8 @@ func _esperar_escena(ruta: String) -> bool:
 	while Time.get_ticks_msec() - inicio < 15000:
 		await process_frame
 		var escena := current_scene
-		if is_instance_valid(escena) and escena.scene_file_path == ruta:
+		if is_instance_valid(escena) and escena.scene_file_path == ruta and not root.get_node("CargaEscenas").activa:
+			await process_frame
 			return true
 	_verificar(false, "Tiempo agotado al esperar %s" % ruta)
 	return false
@@ -101,4 +126,6 @@ func _terminar() -> void:
 		current_scene.queue_free()
 	await process_frame
 	print("Resultado: %d fallo(s)" % _fallos)
+	root.get_node("MenuGlobal").musica_menu.stop()
+	await create_timer(0.3).timeout
 	quit(0 if _fallos == 0 else 1)

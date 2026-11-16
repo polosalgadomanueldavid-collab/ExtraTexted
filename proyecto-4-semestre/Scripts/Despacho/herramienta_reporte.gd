@@ -1,11 +1,10 @@
 extends StaticBody3D
 ## Herramienta de la impresora. La E usa el mismo alcance físico que las mesas.
 
-const TINTA := Color("173b50")
-const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
 
 var activa: bool = false
+var indice_red := 0
 var mostrar_indicador: bool = true:
 	set(valor):
 		mostrar_indicador = valor
@@ -32,12 +31,12 @@ func _ready() -> void:
 	soporte.position.y = 0.06
 	soporte.material_override = _material(CORAL)
 	add_child(soporte)
-	_agregar_pieza(Vector3(-0.07, 0.13, 0), Vector3(0.36, 0.06, 0.10), TINTA)
-	_agregar_pieza(Vector3(-0.19, 0.17, 0), Vector3(0.14, 0.08, 0.13), CREMA)
-	_agregar_pieza(Vector3(0.16, 0.13, -0.09), Vector3(0.17, 0.07, 0.08), CREMA)
-	_agregar_pieza(Vector3(0.16, 0.13, 0.09), Vector3(0.17, 0.07, 0.08), CREMA)
+	var llave := preload("res://Scripts/Despacho/modelo_llave.gd").new()
+	llave.position = Vector3(-0.18, 0.16, 0)
+	llave.rotation = Vector3(0, 0, -PI / 2.0)
+	add_child(llave)
 	var texto := Label3D.new()
-	texto.text = "[E] HERRAMIENTA"
+	texto.text = "[E] LLAVE" + (" %d" % (indice_red + 1) if SesionLAN.activa else "")
 	texto.font = preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 	texto.font_size = 26
 	texto.pixel_size = 0.0045
@@ -61,17 +60,7 @@ func interactuar(jugador: Player) -> void:
 		return
 	var gestor := get_tree().get_first_node_in_group("gestor_partida")
 	if gestor != null:
-		jugador.ejecutar_gesto(&"interactuar", gestor.recoger_herramienta_reporte.bind(jugador), self)
-
-
-func _agregar_pieza(posicion: Vector3, tamano: Vector3, color: Color) -> void:
-	var pieza := MeshInstance3D.new()
-	var caja := BoxMesh.new()
-	caja.size = tamano
-	pieza.mesh = caja
-	pieza.position = posicion
-	pieza.material_override = _material(color)
-	add_child(pieza)
+		jugador.ejecutar_gesto(&"interactuar", gestor.recoger_herramienta_reporte.bind(jugador, indice_red), self)
 
 
 func _material(color: Color) -> StandardMaterial3D:

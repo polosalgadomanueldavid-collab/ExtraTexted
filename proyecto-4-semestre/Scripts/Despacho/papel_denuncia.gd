@@ -9,6 +9,7 @@ const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")
 
 var denuncia_id: String = ""
 var portador: Player = null
+var red: Node
 var nivel_agua := -INF
 var _malla_hoja: MeshInstance3D
 var _contorno: ShaderMaterial
@@ -123,6 +124,9 @@ func tomar(jugador: Player) -> void:
 
 
 func lanzar() -> void:
+	if is_instance_valid(red) and not red.aplicando:
+		SesionLAN.solicitar("lanzar")
+		return
 	if not is_instance_valid(portador):
 		return
 	var jugador := portador
@@ -142,6 +146,8 @@ func lanzar() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if is_instance_valid(red) and not SesionLAN.es_anfitrion():
+		return
 	if nivel_agua > -INF and portador == null:
 		sleeping = false
 	if portador == null and global_position.y < -12.0:

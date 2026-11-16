@@ -7,6 +7,77 @@ const MARCA := &"nieve_acumulada"
 var _plantillas: Dictionary = {}
 var _caras: Dictionary = {}
 var _superficies: Dictionary = {}
+var _extracciones: Dictionary = {}
+
+## Conserva el cursor dentro de cada superficie: una malla grande también
+## respeta el presupuesto, en lugar de ceder solo entre muebles completos.
+class ExtraccionCaras:
+	extends RefCounted
+	var malla: Mesh
+	var normal_base: Basis
+	var caras := PackedVector3Array()
+	var superficie := 0
+	var indice := 0
+	var vertices := PackedVector3Array()
+	var normales := PackedVector3Array()
+	var indices := PackedInt32Array()
+	var cantidad := 0
+
+	func _init(origen: MeshInstance3D) -> void:
+		malla = origen.mesh
+		normal_base = origen.global_basis.inverse().transposed()
+
+	func avanzar(presupuesto_usec: int) -> bool:
+		var limite := Time.get_ticks_usec() + presupuesto_usec
+		while superficie < malla.get_surface_count():
+			if vertices.is_empty():
+				if malla is ArrayMesh and malla.surface_get_primitive_type(superficie) != Mesh.PRIMITIVE_TRIANGLES:
+					superficie += 1
+					continue
+				var datos := malla.surface_get_arrays(superficie)
+				vertices = datos[Mesh.ARRAY_VERTEX]
+				normales = datos[Mesh.ARRAY_NORMAL] if datos[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+				indices = datos[Mesh.ARRAY_INDEX] if datos[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+				cantidad = indices.size() if not indices.is_empty() else vertices.size()
+			while indice < cantidad - 2:
+				var ia := indices[indice] if not indices.is_empty() else indice
+				var ib := indices[indice + 1] if not indices.is_empty() else indice + 1
+				var ic := indices[indice + 2] if not indices.is_empty() else indice + 2
+				var a := vertices[ia]
+				var b := vertices[ib]
+				var c := vertices[ic]
+				var normal := (normales[ia] + normales[ib] + normales[ic]).normalized() if not normales.is_empty() else (c - a).cross(b - a).normalized()
+				if (normal_base * normal).normalized().y >= 0.82:
+					caras.append(a)
+					caras.append(b)
+					caras.append(c)
+					caras.append(normal)
+				indice += 3
+				if presupuesto_usec > 0 and indice % 288 == 0 and Time.get_ticks_usec() >= limite:
+					return false
+			superficie += 1
+			indice = 0
+			vertices = PackedVector3Array()
+		return true
+
+
+func preparar_lote(origen: MeshInstance3D, presupuesto_usec := 3000) -> bool:
+	if origen.mesh == null or origen.has_meta(MARCA):
+		return true
+	var limites := Transform3D(origen.global_basis, Vector3.ZERO) * origen.mesh.get_aabb()
+	if minf(limites.size.x, limites.size.z) < 0.18 or limites.size.x * limites.size.z < 0.065:
+		return true
+	var clave := _clave_caras(origen)
+	if _caras.has(clave):
+		return true
+	if not _extracciones.has(clave):
+		_extracciones[clave] = ExtraccionCaras.new(origen)
+	var trabajo: ExtraccionCaras = _extracciones[clave]
+	if not trabajo.avanzar(presupuesto_usec):
+		return false
+	_caras[clave] = trabajo.caras
+	_extracciones.erase(clave)
+	return true
 
 
 func crear(origen: MeshInstance3D, material: Material, solo_preparar := false) -> MeshInstance3D:
@@ -122,40 +193,20 @@ func _superficie_superior(origen: MeshInstance3D, limites: AABB) -> Dictionary:
 	return resultado
 
 
-func _caras_superiores(origen: MeshInstance3D) -> PackedVector3Array:
+func _clave_caras(origen: MeshInstance3D) -> String:
 	var normal_base := origen.global_basis.inverse().transposed()
 	var eje := Vector3(normal_base.x.y, normal_base.y.y, normal_base.z.y).normalized().snapped(Vector3.ONE * 0.001)
-	var clave := "%d:%s" % [origen.mesh.get_instance_id(), str(eje)]
+	return "%d:%s" % [origen.mesh.get_instance_id(), str(eje)]
+
+
+func _caras_superiores(origen: MeshInstance3D) -> PackedVector3Array:
+	var clave := _clave_caras(origen)
 	if _caras.has(clave):
 		return _caras[clave]
-	var caras := PackedVector3Array()
-	for superficie in origen.mesh.get_surface_count():
-		if origen.mesh is ArrayMesh and origen.mesh.surface_get_primitive_type(superficie) != Mesh.PRIMITIVE_TRIANGLES:
-			continue
-		var datos := origen.mesh.surface_get_arrays(superficie)
-		var vertices: PackedVector3Array = datos[Mesh.ARRAY_VERTEX]
-		var normales := PackedVector3Array()
-		if datos[Mesh.ARRAY_NORMAL] != null:
-			normales = datos[Mesh.ARRAY_NORMAL]
-		var indices := PackedInt32Array()
-		if datos[Mesh.ARRAY_INDEX] != null:
-			indices = datos[Mesh.ARRAY_INDEX]
-		var cantidad_vertices := indices.size() if not indices.is_empty() else vertices.size()
-		for indice in range(0, cantidad_vertices - 2, 3):
-			var ia := indices[indice] if not indices.is_empty() else indice
-			var ib := indices[indice + 1] if not indices.is_empty() else indice + 1
-			var ic := indices[indice + 2] if not indices.is_empty() else indice + 2
-			var a := vertices[ia]
-			var b := vertices[ib]
-			var c := vertices[ic]
-			var normal := (c - a).cross(b - a).normalized()
-			if not normales.is_empty():
-				normal = (normales[ia] + normales[ib] + normales[ic]).normalized()
-			if (normal_base * normal).normalized().y < 0.82:
-				continue
-			caras.append_array(PackedVector3Array([a, b, c, normal]))
-	_caras[clave] = caras
-	return caras
+	var trabajo := ExtraccionCaras.new(origen)
+	trabajo.avanzar(0)
+	_caras[clave] = trabajo.caras
+	return trabajo.caras
 
 
 static func _instanciar(origen: MeshInstance3D, material: Material, malla: Mesh) -> MeshInstance3D:

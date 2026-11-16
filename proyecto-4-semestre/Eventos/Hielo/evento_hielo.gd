@@ -36,6 +36,7 @@ var _escarcha: ShaderMaterial
 var _material_nieve: ShaderMaterial
 var _monticulos: Array[MeshInstance3D] = []
 var _generador_nieve := NieveAcumulada.new()
+var nieve_preparada := false
 var _recubiertos: Array[Dictionary] = []
 var _visuales: Node3D
 var _nieve: CPUParticles3D
@@ -75,7 +76,7 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 
 
 func iniciar() -> bool:
-	if activo or get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto() or _jugador.esta_sentado():
+	if activo or (not (SesionLAN.en_partida and SesionLAN.puente.iniciando_evento) and (get_tree().paused or _jugador.input_locked or _jugador.realizando_gesto() or _jugador.esta_sentado())):
 		return false
 	if permiso_inicio.is_valid() and not permiso_inicio.call():
 		return false
@@ -153,7 +154,12 @@ func obtener_objetivo(jugador: Player) -> Node3D:
 
 
 func interactuar(jugador: Player) -> void:
+	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("hielo"):
+		SesionLAN.puente.reservar_local("hielo", func(): interactuar(jugador))
+		return
 	if jugador.input_locked or jugador.realizando_gesto() or get_tree().paused or obtener_objetivo(jugador) != self:
+		if SesionLAN.en_partida:
+			SesionLAN.puente.liberar_local("hielo")
 		return
 	_bloqueo_anterior = jugador.input_locked
 	_raton_anterior = Input.mouse_mode
@@ -171,12 +177,17 @@ func _cerrar_reparacion() -> void:
 	if not reparando:
 		return
 	reparando = false
+	if SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("hielo")
 	panel.cerrar()
 	_jugador.input_locked = _bloqueo_anterior or _oficina.partida_finalizada
 	Input.mouse_mode = _raton_anterior
 
 
 func _al_reparar() -> void:
+	if SesionLAN.en_partida and not SesionLAN.puente.aplicando:
+		SesionLAN.solicitar("reparar", {"objetivo": "hielo"})
+		return
 	if not activo or descongelando or not panel.resuelto:
 		return
 	_cerrar_reparacion()
@@ -279,6 +290,7 @@ func _raices_mobiliario() -> Array[Node]:
 func _preparar_nieve() -> void:
 	# Preparar entre cuadros al cargar la oficina, antes de sortear el evento.
 	# La segunda pasada incluye el pool que se construye gradualmente.
+	var limite := Time.get_ticks_usec() + 3000
 	for pasada in 2:
 		if pasada == 1:
 			while _oficina._bloqueos_pool.size() < _oficina.BLOQUEOS_SIMULTANEOS:
@@ -297,10 +309,20 @@ func _preparar_nieve() -> void:
 				if not is_instance_valid(candidata):
 					continue
 				var malla := candidata as MeshInstance3D
+				if malla.get_viewport() != _oficina.get_viewport():
+					continue
+				while not _generador_nieve.preparar_lote(malla):
+					await get_tree().process_frame
+					if not is_inside_tree() or activo or not is_instance_valid(malla):
+						return
+					limite = Time.get_ticks_usec() + 3000
 				_generador_nieve.crear(malla, null, true)
-				await get_tree().process_frame
+				if Time.get_ticks_usec() >= limite:
+					await get_tree().process_frame
+					limite = Time.get_ticks_usec() + 3000
 				if not is_inside_tree():
 					return
+	nieve_preparada = true
 
 
 func _recubrir_mobiliario() -> void:
@@ -318,7 +340,7 @@ func recubrir_bloqueo(bloqueo: Node) -> void:
 
 
 func _recubrir(malla: MeshInstance3D) -> void:
-	if malla.mesh == null or malla.has_meta(NieveAcumulada.MARCA):
+	if malla.mesh == null or malla.has_meta(NieveAcumulada.MARCA) or malla.get_viewport() != _oficina.get_viewport():
 		return
 	for dato in _recubiertos:
 		if dato.nodo == malla:

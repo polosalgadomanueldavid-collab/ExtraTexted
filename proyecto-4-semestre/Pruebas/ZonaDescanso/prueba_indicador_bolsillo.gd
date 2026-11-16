@@ -79,7 +79,7 @@ func _probar() -> void:
 	maquina._mensaje_restante = 0
 	await _cuadros(12)
 	_verificar(hud.entradas.size() == 5 and _entrada(4).etiqueta == "F · BEBER", "Café ocupa el quinto medallón con F para beber")
-	_verificar(not zona._aviso.visible, "El café no duplica el aviso permanente anterior")
+	_verificar(not zona._aviso.visible, "El café no duplica el medallón con un aviso azul")
 	await _captura("01_cinco_medallones")
 	for pantalla: Vector2 in [Vector2(960, 540), Vector2(1280, 720), Vector2(1920, 1080), Vector2(2560, 1080)]:
 		hud.ajustar_pantalla(pantalla)

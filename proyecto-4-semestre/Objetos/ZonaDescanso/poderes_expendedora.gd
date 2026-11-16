@@ -20,6 +20,7 @@ var _inicio := Vector3.ZERO
 var _congelado_anterior := false
 var _quemadura_anterior := false
 var _elemento: Node3D
+var _ultima_activacion_red := 0
 
 func configurar(mundo: Node3D, policia: Player) -> void:
 	oficina = mundo
@@ -81,8 +82,13 @@ func animar_elemento(gesto: StringName) -> void:
 	_elemento.global_position = jugador.global_position
 	_elemento.rotation.y = jugador.visual.global_rotation.y
 
-func detener_tiempo() -> void:
-	if restante > 0.0 or oficina.partida_finalizada:
+func detener_tiempo(activacion_red: int = 0) -> void:
+	# Una confirmación repetida, incluso después del efecto, no vuelve a sonar.
+	if activacion_red > 0:
+		if activacion_red <= _ultima_activacion_red:
+			return
+		_ultima_activacion_red = activacion_red
+	if restante > 0.0 or oficina.sistema_despacho.tiempo_detenido or oficina.partida_finalizada:
 		return
 	restante = 12.0
 	# El efecto elegido suena completo, una sola vez, al nacer la burbuja.
@@ -96,6 +102,11 @@ func detener_tiempo() -> void:
 	jugador.congelado = false
 	jugador.quemandose_pies = false
 	_exentos.assign([self, get_parent(), jugador, oficina.get_node("Gameplay/Camera3D"), oficina.get_node("CanvasLayer"), oficina.computador, oficina.sistema_despacho, oficina.temporizador_seguridad, oficina.sonidos_mesas])
+	if SesionLAN.en_partida:
+		_exentos.append(SesionLAN.puente)
+		for otro: Player in SesionLAN.puente.jugadores.values():
+			if not _exentos.has(otro):
+				_exentos.append(otro)
 	# Los tweens ya existentes pertenecen al mundo anterior al gesto. Las nuevas
 	# animaciones de completar tareas se crean después y continúan normalmente.
 	for tween: Tween in get_tree().get_processed_tweens():
@@ -171,7 +182,7 @@ func _physics_process(delta: float) -> void:
 	if is_instance_valid(_burbuja):
 		_burbuja.scale = Vector3.ONE * maxf(0.01, transcurrido * 16.0)
 		_burbuja.visible = transcurrido < 1.7
-	if restante <= 0.0:
+	if restante <= 0.0 and (not SesionLAN.en_partida or SesionLAN.es_anfitrion()):
 		reanudar_tiempo()
 
 func _actualizar_pantalla(tiempo: float) -> void:

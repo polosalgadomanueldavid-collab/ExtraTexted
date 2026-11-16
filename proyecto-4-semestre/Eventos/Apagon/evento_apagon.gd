@@ -90,6 +90,8 @@ func _crear_vision() -> void:
 
 
 func iniciar_apagon() -> bool:
+	if SesionLAN.en_partida and is_instance_valid(SesionLAN.puente) and not SesionLAN.puente.iniciando_evento:
+		return SesionLAN.puente.iniciar_evento("apagon")
 	if permiso_inicio.is_valid() and not permiso_inicio.call():
 		return false
 	if not is_node_ready() or mascara == null or estado != Estado.RESTAURADO:
@@ -166,7 +168,12 @@ func preparar_relevo(vista: Camera3D, companero: Node3D) -> void:
 
 
 func _al_interactuar_taco(quien: Player) -> void:
+	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("apagon"):
+		SesionLAN.puente.reservar_local("apagon", func(): _al_interactuar_taco(quien))
+		return
 	if quien != jugador or estado != Estado.APAGADO or jugador.input_locked or get_tree().paused:
+		if SesionLAN.en_partida:
+			SesionLAN.puente.liberar_local("apagon")
 		return
 	_bloqueo_anterior = jugador.input_locked
 	_raton_anterior = Input.mouse_mode
@@ -184,6 +191,8 @@ func _al_cerrar_panel() -> void:
 	if not _interaccion_abierta:
 		return
 	_interaccion_abierta = false
+	if SesionLAN.en_partida:
+		SesionLAN.puente.liberar_local("apagon")
 	jugador.input_locked = _bloqueo_anterior
 	Input.mouse_mode = _raton_anterior
 	taco.establecer_abierto(false)
@@ -192,6 +201,9 @@ func _al_cerrar_panel() -> void:
 
 
 func _al_resolver_circuito() -> void:
+	if SesionLAN.en_partida and not SesionLAN.puente.aplicando:
+		SesionLAN.solicitar("reparar", {"objetivo": "apagon"})
+		return
 	if estado != Estado.REPARANDO:
 		return
 	_restaurar_luces()

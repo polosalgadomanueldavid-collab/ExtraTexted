@@ -266,6 +266,9 @@ func _probar() -> void:
 	current_scene.queue_free()
 	await process_frame
 	print("[INCENDIO] %d errores" % errores)
+	# Igual que el conductor LAN, deja al mezclador liberar el MP3 del menú.
+	menu.musica_menu.stop()
+	await create_timer(0.3).timeout
 	quit(1 if errores else 0)
 
 

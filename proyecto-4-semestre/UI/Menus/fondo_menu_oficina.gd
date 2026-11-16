@@ -1,7 +1,7 @@
 extends Control
-## Decorado del menú: oficina jugable, dos policías y degradado izquierdo.
+## Decorado visual independiente de las reglas y escenas de juego.
 
-const ESCENA_OFICINA := preload("res://Mundo/Oficina.tscn")
+const ESCENA_OFICINA := preload("res://UI/Menus/DecoradoOficina.scn")
 const MODELOS_POLICIA: Array[PackedScene] = [
 	preload("res://Personajes/PoliciaAzul/policia_azul.glb"),
 	preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"),
@@ -54,23 +54,14 @@ func _crear_escenario() -> void:
 	contenedor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(contenedor)
 	var vista := SubViewport.new()
-	vista.size = Vector2i(1600, 900)
-	vista.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	vista.size = Vector2i(1280, 720)
+	vista.scaling_3d_scale = 0.8
+	vista.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	contenedor.add_child(vista)
 	var escenario := Node3D.new()
 	vista.add_child(escenario)
 
 	var oficina: Node3D = ESCENA_OFICINA.instantiate()
-	# Se conserva la geometría real sin iniciar la lógica de la partida.
-	for nombre in ["Gameplay", "CanvasLayer", "EventoApagon", "TacoLuz", "Computer"]:
-		var nodo := oficina.get_node_or_null(nombre)
-		if nodo != null:
-			oficina.remove_child(nodo)
-			nodo.free()
-	_quitar_logica(oficina)
-	var estructura := oficina.get_node("Pared, suelo, techo")
-	# La cámara queda dentro de la sala; se retira solo la pared frontal.
-	estructura.get_node("Pared4").hide()
 	escenario.add_child(oficina)
 
 	var entorno := WorldEnvironment.new()
@@ -105,7 +96,7 @@ func _crear_escenario() -> void:
 		luz.light_color = Color("d6ecf0")
 		luz.light_energy = 0.48
 		luz.omni_range = 6.0
-		luz.shadow_enabled = true
+		luz.shadow_enabled = false
 		escenario.add_child(luz)
 		_luces.append(luz)
 

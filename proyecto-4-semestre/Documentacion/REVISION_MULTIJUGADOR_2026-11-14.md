@@ -1,5 +1,7 @@
 # Revisión del multijugador — 14 de noviembre de 2026
 
+> Revisión histórica anterior a la implementación. Para el estado actual y los resultados de pruebas, consultar [PLAN_MULTIJUGADOR.md](PLAN_MULTIJUGADOR.md).
+
 ## Dictamen
 
 La base permite empezar la implementación del cooperativo LAN de dos jugadores. Todavía no permite convertir la partida actual en una sesión compartida simplemente añadiendo conexión y sincronización de posiciones. Conviene preparar primero las acciones y el estado de partida, conservando el modo individual como prueba de regresión.
