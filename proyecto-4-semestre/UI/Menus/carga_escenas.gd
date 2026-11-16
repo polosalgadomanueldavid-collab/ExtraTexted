@@ -176,7 +176,7 @@ func _esperar_dibujo(generacion: int) -> void:
 	if _ruta == OFICINA and DisplayServer.get_name() != "headless":
 		_calentamiento = preload("res://UI/Menus/calentamiento_visual.gd").new()
 		add_child(_calentamiento)
-		await _calentamiento.preparar()
+		await _calentamiento.preparar(get_tree().current_scene)
 		if generacion != _generacion or not activa:
 			return
 		_calentamiento.queue_free()

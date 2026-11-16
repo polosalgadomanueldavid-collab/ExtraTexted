@@ -1,14 +1,14 @@
 [gd_scene format=3 uid="uid://dadcg1mmh4vui"]
 
 [ext_resource type="Script" uid="uid://dcbqr1d1g4suw" path="res://Objetos/MarcoFoto/marco_interactivo.gd" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://rxymdi41fnfx" path="res://Furniture Pack/MarcoFoto/MarcoFoto.glb" id="2_marco"]
+[ext_resource type="PackedScene" path="res://Objetos/MarcoFoto/VisualMarco.tscn" id="2_marco"]
 
 [sub_resource type="StandardMaterial3D" id="MaterialMarcoMetalico"]
 resource_local_to_scene = true
 albedo_color = Color(0.78, 0.82, 0.87, 1)
 metallic = 0.78
 roughness = 0.3
-anisotropy_enabled = false
+anisotropy_enabled = true
 anisotropy = 0.35
 
 [sub_resource type="BoxShape3D" id="ColisionMarco"]

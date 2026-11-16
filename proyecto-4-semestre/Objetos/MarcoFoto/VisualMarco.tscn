@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://Objetos/MarcoFoto/MarcoConTangentes.res" id="1"]
+
+[node name="MarcoFoto" type="Node3D"]
+
+[node name="mesh_node" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")

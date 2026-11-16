@@ -26,10 +26,10 @@ func _muestrear() -> void:
 			"nodos": Performance.get_monitor(Performance.OBJECT_NODE_COUNT)})
 	anterior = ahora
 
-func _medir(nombre: String) -> void:
+func _medir(nombre: String, minimo_segundos := 0.0) -> void:
 	muestras.clear()
 	midiendo = true
-	await create_timer(segundos).timeout
+	await create_timer(maxf(segundos, minimo_segundos)).timeout
 	midiendo = false
 	if muestras.is_empty():
 		push_error("No se recibieron cuadros para " + nombre)
@@ -46,12 +46,19 @@ func _medir(nombre: String) -> void:
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://.godot/perfil_%s.png" % nombre)
 
-func _cargar(ruta: String) -> void:
+func _cargar(ruta: String) -> bool:
 	var carga := root.get_node("CargaEscenas")
 	carga.cargar(ruta)
-	await carga.terminada
+	var limite := Time.get_ticks_msec() + 70000
+	while carga.activa and Time.get_ticks_msec() < limite:
+		await process_frame
+	if carga.activa or not is_instance_valid(current_scene) or current_scene.scene_file_path != ruta:
+		push_error("No terminó la carga del perfil: " + ruta + " (" + carga.fase + ")")
+		quit(1)
+		return false
 	cargas.append({"ruta": ruta, "fases_ms": carga.mediciones.duplicate(true)})
 	await process_frame
+	return true
 
 func _run() -> void:
 	root.mode = Window.MODE_WINDOWED
@@ -68,13 +75,16 @@ func _run() -> void:
 		if argumento.begins_with("--calidad="):
 			calidad.nivel = clampi(argumento.get_slice("=", 1).to_int(), 0, 2)
 	root.scaling_3d_scale = calidad.ESCALAS[calidad.nivel]
-	await _cargar("res://UI/Menus/MainMenu.tscn")
+	if not await _cargar("res://UI/Menus/MainMenu.tscn"):
+		return
 	await create_timer(1.0).timeout
 	await _medir("menu")
 	var menu := root.get_node("MenuGlobal")
+	menu._clasificacion = ClasificacionLocal.new("user://perfil_rendimiento_%d.json" % OS.get_process_id())
 	for ronda in rondas:
 		menu.omitir_tutorial_siguiente_partida = true
-		await _cargar("res://Mundo/Oficina.tscn")
+		if not await _cargar("res://Mundo/Oficina.tscn"):
+			return
 		var oficina := current_scene
 		oficina.temporizador_denuncias.stop()
 		oficina.temporizador_bloqueos.stop()
@@ -83,29 +93,62 @@ func _run() -> void:
 		await _medir("oficina_%d" % ronda)
 		if ronda != 0:
 			continue
-		for nombre in ["apagon", "terremoto", "incendio", "inundacion", "lava", "hielo"]:
-			oficina.tutoriales_vistos[StringName(nombre)] = true
-			oficina.bloqueos_iniciados = true
-			var evento: Node = oficina.get("evento_" + nombre)
-			var inicio := Time.get_ticks_usec()
-			if nombre == "apagon":
-				evento.iniciar_apagon()
-			elif nombre == "terremoto":
-				evento.iniciar(oficina.grafo_piso, oficina.jugador, {}, Rect2())
-			elif nombre == "incendio":
-				evento.iniciar({})
-			else:
-				evento.iniciar()
-			resultados[nombre + "_inicio_ms"] = (Time.get_ticks_usec() - inicio) / 1000.0
-			await _medir(nombre)
-			evento.resolver_con_avatar()
-			oficina.temporizador_eventos.stop()
-			oficina.temporizador_bloqueos.stop()
-			await create_timer(1.0).timeout
+		for pasada in 2:
+			for nombre in ["apagon", "terremoto", "incendio", "inundacion", "lava", "hielo"]:
+				oficina.tutoriales_vistos[StringName(nombre)] = true
+				oficina.bloqueos_iniciados = true
+				var evento: Node = oficina.get("evento_" + nombre)
+				var escenario: String = nombre if pasada == 0 else nombre + "_segunda"
+				if nombre == "terremoto":
+					evento._azar.seed = 8762
+				var inicio := Time.get_ticks_usec()
+				var activado: bool
+				if nombre == "apagon":
+					activado = evento.iniciar_apagon()
+				elif nombre == "terremoto":
+					activado = evento.iniciar(oficina.grafo_piso, oficina.jugador, {}, Rect2())
+				elif nombre == "incendio":
+					activado = evento.iniciar({})
+				else:
+					activado = evento.iniciar()
+				resultados[escenario + "_inicio_ms"] = (Time.get_ticks_usec() - inicio) / 1000.0
+				resultados[escenario + "_activado"] = activado
+				await _medir(escenario)
+				evento.resolver_con_avatar()
+				oficina.temporizador_eventos.stop()
+				oficina.temporizador_bloqueos.stop()
+				await create_timer(1.0).timeout
+			# Medir las animaciones y efectos a través del consumo real del bolsillo.
+			var maquina: Node = oficina.get_node("MaquinaExpendedora")
+			for indice in 4:
+				oficina.anuncios.detener()
+				if indice == 3:
+					oficina.evento_inundacion.iniciar()
+					await create_timer(0.2).timeout
+					_oficina_detener_relojes(oficina)
+				maquina.inventario[indice] = 1
+				var nombre_poder: String = ["chocolate", "dona", "papa_tiempo", "avatar_agua"][indice]
+				if pasada == 1:
+					nombre_poder += "_segunda"
+				resultados[nombre_poder + "_activado"] = maquina.usar(indice)
+				await _medir(nombre_poder, 4.5)
+				maquina.poderes.reanudar_tiempo(false)
+				oficina.jugador.chocolate_restante = 0.0
+				oficina.jugador.dona_restante = 0.0
+				if indice == 3:
+					oficina.evento_inundacion.resolver_con_avatar()
+				_oficina_detener_relojes(oficina)
+				await create_timer(1.0).timeout
 	var reporte := {"version": Engine.get_version_info(), "render": DisplayServer.get_name(), "adaptador": RenderingServer.get_video_adapter_name(), "cpu": OS.get_processor_name(), "resolucion": [root.size.x, root.size.y], "exportado": OS.has_feature("standalone"), "calidad": calidad.nivel, "segundos_por_escenario": segundos, "gpu_cero_significa_no_disponible": true, "cargas": cargas, "resultados": resultados}
 	var archivo := FileAccess.open("res://.godot/perfil_rendimiento.json", FileAccess.WRITE)
 	archivo.store_string(JSON.stringify(reporte, "\t"))
 	archivo.close()
-	await _cargar("res://UI/Menus/MainMenu.tscn")
+	if not await _cargar("res://UI/Menus/MainMenu.tscn"):
+		return
 	menu.musica_menu.stop()
 	quit()
+
+func _oficina_detener_relojes(oficina: Node) -> void:
+	oficina.anuncios.detener()
+	oficina.temporizador_eventos.stop()
+	oficina.temporizador_bloqueos.stop()

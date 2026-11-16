@@ -1,6 +1,6 @@
 # Plan de optimización y auditoría de cargas
 
-Fecha: 15 de noviembre de 2026. Estado: implementación parcial, ramas integradas y lote actual verificado. El diagnóstico original se conserva debajo como referencia histórica; sus descripciones de carga directa y barra al 90 % ya no describen el código actual.
+Actualización: 16 de noviembre de 2026, base `e57e652`. Estado: implementación parcial, ramas integradas y verificación adicional en Iris Xe. El diagnóstico original se conserva debajo como referencia histórica; sus descripciones de carga directa y barra al 90 % ya no describen el código actual. Detalles y limitaciones: [continuación del día 16](VERIFICACION_OPTIMIZACION_2026-11-16.md).
 
 ## Estado comprobado tras integrar las ramas
 
@@ -8,11 +8,11 @@ La optimización inicial está en `f6079ea` de `issa`. El merge `3cc52eb` incorp
 
 | Prioridad | Implementado y comprobado por código | Pendiente de aceptación |
 | --- | --- | --- |
-| 0. Medidas | Tiempos por fase; perfil de CPU/física/GPU disponible, cuadros, draw calls, memoria y nodos; ejecutor reproducible de tres procesos por modo y cinco rondas. | Exportación, caché fría de disco/shaders, segunda apertura de cada evento/poder, bytes reales ENet y sesión de 30 minutos. |
+| 0. Medidas | Tiempos por fase; perfil de CPU/física/GPU, cuadros, draw calls, memoria y nodos; cinco rondas; primera/segunda activación registrada; bytes reales ENet. | Exportación, caché fría de disco/shaders y sesión continua de 30 minutos. La ejecución larga tuvo una interrupción tras unos 28 minutos. |
 | 1. Cargas | Decorado independiente; coordinador común; pool de 30 cajones; preparación progresiva; calentamiento visual; 100 % al terminar; barrera LAN posterior al primer cuadro. | Aún hay picos superiores a 100 ms. Las muestras de shaders no cubren todas sus variantes. |
 | 2. Red/HUD | AVL incremental; caché de estaciones; HUD por cambios; snapshots diferenciales con recuperación completa; finales pendientes hasta acuse; canales separados. | Medición sostenida de tráfico, pérdida/reordenación, jitter y latencia en dos PCs/Hamachi. |
-| 3. Render/recursos | Calidad visual, SubViewport visible, preparación de magma y nieve, ajustes de partículas de Compatibility. | Perfil completo de efectos/poderes, tangentes de los materiales heredados de MarcoFoto y avisos de RefCounted al salir. |
-| 4. Aceptación | Pruebas de carga, recuperación, Hielo y LAN con dos procesos locales. | Dos ejecutables iguales en dos equipos; aceptación visual y rendimiento en la Iris Xe de referencia. |
+| 3. Render/recursos | Calidad visual, SubViewport visible, preparación de magma y nieve, partículas de Compatibility, tangentes de MarcoFoto, calentamiento de visión/luces reales del apagón. | Reducir los picos de generación y dibujo; resolver los avisos de RefCounted y el bloqueo de carga directa reproducido en headless. |
+| 4. Aceptación | Pruebas de carga, recuperación, Hielo y LAN local; perfil gráfico en Iris Xe. | Dos ejecutables iguales en dos equipos; cumplir los umbrales de rendimiento y completar la resistencia sin interrupciones. |
 
 Continuación de este lote:
 

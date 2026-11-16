@@ -82,6 +82,9 @@ func _probar() -> void:
 		return
 	_verificar(_barra_maxima == 100.0, "La carga completa alcanza el 100 %")
 	_verificar(current_scene.oficina_preparada, "La disponibilidad incluye toda la preparación")
+	var apagon: Node = current_scene.evento_apagon
+	_verificar(apagon.estado == apagon.Estado.RESTAURADO and not apagon.mascara.visible and not apagon.luz_jugador.visible,
+		"El calentamiento restaura la visión sin activar el apagón")
 	_verificar(menu_global.get("nombre_partida") == "María José", "El nombre llega a la partida")
 	_verificar(menu_global.get_node("%PanelAyuda").visible and paused, "El tutorial inicial se conserva")
 	_verificar((current_scene.get("_bloqueos_disponibles") as Array).size() == 30, "Los 30 cajones ya están preparados al entrar en la oficina")
