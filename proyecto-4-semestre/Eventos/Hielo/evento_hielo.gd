@@ -389,32 +389,14 @@ func _pieza(malla: Mesh, punto: Vector3, material: Material) -> MeshInstance3D:
 
 
 func _crear_tuberia() -> void:
-	tuberia = Node3D.new()
-	tuberia.name = "TuberiaNitrogeno"
-	tuberia.position = Vector3(2.12, 1.15, 11.85)
-	tuberia.rotation.y = -PI * 0.5
-	add_child(tuberia)
+	tuberia = _oficina.get_node_or_null("TuberiaNitrogeno") as Node3D
+	if tuberia == null:
+		push_error("No se encontró TuberiaNitrogeno en la escena de oficina.")
+		return
 	var metal := StandardMaterial3D.new()
 	metal.albedo_color = Color("91abc9")
 	metal.metallic = 0.75
 	metal.roughness = 0.28
-	var azul := StandardMaterial3D.new()
-	azul.albedo_color = Color("3d69b1")
-	azul.metallic = 0.35
-	var tubo := CylinderMesh.new()
-	tubo.height = 1.40
-	tubo.top_radius = 0.07
-	tubo.bottom_radius = 0.07
-	_pieza(tubo, Vector3.ZERO, metal)
-	for y: float in [-0.50, 0.50]:
-		var abrazadera := CylinderMesh.new()
-		abrazadera.height = 0.10
-		abrazadera.top_radius = 0.10
-		abrazadera.bottom_radius = 0.10
-		_pieza(abrazadera, Vector3(0, y, 0), azul)
-	var brida := BoxMesh.new()
-	brida.size = Vector3(0.38, 0.36, 0.18)
-	_pieza(brida, Vector3(0, 0, 0.015), azul)
 	for i in 4:
 		var tuerca := CylinderMesh.new()
 		tuerca.top_radius = 0.045

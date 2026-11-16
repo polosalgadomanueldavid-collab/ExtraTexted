@@ -400,26 +400,18 @@ func _crear_agua() -> void:
 
 
 func _crear_tuberias() -> void:
-	tuberias = Node3D.new()
-	tuberias.name = "TuberiasDescanso"
-	add_child(tuberias)
-	tuberias.position = Vector3(2.12, 1.30, 10.60)
-	tuberias.rotation.y = -PI * 0.5
+	tuberias = _oficina.get_node_or_null("CompuertaEstacionInundacion") as Node3D
+	if tuberias == null:
+		push_error("No se encontró CompuertaEstacionInundacion en la escena de oficina.")
+		return
 	var metal := StandardMaterial3D.new()
 	metal.albedo_color = Color("63a8b8")
 	metal.metallic = 0.6
 	metal.roughness = 0.3
-	for datos: Array in [[Vector3(-0.34, 0, 0), 1.0, false], [Vector3(0.34, -0.23, 0), 0.55, false], [Vector3(0, 0.46, 0), 0.68, true]]:
-		var tramo := MeshInstance3D.new()
-		var tubo := CylinderMesh.new()
-		tubo.top_radius = 0.065
-		tubo.bottom_radius = 0.065
-		tubo.height = datos[1]
-		tramo.mesh = tubo
-		tramo.position = datos[0]
-		tramo.rotation.z = PI * 0.5 if datos[2] else 0
-		tramo.material_override = metal
-		tuberias.add_child(tramo)
+	var accesorios := Node3D.new()
+	accesorios.name = "AccesoriosReparacion"
+	accesorios.scale = Vector3.ONE * 0.6
+	tuberias.add_child(accesorios)
 	_union = MeshInstance3D.new()
 	_union.name = "UnionReparada"
 	var manguito := CylinderMesh.new()
@@ -429,10 +421,10 @@ func _crear_tuberias() -> void:
 	_union.mesh = manguito
 	_union.material_override = metal
 	_union.position = Vector3(0.34, 0.25, 0)
-	tuberias.add_child(_union)
+	accesorios.add_child(_union)
 	_valvula = Node3D.new()
 	_valvula.position = Vector3(-0.34, 0.12, 0.1)
-	tuberias.add_child(_valvula)
+	accesorios.add_child(_valvula)
 	var aro := MeshInstance3D.new()
 	var toro := TorusMesh.new()
 	toro.inner_radius = 0.12
@@ -457,7 +449,7 @@ func _crear_tuberias() -> void:
 	rotulo.pixel_size = 0.003
 	rotulo.position = Vector3(0, 0.75, 0.05)
 	rotulo.modulate = Color("d2faff")
-	tuberias.add_child(rotulo)
+	accesorios.add_child(rotulo)
 	_chorro = CPUParticles3D.new()
 	_chorro.emitting = false
 	_chorro.amount = 38
@@ -476,7 +468,7 @@ func _crear_tuberias() -> void:
 	agua.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	gota.material = agua
 	_chorro.mesh = gota
-	tuberias.add_child(_chorro)
+	accesorios.add_child(_chorro)
 	acceso = Marker3D.new()
 	acceso.name = "AccesoTuberias"
 	acceso.add_to_group("accesos_navegacion")
