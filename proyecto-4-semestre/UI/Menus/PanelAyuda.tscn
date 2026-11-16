@@ -273,8 +273,20 @@ theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
 theme_override_colors/font_hover_color = Color(0.09, 0.231, 0.314, 1)
 theme_override_colors/font_pressed_color = Color(0.09, 0.231, 0.314, 1)
 theme_override_colors/font_focus_color = Color(0.09, 0.231, 0.314, 1)
+theme_override_colors/font_disabled_color = Color(0.34, 0.408, 0.404, 1)
 theme_override_styles/normal = SubResource("Style_boton")
 theme_override_styles/hover = SubResource("Style_boton_hover")
 theme_override_styles/pressed = SubResource("Style_boton_pressed")
 theme_override_styles/focus = SubResource("Style_boton_foco")
+theme_override_styles/disabled = SubResource("Style_boton")
 text = "VOLVER"
+
+[node name="ContadorConfirmaciones" type="Label" parent="Estructura/Cuerpo/Contenido/Pie"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
+theme_override_fonts/font = SubResource("Font_enfasis")
+theme_override_font_sizes/font_size = 28
+text = "(0/2)"
+vertical_alignment = 1

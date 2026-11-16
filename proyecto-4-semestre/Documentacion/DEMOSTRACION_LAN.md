@@ -12,6 +12,7 @@ Para jugar solo se conserva **Jugar → Individual** y la identificación de la 
 
 ## Demostración jugable
 
+- El anfitrión lleva el policía azul y el invitado el segundo policía, de uniforme verde petróleo y gorra marfil. Los retratos de la sala y los personajes de la partida deben coincidir en ambos equipos, también después de reintentar.
 - Mostrar ambos alias y corduras. Cada jugador toma una denuncia en el computador con **E**. Deben aparecer dos hojas de casos distintos.
 - Completar Evidencias y Verificación con sus controles habituales. Una estación ocupada debe rechazar el otro caso. Seguridad permite dejar el archivo desencriptándose y volver a recogerlo.
 - Completar una estación, lanzar la hoja con **E** y dejar que el compañero la recoja y termine el caso. Cada participante recupera 5 de cordura; el saldo aumenta por una única recompensa.
@@ -45,7 +46,7 @@ Para ejecutar la partida de prueba manualmente, abrir dos terminales y lanzar un
 
 `$Godot` debe contener la ruta del ejecutable. La prueba mueve personajes y resuelve minijuegos automáticamente; no es el modo de demostración para jugadores. Para revisar la sala con renderizado real, ejecutar `prueba_menu_lan.gd` sin `--headless`; guarda `lan_menu.png` y `lan_sala.png` en `.godot/`.
 
-El protocolo de estas herramientas es `extratexted-lan-2`: actualizar ambos equipos antes de jugar. Para previsualizar la nueva llave compartida por el objeto y la animación, ejecutar `vista_herramientas.gd` sin `--headless`; guarda `.godot/vista_llave.png`.
+El protocolo de estas herramientas es `extratexted-lan-3`: actualizar ambos equipos antes de jugar. Los tutoriales iniciales y de eventos muestran `(0/2)` junto al botón; después de confirmar, la guía permanece visible con `(1/2)` y el aviso de espera. Al confirmar ambos se cierran las dos guías y continúa la partida. Para previsualizar la nueva llave compartida por el objeto y la animación, ejecutar `vista_herramientas.gd` sin `--headless`; guarda `.godot/vista_llave.png`.
 
 ## Registro pendiente de dos equipos reales
 

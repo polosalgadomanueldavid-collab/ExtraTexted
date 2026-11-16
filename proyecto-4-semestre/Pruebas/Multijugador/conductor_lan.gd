@@ -87,12 +87,9 @@ func _run() -> void:
 		return
 	await _esperar(0.6)
 	comprobar(get_tree().paused and MenuGlobal.panel_ayuda.visible, "El tutorial inicial abre sin bloquear la carga")
-	MenuGlobal.cerrar_ayuda()
-	await _esperar()
-	comprobar(get_tree().paused, "El tutorial del cliente mantiene la pausa")
-	await _al_cliente("cerrar_guia")
-	await _esperar()
+	await _probar_confirmaciones_tutorial(true)
 	comprobar(red.jugadores.size() == 2 and not get_tree().paused, "Dos jugadores y barrera de carga completada")
+	await _comprobar_personajes()
 	comprobar(await _probar_colision(), "El cuerpo local choca y la interpolación remota no lo atraviesa")
 	var colision_cliente := await _al_cliente("colision")
 	comprobar(colision_cliente.ok, "La colisión entre jugadores funciona también en el cliente")
@@ -342,16 +339,14 @@ func _run() -> void:
 	r = await _al_cliente("nueva_ronda")
 	comprobar(oficina.sistema_despacho.puntuacion.puntos == 0 and int(r.saldo) == 0 and red.papeles.is_empty(), "Reinicio sin saldo ni hojas de la ronda anterior")
 	comprobar(oficina.sistema_despacho.obtener_cordura(1) == 100 and bool(r.activo_local), "Ambos vuelven activos en la nueva ronda")
+	await _comprobar_personajes()
 	# El primer evento debe abrir su guía en ambos, aunque el anfitrión ya haya pausado.
 	oficina.bloqueos_iniciados = true
 	comprobar(red.iniciar_evento("apagon"), "Inicio del primer evento con tutorial")
 	await _esperar(0.5)
 	r = await _al_cliente("inspeccionar")
 	comprobar(bool(r.guia) and str(r.evento) == "apagon" and get_tree().paused, "Guía del evento visible y sincronizada en ambos")
-	MenuGlobal.cerrar_ayuda()
-	await _al_cliente("cerrar_guia")
-	await _esperar(0.3)
-	comprobar(not get_tree().paused, "Cerrar ambas guías reanuda el evento")
+	await _probar_confirmaciones_tutorial(false)
 	print("[LAN RESULTADO] %d comprobaciones, %d errores" % [comprobaciones, fallos])
 	await _al_cliente("terminar")
 	while SesionLAN.activa or get_tree().current_scene == oficina or get_tree().current_scene == null:
@@ -364,9 +359,17 @@ func _run() -> void:
 func _orden(orden: String, datos: Dictionary = {}) -> void:
 	var resultado := {"ok": true}
 	match orden:
+		"personajes": resultado = {"ok": _personajes_correctos()}
 		"colision": resultado = {"ok": await _probar_colision()}
 		"capturar": await _capturar("cliente")
 		"cerrar_guia": MenuGlobal.cerrar_ayuda()
+		"estado_guia": resultado = _estado_guia()
+		"repetir_confirmacion_guia":
+			_pulsar_escape_guia()
+			SesionLAN._confirmar_tutorial.rpc_id(1, SesionLAN.ronda, SesionLAN.tutorial_actual)
+		"confirmacion_guia_antigua":
+			SesionLAN._confirmar_tutorial.rpc_id(1, SesionLAN.ronda - 1, SesionLAN.tutorial_actual)
+			SesionLAN._confirmar_tutorial.rpc_id(1, SesionLAN.ronda, &"otro_tutorial")
 		"preparar_reinicio": MenuGlobal.omitir_tutorial_siguiente_partida = true
 		"nueva_ronda":
 			red = SesionLAN.puente
@@ -434,11 +437,98 @@ func _respuesta(resultado: Dictionary) -> void:
 	if multiplayer.get_remote_sender_id() == cliente:
 		respuesta_cliente.emit(resultado)
 
+func _estado_guia() -> Dictionary:
+	var panel := MenuGlobal.panel_ayuda
+	return {"visible": panel.is_visible_in_tree(), "pausado": get_tree().paused,
+		"contador": panel.contador_confirmaciones.text, "contador_visible": panel.contador_confirmaciones.is_visible_in_tree(),
+		"confirmado": panel.boton_cerrar.disabled, "pista": panel.pista.text}
+
+func _pulsar_escape_guia() -> void:
+	var tecla := InputEventKey.new()
+	tecla.keycode = KEY_ESCAPE
+	tecla.physical_keycode = KEY_ESCAPE
+	tecla.pressed = true
+	get_viewport().push_input(tecla)
+	tecla.pressed = false
+	get_viewport().push_input(tecla)
+
+func _probar_confirmaciones_tutorial(primero_anfitrion: bool) -> void:
+	var panel := MenuGlobal.panel_ayuda
+	var remoto := await _al_cliente("estado_guia")
+	comprobar(panel.contador_confirmaciones.text == "(0/2)" and remoto.contador == "(0/2)", "Cada tutorial empieza con cero confirmaciones en ambos equipos")
+	comprobar(panel.contador_confirmaciones.is_visible_in_tree() and remoto.contador_visible and not panel.boton_cerrar.disabled and not remoto.confirmado, "Ambos pueden leer y confirmar con el contador visible")
+	await _al_cliente("confirmacion_guia_antigua")
+	await _esperar()
+	comprobar(panel.contador_confirmaciones.text == "(0/2)", "Se rechazan confirmaciones de otra ronda o de otro tutorial")
+	var segundos: float = oficina.temporizador_denuncias.time_left
+	if primero_anfitrion:
+		panel.boton_cerrar.pressed.emit()
+	else:
+		await _al_cliente("cerrar_guia")
+	await _esperar()
+	remoto = await _al_cliente("estado_guia")
+	comprobar(panel.contador_confirmaciones.text == "(1/2)" and remoto.contador == "(1/2)", "La primera confirmación actualiza a (1/2) en ambos equipos")
+	comprobar(panel.is_visible_in_tree() and remoto.visible and get_tree().paused and remoto.pausado, "Las dos guías permanecen visibles y el mundo sigue pausado")
+	comprobar(panel.boton_cerrar.disabled == primero_anfitrion and remoto.confirmado != primero_anfitrion, "Solo se desactiva el botón del jugador que confirmó")
+	comprobar((panel.pista.text if primero_anfitrion else str(remoto.pista)).contains("Esperando a tu compañero"), "Quien confirma ve por qué está esperando")
+	if primero_anfitrion:
+		_pulsar_escape_guia()
+		panel.boton_cerrar.pressed.emit()
+		SesionLAN.confirmar_tutorial(SesionLAN.tutorial_actual)
+	else:
+		await _al_cliente("repetir_confirmacion_guia")
+	await _esperar()
+	remoto = await _al_cliente("estado_guia")
+	comprobar(panel.contador_confirmaciones.text == "(1/2)" and remoto.contador == "(1/2)" and get_tree().paused, "Escape y confirmaciones repetidas no duplican el voto ni reanudan")
+	comprobar(is_equal_approx(segundos, oficina.temporizador_denuncias.time_left), "El reloj de casos no avanza mientras falta un jugador")
+	if primero_anfitrion:
+		await _al_cliente("cerrar_guia")
+	else:
+		panel.boton_cerrar.pressed.emit()
+	await _esperar()
+	remoto = await _al_cliente("estado_guia")
+	comprobar(panel.contador_confirmaciones.text == "(2/2)" and remoto.contador == "(2/2)", "Se registran exactamente dos confirmaciones")
+	comprobar(not panel.visible and not remoto.visible and not get_tree().paused and not remoto.pausado, "Al confirmar ambos se cierran las guías y se reanuda en los dos equipos")
+	MenuGlobal.abrir_pausa()
+	MenuGlobal.abrir_tutorial()
+	comprobar(not panel.contador_confirmaciones.visible and not panel.boton_cerrar.disabled, "Consultar una guía desde pausa no conserva el contador ni el botón desactivado")
+	MenuGlobal.cerrar_ayuda()
+	MenuGlobal.reanudar_juego()
+	await _esperar()
+
+func _comprobar_personajes() -> void:
+	comprobar(_personajes_correctos(), "Anfitrión azul e invitado de relevo, con sus rigs completos en el servidor")
+	var resultado := await _al_cliente("personajes")
+	comprobar(resultado.ok, "El cliente ve los mismos policías y controla el de relevo")
+
+func _personajes_correctos() -> bool:
+	if red.jugadores.size() != 2 or red.jugadores.get(SesionLAN.id_local()) != oficina.jugador:
+		return false
+	var colores: Array[Color] = []
+	for id: int in red.jugadores:
+		var jugador: Player = red.jugadores[id]
+		var modelo := jugador.get_node("Visual/Modelo")
+		var esperado := "res://Personajes/PoliciaAzul/policia_azul.glb" if id == 1 else "res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"
+		if modelo.scene_file_path != esperado or jugador.id_red != id or jugador.remoto_red != (id != SesionLAN.id_local()):
+			return false
+		var esqueleto := modelo.get_node("Rig/Skeleton3D")
+		if not is_instance_valid(jugador.animation_player) or not modelo.is_ancestor_of(jugador.animation_player):
+			return false
+		if not is_instance_valid(jugador.gestos) or jugador.gestos.get_parent() != esqueleto:
+			return false
+		if not esqueleto.is_ancestor_of(jugador.anclaje_papel()) or not esqueleto.is_ancestor_of(jugador.anclaje_taza()):
+			return false
+		var chaqueta := esqueleto.get_node("Chaqueta") as MeshInstance3D
+		colores.append((chaqueta.get_active_material(0) as StandardMaterial3D).albedo_color)
+		if esqueleto.has_node("AdornoGorra") != (id != 1):
+			return false
+	return not colores[0].is_equal_approx(colores[1]) and oficina.get_node("Gameplay/Camera3D").objetivo == oficina.jugador and oficina.evento_apagon.jugador == oficina.jugador
+
 func _probar_colision() -> bool:
 	# Dos cuerpos con las escenas y máscaras reales, aislados del transporte
 	# para que un paquete de movimiento no altere la geometría durante la prueba.
-	var local: Player = red.POLICIA.instantiate()
-	var remoto: Player = red.POLICIA.instantiate()
+	var local: Player = (red.POLICIA if SesionLAN.es_anfitrion() else red.POLICIA_RELEVO).instantiate()
+	var remoto: Player = (red.POLICIA_RELEVO if SesionLAN.es_anfitrion() else red.POLICIA).instantiate()
 	oficina.add_child(local)
 	oficina.add_child(remoto)
 	local.set_physics_process(false)

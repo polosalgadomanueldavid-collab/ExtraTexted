@@ -1,6 +1,7 @@
 extends Node
 ## Adaptador de la oficina: reglas compartidas en el anfitrión, presentación local.
 const POLICIA := preload("res://Personajes/PoliciaAzul/Policia.tscn")
+const POLICIA_RELEVO := preload("res://Personajes/PoliciaRelevo/PoliciaRelevo.tscn")
 const CONTENIDO_CAFE := preload("res://Objetos/ZonaDescanso/contenido_cafe.gd")
 const CAMPOS_CASO := ["id", "titulo", "descripcion_despacho", "nivel_riesgo", "hora_reporte", "tiempo_limite_segundos", "penalidad_calma", "puntaje_recompensa", "protocolo_estaciones", "estado", "motivo_perdida", "estaciones_completadas"]
 var oficina: Node3D
@@ -66,7 +67,8 @@ func configurar(mundo: Node3D) -> void:
 		if id == SesionLAN.id_local():
 			jugador = oficina.jugador
 		else:
-			jugador = POLICIA.instantiate() as Player
+			# La identidad depende del participante, no de qué equipo lo representa.
+			jugador = (POLICIA if id == 1 else POLICIA_RELEVO).instantiate() as Player
 			jugador.name = "JugadorLAN_%d" % id
 			jugador.remoto_red = true
 			oficina.get_node("Gameplay").add_child(jugador)

@@ -57,6 +57,9 @@ func _probar_sala_real(menu: Control, sesion: Node) -> void:
 		return
 	assert(sala._sala.visible and not sala._conexion.visible)
 	assert(sala._tarjetas[0].nombre.text == "Anfitrión" and sala._tarjetas[1].nombre.text == "Compañero")
+	assert(sala._tarjetas[0].retrato.texture.resource_path == "res://UI/Despacho/retrato_policia.png")
+	assert(sala._tarjetas[1].retrato.texture.resource_path == "res://UI/Despacho/retrato_policia_relevo.png")
+	assert(sala._tarjetas[0 if anfitrion else 1].sello.text.ends_with(" · TÚ"))
 	sala.listo.button_pressed = true
 	while sala._plazas.text != "2 / 2 LISTOS" and Time.get_ticks_msec() < limite:
 		await create_timer(0.1).timeout

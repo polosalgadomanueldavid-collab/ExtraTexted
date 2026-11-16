@@ -126,6 +126,22 @@ var ruleta_emotes: RuletaEmotes
 signal preparacion_terminada
 var oficina_preparada := false
 
+
+func _enter_tree() -> void:
+	if not SesionLAN.activa or SesionLAN.es_anfitrion():
+		return
+	# El invitado conserva su cuerpo y las referencias de cámara y eventos.
+	# Cambiar el modelo antes de _ready enlaza animaciones y gestos al rig correcto.
+	var visual := $Gameplay/Node3D/Visual
+	var anterior := visual.get_node("Modelo")
+	visual.remove_child(anterior)
+	anterior.free()
+	var modelo := preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn").instantiate()
+	modelo.name = "Modelo"
+	visual.add_child(modelo)
+	visual.move_child(modelo, 0)
+
+
 func _ready() -> void:
 	add_to_group("gestor_partida")
 	anuncios = AnuncioPartida.new()
