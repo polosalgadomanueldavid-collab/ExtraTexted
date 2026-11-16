@@ -1047,6 +1047,9 @@ func _al_terminar_partida() -> void:
 	}
 	if sistema_despacho.causa_agotamiento == &"incendio":
 		datos["causa"] = {"incendio": true, "titulo": "Incendio sin apagar"}
+	if SesionLAN.activa:
+		datos["multijugador"] = true
+		datos["equipo"] = sistema_despacho.obtener_resumen_equipo(SesionLAN.participantes)
 	panel_despacho.hide()
 	depurador_grafo.hide()
 	for indicador: IndicadorProximaEstacion in indicadores_estaciones.values():

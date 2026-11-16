@@ -21,6 +21,8 @@ var jugador_local_id: int = 1
 var jugadores: Dictionary = {1: {"cordura": 100, "eliminado": false}}
 var casos_en_proceso: Dictionary = {}
 var participantes: Dictionary = {}
+## Totales del turno. Solo la autoridad suma; el cliente recibe la misma copia.
+var aportes_jugadores: Dictionary = {1: {"misiones": 0, "tareas": 0}}
 var ultimos_portadores: Dictionary = {}
 var casos_por_jugador: Dictionary = {}
 var max_casos_en_proceso: int = 1
@@ -118,6 +120,12 @@ func resolver_denuncia(id: String) -> bool:
 
 	# El saldo ya está actualizado cuando el HUD recibe la resolución.
 	puntuacion.registrar_resolucion(denuncia)
+	if autoridad:
+		# Una misión compartida cuenta para quienes completaron una estación,
+		# nunca para alguien que solo llevó la hoja o recibió la recompensa.
+		for id_jugador: int in participantes.get(id, []):
+			if aportes_jugadores.has(id_jugador):
+				aportes_jugadores[id_jugador].misiones += 1
 	denuncia_resuelta.emit(denuncia)
 	
 	_limpiar_caso(id)
@@ -230,6 +238,8 @@ func interactuar_estacion(estacion_id: String, caso_id: String = "", jugador_id:
 		participantes[caso_id] = []
 	if not participantes[caso_id].has(jugador_id):
 		participantes[caso_id].append(jugador_id)
+	if autoridad and aportes_jugadores.has(jugador_id):
+		aportes_jugadores[jugador_id].tareas += 1
 
 	estacion_completada.emit(denuncia, estacion_id)
 
@@ -242,10 +252,27 @@ func interactuar_estacion(estacion_id: String, caso_id: String = "", jugador_id:
 
 func configurar_jugadores(ids: Array, local_id: int) -> void:
 	jugadores.clear()
+	aportes_jugadores.clear()
 	for id: int in ids:
 		jugadores[id] = {"cordura": 100, "eliminado": false}
+		aportes_jugadores[id] = {"misiones": 0, "tareas": 0}
 	jugador_local_id = local_id
 	max_casos_en_proceso = mini(2, ids.size())
+
+
+func obtener_resumen_equipo(identidades: Dictionary) -> Array[Dictionary]:
+	var resumen: Array[Dictionary] = []
+	var ids := aportes_jugadores.keys()
+	ids.sort()
+	for id: int in ids:
+		var aporte: Dictionary = aportes_jugadores[id]
+		resumen.append({
+			"id": id,
+			"nombre": str(identidades.get(id, {}).get("alias", "Policía")),
+			"misiones": int(aporte.misiones),
+			"tareas": int(aporte.tareas)
+		})
+	return resumen
 
 
 func obtener_cordura(id: int) -> int:

@@ -330,6 +330,8 @@ func _run() -> void:
 	await _esperar()
 	r = await _al_cliente("inspeccionar")
 	comprobar(despacho.terminada and bool(r.final), "Derrota compartida al eliminarse ambos")
+	comprobar(r.aportes == despacho.aportes_jugadores, "El cliente recibe los mismos aportes que el anfitrión")
+	comprobar(r.equipo_final == oficina.final_partida._datos.get("equipo", []) and not r.equipo_final.is_empty(), "Ambos cuadernos presentan el mismo equipo y MVP al finalizar")
 	await _al_cliente("preparar_reinicio")
 	MenuGlobal.omitir_tutorial_siguiente_partida = true
 	SesionLAN.reiniciar()
@@ -341,6 +343,8 @@ func _run() -> void:
 	r = await _al_cliente("nueva_ronda")
 	comprobar(oficina.sistema_despacho.puntuacion.puntos == 0 and int(r.saldo) == 0 and red.papeles.is_empty(), "Reinicio sin saldo ni hojas de la ronda anterior")
 	comprobar(oficina.sistema_despacho.obtener_cordura(1) == 100 and bool(r.activo_local), "Ambos vuelven activos en la nueva ronda")
+	var aportes_reinicio: Dictionary = oficina.sistema_despacho.aportes_jugadores
+	comprobar(r.aportes == aportes_reinicio and aportes_reinicio[1].misiones == 0 and aportes_reinicio[cliente].tareas == 0, "El reinicio borra los aportes en ambos equipos")
 	var ronda_actual := SesionLAN.ronda
 	var puente_actual := SesionLAN.puente
 	SesionLAN._cargar(ronda_actual - 1)
@@ -406,7 +410,7 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 		"nueva_ronda":
 			red = SesionLAN.puente
 			oficina = red.oficina
-			resultado = {"saldo": oficina.sistema_despacho.puntuacion.puntos, "activo_local": oficina.sistema_despacho.esta_activo(SesionLAN.id_local())}
+			resultado = {"saldo": oficina.sistema_despacho.puntuacion.puntos, "activo_local": oficina.sistema_despacho.esta_activo(SesionLAN.id_local()), "aportes": oficina.sistema_despacho.aportes_jugadores}
 		"mover":
 			oficina.jugador.global_position = datos.pos
 			oficina.jugador.velocity = Vector3.ZERO
@@ -444,6 +448,8 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 			for tipo in ["incendio", "inundacion", "lava", "hielo", "terremoto"]:
 				if oficina.get("evento_" + tipo).activo: evento = tipo
 			resultado = {"saldo": oficina.sistema_despacho.puntuacion.puntos, "casos": oficina.sistema_despacho.casos_en_proceso.size(), "hojas": red.papeles.size(), "evento": evento, "tiempo": oficina.sistema_despacho.tiempo_detenido, "activo_local": oficina.sistema_despacho.esta_activo(SesionLAN.id_local()), "final": oficina.sistema_despacho.terminada, "guia": MenuGlobal.panel_ayuda.visible}
+			resultado["aportes"] = oficina.sistema_despacho.aportes_jugadores
+			resultado["equipo_final"] = oficina.final_partida._datos.get("equipo", [])
 			var poderes: Node = oficina.get_node("MaquinaExpendedora").poderes
 			resultado["audios_tiempo"] = 0
 			for reproductor: AudioStreamPlayer in oficina.find_children("*", "AudioStreamPlayer", true, false):
