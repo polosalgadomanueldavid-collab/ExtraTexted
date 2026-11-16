@@ -10,6 +10,7 @@ const FUENTE_TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 const ARTE_CUADERNO := preload("res://UI/Despacho/cuaderno_arte.gd")
 const SONIDO_ALERTA := preload("res://Audios/Apagon/rechazo.wav")
 const SONIDO_PAGINA := preload("res://Audios/Mesas/pasar_hoja_1.ogg")
+const MELODIA_DERROTA := preload("res://Audios/phatphrogstudio-defeat-outros-game-sounds-collection-477823.mp3")
 const TAMANO_LIBRO := Vector2(1280, 720)
 const PETROLEO := Color("173b50")
 const CREMA := Color("fff1d8")
@@ -47,6 +48,7 @@ var _numero_der: Label
 var _estadisticas: Label
 var _alerta: AudioStreamPlayer
 var _sonido_pagina: AudioStreamPlayer
+var _musica_derrota: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -80,6 +82,11 @@ func presentar(datos: Dictionary) -> void:
 	var entrada := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	entrada.tween_property(_aviso_cinematica, "modulate:a", 1.0, 0.45)
 	_alerta.play()
+	_musica_derrota.volume_db = -18.0
+	_musica_derrota.play()
+	create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).tween_property(
+		_musica_derrota, "volume_db", -7.5, 0.9
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	relevo_iniciado.emit()
 
 
@@ -226,6 +233,8 @@ func _construir_interfaz() -> void:
 
 	_alerta = _crear_sonido(SONIDO_ALERTA, -7.0)
 	_sonido_pagina = _crear_sonido(SONIDO_PAGINA, -5.0)
+	_musica_derrota = _crear_sonido(MELODIA_DERROTA, -18.0)
+	_musica_derrota.bus = "Musica"
 
 
 func _crear_pagina(x: float) -> Dictionary:

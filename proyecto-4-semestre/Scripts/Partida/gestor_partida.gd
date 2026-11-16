@@ -1059,6 +1059,8 @@ func _al_terminar_partida() -> void:
 	_aviso_apagon.hide()
 	anuncios.detener()
 	indicador_denuncia_pc.hide()
+	musica_partida.detener_para_final()
+	musica_cordura_baja.detener_para_final()
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	final_partida.presentar(datos)

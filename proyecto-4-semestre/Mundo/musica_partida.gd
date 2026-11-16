@@ -71,6 +71,13 @@ func _al_terminar_pista() -> void:
 	_reproducir_pista_actual()
 
 
+func detener_para_final() -> void:
+	# La melodía de derrota toma el relevo sin superponerse con la música de juego.
+	_en_rango = false
+	if playing:
+		_fundir_a(VOLUMEN_SILENCIO_DB, true)
+
+
 func _fundir_a(volumen_objetivo_db: float, detener_al_final: bool = false) -> void:
 	_detener_fundido()
 	_fundido = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
