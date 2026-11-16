@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://Furniture Pack/MarcoFoto/MarcoPlateadoFacetado.glb" id="1"]
+
+[node name="MarcoFoto" type="Node3D"]
+
+[node name="MarcoPlateadoFacetado" parent="." instance=ExtResource("1")]

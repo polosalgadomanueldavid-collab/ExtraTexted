@@ -25,7 +25,7 @@ const GUIAS := {
 		"pista": "Puedes seguir atendiendo casos mientras nadas.",
 		"pasos": [
 			["Nada hasta descanso", "El agua te ralentiza. Usa las teclas de movimiento para llegar a la zona de descanso.", preload("res://UI/Menus/ArtePiloto/Eventos/agua_nado.webp")],
-			["Busca las tuberías", "Sigue el marcador hasta la tubería con la válvula. Mírala de cerca y pulsa E.", preload("res://UI/Menus/ArtePiloto/Eventos/agua_tuberia.webp")],
+			["Abre la compuerta", "Busca la caja azul junto al taco de luz. Mírala y pulsa E para abrir la puerta y reparar la fuga.", preload("res://UI/Menus/ArtePiloto/Eventos/agua_tuberia.webp")],
 			["Conecta el desagüe", "Gira las piezas con clic, o elígelas con las flechas y pulsa E. Une la entrada con el desagüe.", preload("res://UI/Menus/ArtePiloto/Eventos/agua_red.webp")],
 		],
 	},
@@ -43,7 +43,7 @@ const GUIAS := {
 		"pista": "Al congelarte conservas la velocidad que llevabas.",
 		"pasos": [
 			["Anticipa el giro", "El piso resbala. Cada cuatro segundos te congelas un instante, así que gira antes de llegar a la pared.", preload("res://UI/Menus/ArtePiloto/Eventos/hielo_cristal.webp")],
-			["Localiza la fuga", "Sigue el indicador de nitrógeno hasta la zona de descanso. Mira la tubería y pulsa E.", preload("res://UI/Menus/ArtePiloto/Eventos/hielo_tuberia.webp")],
+			["Localiza la fuga", "Busca la compuerta escarchada en descanso. Acércate, mira la fuga de nitrógeno y pulsa E.", preload("res://UI/Menus/ArtePiloto/Eventos/hielo_tuberia.webp")],
 			["Aprieta en cruz", "Sigue el orden del panel. Haz clic en las cuatro tuercas y repite la secuencia tres veces en total.", preload("res://UI/Menus/ArtePiloto/Eventos/hielo_tuercas.webp")],
 		],
 	},

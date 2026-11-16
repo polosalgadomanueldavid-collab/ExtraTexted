@@ -25,7 +25,6 @@ func _probar() -> void:
 	oficina._recibir_denuncia_aleatoria()
 	oficina.temporizador_denuncias.stop()
 	oficina.temporizador_bloqueos.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	oficina.sistema_despacho.set_process(false)
 	var reloj: Timer = oficina.temporizador_eventos
 	var terremoto: Node3D = oficina.evento_terremoto

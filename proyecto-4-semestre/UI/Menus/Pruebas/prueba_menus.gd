@@ -249,8 +249,6 @@ func _probar() -> void:
 	_pulsar_tecla(KEY_E)
 	await get_tree().process_frame
 	_verificar(not pc.is_using and not jugador.input_locked and _aperturas_pc == 1, "E solicita una hoja sin abrir el panel del computador")
-	pc.toggle_use()
-	_verificar(not pc.is_using and not pc.camera_3d.current, "La apertura antigua del computador queda deshabilitada en la oficina")
 	var denuncia_activa := sistema.obtener_denuncia_activa()
 	_verificar(denuncia_activa != null and is_instance_valid(jugador.papel_en_mano) and jugador.papel_en_mano.denuncia_id == denuncia_activa.id, "La PC entrega el papel del caso activo")
 	_pulsar_escape()

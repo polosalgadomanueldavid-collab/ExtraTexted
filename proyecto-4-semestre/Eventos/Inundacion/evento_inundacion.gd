@@ -4,6 +4,7 @@ extends Node3D
 
 signal iniciado
 signal terminado
+const TuberiaRompible := preload("res://Eventos/Tuberias/tuberia_rompible.gd")
 const PanelTuberias := preload("res://Eventos/Inundacion/panel_tuberias.gd")
 const Indicador := preload("res://Eventos/Inundacion/indicador_tuberias.gd")
 const Salpicadura := preload("res://Eventos/Inundacion/salpicadura.gd")
@@ -23,7 +24,7 @@ var tiempo := 0.0
 var permiso_inicio: Callable
 var panel: PanelTuberias
 var indicador: Indicador
-var tuberias: Node3D
+var tuberias: TuberiaRompible
 var acceso: Marker3D
 var superficie: MeshInstance3D
 var _volumen: MeshInstance3D
@@ -40,8 +41,6 @@ var _reloj_ondas := 0.0
 var _raton_anterior: Input.MouseMode
 var _bloqueo_anterior := false
 var _chorro: CPUParticles3D
-var _valvula: Node3D
-var _union: MeshInstance3D
 var _efectos: Node3D
 var _ambiente: AudioStreamPlayer
 var _salpicaduras: Array[AudioStreamPlayer] = []
@@ -106,8 +105,7 @@ func iniciar() -> bool:
 			_registrar_flotante(hijo)
 	superficie.show()
 	_volumen.show()
-	_chorro.emitting = true
-	_union.scale.y = 0.12
+	tuberias.romper()
 	_ambiente.play()
 	set_process(true)
 	set_physics_process(true)
@@ -208,6 +206,7 @@ func _process(delta: float) -> void:
 		return
 	var altura := maxf(0.0, nivel - PISO)
 	_ambiente.volume_db = lerpf(-34.0, -26.0, altura / (NIVEL_MAXIMO - PISO))
+	tuberias.nivel_agua = nivel
 	var peso := smoothstep(0.0, 0.25, altura)
 	superficie.position.y = nivel
 	_material.set_shader_parameter("reloj", tiempo)
@@ -218,8 +217,6 @@ func _process(delta: float) -> void:
 		efecto.global_position.y = nivel + 0.045
 	_volumen.position.y = PISO + altura * 0.5
 	_volumen.scale.y = maxf(0.001, altura)
-	_valvula.rotation.z = lerp_angle(_valvula.rotation.z, PI * 0.5 if drenando else 0.0, delta * 4)
-	_union.scale.y = move_toward(_union.scale.y, 1.0 if drenando else 0.12, delta * 2.0)
 	indicador.actualizar(get_viewport().get_camera_3d(), tuberias.global_position + Vector3.UP * 0.5,
 		_jugador.global_position, obtener_objetivo(_jugador) == self,
 		not _oficina.partida_finalizada and not drenando and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible)
@@ -261,10 +258,11 @@ func obtener_objetivo(jugador: Player) -> Node3D:
 	if diferencia.length() > 0.1 and jugador.visual.global_basis.z.normalized().dot(diferencia.normalized()) < 0.2:
 		return null
 	var origen := jugador.global_position + Vector3.UP * 0.45
-	var destino := Vector3(tuberias.global_position.x, origen.y, tuberias.global_position.z)
+	var destino := tuberias.cuerpo.global_position
 	var consulta := PhysicsRayQueryParameters3D.create(origen, destino, 1)
 	consulta.exclude = [jugador.get_rid()]
-	return self if get_world_3d().direct_space_state.intersect_ray(consulta).is_empty() else null
+	var impacto := get_world_3d().direct_space_state.intersect_ray(consulta)
+	return self if impacto.is_empty() or tuberias.is_ancestor_of(impacto.collider) else null
 
 
 func interactuar(jugador: Player) -> void:
@@ -282,6 +280,7 @@ func interactuar(jugador: Player) -> void:
 	jugador.velocity.x = 0
 	jugador.velocity.z = 0
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	tuberias.establecer_abierto(true)
 	panel.abrir()
 	indicador.hide()
 
@@ -290,6 +289,7 @@ func _cerrar_reparacion() -> void:
 	if not reparando:
 		return
 	reparando = false
+	tuberias.establecer_abierto(false)
 	if SesionLAN.en_partida:
 		SesionLAN.puente.liberar_local("inundacion")
 	panel.cerrar()
@@ -305,7 +305,7 @@ func _al_reparar() -> void:
 		return
 	_cerrar_reparacion()
 	drenando = true
-	_chorro.emitting = false
+	tuberias.sellar()
 	indicador.hide()
 	_oficina.anuncios.mostrar_evento("TUBERÍAS", "REPARADAS", "El agua está bajando")
 
@@ -358,9 +358,8 @@ func detener() -> void:
 			papel.nivel_agua = -INF
 	superficie.hide()
 	_volumen.hide()
-	_chorro.emitting = false
+	tuberias.restablecer()
 	_ambiente.stop()
-	_union.scale.y = 1.0
 	for sonido in _salpicaduras:
 		sonido.stop()
 	indicador.hide()
@@ -400,79 +399,15 @@ func _crear_agua() -> void:
 
 
 func _crear_tuberias() -> void:
-	tuberias = _oficina.get_node_or_null("CompuertaEstacionInundacion") as Node3D
+	tuberias = _oficina.get_node_or_null("CompuertaEstacionInundacion") as TuberiaRompible
 	if tuberias == null:
-		push_error("No se encontró CompuertaEstacionInundacion en la escena de oficina.")
+		push_error("No se encontró la estación CompuertaEstacionInundacion en la escena de oficina.")
 		return
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color("63a8b8")
-	metal.metallic = 0.6
-	metal.roughness = 0.3
-	var accesorios := Node3D.new()
-	accesorios.name = "AccesoriosReparacion"
-	accesorios.scale = Vector3.ONE * 0.6
-	tuberias.add_child(accesorios)
-	_union = MeshInstance3D.new()
-	_union.name = "UnionReparada"
-	var manguito := CylinderMesh.new()
-	manguito.top_radius = 0.073
-	manguito.bottom_radius = 0.073
-	manguito.height = 0.42
-	_union.mesh = manguito
-	_union.material_override = metal
-	_union.position = Vector3(0.34, 0.25, 0)
-	accesorios.add_child(_union)
-	_valvula = Node3D.new()
-	_valvula.position = Vector3(-0.34, 0.12, 0.1)
-	accesorios.add_child(_valvula)
-	var aro := MeshInstance3D.new()
-	var toro := TorusMesh.new()
-	toro.inner_radius = 0.12
-	toro.outer_radius = 0.16
-	aro.mesh = toro
-	aro.rotation.x = PI * 0.5
-	var rojo := StandardMaterial3D.new()
-	rojo.albedo_color = Color("ff945f")
-	aro.material_override = rojo
-	_valvula.add_child(aro)
-	for i in 3:
-		var radio := MeshInstance3D.new()
-		var caja := BoxMesh.new()
-		caja.size = Vector3(0.27, 0.025, 0.025)
-		radio.mesh = caja
-		radio.rotation.z = i * TAU / 3
-		radio.material_override = rojo
-		_valvula.add_child(radio)
-	var rotulo := Label3D.new()
-	rotulo.text = "TUBERÍAS"
-	rotulo.font_size = 44
-	rotulo.pixel_size = 0.003
-	rotulo.position = Vector3(0, 0.75, 0.05)
-	rotulo.modulate = Color("d2faff")
-	accesorios.add_child(rotulo)
-	_chorro = CPUParticles3D.new()
-	_chorro.emitting = false
-	_chorro.amount = 38
-	_chorro.lifetime = 0.65
-	_chorro.direction = Vector3(0.1, 0.25, 1)
-	_chorro.spread = 14
-	_chorro.initial_velocity_min = 0.8
-	_chorro.initial_velocity_max = 1.4
-	_chorro.gravity = Vector3(0, -3, 0)
-	_chorro.position = Vector3(0.34, 0.18, 0)
-	var gota := SphereMesh.new()
-	gota.radius = 0.022
-	gota.height = 0.065
-	var agua := StandardMaterial3D.new()
-	agua.albedo_color = Color("9ee9f2")
-	agua.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	gota.material = agua
-	_chorro.mesh = gota
-	accesorios.add_child(_chorro)
+	_chorro = tuberias.chorro
 	acceso = Marker3D.new()
 	acceso.name = "AccesoTuberias"
 	acceso.add_to_group("accesos_navegacion")
-	acceso.position = Vector3(1.5, PISO, tuberias.position.z)
+	acceso.position = Vector3(1.45, PISO, tuberias.position.z)
 	add_child(acceso)
 
 

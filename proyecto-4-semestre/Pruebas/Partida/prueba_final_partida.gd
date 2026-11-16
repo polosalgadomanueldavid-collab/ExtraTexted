@@ -113,6 +113,7 @@ func probar() -> void:
 	await process_frame
 	_verificar(oficina.final_partida._fase == 2 and oficina.final_partida._cuaderno.visible, "Ir al cuaderno abre el balance después de la cinemática")
 	_verificar(oficina.final_partida._estadisticas.text.contains("1 de 3"), "Las estadísticas reflejan el turno")
+	await oficina.final_partida._cuaderno.apertura_terminada
 	if _capturas_habilitadas():
 		await RenderingServer.frame_post_draw
 		var ruta := ProjectSettings.globalize_path("user://prueba_final_partida.png")
@@ -138,12 +139,10 @@ func probar() -> void:
 	oficina.final_partida._pestanas[0].emit_signal("pressed")
 	await create_timer(0.8, true, false, true).timeout
 	_verificar(oficina.final_partida._pagina_actual == 0, "Las pestañas regresan al balance")
+	var oficina_anterior_id: int = oficina.get_instance_id()
 	oficina._reiniciar_despues_del_final()
-	for indice: int in range(20):
-		if is_instance_valid(current_scene) and current_scene != oficina:
-			break
-		await process_frame
-	_verificar(not paused and current_scene != oficina and is_instance_valid(current_scene), "Jugar de nuevo abre una partida limpia")
+	var reinicio_listo := await _esperar_condicion(func() -> bool: return is_instance_valid(current_scene) and current_scene.get_instance_id() != oficina_anterior_id and current_scene.scene_file_path == "res://Mundo/Oficina.tscn" and not paused and not root.get_node("CargaEscenas").activa, 150)
+	_verificar(reinicio_listo, "Jugar de nuevo abre una partida limpia")
 	var nueva_oficina: Variant = current_scene
 	for indice: int in range(20):
 		if nueva_oficina.final_partida != null:
@@ -151,10 +150,7 @@ func probar() -> void:
 		await physics_frame
 	await create_timer(0.3, true, false, true).timeout
 	nueva_oficina._volver_al_menu_despues_del_final()
-	for indice: int in range(20):
-		if is_instance_valid(current_scene) and current_scene.scene_file_path == "res://UI/Menus/MainMenu.tscn":
-			break
-		await process_frame
+	await _esperar_condicion(func() -> bool: return is_instance_valid(current_scene) and current_scene.scene_file_path == "res://UI/Menus/MainMenu.tscn" and not root.get_node("CargaEscenas").activa, 150)
 	_verificar(is_instance_valid(current_scene) and current_scene.scene_file_path == "res://UI/Menus/MainMenu.tscn", "El cuaderno permite volver al menú")
 	quit(1 if fallos > 0 else 0)
 

@@ -543,6 +543,7 @@ func publicar() -> void:
 		if is_instance_valid(papel):
 			hojas[caso] = {"portador": papel.portador.id_red if is_instance_valid(papel.portador) else 0, "transform": papel.global_transform, "velocidad": papel.linear_velocity}
 	var estado_actual := {"revision": _revision, "jugadores": despacho.jugadores, "casos": casos, "tiempos": despacho.tiempos_restantes, "activos": despacho.casos_en_proceso, "participantes": despacho.participantes, "portadores": despacho.ultimos_portadores, "asignados": despacho.casos_por_jugador, "saldo": despacho.puntuacion.puntos, "ganados": despacho.puntuacion.puntos_ganados, "terminada": despacho.terminada, "causa": str(despacho.causa_agotamiento), "hojas": hojas, "reservas": reservas, "bolsillos": bolsillos, "cafes": cafes, "tazas_cafe": tazas_cafe, "resueltos": {}, "vencidos": {}, "duracion": oficina._duracion_partida, "mundo": _estado_mundo()}
+	estado_actual["aportes"] = despacho.aportes_jugadores
 	_enviar_estado(estado_actual)
 
 func aplicar(datos: Dictionary) -> void:
@@ -556,6 +557,7 @@ func aplicar(datos: Dictionary) -> void:
 	despacho.tiempos_restantes = datos.tiempos.duplicate()
 	despacho.casos_en_proceso = datos.activos.duplicate()
 	despacho.participantes = datos.participantes.duplicate(true)
+	despacho.aportes_jugadores = datos.get("aportes", {}).duplicate(true)
 	despacho.ultimos_portadores = datos.portadores.duplicate()
 	despacho.casos_por_jugador = datos.asignados.duplicate()
 	reservas = datos.reservas.duplicate(true)
@@ -814,7 +816,7 @@ func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 					var evento: Node = oficina.evento_inundacion
 					evento._cerrar_reparacion()
 					evento.drenando = true
-					evento._chorro.emitting = false
+					evento.tuberias.sellar()
 					evento.indicador.hide()
 					oficina.anuncios.mostrar_evento("TUBERÍAS", "REPARADAS", "El agua está bajando")
 				"hielo":
@@ -824,7 +826,7 @@ func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 					evento._tiempo_deshielo = 0.0
 					evento._presencia_al_reparar = minf(1.0, evento.tiempo / evento.ENTRADA)
 					evento._jugador.congelado = false
-					evento._fuga.emitting = false
+					evento.tuberia.sellar()
 					evento._nieve.emitting = false
 					oficina.anuncios.mostrar_evento("¡FUGA", "SELLADA!", "El hielo se está derritiendo")
 			aplicando = false

@@ -36,8 +36,9 @@
 [ext_resource type="PackedScene" path="res://Mundo/LuminariaParedOptimizada.tscn" id="34_luminaria_pared"]
 [ext_resource type="PackedScene" path="res://Mundo/LuminariaColganteOptimizada.tscn" id="35_luminaria_colgante"]
 [ext_resource type="PackedScene" uid="uid://bay6722aoymbt" path="res://Furniture Pack/Ventana/Ventana.glb" id="36_ventana"]
-[ext_resource type="PackedScene" path="res://Furniture Pack/Compuertas/CompuertaEstacionInundacion.glb" id="37_compuerta_inundacion"]
-[ext_resource type="PackedScene" uid="uid://scjgsy6db5x8" path="res://Furniture Pack/Tuberias/TuberiaNitrogeno.glb" id="38_tuberia_nitrogeno"]
+[ext_resource type="Script" uid="uid://uyy0u0q84qr6" path="res://Eventos/Tuberias/tuberia_rompible.gd" id="39_tuberia_rompible"]
+[ext_resource type="PackedScene" path="res://Eventos/Tuberias/Agua.scn" id="40_modelo_agua"]
+[ext_resource type="PackedScene" path="res://Eventos/Tuberias/Nitrogeno.scn" id="41_modelo_nitrogeno"]
 
 [sub_resource type="BoxShape3D" id="ColisionPlantaDecorativa"]
 size = Vector3(0.38, 0.72, 0.38)
@@ -761,11 +762,18 @@ collision_mask = 1
 position = Vector3(0, -0.55, 0)
 shape = SubResource("ColisionPlantaDecorativa")
 
-[node name="CompuertaEstacionInundacion" parent="." unique_id=1992363711 instance=ExtResource("37_compuerta_inundacion")]
-transform = Transform3D(-2.622683e-08, 0, -0.6, 0, 0.6, 0, 0.6, 0, -2.622683e-08, 2.12, 1.3, 9.9)
+[node name="CompuertaEstacionInundacion" type="Node3D" parent="."]
+transform = Transform3D(-2.2729928e-08, 0, -0.52, 0, 0.52, 0, 0.52, 0, -2.2729928e-08, 2.368, 1.12, 9.34)
+script = ExtResource("39_tuberia_rompible")
 
-[node name="TuberiaNitrogeno" parent="." unique_id=1174121388 instance=ExtResource("38_tuberia_nitrogeno")]
-transform = Transform3D(-1.96701e-08, 0, -0.45, 0, 0.45, 0, 0.45, 0, -1.96701e-08, 2.12, 1.3, 11.536207)
+[node name="Modelo" parent="CompuertaEstacionInundacion" instance=ExtResource("40_modelo_agua")]
+
+[node name="TuberiaNitrogeno" type="Node3D" parent="."]
+transform = Transform3D(-2.2729928e-08, 0, -0.52, 0, 0.52, 0, 0.52, 0, -2.2729928e-08, 2.368, 1.12, 10.08)
+script = ExtResource("39_tuberia_rompible")
+nitrogeno = true
+
+[node name="Modelo" parent="TuberiaNitrogeno" instance=ExtResource("41_modelo_nitrogeno")]
 
 [node name="VentanaParedEntradaA" parent="." instance=ExtResource("36_ventana")]
 position = Vector3(0.6837306, 2.2459376, -0.06588924)

@@ -6,7 +6,7 @@ signal respuesta_recibida(numero: int, resultado: Dictionary)
 signal tutorial_actualizado
 
 const PUERTO := 7000
-const VERSION := "extratexted-lan-4"
+const VERSION := "extratexted-lan-5"
 const OFICINA := "res://Mundo/Oficina.tscn"
 var activa := false
 var en_partida := false

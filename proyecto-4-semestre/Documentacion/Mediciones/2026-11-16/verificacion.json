@@ -1,0 +1,37 @@
+{
+  "base": "e57e652",
+  "carga_headless": {
+    "comprobaciones": 23,
+    "fallos": 0
+  },
+  "carga_render": {
+    "comprobaciones": 23,
+    "fallos": 0
+  },
+  "recuperacion_headless": {
+    "comprobaciones": 49,
+    "fallos": 0
+  },
+  "recuperacion_render": {
+    "comprobaciones": 49,
+    "fallos": 0
+  },
+  "lan_partida": {
+    "comprobaciones": 144,
+    "fallos": 0
+  },
+  "lan_reglas": {
+    "comprobaciones": 17,
+    "fallos": 0
+  },
+  "resistencia_120s": {
+    "fallos_host": 0,
+    "fallos_client": 0,
+    "rondas": 6,
+    "casos": 207
+  },
+  "resistencia_30min_completa": false,
+  "perfil_final_exit_code": 0,
+  "avisos_tangentes_final": 0,
+  "avisos_objectdb_final": 61
+}

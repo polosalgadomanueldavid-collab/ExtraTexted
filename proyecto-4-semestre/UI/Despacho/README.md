@@ -20,6 +20,27 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   La clasificación del menú usa una carpeta de expedientes con una ficha para el
   puesto, alias y mejor marca local. Su lista completa permite desplazamiento.
   Ambas tablas usan marcos ilustrados y controles nativos para sus datos.
+- Al terminar el relevo, **Ir al cuaderno** abre una libreta 3D: cubierta naranja,
+  cantos de papel, espiral metálico, hojas cuadriculadas con curvatura y giro con
+  anverso y reverso. Conserva los titulares, descripciones y resultados del turno.
+  Las pestañas de Balance, Casos y Estadísticas pasan al lado izquierdo conforme
+  se avanza. Las estaciones y denuncias llevan viñetas. El fondo se desenfoca.
+  **A/D, flechas o RePág/AvPág** cambian de sección; **clic derecho** acerca la
+  zona apuntada y vuelve al encuadre completo; **Z** acerca el centro y **Esc**
+  sale del acercamiento. La rueda desplaza cada lista. Cambiar de sección también
+  devuelve el encuadre completo. El balanceo sigue el ajuste de accesibilidad.
+  Reintentar y Menú conservan su comportamiento, incluida la restricción del
+  anfitrión LAN. El renderizado adicional solo funciona con la libreta visible.
+  Las pestañas de colores son la única numeración; no hay encabezado de marca
+  repetido ni números al pie. El espiral queda dentro de las hojas, sin varilla.
+  En LAN, la primera apertura añade **MVP del equipo** sobre el caso final:
+  **Más misiones** reconoce las denuncias resueltas en las que el jugador completó
+  alguna estación, y **Mayor aporte** cuenta sus tareas completadas, incluso en
+  casos que luego vencen o siguen abiertos. Una misión compartida reconoce a
+  ambos; repetir una estación o llevar la hoja no suma. Los empates muestran
+  ambos nombres y una ronda sin actividad deja los premios sin asignar.
+  El anfitrión acumula y sincroniza los totales; reiniciar los pone a cero.
+  Las demás páginas conservan su contenido.
 - La tarjeta **PUNTOS** permanece visible aunque no haya casos. Muestra el saldo
   de la partida, separadores de miles y un aviso `+N PTS` durante tres segundos
   después de obtener una recompensa; el aviso se congela con la pausa.
@@ -111,6 +132,16 @@ dejar vencer un caso no concede puntos. El canje y los efectos sobre el mapa
 se incorporarán en una etapa posterior.
 
 ## Comprobación
+
+`Pruebas/Partida/PruebaCuaderno3D.tscn` ofrece una vista interactiva con F6.
+Por CLI, `-- --verificar` comprueba clics proyectados, giro en ambos sentidos,
+entradas repetidas, foco/Enter, desplazamiento normal y ampliado, cinco tamaños
+de ventana y las señales de salida. `-- --verificar --capturas` guarda las
+vistas de balance, casos, estadísticas, giro y zoom en `.godot/cuaderno_3d_qa/`.
+También verifica MVP individual/LAN, ganadores diferentes, empates y ausencia
+de actividad; `08_mvp.png` y `09_mvp_sin_actividad.png` muestran estos estados.
+La prueba admite `--headless`. `Pruebas/Partida/prueba_final_partida.gd` comprueba
+además el relevo real, la pausa, el reinicio de la oficina y la vuelta al menú.
 
 `Godot --headless --path proyecto-4-semestre --script res://Pruebas/Puntuacion/prueba_diseno_clasificacion.gd`
 comprueba los nombres, la reserva para dos barras, cuatro resoluciones, estados

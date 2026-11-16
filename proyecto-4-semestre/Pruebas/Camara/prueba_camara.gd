@@ -30,7 +30,6 @@ func _probar() -> void:
 	_camara.set_physics_process(false)
 	_oficina.temporizador_denuncias.stop()
 	_oficina.temporizador_bloqueos.stop()
-	_oficina.computador.timer_nuevo_problema.stop()
 	_oficina.depurador_grafo.hide()
 	var orientacion_original := _camara.global_basis
 	_camara.balanceo_activo = false

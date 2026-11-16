@@ -35,7 +35,6 @@ func _probar() -> void:
 	(_escena.get("temporizador_denuncias") as Timer).stop()
 	(_escena.get("temporizador_bloqueos") as Timer).stop()
 	var computador: Node = _escena.get("computador")
-	(computador.get("timer_nuevo_problema") as Timer).stop()
 	(_escena.get("depurador_grafo") as Node3D).hide()
 	_verificar(not (_escena.get("depurador_grafo") as GrafoDebugVisual).visible_debug, "La partida comienza sin modo debug")
 	await _pulsar_tecla(KEY_B)

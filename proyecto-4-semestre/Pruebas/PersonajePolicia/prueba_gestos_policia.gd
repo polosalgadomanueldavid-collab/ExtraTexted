@@ -24,7 +24,6 @@ func _probar() -> void:
 	(oficina.get("temporizador_denuncias") as Timer).stop()
 	(oficina.get("temporizador_bloqueos") as Timer).stop()
 	var computador = oficina.get("computador")
-	computador.timer_nuevo_problema.stop()
 	var sistema = oficina.get("sistema_despacho") as SistemaDespacho
 	sistema.set_process(false)
 	await _cuadros(45)

@@ -300,9 +300,6 @@ func _ready() -> void:
 	_crear_aviso_apagon()
 	evento_apagon.estado_cambiado.connect(_al_cambiar_estado_apagon)
 	_al_cambiar_estado_apagon(evento_apagon.estado)
-	# Desactiva el flujo antiguo de preguntas del computador.
-	computador.lista_problemas.clear()
-	computador.entregar_papel = true
 	computador.papel_solicitado.connect(_entregar_papel)
 
 	_asegurar_temporizador_denuncias()
@@ -1050,6 +1047,9 @@ func _al_terminar_partida() -> void:
 	}
 	if sistema_despacho.causa_agotamiento == &"incendio":
 		datos["causa"] = {"incendio": true, "titulo": "Incendio sin apagar"}
+	if SesionLAN.activa:
+		datos["multijugador"] = true
+		datos["equipo"] = sistema_despacho.obtener_resumen_equipo(SesionLAN.participantes)
 	panel_despacho.hide()
 	depurador_grafo.hide()
 	for indicador: IndicadorProximaEstacion in indicadores_estaciones.values():

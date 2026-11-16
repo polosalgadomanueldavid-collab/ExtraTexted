@@ -445,17 +445,8 @@ func _pedir_volver_al_menu() -> void:
 	%CancelarSalida.grab_focus()
 
 
-func _computador() -> PCStatic:
-	if not es_escena_de_juego():
-		return null
-	return get_tree().current_scene.get_node_or_null("Computer") as PCStatic
-
-
 func _guardar_entrada() -> void:
 	_foco_anterior = get_viewport().gui_get_focus_owner()
-	var computador := _computador()
-	if is_instance_valid(computador) and computador.is_using:
-		_foco_anterior = computador.sub_viewport.gui_get_focus_owner()
 	if is_instance_valid(_foco_anterior):
 		_foco_anterior.release_focus()
 	_raton_anterior = Input.mouse_mode

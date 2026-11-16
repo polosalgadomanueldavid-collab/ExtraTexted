@@ -1,5 +1,7 @@
 # Verificación de optimización e integración
 
+Continuación en el equipo Intel/Iris Xe: [verificación del 16 de noviembre](VERIFICACION_OPTIMIZACION_2026-11-16.md). Las cifras siguientes corresponden al equipo y revisión del día 15; no son una comparación directa entre máquinas.
+
 15 de noviembre de 2026. Rama `issa`, merge `3cc52eb` con los commits `da5bc4d` y `5d29121` de `Barandica`. Las mediciones corresponden al árbol de trabajo posterior a ese merge.
 
 ## Resultado funcional

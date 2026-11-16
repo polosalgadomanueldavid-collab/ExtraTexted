@@ -8,6 +8,8 @@ signal menu_solicitado
 const FUENTE_TITULOS := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const FUENTE_TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 const ARTE_CUADERNO := preload("res://UI/Despacho/cuaderno_arte.gd")
+const CUADERNO_3D := preload("res://UI/Despacho/cuaderno_3d.gd")
+const FONDO_CUADERNO := preload("res://UI/Despacho/fondo_cuaderno.gdshader")
 const SONIDO_ALERTA := preload("res://Audios/Apagon/rechazo.wav")
 const SONIDO_PAGINA := preload("res://Audios/Mesas/pasar_hoja_1.ogg")
 const MELODIA_DERROTA := preload("res://Audios/phatphrogstudio-defeat-outros-game-sounds-collection-477823.mp3")
@@ -30,7 +32,6 @@ var _fase: int = 0
 var _relevo_finalizado: bool = false
 var _pagina_actual: int = 0
 var _pasando_pagina: bool = false
-var _escala_libro: float = 1.0
 var _fondo: ColorRect
 var _tarjeta: PanelContainer
 var _aviso_cinematica: PanelContainer
@@ -39,12 +40,13 @@ var _titulo_caso: Label
 var _detalle: Label
 var _saltar: Button
 var _cuaderno: Control
+var _contenido_libro: Control
+var _ayuda_libro: Label
+var _fuente_cuerpo: FontVariation
 var _paginas: Array[Dictionary] = []
 var _pestanas: Array[Button] = []
 var _anterior: Button
 var _siguiente: Button
-var _numero_izq: Label
-var _numero_der: Label
 var _estadisticas: Label
 var _alerta: AudioStreamPlayer
 var _sonido_pagina: AudioStreamPlayer
@@ -110,6 +112,9 @@ func finalizar_relevo() -> void:
 
 
 func _construir_interfaz() -> void:
+	_fuente_cuerpo = FontVariation.new()
+	_fuente_cuerpo.base_font = FUENTE_TEXTO
+	_fuente_cuerpo.variation_opentype = {2003265652: 550.0}
 	_fondo = ColorRect.new()
 	_fondo.color = Color(0.02, 0.08, 0.12, 0.0)
 	_fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -176,45 +181,33 @@ func _construir_interfaz() -> void:
 	contenido.add_child(_saltar)
 	_tarjeta.hide()
 
-	_cuaderno = Control.new()
-	_cuaderno.size = TAMANO_LIBRO
-	_cuaderno.pivot_offset = TAMANO_LIBRO * 0.5
+	_cuaderno = CUADERNO_3D.new()
+	_cuaderno.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_cuaderno)
+	_contenido_libro = _cuaderno.contenido
 	var arte := ARTE_CUADERNO.new() as Control
 	arte.size = TAMANO_LIBRO
-	_cuaderno.add_child(arte)
+	_contenido_libro.add_child(arte)
 	_paginas.append(_crear_pagina(105.0))
 	_paginas.append(_crear_pagina(694.0))
-	_numero_izq = _etiqueta("", 18, CREMA, FUENTE_TITULOS)
-	_numero_izq.position = Vector2(77, 607)
-	_numero_izq.size = Vector2(32, 30)
-	_numero_izq.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_numero_izq.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_cuaderno.add_child(_numero_izq)
-	_numero_der = _etiqueta("", 18, CREMA, FUENTE_TITULOS)
-	_numero_der.position = Vector2(1167, 607)
-	_numero_der.size = Vector2(32, 30)
-	_numero_der.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_numero_der.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_cuaderno.add_child(_numero_der)
 	for indice: int in range(3):
 		var pestana := _boton(str(indice + 1), COLORES_PESTANAS[indice], 25)
 		pestana.tooltip_text = ["Balance", "Casos", "Estadísticas"][indice]
-		pestana.position = Vector2(1213, 139 + indice * 72)
-		pestana.size = Vector2(54, 48)
+		pestana.position = Vector2(1204, 140 + indice * 66)
+		pestana.size = Vector2(48, 47)
 		pestana.pressed.connect(_ir_a_pagina.bind(indice))
-		_cuaderno.add_child(pestana)
+		_contenido_libro.add_child(pestana)
 		_pestanas.append(pestana)
 	_anterior = _boton("‹  Anterior", PETROLEO, 17)
 	_anterior.position = Vector2(422, 609)
 	_anterior.size = Vector2(145, 43)
 	_anterior.pressed.connect(_ir_a_pagina.bind(-1))
-	_cuaderno.add_child(_anterior)
+	_contenido_libro.add_child(_anterior)
 	_siguiente = _boton("Siguiente  ›", PETROLEO, 17)
 	_siguiente.position = Vector2(697, 609)
 	_siguiente.size = Vector2(145, 43)
 	_siguiente.pressed.connect(_ir_a_pagina.bind(-2))
-	_cuaderno.add_child(_siguiente)
+	_contenido_libro.add_child(_siguiente)
 	var reiniciar := _boton("Reintentar", Color("5f9d88"), 17)
 	var sesion: Node = get_node_or_null("/root/SesionLAN")
 	if sesion != null and sesion.activa and not sesion.es_anfitrion():
@@ -223,13 +216,21 @@ func _construir_interfaz() -> void:
 	reiniciar.position = Vector2(868, 609)
 	reiniciar.size = Vector2(139, 43)
 	reiniciar.pressed.connect(func() -> void: reiniciar_solicitado.emit())
-	_cuaderno.add_child(reiniciar)
+	_contenido_libro.add_child(reiniciar)
 	var menu := _boton("Menú", Color("60788a"), 17)
 	menu.position = Vector2(1024, 609)
 	menu.size = Vector2(110, 43)
 	menu.pressed.connect(func() -> void: menu_solicitado.emit())
-	_cuaderno.add_child(menu)
+	_contenido_libro.add_child(menu)
 	_cuaderno.hide()
+	_ayuda_libro = _etiqueta("← → / A D  Pasar hoja     ·     Clic derecho / Z  Acercar     ·     Rueda  Leer listas", 16, CREMA, FUENTE_TEXTO)
+	_ayuda_libro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ayuda_libro.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ayuda_libro.add_theme_color_override("font_shadow_color", Color("172c36"))
+	_ayuda_libro.add_theme_constant_override("shadow_offset_x", 1)
+	_ayuda_libro.add_theme_constant_override("shadow_offset_y", 1)
+	_ayuda_libro.hide()
+	add_child(_ayuda_libro)
 
 	_alerta = _crear_sonido(SONIDO_ALERTA, -7.0)
 	_sonido_pagina = _crear_sonido(SONIDO_PAGINA, -5.0)
@@ -240,10 +241,9 @@ func _construir_interfaz() -> void:
 func _crear_pagina(x: float) -> Dictionary:
 	var columna := VBoxContainer.new()
 	columna.position = Vector2(x, 86)
-	columna.size = Vector2(489, 508)
+	columna.size = Vector2(470, 508)
 	columna.add_theme_constant_override("separation", 7)
-	_cuaderno.add_child(columna)
-	columna.add_child(_etiqueta("EXTRATEXTED  ·  CUADERNO DE TURNO", 13, Color("637988"), FUENTE_TEXTO))
+	_contenido_libro.add_child(columna)
 	var titulo := _etiqueta("", 31, TINTA, FUENTE_TITULOS)
 	columna.add_child(titulo)
 	var subtitulo := _etiqueta("", 17, TINTA, FUENTE_TEXTO)
@@ -268,11 +268,10 @@ func _ajustar() -> void:
 	_detalle.add_theme_font_size_override("font_size", 25 if size.x < 540.0 else 30)
 	_tarjeta.size = Vector2(minf(480.0, maxf(1.0, size.x - margen * 2.0)), 0.0)
 	_tarjeta.position = Vector2((size.x - _tarjeta.size.x) * 0.5, maxf(margen, size.y - _tarjeta.size.y - margen))
-	_escala_libro = minf(size.x / 1350.0, size.y / 765.0)
-	# El pivote central ya compensa la escala; centrar aquí el tamaño escalado
-	# aplicaba ese desplazamiento dos veces y cortaba el cuaderno por arriba/izquierda.
-	_cuaderno.position = (size - TAMANO_LIBRO) * 0.5
-	_cuaderno.scale = Vector2.ONE * _escala_libro
+	if is_instance_valid(_ayuda_libro):
+		_ayuda_libro.position = Vector2(16, size.y - 35)
+		_ayuda_libro.size = Vector2(maxf(1, size.x - 32), 28)
+		_ayuda_libro.add_theme_font_size_override("font_size", 12 if size.x < 1000 else 16)
 
 
 func _abrir_cuaderno() -> void:
@@ -282,17 +281,16 @@ func _abrir_cuaderno() -> void:
 	_aviso_cinematica.hide()
 	_tarjeta.hide()
 	_fondo.color = Color(0.02, 0.08, 0.12, 0.78)
+	var desenfoque := ShaderMaterial.new()
+	desenfoque.shader = FONDO_CUADERNO
+	_fondo.material = desenfoque
 	_pagina_actual = 0
 	_poblar_paginas()
 	_sonido_pagina.play()
-	_cuaderno.show()
-	_cuaderno.scale = Vector2(_escala_libro * 0.94, _escala_libro * 0.08)
-	_cuaderno.modulate = Color(1, 1, 1, 0.55)
-	var apertura := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	apertura.set_parallel(true)
-	apertura.tween_property(_cuaderno, "scale", Vector2.ONE * _escala_libro, 0.48).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	apertura.tween_property(_cuaderno, "modulate", Color.WHITE, 0.34)
-	apertura.finished.connect(func() -> void: _siguiente.grab_focus())
+	_ayuda_libro.show()
+	_cuaderno.abrir()
+	await _cuaderno.apertura_terminada
+	_siguiente.grab_focus()
 
 
 func _poblar_paginas() -> void:
@@ -306,13 +304,12 @@ func _poblar_paginas() -> void:
 		0: _llenar_balance()
 		1: _llenar_casos()
 		2: _llenar_estadisticas()
-	_numero_izq.text = "%02d" % (_pagina_actual * 2 + 1)
-	_numero_der.text = "%02d" % (_pagina_actual * 2 + 2)
 	_anterior.disabled = _pagina_actual == 0
 	_siguiente.disabled = _pagina_actual == 2
 	for indice: int in range(_pestanas.size()):
-		_pestanas[indice].position.x = 1205.0 if indice == _pagina_actual else 1216.0
-		_pestanas[indice].modulate = Color.WHITE if indice == _pagina_actual else Color(0.82, 0.85, 0.88)
+		# Los separadores de las secciones ya abiertas quedan a la izquierda.
+		_pestanas[indice].position.x = 31.0 if indice <= _pagina_actual else 1203.0
+		_pestanas[indice].modulate = Color.WHITE if indice == _pagina_actual else Color(0.88, 0.90, 0.92)
 
 
 func _llenar_balance() -> void:
@@ -338,20 +335,70 @@ func _llenar_balance() -> void:
 	izq.add_child(_etiqueta("El equipo continúa con las denuncias que quedaron abiertas.", 18, TINTA, FUENTE_TEXTO))
 	var causa: Dictionary = _datos.get("causa", {})
 	var der := _cuerpo(1)
+	var multijugador := bool(_datos.get("multijugador", false))
+	if multijugador:
+		_encabezado(1, "MVP del equipo", "")
+		_llenar_mvp(der)
+		der.add_child(HSeparator.new())
+		der.add_child(_etiqueta("El incendio" if causa.get("incendio", false) else "El caso final", 23, TINTA, FUENTE_TITULOS))
 	der.add_child(_etiqueta(str(causa.get("titulo", "Denuncia sin resolver")), 27, PETROLEO, FUENTE_TITULOS))
 	der.add_child(_etiqueta("CALMA OPERATIVA  0 / 100", 17, CORAL, FUENTE_TITULOS))
 	if causa.get("incendio", false):
-		_encabezado(1, "El incendio", "El fuego agotó la cordura")
+		if not multijugador:
+			_encabezado(1, "El incendio", "El fuego agotó la cordura")
 		der.add_child(_etiqueta("El incendio siguió activo y agotó tu cordura. Apaga todas las mesas para detener el desgaste.", 19, TINTA, FUENTE_TEXTO))
 		return
 	var hechas: Array = causa.get("completadas", [])
 	var faltantes: Array = causa.get("pendientes", [])
 	_agregar_barra(der, "Protocolo", hechas.size(), maxi(1, hechas.size() + faltantes.size()), Color("5b9d82"))
 	der.add_child(_etiqueta("HECHO", 19, Color("2c7c68"), FUENTE_TITULOS))
-	der.add_child(_etiqueta(_estaciones(hechas), 19, TINTA, FUENTE_TEXTO))
+	_agregar_estaciones(der, hechas, Color("5b9d82"))
 	der.add_child(_etiqueta("FALTÓ", 19, CORAL, FUENTE_TITULOS))
-	der.add_child(_etiqueta(_estaciones(faltantes), 19, TINTA, FUENTE_TEXTO))
+	_agregar_estaciones(der, faltantes, CORAL)
 	der.add_child(_etiqueta("«Déjalo. Yo me encargo desde aquí»", 18, TINTA, FUENTE_TEXTO))
+
+
+func _llenar_mvp(padre: VBoxContainer) -> void:
+	var equipo: Array = _datos.get("equipo", [])
+	_agregar_distincion(padre, equipo, "misiones", "MÁS MISIONES", "misiones resueltas", Color("b58125"))
+	_agregar_distincion(padre, equipo, "tareas", "MAYOR APORTE", "tareas completadas", Color("397e70"))
+	for jugador: Dictionary in equipo:
+		var fila := HBoxContainer.new()
+		fila.add_theme_constant_override("separation", 10)
+		var nombre := _etiqueta(str(jugador.get("nombre", "Policía")), 17, TINTA, FUENTE_TEXTO)
+		nombre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fila.add_child(nombre)
+		var cifras := _etiqueta("%d misiones · %d tareas" % [int(jugador.get("misiones", 0)), int(jugador.get("tareas", 0))], 16, TINTA, FUENTE_TEXTO)
+		cifras.autowrap_mode = TextServer.AUTOWRAP_OFF
+		fila.add_child(cifras)
+		padre.add_child(fila)
+
+
+func _agregar_distincion(padre: VBoxContainer, equipo: Array, campo: String, titulo: String, unidad: String, color: Color) -> void:
+	var maximo := 0
+	var nombres := PackedStringArray()
+	for jugador: Dictionary in equipo:
+		var cantidad := int(jugador.get(campo, 0))
+		if cantidad > maximo:
+			maximo = cantidad
+			nombres.clear()
+		if cantidad == maximo and cantidad > 0:
+			nombres.append(str(jugador.get("nombre", "Policía")))
+	var tarjeta := PanelContainer.new()
+	tarjeta.name = "Distincion_" + campo
+	tarjeta.tooltip_text = "Misiones resueltas en las que completaste al menos una tarea." if campo == "misiones" else "Cada estación completada cuenta una vez, aunque el caso quede pendiente o venza."
+	var estilo := _estilo(Color(color, 0.07), color, 12)
+	estilo.set_border_width_all(0)
+	estilo.border_width_left = 4
+	estilo.set_corner_radius_all(4)
+	tarjeta.add_theme_stylebox_override("panel", estilo)
+	padre.add_child(tarjeta)
+	var columna := VBoxContainer.new()
+	columna.add_theme_constant_override("separation", 3)
+	tarjeta.add_child(columna)
+	columna.add_child(_etiqueta(titulo + (" · EMPATE" if nombres.size() > 1 else ""), 16, color, FUENTE_TITULOS))
+	columna.add_child(_etiqueta("Sin asignar" if maximo == 0 else " y ".join(nombres), 25, PETROLEO, FUENTE_TITULOS))
+	columna.add_child(_etiqueta("%d %s" % [maximo, unidad], 17, TINTA, FUENTE_TEXTO))
 
 
 func _llenar_casos() -> void:
@@ -394,6 +441,7 @@ func _llenar_estadisticas() -> void:
 func _encabezado(indice: int, titulo: String, subtitulo: String) -> void:
 	(_paginas[indice]["titulo"] as Label).text = titulo
 	(_paginas[indice]["subtitulo"] as Label).text = subtitulo
+	(_paginas[indice]["subtitulo"] as Label).visible = not subtitulo.is_empty()
 
 
 func _cuerpo(indice: int) -> VBoxContainer:
@@ -412,12 +460,16 @@ func _agregar_casos(padre: VBoxContainer, casos: Array, color: Color, vacio: Str
 	for valor: Variant in casos:
 		var caso: Dictionary = valor
 		var tarjeta := PanelContainer.new()
-		tarjeta.add_theme_stylebox_override("panel", _estilo(Color(1, 1, 1, 0.62), color, 12))
+		var estilo_caso := _estilo(Color(1, 1, 1, 0.25), color, 12)
+		estilo_caso.set_border_width_all(0)
+		estilo_caso.border_width_left = 3
+		estilo_caso.set_corner_radius_all(2)
+		tarjeta.add_theme_stylebox_override("panel", estilo_caso)
 		padre.add_child(tarjeta)
 		var texto := VBoxContainer.new()
 		texto.add_theme_constant_override("separation", 3)
 		tarjeta.add_child(texto)
-		texto.add_child(_etiqueta(str(caso.get("titulo", "Denuncia")), 21, PETROLEO, FUENTE_TITULOS))
+		texto.add_child(_etiqueta("•  " + str(caso.get("titulo", "Denuncia")), 21, PETROLEO, FUENTE_TITULOS))
 		if caso.get("terremoto", false):
 			texto.add_child(_etiqueta("La hoja cayó en una grieta.", 17, CORAL, FUENTE_TEXTO))
 		var hechas: Array = caso.get("completadas", [])
@@ -446,6 +498,7 @@ func _agregar_barra(padre: VBoxContainer, nombre: String, valor: int, maximo: in
 	padre.add_child(fila)
 	var etiqueta := _etiqueta(nombre, 16, TINTA, FUENTE_TEXTO)
 	etiqueta.custom_minimum_size.x = 119
+	etiqueta.autowrap_mode = TextServer.AUTOWRAP_OFF
 	fila.add_child(etiqueta)
 	var pista := Control.new()
 	pista.custom_minimum_size = Vector2(220, 17)
@@ -460,11 +513,14 @@ func _agregar_barra(padre: VBoxContainer, nombre: String, valor: int, maximo: in
 	relleno.size = Vector2(220.0 * float(valor) / float(maxi(1, maximo)), 17)
 	relleno.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pista.add_child(relleno)
-	fila.add_child(_etiqueta(str(valor), 16, TINTA, FUENTE_TITULOS))
+	var cifra := _etiqueta(str(valor), 16, TINTA, FUENTE_TITULOS)
+	cifra.autowrap_mode = TextServer.AUTOWRAP_OFF
+	cifra.custom_minimum_size.x = 40
+	fila.add_child(cifra)
 
 
 func _ir_a_pagina(destino: int) -> void:
-	if _fase != 2 or _pasando_pagina:
+	if _fase != 2 or _pasando_pagina or _cuaderno.ocupado:
 		return
 	if destino == -1:
 		destino = _pagina_actual - 1
@@ -473,21 +529,22 @@ func _ir_a_pagina(destino: int) -> void:
 	if destino < 0 or destino > 2 or destino == _pagina_actual:
 		return
 	_pasando_pagina = true
+	if _cuaderno.acercado:
+		_cuaderno.alternar_zoom()
+	_cuaderno.ocupado = true
 	_sonido_pagina.play()
-	var salida := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	salida.set_parallel(true)
-	for pagina: Dictionary in _paginas:
-		salida.tween_property(pagina["columna"], "modulate:a", 0.0, 0.12)
-	await salida.finished
-	if not is_inside_tree():
-		return
+	var direccion := 1 if destino > _pagina_actual else -1
+	var origen := _pagina_actual
+	var anterior: Texture2D = _cuaderno.fotografiar()
+	_cuaderno.congelar_paginas(anterior)
 	_pagina_actual = destino
 	_poblar_paginas()
-	var entrada := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	entrada.set_parallel(true)
-	for pagina: Dictionary in _paginas:
-		entrada.tween_property(pagina["columna"], "modulate:a", 1.0, 0.18)
-	await entrada.finished
+	# Espera el layout y la impresión antes de usar el reverso de la nueva hoja.
+	await get_tree().process_frame
+	if DisplayServer.get_name() != "headless":
+		await RenderingServer.frame_post_draw
+	var siguiente: Texture2D = _cuaderno.fotografiar()
+	await _cuaderno.pasar_pagina(anterior, siguiente, direccion, origen, destino)
 	_pasando_pagina = false
 	if destino == 2:
 		_anterior.grab_focus()
@@ -496,14 +553,43 @@ func _ir_a_pagina(destino: int) -> void:
 
 
 func _input(evento: InputEvent) -> void:
-	if _fase != 2 or not evento is InputEventKey or not evento.pressed or evento.echo:
+	if _fase != 2 or not evento is InputEventKey:
 		return
-	if evento.keycode in [KEY_RIGHT, KEY_PAGEDOWN]:
+	if not evento.pressed:
+		_cuaderno.enviar_tecla(evento)
+		return
+	if evento.echo:
+		return
+	if evento.keycode in [KEY_RIGHT, KEY_PAGEDOWN, KEY_D]:
 		_ir_a_pagina(-2)
 		get_viewport().set_input_as_handled()
-	elif evento.keycode in [KEY_LEFT, KEY_PAGEUP]:
+	elif evento.keycode in [KEY_LEFT, KEY_PAGEUP, KEY_A]:
 		_ir_a_pagina(-1)
 		get_viewport().set_input_as_handled()
+	elif evento.keycode == KEY_Z or (evento.keycode == KEY_ESCAPE and _cuaderno.acercado):
+		_cuaderno.alternar_zoom()
+		get_viewport().set_input_as_handled()
+	else:
+		_cuaderno.enviar_tecla(evento)
+		get_viewport().set_input_as_handled()
+
+
+func _agregar_estaciones(padre: VBoxContainer, ids: Array, color: Color) -> void:
+	if ids.is_empty():
+		padre.add_child(_etiqueta(_estaciones(ids), 19, TINTA, FUENTE_TEXTO))
+		return
+	for id: Variant in ids:
+		var fila := HBoxContainer.new()
+		fila.add_theme_constant_override("separation", 10)
+		var vineta := _etiqueta("•", 19, color, FUENTE_TEXTO)
+		vineta.autowrap_mode = TextServer.AUTOWRAP_OFF
+		vineta.custom_minimum_size.x = 12
+		fila.add_child(vineta)
+		var texto := _etiqueta(_estaciones([id]), 19, TINTA, FUENTE_TEXTO)
+		texto.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		texto.autowrap_mode = TextServer.AUTOWRAP_OFF
+		fila.add_child(texto)
+		padre.add_child(fila)
 
 
 func _estaciones(ids: Array) -> String:
@@ -519,7 +605,7 @@ func _etiqueta(texto: String, tamano: int, color: Color, fuente: Font) -> Label:
 	var etiqueta := Label.new()
 	etiqueta.text = texto
 	etiqueta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	etiqueta.add_theme_font_override("font", fuente)
+	etiqueta.add_theme_font_override("font", _fuente_cuerpo if fuente == FUENTE_TEXTO else fuente)
 	etiqueta.add_theme_font_size_override("font_size", tamano)
 	etiqueta.add_theme_color_override("font_color", color)
 	return etiqueta

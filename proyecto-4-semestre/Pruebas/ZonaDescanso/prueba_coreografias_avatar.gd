@@ -18,7 +18,7 @@ func _probar() -> void:
 	root.get_node("MenuGlobal").cerrar_ayuda()
 	paused = false
 	jugador = oficina.jugador
-	for reloj: Timer in [oficina.temporizador_denuncias, oficina.temporizador_bloqueos, oficina.temporizador_eventos, oficina.computador.timer_nuevo_problema]:
+	for reloj: Timer in [oficina.temporizador_denuncias, oficina.temporizador_bloqueos, oficina.temporizador_eventos]:
 		reloj.stop()
 	oficina.anuncios.detener()
 	jugador.global_position = Vector3(-1, .38, 8.5)
