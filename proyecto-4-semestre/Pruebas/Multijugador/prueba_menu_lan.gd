@@ -36,6 +36,8 @@ func _probar() -> void:
 	sesion.cerrar()
 	await process_frame
 	print("[MENU LAN] IP inválida, sala, salida y nueva sesión: OK")
+	root.get_node("MenuGlobal").musica_menu.stop()
+	await create_timer(0.3).timeout
 	quit()
 
 func _probar_sala_real(menu: Control, sesion: Node) -> void:

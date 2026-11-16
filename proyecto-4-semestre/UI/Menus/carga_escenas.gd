@@ -14,6 +14,7 @@ var mediciones := {}
 var _ruta := ""
 var _generacion := 0
 var _instancia: Node
+var _escena_preparandose: Node
 var _fase := ""
 var _cuadros := 0
 var _inicio := 0
@@ -76,12 +77,16 @@ func _ready() -> void:
 func precargar(ruta: String) -> Error:
 	if _precargas.has(ruta):
 		return OK
+	if not ResourceLoader.exists(ruta):
+		return ERR_FILE_NOT_FOUND
 	var error := ResourceLoader.load_threaded_request(ruta)
 	if error == OK:
 		_precargas[ruta] = true
 	return error
 
 func cargar(ruta: String) -> void:
+	if activa and ruta == _ruta:
+		return
 	_invalidar()
 	_ruta = ruta
 	activa = true
@@ -106,6 +111,7 @@ func cargar(ruta: String) -> void:
 	_cuadros = 2 # El overlay se dibuja antes de solicitar/instanciar recursos.
 
 func _process(_delta: float) -> void:
+	_liberar_precargas_descartadas()
 	if not activa:
 		return
 	if Time.get_ticks_msec() >= _limite:
@@ -148,6 +154,7 @@ func _process(_delta: float) -> void:
 			_centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			var escena := _instancia
 			_instancia = null # El árbol adquiere la propiedad; nunca liberar desde cancelar.
+			_escena_preparandose = escena
 			_cambiar_fase("preparacion", "Preparando estaciones e interfaces…", 80)
 			if get_tree().change_scene_to_node(escena) != OK:
 				escena.free()
@@ -196,6 +203,7 @@ func finalizar_espera() -> void:
 	mediciones["total_ms"] = (Time.get_ticks_usec() - _inicio) / 1000.0
 	print("[CARGA] ", _ruta, " ", JSON.stringify(mediciones))
 	activa = false
+	_escena_preparandose = null
 	hide()
 	if not SesionLAN.activa:
 		get_tree().paused = false
@@ -228,6 +236,24 @@ func _invalidar() -> void:
 	if is_instance_valid(_instancia):
 		_instancia.free()
 	_instancia = null
+	# Detener también el _ready progresivo de una escena que ya entró al árbol.
+	# queue_free respeta el cambio de escena pendiente y cancela sus corutinas.
+	if is_instance_valid(_escena_preparandose):
+		_escena_preparandose.queue_free()
+	_escena_preparandose = null
+
+func _liberar_precargas_descartadas() -> void:
+	# ResourceLoader no cancela solicitudes: recogerlas SOLO al terminar evita
+	# bloquear el hilo principal o retener recursos de una carga abandonada.
+	for ruta: String in _precargas.keys():
+		if activa and ruta == _ruta:
+			continue
+		var estado := ResourceLoader.load_threaded_get_status(ruta)
+		if estado == ResourceLoader.THREAD_LOAD_LOADED:
+			ResourceLoader.load_threaded_get(ruta)
+			_precargas.erase(ruta)
+		elif estado in [ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE]:
+			_precargas.erase(ruta)
 
 func cancelar() -> void:
 	_invalidar()
@@ -237,8 +263,8 @@ func cancelar() -> void:
 		cargar(MENU)
 
 func _error(mensaje: String) -> void:
-	_precargas.erase(_ruta)
 	_invalidar()
+	MenuGlobal._cambiando_escena = false
 	fallo.emit(mensaje)
 	if SesionLAN.activa:
 		SesionLAN.cerrar(mensaje)

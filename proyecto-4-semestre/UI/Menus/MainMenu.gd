@@ -128,6 +128,7 @@ func iniciar_discusion() -> void:
 	_dialogo_activo = true
 	presentacion.hide()
 	pantalla_discusion.show()
+	fila_carga.show()
 	estado_carga.text = "Preparando el turno..."
 	progreso_carga.value = 0.0
 	fondo.call("establecer_discusion", true)
@@ -146,7 +147,8 @@ func cancelar_discusion() -> void:
 
 func confirmar_discusion(nombre_1: String, nombre_2: String = "") -> void:
 	_preparar_frases(nombre_1, nombre_2)
-	estado_carga.text = "Abriendo la oficina..."
+	# El coordinador persistente presenta el único progreso real de la carga.
+	fila_carga.hide()
 
 
 func actualizar_carga(avance: float) -> void:

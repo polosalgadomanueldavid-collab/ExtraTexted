@@ -61,6 +61,7 @@ func _mover_cliente(posicion: Vector3) -> void:
 	await _esperar(0.15)
 
 func _run() -> void:
+	_demorar_carga_prueba()
 	MenuGlobal._clasificacion = ClasificacionLocal.new("user://prueba_lan_%d.json" % OS.get_process_id())
 	MenuGlobal.omitir_tutorial_siguiente_partida = false
 	if OS.get_cmdline_user_args().has("--host"):
@@ -83,6 +84,7 @@ func _run() -> void:
 		await _esperar(0.1)
 	red = SesionLAN.puente
 	oficina = red.oficina
+	comprobar(oficina.oficina_preparada and oficina._bloqueos_pool.size() == 30 and not CargaEscenas.activa, "La barrera incluye preparación, pool completo y primer cuadro")
 	if not SesionLAN.es_anfitrion():
 		return
 	await _esperar(0.6)
@@ -339,6 +341,14 @@ func _run() -> void:
 	r = await _al_cliente("nueva_ronda")
 	comprobar(oficina.sistema_despacho.puntuacion.puntos == 0 and int(r.saldo) == 0 and red.papeles.is_empty(), "Reinicio sin saldo ni hojas de la ronda anterior")
 	comprobar(oficina.sistema_despacho.obtener_cordura(1) == 100 and bool(r.activo_local), "Ambos vuelven activos en la nueva ronda")
+	var ronda_actual := SesionLAN.ronda
+	var puente_actual := SesionLAN.puente
+	SesionLAN._cargar(ronda_actual - 1)
+	SesionLAN._comenzar(ronda_actual - 1)
+	SesionLAN._cambiar_a_oficina(ronda_actual - 1)
+	comprobar(SesionLAN.en_partida and SesionLAN.ronda == ronda_actual and SesionLAN.puente == puente_actual and not CargaEscenas.activa, "Cargas e inicios atrasados no reemplazan la ronda actual")
+	r = await _al_cliente("movimiento_antiguo")
+	comprobar(bool(r.ok), "Un movimiento de la ronda anterior no altera al jugador remoto")
 	await _comprobar_personajes()
 	# El primer evento debe abrir su guía en ambos, aunque el anfitrión ya haya pausado.
 	oficina.bloqueos_iniciados = true
@@ -347,18 +357,40 @@ func _run() -> void:
 	r = await _al_cliente("inspeccionar")
 	comprobar(bool(r.guia) and str(r.evento) == "apagon" and get_tree().paused, "Guía del evento visible y sincronizada en ambos")
 	await _probar_confirmaciones_tutorial(false)
-	print("[LAN RESULTADO] %d comprobaciones, %d errores" % [comprobaciones, fallos])
-	await _al_cliente("terminar")
+	await _al_cliente("desconectar_en_carga")
+	SesionLAN.reiniciar()
 	while SesionLAN.activa or get_tree().current_scene == oficina or get_tree().current_scene == null:
 		await _esperar(0.1)
-	await _esperar(1.0)
+	while CargaEscenas.activa:
+		await _esperar(0.1)
+	comprobar(get_tree().current_scene.scene_file_path == CargaEscenas.MENU and not get_tree().paused, "Desconectar durante preparación recupera el menú del anfitrión")
+	comprobar(get_tree().get_nodes_in_group("gestor_partida").is_empty(), "La desconexión retira la oficina incompleta")
+	print("[LAN RESULTADO] %d comprobaciones, %d errores" % [comprobaciones, fallos])
 	_terminando = true
 	await _finalizar_prueba(1 if fallos else 0)
+
+func _demorar_carga_prueba() -> void:
+	# Primera entrada con cliente lento; reinicio con anfitrión lento.
+	var ronda_lenta := 2 if OS.get_cmdline_user_args().has("--host") else 1
+	while not (SesionLAN.cargando and SesionLAN.ronda == ronda_lenta and CargaEscenas._fase == "listo"):
+		await get_tree().process_frame
+	CargaEscenas.set_process(false)
+	await _esperar(0.8)
+	var preparada := get_tree().current_scene
+	comprobar(SesionLAN.cargando and not SesionLAN.en_partida and get_tree().paused and preparada._duracion_partida == 0.0 and preparada.contador_denuncias == 0, "Un equipo lento mantiene relojes, casos y controles detenidos")
+	SesionLAN._comenzar(SesionLAN.ronda - 1)
+	comprobar(SesionLAN.cargando and not SesionLAN.en_partida, "Un inicio atrasado no libera la barrera de carga")
+	CargaEscenas.set_process(true)
 
 @rpc("authority", "call_remote", "reliable")
 func _orden(orden: String, datos: Dictionary = {}) -> void:
 	var resultado := {"ok": true}
 	match orden:
+		"desconectar_en_carga": _desconectar_en_carga()
+		"movimiento_antiguo":
+			red._remotos.erase(1)
+			SesionLAN._movimiento_confirmado(SesionLAN.ronda - 1, 1, {"pos": Vector3.ZERO, "vel": Vector3.ZERO, "tick": Time.get_ticks_msec() + 10000})
+			resultado = {"ok": not red._remotos.has(1)}
 		"personajes": resultado = {"ok": _personajes_correctos()}
 		"colision": resultado = {"ok": await _probar_colision()}
 		"capturar": await _capturar("cliente")
@@ -598,6 +630,16 @@ func _salir_limpio() -> void:
 	SesionLAN.cerrar("Prueba de desconexión terminada.")
 	await _esperar(2.0)
 	await _finalizar_prueba(0)
+
+func _desconectar_en_carga() -> void:
+	while not (SesionLAN.cargando and CargaEscenas._fase == "preparacion"):
+		await get_tree().process_frame
+	SesionLAN.cerrar("Prueba de desconexión durante preparación.")
+	while get_tree().current_scene == null or get_tree().current_scene.scene_file_path != CargaEscenas.MENU or CargaEscenas.activa:
+		await get_tree().process_frame
+	comprobar(not get_tree().paused and get_tree().get_nodes_in_group("gestor_partida").is_empty(), "Desconectar durante preparación recupera el menú del cliente")
+	_terminando = true
+	await _finalizar_prueba(1 if fallos else 0)
 
 func _finalizar_prueba(codigo: int) -> void:
 	# Dar al mezclador tiempo real para liberar el MP3 del menú antes de cerrar.

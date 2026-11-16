@@ -1,6 +1,48 @@
 # Plan de optimización y auditoría de cargas
 
-Fecha: 15 de noviembre de 2026. Estado: revisión terminada; optimizaciones propuestas, todavía sin implementar. Se actualizó únicamente la prueba de carga para recorrer el menú actual y registrar tiempos.
+Fecha: 15 de noviembre de 2026. Estado: implementación parcial, ramas integradas y lote actual verificado. El diagnóstico original se conserva debajo como referencia histórica; sus descripciones de carga directa y barra al 90 % ya no describen el código actual.
+
+## Estado comprobado tras integrar las ramas
+
+La optimización inicial está en `f6079ea` de `issa`. El merge `3cc52eb` incorpora `da5bc4d` (tutoriales LAN y skins por participante) y `5d29121` (nombre del proyecto) de `Barandica`. Se resolvieron los conflictos de `gestor_partida.gd` y `menu_global.gd` conservando la señal de disponibilidad, el cargador común, los modelos correctos y las confirmaciones compartidas de tutoriales.
+
+| Prioridad | Implementado y comprobado por código | Pendiente de aceptación |
+| --- | --- | --- |
+| 0. Medidas | Tiempos por fase; perfil de CPU/física/GPU disponible, cuadros, draw calls, memoria y nodos; ejecutor reproducible de tres procesos por modo y cinco rondas. | Exportación, caché fría de disco/shaders, segunda apertura de cada evento/poder, bytes reales ENet y sesión de 30 minutos. |
+| 1. Cargas | Decorado independiente; coordinador común; pool de 30 cajones; preparación progresiva; calentamiento visual; 100 % al terminar; barrera LAN posterior al primer cuadro. | Aún hay picos superiores a 100 ms. Las muestras de shaders no cubren todas sus variantes. |
+| 2. Red/HUD | AVL incremental; caché de estaciones; HUD por cambios; snapshots diferenciales con recuperación completa; finales pendientes hasta acuse; canales separados. | Medición sostenida de tráfico, pérdida/reordenación, jitter y latencia en dos PCs/Hamachi. |
+| 3. Render/recursos | Calidad visual, SubViewport visible, preparación de magma y nieve, ajustes de partículas de Compatibility. | Perfil completo de efectos/poderes, tangentes de los materiales heredados de MarcoFoto y avisos de RefCounted al salir. |
+| 4. Aceptación | Pruebas de carga, recuperación, Hielo y LAN con dos procesos locales. | Dos ejecutables iguales en dos equipos; aceptación visual y rendimiento en la Iris Xe de referencia. |
+
+Continuación de este lote:
+
+- Carga idempotente, liberación de solicitudes abandonadas una vez completadas y retirada de oficinas parcialmente preparadas al cancelar o desconectar.
+- Validación de ronda en inicio y movimiento remoto; rechazo de cambios de escena diferidos obsoletos; plazo de conexión monotónico. Protocolo `extratexted-lan-4`: ambos equipos deben actualizarse.
+- Una sola barra durante la discusión. Se conserva el diálogo y la presentación del menú.
+- Lectura de triángulos de nieve por presupuesto de 3 ms, con cursor dentro de cada superficie. Se excluyen modelos de SubViewports de interfaz. No se modifican física, daño, tiempos ni geometría de la nieve del mundo.
+- La prueba de menú LAN detiene el MP3 antes de salir, igual que las otras pruebas, evitando un error de recurso todavía en uso por el mezclador.
+
+### Evidencia de la continuación
+
+Equipo real de esta revisión: AMD Ryzen 5 5600G con Radeon integrada, Godot **4.7.2**, Windows, Compatibility a 1280 × 720. Es un equipo diferente del Intel/Iris Xe de la auditoría original; las cifras no constituyen una comparación entre esos equipos.
+
+- Antes de continuar, la prueba individual ya pasaba **22 comprobaciones**, alcanzaba 100 % y registró 2.425 ms desde confirmar hasta oficina y un intervalo máximo de 142 ms en headless. La optimización inicial sí estaba implementada.
+- La suite LAN tras el merge pasó inicialmente **137 comprobaciones del anfitrión**. La suite final ampliada pasa **144 comprobaciones del anfitrión y 17 de reglas, sin errores**, además de verificaciones del cliente, menú, sala de dos procesos y rechazo de conexiones incompatibles/ocupadas. Incluye equipos lentos, rondas obsoletas y desconexión durante preparación.
+- Recuperación: **49 comprobaciones, 0 errores**, cancelando en recursos, pool, entrada, preparación, render y listo; ruta inexistente, recurso que no es escena, plazo agotado, solicitudes repetidas, tres reentradas y retorno al menú.
+- Hielo: prueba funcional sin errores, incluyendo nieve de cajones reciclados, rutas, reparación, pausa, restauración y segundo evento.
+- Comparación de nieve con el generador de `f6079ea`: **65 mallas con geometría idéntica byte a byte, 0 diferencias**. Máximo de la llamada anterior: 54,3 ms; máximo de lectura por lote: 5,1 ms en 130 lotes. CPU total de la comparación: 262,6 ms antes / 259,5 ms después. El presupuesto es cooperativo; no es un límite duro. Se reparte el trabajo, sin prometer una reducción del tiempo total de entrada.
+
+Los resultados finales reproducibles se registran en `Documentacion/RESULTADOS_OPTIMIZACION.md`. Los registros detallados permanecen en `.godot/qa_optimizacion`, `.godot/qa_lan`, `.godot/hielo_optimizacion.log` y `.godot/comparar_nieve.log` (locales, no versionados).
+
+Para repetir el lote, desde la raíz, con `$Godot` apuntando a Godot 4.7.2:
+
+```powershell
+& proyecto-4-semestre/Pruebas/Menus/ejecutar_auditoria.ps1 -Godot $Godot
+& proyecto-4-semestre/Pruebas/Multijugador/ejecutar_pruebas.ps1 -Godot $Godot
+& $Godot --headless --path proyecto-4-semestre --script res://Pruebas/Hielo/prueba_hielo.gd --fixed-fps 60
+```
+
+`-SinRender` limita la primera orden a headless. Cada repetición de carga usa un proceso nuevo; no vacía cachés del SO ni de shaders. El perfil conserva cinco rondas, calidad alta y tres segundos por escenario, suficiente como diagnóstico breve, no como aceptación de una sesión larga.
 
 ## Objetivo
 

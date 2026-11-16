@@ -46,7 +46,7 @@ Para ejecutar la partida de prueba manualmente, abrir dos terminales y lanzar un
 
 `$Godot` debe contener la ruta del ejecutable. La prueba mueve personajes y resuelve minijuegos automáticamente; no es el modo de demostración para jugadores. Para revisar la sala con renderizado real, ejecutar `prueba_menu_lan.gd` sin `--headless`; guarda `lan_menu.png` y `lan_sala.png` en `.godot/`.
 
-El protocolo de estas herramientas es `extratexted-lan-3`: actualizar ambos equipos antes de jugar. Los tutoriales iniciales y de eventos muestran `(0/2)` junto al botón; después de confirmar, la guía permanece visible con `(1/2)` y el aviso de espera. Al confirmar ambos se cierran las dos guías y continúa la partida. Para previsualizar la nueva llave compartida por el objeto y la animación, ejecutar `vista_herramientas.gd` sin `--headless`; guarda `.godot/vista_llave.png`.
+El protocolo de estas herramientas es `extratexted-lan-4`: actualizar ambos equipos antes de jugar. Incluye el cargador común y validación de ronda en el inicio y movimiento remoto. Los tutoriales iniciales y de eventos muestran `(0/2)` junto al botón; después de confirmar, la guía permanece visible con `(1/2)` y el aviso de espera. Al confirmar ambos se cierran las dos guías y continúa la partida. Para previsualizar la nueva llave compartida por el objeto y la animación, ejecutar `vista_herramientas.gd` sin `--headless`; guarda `.godot/vista_llave.png`.
 
 ## Registro pendiente de dos equipos reales
 

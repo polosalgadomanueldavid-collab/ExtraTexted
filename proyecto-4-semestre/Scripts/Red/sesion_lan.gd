@@ -6,7 +6,7 @@ signal respuesta_recibida(numero: int, resultado: Dictionary)
 signal tutorial_actualizado
 
 const PUERTO := 7000
-const VERSION := "extratexted-lan-3"
+const VERSION := "extratexted-lan-4"
 const OFICINA := "res://Mundo/Oficina.tscn"
 var activa := false
 var en_partida := false
@@ -71,7 +71,7 @@ func unirse(ip: String, alias_jugador: String) -> Error:
 	multiplayer.multiplayer_peer = peer
 	activa = true
 	_alias = _nombre(alias_jugador)
-	_limite_conexion = 10.0
+	_limite_conexion = Time.get_ticks_msec() / 1000.0 + 10.0
 	ultimo_aviso = "Conectando…"
 	sala_actualizada.emit()
 	return OK
@@ -137,6 +137,8 @@ func reiniciar() -> void:
 
 @rpc("authority", "call_local", "reliable")
 func _cargar(nueva_ronda: int) -> void:
+	if not activa or nueva_ronda <= ronda:
+		return
 	if is_instance_valid(puente):
 		puente.preparar_salida()
 	MenuGlobal.omitir_tutorial_siguiente_partida = ronda > 0 or MenuGlobal.omitir_tutorial_siguiente_partida
@@ -154,13 +156,18 @@ func _cargar(nueva_ronda: int) -> void:
 	_cancelar_pendientes()
 	MenuGlobal.nombre_partida = str(participantes.get(id_local(), {}).get("alias", _alias))
 	MenuGlobal.final_de_partida_activo = false
-	get_tree().paused = false
-	_cambiar_a_oficina.call_deferred()
+	get_tree().paused = true
+	_cambiar_a_oficina.call_deferred(ronda)
 
-func _cambiar_a_oficina() -> void:
-	CargaEscenas.cargar(OFICINA)
+func _cambiar_a_oficina(ronda_solicitada: int) -> void:
+	if activa and cargando and ronda_solicitada == ronda:
+		CargaEscenas.cargar(OFICINA)
 
 func oficina_lista(nuevo_puente: Node) -> void:
+	if not activa or not cargando or not is_instance_valid(nuevo_puente):
+		return
+	if nuevo_puente.get_parent() != get_tree().current_scene or not nuevo_puente.oficina.oficina_preparada:
+		return
 	puente = nuevo_puente
 	get_tree().paused = true
 	if es_anfitrion():
@@ -178,10 +185,12 @@ func _marcar_cargado(id: int) -> void:
 		return
 	_cargados[id] = true
 	if _cargados.size() == 2 and is_instance_valid(puente):
-		_comenzar.rpc()
+		_comenzar.rpc(ronda)
 
 @rpc("authority", "call_local", "reliable")
-func _comenzar() -> void:
+func _comenzar(ronda_servidor: int) -> void:
+	if not activa or not cargando or ronda_servidor != ronda or not is_instance_valid(puente):
+		return
 	cargando = false
 	_limite_carga = 0.0
 	en_partida = true
@@ -315,7 +324,7 @@ func enviar_movimiento(datos: Dictionary) -> void:
 	if not en_partida:
 		return
 	if es_anfitrion():
-		_movimiento_confirmado.rpc(1, datos)
+		_movimiento_confirmado.rpc(ronda, 1, datos)
 	else:
 		_movimiento.rpc_id(1, ronda, datos)
 
@@ -325,11 +334,11 @@ func _movimiento(ronda_cliente: int, datos: Dictionary) -> void:
 		return
 	var id := multiplayer.get_remote_sender_id()
 	if puente.recibir_movimiento(id, datos, true):
-		_movimiento_confirmado.rpc(id, datos)
+		_movimiento_confirmado.rpc(ronda, id, datos)
 
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
-func _movimiento_confirmado(id: int, datos: Dictionary) -> void:
-	if is_instance_valid(puente) and id != id_local():
+func _movimiento_confirmado(ronda_servidor: int, id: int, datos: Dictionary) -> void:
+	if en_partida and ronda_servidor == ronda and is_instance_valid(puente) and id != id_local():
 		puente.recibir_movimiento(id, datos, false)
 
 func difundir(tipo: String, datos: Dictionary) -> void:
@@ -355,6 +364,8 @@ func cerrar(motivo: String = "") -> void:
 	if _cerrando:
 		return
 	_cerrando = true
+	if CargaEscenas.activa:
+		CargaEscenas._invalidar()
 	if is_instance_valid(puente):
 		puente.preparar_salida()
 	var volver := en_partida or cargando
@@ -394,10 +405,9 @@ func _notificar(texto: String) -> void:
 	ultimo_aviso = texto
 	aviso.emit(texto)
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if _limite_conexion > 0.0:
-		_limite_conexion -= delta
-		if _limite_conexion <= 0.0:
+		if Time.get_ticks_msec() / 1000.0 >= _limite_conexion:
 			cerrar("La conexión agotó el tiempo de espera.")
 	if _limite_carga > 0.0:
 		if Time.get_ticks_msec() / 1000.0 >= _limite_carga:

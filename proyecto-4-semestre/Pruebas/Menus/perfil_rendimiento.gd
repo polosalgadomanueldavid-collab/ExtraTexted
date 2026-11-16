@@ -7,6 +7,7 @@ var anterior := 0
 var midiendo := false
 var segundos := 10.0
 var rondas := 5
+var cargas: Array = []
 
 func _initialize() -> void:
 	process_frame.connect(_muestrear)
@@ -30,6 +31,10 @@ func _medir(nombre: String) -> void:
 	midiendo = true
 	await create_timer(segundos).timeout
 	midiendo = false
+	if muestras.is_empty():
+		push_error("No se recibieron cuadros para " + nombre)
+		quit(1)
+		return
 	var resumen := {}
 	for clave in muestras[0]:
 		var valores: Array = muestras.map(func(m): return m[clave])
@@ -45,6 +50,7 @@ func _cargar(ruta: String) -> void:
 	var carga := root.get_node("CargaEscenas")
 	carga.cargar(ruta)
 	await carga.terminada
+	cargas.append({"ruta": ruta, "fases_ms": carga.mediciones.duplicate(true)})
 	await process_frame
 
 func _run() -> void:
@@ -96,7 +102,7 @@ func _run() -> void:
 			oficina.temporizador_eventos.stop()
 			oficina.temporizador_bloqueos.stop()
 			await create_timer(1.0).timeout
-	var reporte := {"version": Engine.get_version_info(), "render": DisplayServer.get_name(), "adaptador": RenderingServer.get_video_adapter_name(), "calidad": calidad.nivel, "segundos_por_escenario": segundos, "gpu_cero_significa_no_disponible": true, "resultados": resultados}
+	var reporte := {"version": Engine.get_version_info(), "render": DisplayServer.get_name(), "adaptador": RenderingServer.get_video_adapter_name(), "cpu": OS.get_processor_name(), "resolucion": [root.size.x, root.size.y], "exportado": OS.has_feature("standalone"), "calidad": calidad.nivel, "segundos_por_escenario": segundos, "gpu_cero_significa_no_disponible": true, "cargas": cargas, "resultados": resultados}
 	var archivo := FileAccess.open("res://.godot/perfil_rendimiento.json", FileAccess.WRITE)
 	archivo.store_string(JSON.stringify(reporte, "\t"))
 	archivo.close()

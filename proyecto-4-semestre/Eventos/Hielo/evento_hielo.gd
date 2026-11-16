@@ -309,6 +309,13 @@ func _preparar_nieve() -> void:
 				if not is_instance_valid(candidata):
 					continue
 				var malla := candidata as MeshInstance3D
+				if malla.get_viewport() != _oficina.get_viewport():
+					continue
+				while not _generador_nieve.preparar_lote(malla):
+					await get_tree().process_frame
+					if not is_inside_tree() or activo or not is_instance_valid(malla):
+						return
+					limite = Time.get_ticks_usec() + 3000
 				_generador_nieve.crear(malla, null, true)
 				if Time.get_ticks_usec() >= limite:
 					await get_tree().process_frame
@@ -333,7 +340,7 @@ func recubrir_bloqueo(bloqueo: Node) -> void:
 
 
 func _recubrir(malla: MeshInstance3D) -> void:
-	if malla.mesh == null or malla.has_meta(NieveAcumulada.MARCA):
+	if malla.mesh == null or malla.has_meta(NieveAcumulada.MARCA) or malla.get_viewport() != _oficina.get_viewport():
 		return
 	for dato in _recubiertos:
 		if dato.nodo == malla:
