@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_m6ul8")
 texto_pantalla = "Has perdido Inutil"
-tipo = 2
+tipo_nodo = 2
 metadata/_custom_type_script = "uid://c5e8kiy2f25y6"

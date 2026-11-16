@@ -162,46 +162,36 @@ func calcular_ruta(origen: Vector2i, destino: Vector2i) -> Array[Vector2i]:
 
 
 func calcular_ruta_a_mas_cercana(origen: Vector2i, destinos: Array[Vector2i]) -> Array[Vector2i]:
-	# Un solo Dijkstra: termina al alcanzar el primer destino pendiente.
+	# Todas las conexiones cuestan un paso: BFS evita buscar el mínimo en cada vuelta.
 	if not adyacencia.has(origen) or destinos.is_empty():
 		return []
 	var destino := Vector2i(-1, -1)
-
-	var infinito: float = INF
-	var distancias: Dictionary = {}
+	var distancia_destino := -1
+	var distancias: Dictionary = {origen: 0}
 	var anterior: Dictionary = {}
-	var sin_visitar: Array[Vector2i] = []
+	var pendientes: Array[Vector2i] = [origen]
+	var siguiente := 0
 
-	for celda: Vector2i in adyacencia.keys():
-		distancias[celda] = infinito
-		sin_visitar.append(celda)
-
-	distancias[origen] = 0.0
-
-	while not sin_visitar.is_empty():
-		var actual: Vector2i = Vector2i(-1, -1)
-		var mejor_distancia: float = infinito
-
-		for celda: Vector2i in sin_visitar:
-			if float(distancias[celda]) < mejor_distancia:
-				mejor_distancia = float(distancias[celda])
-				actual = celda
-
-		if actual == Vector2i(-1, -1):
+	while siguiente < pendientes.size():
+		var actual: Vector2i = pendientes[siguiente]
+		siguiente += 1
+		var distancia_actual: int = distancias[actual]
+		if distancia_destino >= 0 and distancia_actual > distancia_destino:
 			break
 
 		if destinos.has(actual):
-			destino = actual
-			break
-
-		sin_visitar.erase(actual)
+			# El algoritmo anterior elegía la primera celda por fila y columna
+			# cuando varios destinos estaban a la misma distancia.
+			if destino == Vector2i(-1, -1) or actual.y < destino.y or (actual.y == destino.y and actual.x < destino.x):
+				destino = actual
+				distancia_destino = distancia_actual
+			continue
 
 		for vecina: Vector2i in adyacencia[actual]:
-			var distancia_nueva: float = float(distancias[actual]) + 1.0
-
-			if distancia_nueva < float(distancias[vecina]):
-				distancias[vecina] = distancia_nueva
+			if not distancias.has(vecina):
+				distancias[vecina] = distancia_actual + 1
 				anterior[vecina] = actual
+				pendientes.append(vecina)
 
 	if destino == Vector2i(-1, -1):
 		return []

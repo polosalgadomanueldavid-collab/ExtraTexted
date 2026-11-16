@@ -120,7 +120,7 @@ func _probar_ruta_sugerida() -> void:
 	var al_otro_lado := Vector2i(5, 2)
 	var accesible := Vector2i(1, 2)
 	var ruta := grafo.calcular_ruta_a_mas_cercana(origen, [al_otro_lado, accesible])
-	_verificar(ruta.size() == 3 and ruta.back() == accesible, "Dijkstra recomienda el destino con menos recorrido, considerando el muro")
+	_verificar(ruta.size() == 3 and ruta.back() == accesible, "La búsqueda recomienda el destino con menos recorrido, considerando el muro")
 	grafo.bloqueos_temporales[accesible] = true
 	grafo.construir_adyacencia()
 	ruta = grafo.calcular_ruta_a_mas_cercana(origen, [accesible, al_otro_lado])

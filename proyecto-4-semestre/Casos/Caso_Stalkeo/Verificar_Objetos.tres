@@ -7,7 +7,7 @@
 [resource]
 script = ExtResource("1_aqioy")
 texto_pantalla = "Necesitamos estos objetos"
-tipo = 1
+tipo_nodo = 1
 rama_si = ExtResource("2_62lmt")
 rama_no = ExtResource("1_k8750")
 objetos_requeridos = Array[String](["UsuarioDelStalker", "Direccion"])
