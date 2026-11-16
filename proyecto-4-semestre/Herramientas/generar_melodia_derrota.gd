@@ -1,53 +1,36 @@
 extends SceneTree
 
 const FRECUENCIA_MUESTREO := 44100
-const DURACION_TOTAL := 16.8
+const DURACION_TOTAL := 36.4
 const RUTA_SALIDA := "res://Audios/melodia_derrota_sutil.wav"
 
 
 func _initialize() -> void:
-	var eventos: Array[Dictionary] = [
-		# Una caída cromática breve: reconocible como derrota, pero sin caricatura.
-		_nota(0.15, 0.72, 392.00, 0.16, 0.010, 0.38),
-		_nota(0.78, 0.72, 369.99, 0.15, 0.010, 0.40),
-		_nota(1.41, 0.78, 349.23, 0.15, 0.012, 0.43),
-		_nota(2.08, 1.10, 329.63, 0.16, 0.014, 0.58),
-		# La frase se desploma una octava y deja respirar el silencio.
-		_nota(2.82, 1.35, 246.94, 0.13, 0.018, 0.72),
-		_nota(3.58, 1.55, 196.00, 0.12, 0.022, 0.90),
-		_nota(4.42, 1.75, 164.81, 0.12, 0.025, 1.05),
-		# Acordes muy suaves que acompañan el relevo y el resumen final.
-		_nota(5.55, 2.20, 146.83, 0.075, 0.18, 1.20, true),
-		_nota(5.55, 2.20, 220.00, 0.055, 0.20, 1.15, true),
-		_nota(5.55, 2.20, 293.66, 0.047, 0.16, 1.05, true),
-		_nota(7.42, 2.15, 130.81, 0.072, 0.18, 1.15, true),
-		_nota(7.42, 2.15, 196.00, 0.052, 0.20, 1.10, true),
-		_nota(7.42, 2.15, 261.63, 0.044, 0.16, 1.00, true),
-		_nota(9.18, 2.75, 110.00, 0.078, 0.22, 1.45, true),
-		_nota(9.18, 2.75, 164.81, 0.054, 0.24, 1.35, true),
-		_nota(9.18, 2.75, 233.08, 0.046, 0.20, 1.25, true),
-		# Última nota sin resolución completa: la derrota queda pesando.
-		_nota(10.55, 1.65, 146.83, 0.068, 0.08, 1.20, true),
-		# Una segunda respiración prolonga el cierre sin repetir la frase inicial.
-		_nota(11.82, 2.25, 98.00, 0.070, 0.24, 1.30, true),
-		_nota(11.82, 2.25, 146.83, 0.048, 0.26, 1.25, true),
-		_nota(11.82, 2.25, 196.00, 0.040, 0.22, 1.15, true),
-		# Cadencia final grave y contenida; se apaga lentamente en lugar de cortar.
-		_nota(13.62, 2.85, 73.42, 0.075, 0.28, 1.55, true),
-		_nota(13.62, 2.85, 110.00, 0.052, 0.30, 1.45, true),
-		_nota(13.62, 2.85, 146.83, 0.044, 0.26, 1.35, true),
-		_nota(14.08, 2.30, 220.00, 0.034, 0.22, 1.30, true),
-	]
+	# Motivo menor descendente y rítmico: insiste en la caída sin sonar de terror.
+	var motivo: Array[float] = [293.66, 233.08, 220.00, 174.61, 196.00, 174.61, 155.56, 146.83]
+	var transposiciones: Array[int] = [0, 0, -2, -2, -3, -3, -5, -5, -7, -12]
+	var eventos: Array[Dictionary] = []
+	for frase: int in range(transposiciones.size()):
+		for paso: int in range(motivo.size()):
+			var inicio := float(frase) * 3.6 + float(paso) * 0.45
+			var intensidad := 0.22 - float(frase) * 0.012
+			var frecuencia := motivo[paso] * pow(2.0, float(transposiciones[frase]) / 12.0)
+			var duracion := 1.45 if frase == transposiciones.size() - 1 and paso == motivo.size() - 1 else 0.58
+			eventos.append(_nota(inicio, duracion, frecuencia, intensidad, 0.006, 0.20))
+			# Golpe grave breve en el pulso para reforzar el peso de la frase.
+			if paso == 0 or paso == 4:
+				eventos.append(_nota(inicio, 0.22, frecuencia * 0.5, intensidad * 0.42, 0.003, 0.14))
 
 	var cantidad := int(DURACION_TOTAL * FRECUENCIA_MUESTREO)
 	var mezcla := PackedFloat32Array()
 	mezcla.resize(cantidad)
 	for evento: Dictionary in eventos:
-		_renderizar_nota(mezcla, evento)
+		if evento.has("tono"):
+			_renderizar_ruido(mezcla, evento, int(float(evento.inicio) * 100000.0) + 7163)
+		else:
+			_renderizar_nota(mezcla, evento)
 
-	# Dos repeticiones discretas crean espacio sin convertirla en una pieza épica.
-	_aplicar_eco(mezcla, 0.19, 0.17)
-	_aplicar_eco(mezcla, 0.37, 0.09)
+	# Sin eco ni capas ambientales: la melodía queda al frente y es fácil de reconocer.
 	var datos := PackedByteArray()
 	datos.resize(cantidad * 2)
 	for indice: int in range(cantidad):
@@ -96,18 +79,45 @@ func _renderizar_nota(mezcla: PackedFloat32Array, evento: Dictionary) -> void:
 		var tiempo := float(local) / FRECUENCIA_MUESTREO
 		var restante := float(muestras - local) / FRECUENCIA_MUESTREO
 		var envolvente := minf(1.0, tiempo / maxf(ataque, 0.001))
-		envolvente *= minf(1.0, restante / maxf(salida, 0.001))
+		envolvente *= minf(1.0, restante / maxf(salida, 0.001)) * exp(-0.72 * tiempo)
 		var fase := TAU * frecuencia * tiempo
 		var timbre: float
 		if fondo:
 			timbre = sin(fase) + sin(fase * 2.01) * 0.16 + sin(fase * 0.501) * 0.10
 		else:
-			# Piano apagado: ataque claro, armónicos que desaparecen rápidamente.
-			timbre = sin(fase) * 0.74
-			timbre += sin(fase * 2.0) * 0.20 * exp(-tiempo * 2.4)
-			timbre += sin(fase * 3.01) * 0.09 * exp(-tiempo * 3.2)
-			timbre += sin(fase * 0.499) * 0.06
+			# Ataque de piano seco y definido; la armonía menor da una caída emocional clara.
+			timbre = sin(fase) * 0.68
+			timbre += sin(fase * 2.0) * 0.23 * exp(-tiempo * 1.8)
+			timbre += sin(fase * 3.0) * 0.08 * exp(-tiempo * 3.0)
+			timbre += sin(fase * 4.0) * 0.025 * exp(-tiempo * 4.0)
 		mezcla[indice] += timbre * amplitud * envolvente
+
+
+func _ruido(inicio: float, duracion: float, amplitud: float, ataque: float, salida: float, tono: float) -> Dictionary:
+	return {"inicio": inicio, "duracion": duracion, "amplitud": amplitud, "ataque": ataque, "salida": salida, "tono": tono}
+
+
+func _renderizar_ruido(mezcla: PackedFloat32Array, evento: Dictionary, semilla: int) -> void:
+	var inicio := int(float(evento.inicio) * FRECUENCIA_MUESTREO)
+	var muestras := int(float(evento.duracion) * FRECUENCIA_MUESTREO)
+	var amplitud := float(evento.amplitud)
+	var ataque := float(evento.ataque)
+	var salida := float(evento.salida)
+	var tono := float(evento.tono)
+	var azar := RandomNumberGenerator.new()
+	azar.seed = semilla
+	var filtro := 0.0
+	for local: int in range(muestras):
+		var indice := inicio + local
+		if indice >= mezcla.size():
+			break
+		var tiempo := float(local) / FRECUENCIA_MUESTREO
+		var restante := float(muestras - local) / FRECUENCIA_MUESTREO
+		var envolvente := minf(1.0, tiempo / maxf(ataque, 0.001))
+		envolvente *= minf(1.0, restante / maxf(salida, 0.001))
+		var blanco := azar.randf_range(-1.0, 1.0)
+		filtro += (blanco - filtro) * (0.035 + tono * 0.15)
+		mezcla[indice] += (blanco * (1.0 - tono) + filtro * tono) * amplitud * envolvente
 
 
 func _aplicar_eco(mezcla: PackedFloat32Array, retraso: float, ganancia: float) -> void:
