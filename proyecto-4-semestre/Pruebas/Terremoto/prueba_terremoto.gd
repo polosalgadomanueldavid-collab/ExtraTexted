@@ -36,7 +36,6 @@ func _probar() -> void:
 	oficina._evento_aleatorio_pendiente = 0
 	oficina.temporizador_eventos.start(1.0)
 	oficina.temporizador_denuncias.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	var antes: Dictionary = oficina.bloqueos_visuales.duplicate()
 	var mesa_fija := oficina.get_node("Mesas verticales IZQ/Table_017") as Node3D
 	var original := mesa_fija.global_transform

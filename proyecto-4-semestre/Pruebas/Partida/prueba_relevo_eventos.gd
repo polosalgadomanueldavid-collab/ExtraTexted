@@ -39,7 +39,6 @@ func _probar_escenario(escenario: String) -> void:
 	oficina.temporizador_denuncias.stop()
 	oficina.temporizador_eventos.stop()
 	oficina.temporizador_bloqueos.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	oficina.sistema_despacho.set_process(false)
 	oficina.jugador.set_physics_process(false)
 	var puerta: Node3D = oficina.get_node("PuertaRelevo")

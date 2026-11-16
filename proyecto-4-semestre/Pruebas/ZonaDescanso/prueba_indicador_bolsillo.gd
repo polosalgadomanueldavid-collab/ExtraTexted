@@ -25,7 +25,7 @@ func _probar() -> void:
 	maquina = oficina.get_node("MaquinaExpendedora")
 	zona = oficina.get_node("ZonaDescanso")
 	hud = oficina.indicador_bolsillo
-	for reloj: Timer in [oficina.temporizador_denuncias, oficina.temporizador_bloqueos, oficina.temporizador_eventos, oficina.computador.timer_nuevo_problema]:
+	for reloj: Timer in [oficina.temporizador_denuncias, oficina.temporizador_bloqueos, oficina.temporizador_eventos]:
 		reloj.stop()
 	oficina.anuncios.detener()
 	await _cuadros(60)

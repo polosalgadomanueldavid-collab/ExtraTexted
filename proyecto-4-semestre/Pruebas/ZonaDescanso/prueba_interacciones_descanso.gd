@@ -62,7 +62,6 @@ func _cargar() -> void:
 	paused = false
 	for nombre: String in ["temporizador_denuncias", "temporizador_bloqueos"]:
 		(_oficina.get(nombre) as Timer).stop()
-	(_oficina.computador.timer_nuevo_problema as Timer).stop()
 	await _fisicas(50)
 	_zona = _oficina.get_node("ZonaDescanso") as Node3D
 	_jugador = _oficina.jugador as CharacterBody3D

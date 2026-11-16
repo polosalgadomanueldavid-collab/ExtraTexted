@@ -25,7 +25,6 @@ func _probar() -> void:
 	oficina.evento_terremoto._azar.seed = 8762
 	oficina._recibir_denuncia_aleatoria()
 	oficina.temporizador_denuncias.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	oficina.sistema_despacho.set_process(false)
 	var apagon: Node = oficina.evento_apagon
 	var incendio: Node3D = oficina.evento_incendio

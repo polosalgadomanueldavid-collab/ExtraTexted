@@ -27,7 +27,6 @@ func _probar() -> void:
 	hielo = oficina.evento_hielo
 	oficina.generador_aleatorio.seed = 1235
 	oficina.temporizador_denuncias.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	oficina.sistema_despacho.set_process(false)
 	var caso := Denuncia.new()
 	caso.id = "QA-HIELO"

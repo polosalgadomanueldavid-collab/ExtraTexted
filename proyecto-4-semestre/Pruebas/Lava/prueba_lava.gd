@@ -25,7 +25,6 @@ func _probar() -> void:
 	oficina.generador_aleatorio.seed = 9526
 	oficina._recibir_denuncia_aleatoria()
 	oficina.temporizador_denuncias.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	oficina.sistema_despacho.set_process(false)
 	oficina.temporizador_bloqueos.stop()
 	oficina.temporizador_eventos.stop()

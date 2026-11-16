@@ -18,7 +18,7 @@ func _ejecutar() -> void:
 	root.size = Vector2i(1280, 720)
 	root.get_node("MenuGlobal").cerrar_ayuda()
 	paused = false
-	for reloj: Timer in [oficina.temporizador_denuncias, oficina.temporizador_bloqueos, oficina.temporizador_eventos, oficina.computador.timer_nuevo_problema]:
+	for reloj: Timer in [oficina.temporizador_denuncias, oficina.temporizador_bloqueos, oficina.temporizador_eventos]:
 		reloj.stop()
 	oficina.anuncios.detener()
 	await _cuadros(50)

@@ -26,7 +26,6 @@ func _probar() -> void:
 	oficina.temporizador_denuncias.stop()
 	oficina.temporizador_eventos.stop()
 	oficina.temporizador_bloqueos.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	oficina.sistema_despacho.set_process(false)
 	oficina.bloqueos_iniciados = true
 	var jugador: CharacterBody3D = oficina.jugador

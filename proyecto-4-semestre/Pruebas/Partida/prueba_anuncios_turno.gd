@@ -26,7 +26,6 @@ func probar() -> void:
 	menu.cerrar_ayuda()
 	await _cuadros(3)
 	oficina.temporizador_denuncias.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	var anuncio: Control = oficina.anuncios
 	_verificar(anuncio.visible and anuncio.es_inicio and anuncio.titulo == "COMIENZO", "Empezar turno reproduce Sello de guardia")
 	var instante: float = anuncio.tiempo

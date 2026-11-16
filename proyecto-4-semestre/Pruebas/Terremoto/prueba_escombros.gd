@@ -31,7 +31,6 @@ func _probar() -> void:
 	jugador = oficina.jugador
 	jugador.set_physics_process(false)
 	oficina.temporizador_denuncias.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	evento.escombros_actualizados.connect(func() -> void: impactos += 1)
 	var inicio := jugador.global_position
 	for semilla: int in [8762, 14, 927, 951, 1307, 2026, 13, 114]:

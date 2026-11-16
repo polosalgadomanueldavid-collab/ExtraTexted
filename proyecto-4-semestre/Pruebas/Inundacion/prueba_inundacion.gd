@@ -39,7 +39,6 @@ func _probar() -> void:
 	menu.cerrar_ayuda()
 	oficina.tutoriales_vistos[&"inundacion"] = true
 	oficina.temporizador_denuncias.stop()
-	oficina.computador.timer_nuevo_problema.stop()
 	oficina.sistema_despacho.set_process(false)
 	var jugador = oficina.jugador
 	jugador.emote_rechazado.connect(func(mensaje: String) -> void: rechazos.append(mensaje))

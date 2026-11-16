@@ -19,7 +19,6 @@ func _probar() -> void:
 	await _fisicas(3)
 	(_oficina.get("temporizador_denuncias") as Timer).stop()
 	(_oficina.get("temporizador_bloqueos") as Timer).stop()
-	(_oficina.get("computador").get("timer_nuevo_problema") as Timer).stop()
 	await _fisicas(60)
 	var pool: Array = _oficina.get("_bloqueos_pool")
 	_verificar(pool.size() == 30, "Los 30 cajones se preparan antes del primer bloqueo")

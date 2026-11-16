@@ -34,7 +34,6 @@ func _probar() -> void:
 		for nombre: String in ["temporizador_denuncias", "temporizador_bloqueos"]:
 			(_escena.get(nombre) as Timer).stop()
 		var computador: Node = _escena.get("computador")
-		(computador.get("timer_nuevo_problema") as Timer).stop()
 		await _fisicas(45)
 		_zona = _escena.get_node_or_null("ZonaDescanso") as Node3D
 		_verificar(_zona != null, "La oficina carga la zona de descanso en la entrada %d" % carga)

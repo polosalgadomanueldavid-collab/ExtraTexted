@@ -261,7 +261,7 @@ func _limpieza() -> void:
 	_verificar(not despacho.tiempo_detenido and not jugador.tiempo_detenido, "Retirar la máquina no deja el mundo congelado")
 
 func _parar_relojes() -> void:
-	for reloj: Timer in [oficina.temporizador_denuncias, oficina.temporizador_bloqueos, oficina.temporizador_eventos, oficina.computador.timer_nuevo_problema]:
+	for reloj: Timer in [oficina.temporizador_denuncias, oficina.temporizador_bloqueos, oficina.temporizador_eventos]:
 		reloj.stop()
 
 func _tecla(tecla: Key) -> void:

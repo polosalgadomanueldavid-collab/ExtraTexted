@@ -33,7 +33,6 @@ func _probar() -> void:
 	_oficina.temporizador_denuncias.stop()
 	_oficina.temporizador_bloqueos.stop()
 	_oficina.probabilidad_atasco_reporte = 0.0
-	_oficina.computador.timer_nuevo_problema.stop()
 	_sistema = _oficina.sistema_despacho
 	_sistema.set_process(false)
 	_jugador = _oficina.jugador
