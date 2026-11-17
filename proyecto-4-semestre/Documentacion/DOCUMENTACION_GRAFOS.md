@@ -62,19 +62,18 @@ Una celda es transitable si está dentro de los límites y no figura ni en `bloq
 
 ## 5. Cálculo de la ruta mínima
 
-El método `calcular_ruta(origen, destino)` utiliza **Dijkstra**. Todas las aristas tienen costo `1`, porque desplazarse entre dos celdas vecinas representa un paso equivalente. `calcular_ruta_a_mas_cercana(origen, destinos)` realiza una sola búsqueda y termina al alcanzar la primera estación pendiente con distancia mínima; el método de un único destino delega en esta búsqueda.
+El método `calcular_ruta(origen, destino)` utiliza **búsqueda en anchura (BFS)**. Todas las aristas tienen costo `1`, porque desplazarse entre dos celdas vecinas representa un paso equivalente. BFS encuentra una ruta de mínimo número de pasos. `calcular_ruta_a_mas_cercana(origen, destinos)` realiza una sola búsqueda y elige la estación pendiente más cercana; el método de un único destino delega en esta búsqueda.
 
-1. Asigna distancia infinita a cada vértice y `0` al origen.
-2. Selecciona el vértice no visitado con menor distancia.
-3. Revisa sus vecinos y mejora su distancia cuando encuentra un camino más corto.
-4. Guarda en `anterior` el vértice desde el que se llegó a cada celda.
-5. Al llegar al destino, reconstruye el camino retrocediendo desde destino hasta origen y luego invierte el resultado.
+1. Coloca el origen al inicio de una cola FIFO con distancia `0`.
+2. Retira el siguiente vértice y revisa sus vecinos transitables.
+3. Añade a la cola cada vecino aún no visitado y guarda su distancia y predecesor.
+4. Al alcanzar la estación más cercana, reconstruye la ruta siguiendo los predecesores.
 
 Si el origen o el destino no son transitables, o si no existe conexión entre ellos, retorna un arreglo vacío. Esto evita mostrar rutas que atraviesen obstáculos.
 
 ### Complejidad
 
-La implementación actual busca linealmente el siguiente vértice de menor distancia dentro de `sin_visitar`; por eso su complejidad es `O(V² + E)`. Es adecuada para el mapa actual, cuyo máximo teórico es de `14 × 25 = 350` celdas. Una versión para mapas mucho más grandes podría reemplazar esa búsqueda por una cola de prioridad y lograr `O((V + E) log V)`.
+La implementación usa una cola basada en arreglo con índice de avance, por lo que cada vértice y arista se procesa como máximo una vez: `O(V + E)` tiempo y `O(V)` memoria. Es adecuada para el mapa actual, cuyo máximo teórico es de `14 × 25 = 350` celdas.
 
 ## 6. Bloqueos dinámicos
 
@@ -119,10 +118,10 @@ La conversión se realiza con `posicion_a_celda()` y `celda_a_posicion()`, usand
 
 | Archivo | Responsabilidad |
 |---|---|
-| `Scripts/Estructuras/grafo_piso.gd` | Modelo de cuadrícula, adyacencia, Dijkstra y conversiones de coordenadas. |
+| `Scripts/Estructuras/grafo_piso.gd` | Modelo de cuadrícula, adyacencia, BFS y conversiones de coordenadas. |
 | `Scripts/Partida/gestor_partida.gd` | Solicita rutas, administra bloqueos temporales y los visualiza en la escena. |
 | `Pruebas/Estructuras/prueba_grafo.gd` | Prueba el cálculo de una ruta entre origen y destino. |
 
 ## 9. Guion breve para la sustentación
 
-> Modelamos el piso como un grafo: cada celda transitable es un vértice y cada paso horizontal o vertical es una arista de costo uno. Cuando una denuncia exige ir a una estación, convertimos la posición del jugador y la estación a coordenadas de cuadrícula y aplicamos Dijkstra para obtener la ruta más corta. Los obstáculos fijos y temporales no forman parte de la adyacencia. Además, antes de fijar un bloqueo temporal verificamos que aún exista un camino válido, de modo que el reto cambia la ruta sin bloquear el progreso del jugador.
+> Modelamos el piso como un grafo: cada celda transitable es un vértice y cada paso horizontal o vertical es una arista de costo uno. Convertimos la posición del jugador y las estaciones pendientes a coordenadas de cuadrícula y aplicamos BFS para hallar una ruta con el menor número de pasos. Los obstáculos fijos y temporales no forman parte de la adyacencia. Antes de fijar un bloqueo temporal verificamos que aún exista un camino válido, para cambiar la ruta sin bloquear el progreso.

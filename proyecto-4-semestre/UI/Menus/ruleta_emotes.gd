@@ -21,6 +21,8 @@ const RADIO_BOTONES := 232.0
 
 var _modo_mouse_previo: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
 var _aura_activada := false
+var _dispositivo_mando := -1
+var _indice_enfocado := -1
 var _lienzo: Control
 var _rotulo_centro: Label
 var _botones: Array[Button] = []
@@ -35,6 +37,7 @@ var _selecciones: Array[Dictionary] = [
 
 
 func _ready() -> void:
+	add_to_group(&"ruleta_emotes")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -44,17 +47,45 @@ func _ready() -> void:
 	_ajustar_presentacion()
 
 
-func abrir(aura_activa: bool = false) -> void:
+func abrir(aura_activa: bool = false, dispositivo_mando: int = -1) -> void:
 	_modo_mouse_previo = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_aura_activada = aura_activa
+	_dispositivo_mando = dispositivo_mando
+	_indice_enfocado = -1
 	_actualizar_estado_aura()
 	visible = true
+	if _dispositivo_mando >= 0 and not _botones.is_empty():
+		_indice_enfocado = 0
+		_botones[0].grab_focus()
 
 
 func cerrar() -> void:
 	visible = false
 	Input.mouse_mode = _modo_mouse_previo
+	_indice_enfocado = -1
+	_dispositivo_mando = -1
+	if is_instance_valid(_lienzo):
+		var foco := get_viewport().gui_get_focus_owner()
+		if foco != null and is_ancestor_of(foco):
+			foco.release_focus()
+
+
+func _process(_delta: float) -> void:
+	if not visible or _dispositivo_mando < 0 or _botones.is_empty():
+		return
+	var eje := Vector2(
+		Input.get_joy_axis(_dispositivo_mando, JOY_AXIS_RIGHT_X),
+		Input.get_joy_axis(_dispositivo_mando, JOY_AXIS_RIGHT_Y)
+	)
+	if eje.length() < 0.48:
+		return
+	var paso := TAU / float(_botones.size())
+	var indice := posmod(roundi((eje.angle() + PI * 0.5) / paso), _botones.size())
+	if indice == _indice_enfocado:
+		return
+	_indice_enfocado = indice
+	_botones[indice].grab_focus()
 
 
 func _crear_interfaz() -> void:
@@ -166,7 +197,7 @@ func _crear_pie() -> void:
 	_centrar(panel, Vector2(0.0, 350.0), Vector2(470.0, 50.0))
 
 	var texto := Label.new()
-	texto.text = "HAZ CLIC PARA ELEGIR  •  G O ESC PARA CERRAR"
+	texto.text = "PALANCA DERECHA + A PARA ELEGIR  •  B CIERRA  •  G / ESC"
 	texto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	texto.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	texto.add_theme_color_override("font_color", PETROLEO_OSCURO)

@@ -1,4 +1,6 @@
 extends VBoxContainer
+class_name ManualControles
+signal navegacion_cambiada
 ## Manual de controles: contenido nativo y navegación de foco dentro del modal.
 
 const TINTA := Color("173b50")
@@ -11,11 +13,18 @@ const CATEGORIAS := ["Movimiento", "Acciones", "Menús", "Objetos"]
 var pestanas: Array[Button] = []
 var paginas: Array[VBoxContainer] = []
 var pagina_actual: int = 0
+var cabecera: HBoxContainer
+var hoja: PanelContainer
+var boton_control: Button
+var pagina_mando: VBoxContainer
+var pestanas_mando: Array[Button] = []
+var pagina_mando_actual := 0
+var _infografia_mando: Control
 
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 0)
-	var cabecera := HBoxContainer.new()
+	cabecera = HBoxContainer.new()
 	cabecera.add_theme_constant_override("separation", 8)
 	add_child(cabecera)
 	for indice: int in range(CATEGORIAS.size()):
@@ -28,11 +37,12 @@ func _ready() -> void:
 		boton.add_theme_font_size_override("font_size", 32)
 		boton.pressed.connect(seleccionar.bind(indice))
 		boton.focus_entered.connect(seleccionar.bind(indice))
+		boton.focus_entered.connect(_recordar_pestana.bind(boton))
 		boton.gui_input.connect(_entrada_pestana.bind(indice))
 		cabecera.add_child(boton)
 		pestanas.append(boton)
 
-	var hoja := PanelContainer.new()
+	hoja = PanelContainer.new()
 	hoja.custom_minimum_size = Vector2(0, 510)
 	hoja.add_theme_stylebox_override("panel", _caja(CREMA, 0, 32))
 	add_child(hoja)
@@ -46,8 +56,144 @@ func _ready() -> void:
 	_crear_acciones(paginas[1])
 	_crear_menus(paginas[2])
 	_crear_objetos(paginas[3])
+	boton_control = _boton_pie("CONTROL")
+	boton_control.pressed.connect(_mostrar_mando)
+	add_child(boton_control)
+	pagina_mando = _crear_pagina_mando()
+	pagina_mando.visible = false
+	add_child(pagina_mando)
 	seleccionar(0)
 
+
+func _boton_pie(etiqueta: String) -> Button:
+	var boton := Button.new()
+	boton.text = etiqueta
+	boton.custom_minimum_size = Vector2(0, 54)
+	boton.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	boton.add_theme_font_override("font", TEMA_AJUSTES.get_font("font", "Button"))
+	boton.add_theme_font_size_override("font_size", 25)
+	_estilo_foco_unico(boton)
+	return boton
+
+
+func _estilo_foco_unico(boton: Button) -> void:
+	for estado: String in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color", "font_hover_pressed_color"]:
+		boton.add_theme_color_override(estado, CREMA)
+	var estilo := _caja(TINTA, 12, 14)
+	estilo.border_color = Color("54717f")
+	estilo.set_border_width_all(1)
+	boton.add_theme_stylebox_override("normal", estilo)
+	boton.add_theme_stylebox_override("hover", _caja(Color("2a5062"), 12, 14))
+	boton.add_theme_stylebox_override("pressed", estilo)
+	boton.add_theme_stylebox_override("hover_pressed", _caja(Color("2a5062"), 12, 14))
+	var foco := _caja(Color.TRANSPARENT, 12, 14)
+	foco.draw_center = false
+	foco.border_color = CORAL
+	foco.set_border_width_all(4)
+	boton.add_theme_stylebox_override("focus", foco)
+
+
+func _mostrar_mando() -> void:
+	cabecera.hide()
+	hoja.hide()
+	boton_control.hide()
+	pagina_mando.show()
+	navegacion_cambiada.emit()
+	pestanas_mando[0].grab_focus()
+
+
+func _volver_teclado() -> void:
+	pagina_mando.hide()
+	cabecera.show()
+	hoja.show()
+	boton_control.show()
+	navegacion_cambiada.emit()
+	boton_control.grab_focus()
+
+
+func _crear_pagina_mando() -> VBoxContainer:
+	var pagina := VBoxContainer.new()
+	pagina.name = "PanelMando"
+	pagina.add_theme_constant_override("separation", 12)
+	var titulo := _texto("CONTROLES CON MANDO", 34, true)
+	titulo.add_theme_color_override("font_color", CREMA)
+	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pagina.add_child(titulo)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0, 540)
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _caja(CREMA, 0, 18))
+	pagina.add_child(panel)
+	var infografia := preload("res://UI/Menus/infografia_mando.gd").new()
+	_infografia_mando = infografia
+	infografia.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	infografia.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_child(infografia)
+	var selector := HBoxContainer.new()
+	selector.alignment = BoxContainer.ALIGNMENT_CENTER
+	selector.add_theme_constant_override("separation", 12)
+	pagina.add_child(selector)
+	pagina.move_child(selector, 1)
+	var grupo := ButtonGroup.new()
+	for i: int in range(3):
+		var boton := _boton_pie(["ACCIONES", "MENÚS", "OBJETOS"][i])
+		boton.toggle_mode = true
+		boton.button_group = grupo
+		boton.button_pressed = i == 0
+		boton.pressed.connect(_seleccionar_mando.bind(i))
+		boton.focus_entered.connect(_seleccionar_mando.bind(i))
+		boton.focus_entered.connect(_recordar_pestana.bind(boton))
+		selector.add_child(boton)
+		pestanas_mando.append(boton)
+	var nota := _texto("Un mando por jugador local · En LAN, cada participante controla su propio personaje.", 18)
+	nota.add_theme_color_override("font_color", CREMA)
+	nota.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pagina.add_child(nota)
+	var volver := _boton_pie("VOLVER A TECLADO")
+	volver.name = "BotonVolverMando"
+	volver.pressed.connect(_volver_teclado)
+	pagina.add_child(volver)
+	return pagina
+
+
+func _seleccionar_mando(indice: int) -> void:
+	pagina_mando_actual = indice
+	for i in pestanas_mando.size():
+		pestanas_mando[i].set_pressed_no_signal(i == indice)
+	_infografia_mando.mostrar(indice)
+
+
+func _recordar_pestana(boton: Button) -> void:
+	if not is_instance_valid(pagina_mando):
+		return
+	var pie: Button = pagina_mando.get_node("BotonVolverMando") if pagina_mando.visible else boton_control
+	pie.focus_neighbor_top = pie.get_path_to(boton)
+
+
+func controles_foco() -> Array[Control]:
+	var controles: Array[Control] = []
+	if pagina_mando.visible:
+		controles.append_array(pestanas_mando)
+		controles.append(pagina_mando.get_node("BotonVolverMando"))
+	else:
+		controles.append_array(pestanas)
+		controles.append(boton_control)
+	return controles
+
+func configurar_navegacion(cerrar: Button) -> void:
+	var fila: Array[Button] = pestanas_mando if pagina_mando.visible else pestanas
+	var pie: Button = pagina_mando.get_node("BotonVolverMando") if pagina_mando.visible else boton_control
+	_estilo_foco_unico(cerrar)
+	for i: int in range(fila.size()):
+		var boton := fila[i]
+		boton.focus_neighbor_left = boton.get_path_to(fila[posmod(i - 1, fila.size())])
+		boton.focus_neighbor_right = boton.get_path_to(fila[(i + 1) % fila.size()])
+		boton.focus_neighbor_bottom = boton.get_path_to(pie)
+		boton.focus_neighbor_top = boton.get_path_to(cerrar)
+	pie.focus_neighbor_top = pie.get_path_to(fila[pagina_mando_actual if pagina_mando.visible else pagina_actual])
+	pie.focus_neighbor_bottom = pie.get_path_to(cerrar)
+	cerrar.focus_neighbor_top = cerrar.get_path_to(pie)
+	cerrar.focus_neighbor_bottom = cerrar.get_path_to(fila[0])
 
 func seleccionar(indice: int) -> void:
 	pagina_actual = clampi(indice, 0, CATEGORIAS.size() - 1)
@@ -55,17 +201,7 @@ func seleccionar(indice: int) -> void:
 		var activa := i == pagina_actual
 		paginas[i].visible = activa
 		var boton := pestanas[i]
-		boton.add_theme_stylebox_override("normal", _estilo_pestana(CREMA if activa else Color("2a5062")))
-		boton.add_theme_stylebox_override("hover", _estilo_pestana(CREMA if activa else Color("365e70")))
-		boton.add_theme_stylebox_override("pressed", _estilo_pestana(CREMA))
-		for estado: String in ["font_color", "font_hover_color", "font_focus_color"]:
-			boton.add_theme_color_override(estado, TINTA if activa else CREMA)
-		boton.add_theme_color_override("font_pressed_color", TINTA)
-		var foco := _caja(Color.TRANSPARENT, 10, 0, true)
-		foco.draw_center = false
-		foco.border_color = CORAL
-		foco.set_border_width_all(3)
-		boton.add_theme_stylebox_override("focus", foco)
+		_estilo_foco_unico(boton)
 
 
 func _estilo_pestana(color: Color) -> StyleBoxFlat:

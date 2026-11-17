@@ -88,6 +88,8 @@ var chocolate_restante := 0.0
 var dona_restante := 0.0
 var tiempo_detenido := false
 var _peso_dona := 0.0
+var dispositivo_mando := -1
+var _eventos_mando: Array[Dictionary] = []
 
 @onready var visual: Node3D = $Visual
 @onready var shape_cast_3d: ShapeCast3D = $Visual/ShapeCast3D
@@ -105,6 +107,9 @@ func _ready() -> void:
 	_spawn_transform = global_transform
 	_spawn_visual_rotation = visual.rotation
 	_pose_modelo = $Visual/Modelo.transform
+	if not remoto_red:
+		dispositivo_mando = ControladorInterfaz.dispositivo_mando
+		ControladorInterfaz.mando_cambiado.connect(_al_cambio_mando)
 	_register_inputs()
 	animation_player = $Visual/Modelo.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if animation_player == null:
@@ -163,13 +168,13 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 
 	var input_direction := Vector2.ZERO
-	if not congelado and not input_locked and not realizando_gesto() and not usando_extintor:
+	if not congelado and not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active:
 		input_direction = Input.get_vector(LEFT, RIGHT, FORWARD, BACK)
 	var direction := _camera_relative_direction(input_direction)
 	var moving := direction.length_squared() > 0.001
-	var running := not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_pressed(RUN)
+	var running := not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active and Input.is_action_pressed(RUN)
 
-	if not congelado and not nadando and not input_locked and not realizando_gesto() and not usando_extintor and Input.is_action_just_pressed(JUMP) and is_on_floor():
+	if not congelado and not nadando and not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
 		if lava_activa or dona_restante > 0.0:
@@ -351,6 +356,10 @@ func _input(event: InputEvent) -> void:
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_EXIT_TREE]:
 		_finish_emote_menu(true)
+	if what == NOTIFICATION_EXIT_TREE:
+		if not remoto_red and ControladorInterfaz.mando_cambiado.is_connected(_al_cambio_mando):
+			ControladorInterfaz.mando_cambiado.disconnect(_al_cambio_mando)
+		_quitar_eventos_mando()
 
 
 func _finish_emote_menu(cancelled: bool) -> void:
@@ -663,6 +672,80 @@ func _register_inputs() -> void:
 	_add_keys(KAMEHAMEHA, [KEY_K])
 	_add_keys(GENKIDAMA, [KEY_H])
 	_add_keys(RASENGAN, [KEY_J])
+	_configurar_eventos_mando()
+
+
+func _al_cambio_mando(_dispositivo: int) -> void:
+	_actualizar_dispositivo_mando()
+
+
+func _actualizar_dispositivo_mando() -> void:
+	if remoto_red:
+		return
+	var conectado := ControladorInterfaz.dispositivo_mando
+	if conectado == dispositivo_mando:
+		return
+	for registro: Dictionary in _eventos_mando:
+		if InputMap.has_action(registro["accion"]):
+			InputMap.action_erase_event(registro["accion"], registro["evento"])
+	_eventos_mando.clear()
+	if remoto_red:
+		return
+	dispositivo_mando = conectado
+	_configurar_eventos_mando()
+
+
+func _quitar_eventos_mando() -> void:
+	for registro: Dictionary in _eventos_mando:
+		var accion: StringName = registro["accion"]
+		var evento: InputEvent = registro["evento"]
+		if InputMap.has_action(accion):
+			InputMap.action_erase_event(accion, evento)
+	_eventos_mando.clear()
+
+
+func _configurar_eventos_mando() -> void:
+	if remoto_red or dispositivo_mando < 0:
+		return
+	var deadzone := 0.22
+	for accion: StringName in [LEFT, RIGHT, FORWARD, BACK]:
+		if InputMap.has_action(accion):
+			InputMap.action_set_deadzone(accion, deadzone)
+	_agregar_mando_boton(LEFT, JOY_BUTTON_DPAD_LEFT)
+	_agregar_mando_boton(RIGHT, JOY_BUTTON_DPAD_RIGHT)
+	_agregar_mando_boton(FORWARD, JOY_BUTTON_DPAD_UP)
+	_agregar_mando_boton(BACK, JOY_BUTTON_DPAD_DOWN)
+	_agregar_mando_eje(LEFT, JOY_AXIS_LEFT_X, -1.0)
+	_agregar_mando_eje(RIGHT, JOY_AXIS_LEFT_X, 1.0)
+	_agregar_mando_eje(FORWARD, JOY_AXIS_LEFT_Y, -1.0)
+	_agregar_mando_eje(BACK, JOY_AXIS_LEFT_Y, 1.0)
+	_agregar_mando_boton(RUN, JOY_BUTTON_LEFT_STICK)
+	_agregar_mando_boton(JUMP, JOY_BUTTON_A)
+	_agregar_mando_boton(EMOTE_MENU, JOY_BUTTON_Y)
+	_agregar_mando_boton(interaction_action, JOY_BUTTON_X)
+	_agregar_mando_boton(&"CambiarCamara", JOY_BUTTON_RIGHT_STICK)
+	_agregar_mando_boton(&"VerClasificacion", JOY_BUTTON_BACK)
+
+
+func _agregar_mando_boton(accion: StringName, boton: JoyButton) -> void:
+	if not InputMap.has_action(accion):
+		InputMap.add_action(accion)
+	var evento := InputEventJoypadButton.new()
+	evento.device = dispositivo_mando
+	evento.button_index = boton
+	InputMap.action_add_event(accion, evento)
+	_eventos_mando.append({"accion": accion, "evento": evento})
+
+
+func _agregar_mando_eje(accion: StringName, eje: JoyAxis, valor: float) -> void:
+	if not InputMap.has_action(accion):
+		InputMap.add_action(accion)
+	var evento := InputEventJoypadMotion.new()
+	evento.device = dispositivo_mando
+	evento.axis = eje
+	evento.axis_value = valor
+	InputMap.action_add_event(accion, evento)
+	_eventos_mando.append({"accion": accion, "evento": evento})
 
 
 func _add_keys(action: StringName, keys: Array) -> void:

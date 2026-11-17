@@ -3,6 +3,7 @@ extends Control
 
 signal producto_solicitado(indice: int)
 signal recoger_solicitado
+signal usar_solicitado(indice: int)
 signal cerrar_solicitado
 
 const CREMA := Color("fff1d8")
@@ -21,6 +22,7 @@ var camara: Camera3D
 var botones: Array[Button] = []
 var boton_recoger: Button
 var boton_retirar: Button
+var boton_usar: Button
 var _modelo: Node3D
 var _productos: Array[Node3D] = []
 var _pulsadores: Array[MeshInstance3D] = []
@@ -30,6 +32,7 @@ var _pantalla: Label3D
 var _saldo: Label3D
 var _bandeja: MeshInstance3D
 var _indice := -1
+var _indice_usar := -1
 var _raton_anterior: Input.MouseMode
 
 
@@ -87,10 +90,13 @@ func _ready() -> void:
 		botones.append(boton)
 	boton_recoger = _boton("RecogerProducto", "Recoger el producto de la bandeja", recoger_solicitado.emit)
 	boton_retirar = _boton("RetirarProducto", "Retirar el producto desde la pantalla", recoger_solicitado.emit)
+	boton_usar = _boton("UsarProducto", "Usar el objeto que ya compraste", func(): usar_solicitado.emit(_indice_usar))
 	boton_recoger.hide()
 	boton_retirar.hide()
+	boton_usar.hide()
 	resized.connect(_ajustar)
 	visibility_changed.connect(_actualizar_render)
+	visibility_changed.connect(_al_mostrar_para_mando)
 	hide()
 	_ajustar.call_deferred()
 
@@ -249,19 +255,42 @@ func _boton(nombre: String, descripcion: String, accion: Callable) -> Button:
 	var boton := Button.new()
 	boton.name = nombre
 	boton.accessibility_name = descripcion
+	boton.focus_mode = Control.FOCUS_ALL
 	boton.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	for estilo: String in ["normal", "hover", "pressed", "disabled", "focus"]:
+	for estilo: String in ["normal", "hover", "pressed", "disabled"]:
 		boton.add_theme_stylebox_override(estilo, StyleBoxEmpty.new())
+	var foco := StyleBoxFlat.new()
+	foco.bg_color = Color(0.13, 0.69, 0.73, 0.20)
+	foco.border_color = Color("fff1d8")
+	foco.set_border_width_all(3)
+	foco.set_corner_radius_all(8)
+	foco.shadow_color = Color(0.05, 0.10, 0.14, 0.75)
+	foco.shadow_size = 7
+	boton.add_theme_stylebox_override("focus", foco)
 	boton.pressed.connect(accion)
 	add_child(boton)
 	return boton
+
+
+func _al_mostrar_para_mando() -> void:
+	if visible and ControladorInterfaz.dispositivo_mando >= 0 and not botones.is_empty():
+		for boton: Button in botones:
+			if not boton.disabled:
+				boton.grab_focus()
+				return
+		if boton_usar.visible:
+			boton_usar.grab_focus()
 
 
 func _resaltar(indice: int, activo: bool) -> void:
 	var mat := _pulsadores[indice].material_override as StandardMaterial3D
 	mat.emission_enabled = activo and not botones[indice].disabled
 	mat.emission = Color("ffd187")
-	mat.emission_energy_multiplier = 0.28
+	mat.emission_energy_multiplier = 0.72
+	if activo and _indice < 0:
+		_pantalla.text = "%s\nA · ELEGIR" % NOMBRES[indice]
+	elif _indice < 0 and _indice_usar < 0:
+		_pantalla.text = "ELIGE"
 
 
 func abrir() -> void:
@@ -290,9 +319,18 @@ func actualizar(saldo: int, precios: Array[int], inventario: Array[int], ocupado
 	for i in 4:
 		_etiquetas[i].text = "%s · %s" % [CODIGOS[i], "COMPRADO" if inventario[i] > 0 else "%d PTS" % precios[i]]
 		_etiquetas[i].pixel_size = minf(0.00185, 0.86 / maxf(1.0, _etiquetas[i].font.get_string_size(_etiquetas[i].text, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x))
-		botones[i].disabled = ocupado or inventario[i] > 0 or saldo < precios[i]
+		botones[i].disabled = ocupado or inventario[i] > 0
 		if botones[i].disabled:
 			_resaltar(i, false)
+	if _indice_usar < 0 or inventario[_indice_usar] <= 0:
+		_indice_usar = -1
+		for i in 4:
+			if inventario[i] > 0:
+				_indice_usar = i
+				break
+	boton_usar.visible = _indice_usar >= 0 and _indice < 0 and not ocupado
+	if boton_usar.visible:
+		boton_usar.text = "USAR %s" % NOMBRES[_indice_usar]
 
 
 func dispensar(indice: int) -> void:
@@ -300,6 +338,7 @@ func dispensar(indice: int) -> void:
 	_pantalla.text = "ESPERA"
 	boton_recoger.hide()
 	boton_retirar.hide()
+	boton_usar.hide()
 
 
 func actualizar_caida(avance: float) -> void:
@@ -336,11 +375,11 @@ func listo() -> void:
 
 func recogido(indice: int, atajo: String) -> void:
 	_cancelar_visual()
-	_pantalla.text = "%s\nUSAR %s" % [CODIGOS[indice], atajo]
-	for boton: Button in botones:
-		if not boton.disabled:
-			boton.grab_focus()
-			break
+	_indice_usar = indice
+	_pantalla.text = "%s\nUSAR: %s / A" % [CODIGOS[indice], atajo]
+	boton_usar.text = "USAR %s" % NOMBRES[indice]
+	boton_usar.show()
+	boton_usar.grab_focus()
 
 
 func mostrar_error(texto: String) -> void:
@@ -351,6 +390,7 @@ func _cancelar_visual() -> void:
 	_indice = -1
 	boton_recoger.hide()
 	boton_retirar.hide()
+	boton_usar.hide()
 	_pantalla.text = "ELIGE"
 	(_bandeja.material_override as StandardMaterial3D).emission_enabled = false
 	for i in 4:
@@ -376,6 +416,7 @@ func _ajustar() -> void:
 		_colocar_boton(botones[i], Vector3(1.14, 2.85 - i * 0.48, 0.82), Vector2(0.52, 0.35))
 	_colocar_boton(boton_recoger, Vector3(-0.32, 0.85, 0.79), Vector2(1.9, 0.65))
 	_colocar_boton(boton_retirar, Vector3(1.14, 3.29, 0.82), Vector2(0.49, 0.25))
+	_colocar_boton(boton_usar, Vector3(1.14, 3.29, 0.82), Vector2(0.49, 0.25))
 
 
 func _colocar_boton(boton: Button, centro: Vector3, medidas: Vector2) -> void:
@@ -392,7 +433,13 @@ func _process(_delta: float) -> void:
 
 
 func _input(evento: InputEvent) -> void:
-	if not visible or get_tree().paused or not evento is InputEventKey:
+	if not visible or get_tree().paused:
+		return
+	if evento is InputEventJoypadButton and evento.pressed and evento.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		cerrar_solicitado.emit()
+		return
+	if not evento is InputEventKey:
 		return
 	var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
 	if tecla in [KEY_ESCAPE, KEY_E]:

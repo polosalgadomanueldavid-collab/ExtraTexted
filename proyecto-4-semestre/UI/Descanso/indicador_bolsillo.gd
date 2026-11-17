@@ -3,6 +3,7 @@ extends Control
 const FUENTE := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const ICONOS := [preload("res://UI/Descanso/Arte/chocolate.png"), preload("res://UI/Descanso/Arte/dona.png"), preload("res://UI/Descanso/Arte/papa_tiempo.png"), preload("res://UI/Descanso/Arte/avatar.png"), preload("res://UI/Descanso/Arte/cafe.png")]
 const TECLAS := ["Z · USAR", "X · USAR", "V · USAR", "N · USAR", "F · BEBER"]
+const MANDO := ["LB · USAR", "RB · USAR", "LT · USAR", "RT · USAR", "F · BEBER"]
 const TINTA := Color("173b50")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
@@ -48,7 +49,7 @@ func actualizar() -> void:
 			var cantidad: int = maquina.inventario[i]
 			if cantidad <= 0 and tiempos[i] <= 0:
 				continue
-			var etiqueta: String = TECLAS[i]
+			var etiqueta: String = MANDO[i] if ControladorInterfaz.dispositivo_mando >= 0 else TECLAS[i]
 			var estado := "listo"
 			if tiempos[i] > 0:
 				etiqueta = "%d s" % ceili(tiempos[i])

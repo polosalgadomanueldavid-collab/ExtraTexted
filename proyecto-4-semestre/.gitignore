@@ -1,3 +1,10 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Archivos generados durante las pruebas locales.
+/output/*
+# Conservar las presentaciones finales para compartirlas con el equipo.
+!/output/presentacion_revision/
+/output/presentacion_revision/*
+!/output/presentacion_revision/entrega/

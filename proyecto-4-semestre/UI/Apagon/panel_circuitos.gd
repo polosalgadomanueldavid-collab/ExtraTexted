@@ -20,6 +20,9 @@ var botones_anillos: Array[Button] = []
 var origenes_cables: Array[Button] = []
 var destinos_cables: Array[Button] = []
 
+var _cursor: CursorMando
+var _pista_mando: Label
+
 var _tipo: int = Tipo.INTERRUPTORES
 var _clave_estado: String = ""
 var _estado: Dictionary = {}
@@ -51,6 +54,7 @@ var _presiones: Array[float] = []
 
 func _ready() -> void:
 	name = "PanelCircuitos"
+	add_to_group("cursor_mando")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_velo = ColorRect.new()
@@ -65,6 +69,20 @@ func _ready() -> void:
 	_arte.size = TAMANO_DISENO
 	_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lienzo.add_child(_arte)
+	_cursor = CursorMando.new()
+	_cursor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cursor.z_index = 20
+	_lienzo.add_child(_cursor)
+	_cursor.hide()
+	_pista_mando = Label.new()
+	_pista_mando.text = "Palanca: mover cursor   ·   A: elegir / conectar   ·   B: cerrar"
+	_pista_mando.position = Vector2(60, 474)
+	_pista_mando.size = Vector2(740, 28)
+	_pista_mando.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pista_mando.add_theme_font_size_override("font_size", 19)
+	_pista_mando.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lienzo.add_child(_pista_mando)
+	_pista_mando.hide()
 	_sonidos = SONIDOS.new()
 	_sonidos.name = "SonidosCircuitos"
 	add_child(_sonidos)
@@ -95,6 +113,10 @@ func abrir(tipo: int, semilla: int) -> void:
 	_sincronizar_visuales()
 	_crear_controles()
 	_abierto = true
+	var iniciales := _botones_en_foco()
+	_cursor.position = iniciales[0].position + iniciales[0].size * 0.5 if not iniciales.is_empty() else TAMANO_DISENO * 0.5
+	_cursor.visible = ControladorInterfaz.dispositivo_mando >= 0
+	_pista_mando.visible = _cursor.visible
 	show()
 	_ajustar_presentacion()
 	_refrescar()
@@ -225,12 +247,22 @@ func _actualizar_controles() -> void:
 
 
 func _input(evento: InputEvent) -> void:
-	if not _abierto or not is_visible_in_tree() or get_tree().paused:
+	if not cursor_mando_activo():
 		return
 	if evento.is_action_pressed("ui_cancel") or evento.is_action_pressed("Cancel"):
 		get_viewport().set_input_as_handled()
 		cerrar()
 		return
+	if evento is InputEventJoypadButton:
+		if evento.device != ControladorInterfaz.dispositivo_mando:
+			return
+		get_viewport().set_input_as_handled()
+		if evento.pressed and evento.is_action_pressed("ui_accept") and _acepta_entrada():
+			_activar_cursor()
+		return
+	if evento is InputEventMouseMotion and evento.relative.length_squared() > 0.0:
+		_cursor.hide()
+		_pista_mando.hide()
 	if evento is InputEventKey:
 		var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
 		if tecla == KEY_E:
@@ -258,6 +290,59 @@ func _input(evento: InputEvent) -> void:
 	elif evento is InputEventMouseButton and evento.button_index == MOUSE_BUTTON_LEFT:
 		_procesar_raton(evento)
 
+
+
+func cursor_mando_activo() -> bool:
+	return _abierto and is_visible_in_tree() and not get_tree().paused and not MenuGlobal.capa.visible
+
+func procesar_cursor_mando(delta: float, dispositivo: int) -> void:
+	if not _abierto or get_tree().paused:
+		return
+	var eje := Vector2(Input.get_joy_axis(dispositivo, JOY_AXIS_LEFT_X), Input.get_joy_axis(dispositivo, JOY_AXIS_LEFT_Y))
+	if eje.length() <= 0.18:
+		return
+	_mover_cursor(eje.normalized() * inverse_lerp(0.18, 1.0, minf(eje.length(), 1.0)) * 430.0 * delta)
+
+func _mover_cursor(desplazamiento: Vector2) -> void:
+	_cursor.show()
+	_pista_mando.show()
+	_cursor.position = (_cursor.position + desplazamiento).clamp(Vector2(60, 110), Vector2(800, 410))
+	_usa_raton = true
+	_arrastrando = false
+	_raton = _cursor.position - ORIGEN_INTERIOR
+	var boton := _boton_bajo_cursor()
+	_cursor.activo = boton != null
+	_cursor.queue_redraw()
+	if boton != null:
+		boton.grab_focus()
+	_refrescar()
+
+func _boton_bajo_cursor() -> Button:
+	for grupo: Array[Button] in [interruptores, botones_anillos, origenes_cables, destinos_cables]:
+		for boton: Button in grupo:
+			if not boton.disabled and Rect2(boton.position, boton.size).has_point(_cursor.position):
+				return boton
+	return null
+
+func _activar_cursor() -> void:
+	_mover_cursor(Vector2.ZERO)
+	var boton := _boton_bajo_cursor()
+	if boton == null:
+		return
+	if boton.toggle_mode:
+		boton.button_pressed = not boton.button_pressed
+	else:
+		boton.pressed.emit()
+	_raton = _cursor.position - ORIGEN_INTERIOR
+	_refrescar()
+
+class CursorMando extends Control:
+	var activo := false
+	func _draw() -> void:
+		draw_circle(Vector2.ZERO, 13, Color("173b50"))
+		draw_arc(Vector2.ZERO, 11, 0, TAU, 32, Color("79d693") if activo else Color("fff1d8"), 3, true)
+		draw_line(Vector2(-18, 0), Vector2(18, 0), Color("ff785f"), 2, true)
+		draw_line(Vector2(0, -18), Vector2(0, 18), Color("ff785f"), 2, true)
 
 func _procesar_raton(evento: InputEventMouseButton) -> void:
 	_usa_raton = true

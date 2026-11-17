@@ -1,4 +1,5 @@
 extends PanelContainer
+signal navegacion_cambiada
 
 const CREMA := Color("fff1d8")
 const PETROLEO := Color("173b50")
@@ -64,6 +65,7 @@ var _estilos_cierre: Dictionary = {}
 
 
 func _ready() -> void:
+	leyenda.navegacion_cambiada.connect(func(): navegacion_cambiada.emit())
 	_crear_pasos(tutorial, PASOS)
 	_crear_pasos(tutorial_apagon, PASOS_APAGON)
 	_crear_demostracion_circuitos()
@@ -212,7 +214,7 @@ func _crear_encabezado_paso(columna: VBoxContainer, numero: int, texto: String) 
 func controles_foco() -> Array[Control]:
 	var controles: Array[Control] = []
 	if leyenda.visible:
-		controles.append_array(leyenda.pestanas)
+		controles.append_array(leyenda.controles_foco())
 	elif navegacion.visible:
 		controles.append_array(pestanas_tutorial)
 	controles.append(boton_cerrar)
@@ -289,6 +291,9 @@ func _restablecer_confirmaciones() -> void:
 
 func _establecer_expediente(activo: bool) -> void:
 	_es_expediente = activo
+	# El manual personaliza el foco; los demás tutoriales recuperan su tema.
+	for estado: String in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color", "font_hover_pressed_color"]:
+		boton_cerrar.remove_theme_color_override(estado)
 	if activo:
 		cuerpo.add_theme_stylebox_override("panel", estilo_expediente)
 	else:

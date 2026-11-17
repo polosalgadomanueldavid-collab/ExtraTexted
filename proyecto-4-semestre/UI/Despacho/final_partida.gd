@@ -47,6 +47,8 @@ var _paginas: Array[Dictionary] = []
 var _pestanas: Array[Button] = []
 var _anterior: Button
 var _siguiente: Button
+var _boton_reintentar: Button
+var _boton_menu: Button
 var _estadisticas: Label
 var _alerta: AudioStreamPlayer
 var _sonido_pagina: AudioStreamPlayer
@@ -55,6 +57,7 @@ var _musica_derrota: AudioStreamPlayer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group("foco_mando_interno")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_construir_interfaz()
@@ -208,22 +211,22 @@ func _construir_interfaz() -> void:
 	_siguiente.size = Vector2(145, 43)
 	_siguiente.pressed.connect(_ir_a_pagina.bind(-2))
 	_contenido_libro.add_child(_siguiente)
-	var reiniciar := _boton("Reintentar", Color("5f9d88"), 17)
+	_boton_reintentar = _boton("Reintentar", Color("5f9d88"), 17)
 	var sesion: Node = get_node_or_null("/root/SesionLAN")
 	if sesion != null and sesion.activa and not sesion.es_anfitrion():
-		reiniciar.text = "Espera al anfitrión"
-		reiniciar.disabled = true
-	reiniciar.position = Vector2(868, 609)
-	reiniciar.size = Vector2(139, 43)
-	reiniciar.pressed.connect(func() -> void: reiniciar_solicitado.emit())
-	_contenido_libro.add_child(reiniciar)
-	var menu := _boton("Menú", Color("60788a"), 17)
-	menu.position = Vector2(1024, 609)
-	menu.size = Vector2(110, 43)
-	menu.pressed.connect(func() -> void: menu_solicitado.emit())
-	_contenido_libro.add_child(menu)
+		_boton_reintentar.text = "Espera al anfitrión"
+		_boton_reintentar.disabled = true
+	_boton_reintentar.position = Vector2(868, 609)
+	_boton_reintentar.size = Vector2(139, 43)
+	_boton_reintentar.pressed.connect(func() -> void: reiniciar_solicitado.emit())
+	_contenido_libro.add_child(_boton_reintentar)
+	_boton_menu = _boton("Menú", Color("60788a"), 17)
+	_boton_menu.position = Vector2(1024, 609)
+	_boton_menu.size = Vector2(110, 43)
+	_boton_menu.pressed.connect(func() -> void: menu_solicitado.emit())
+	_contenido_libro.add_child(_boton_menu)
 	_cuaderno.hide()
-	_ayuda_libro = _etiqueta("← → / A D  Pasar hoja     ·     Clic derecho / Z  Acercar     ·     Rueda  Leer listas", 16, CREMA, FUENTE_TEXTO)
+	_ayuda_libro = _etiqueta("Palanca izq.: seleccionar · Cruceta ← →: páginas · Palanca der.: scroll · A: activar · X: zoom · B: menú / alejar", 16, CREMA, FUENTE_TEXTO)
 	_ayuda_libro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ayuda_libro.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ayuda_libro.add_theme_color_override("font_shadow_color", Color("172c36"))
@@ -249,6 +252,10 @@ func _crear_pagina(x: float) -> Dictionary:
 	var subtitulo := _etiqueta("", 17, TINTA, FUENTE_TEXTO)
 	columna.add_child(subtitulo)
 	var scroll := ScrollContainer.new()
+	scroll.focus_mode = Control.FOCUS_ALL
+	scroll.focus_entered.connect(_marcar_lectura.bind(scroll, true))
+	scroll.focus_exited.connect(_marcar_lectura.bind(scroll, false))
+	_marcar_lectura(scroll, false)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	columna.add_child(scroll)
@@ -290,7 +297,7 @@ func _abrir_cuaderno() -> void:
 	_ayuda_libro.show()
 	_cuaderno.abrir()
 	await _cuaderno.apertura_terminada
-	_siguiente.grab_focus()
+	(_boton_menu if _boton_reintentar.disabled else _boton_reintentar).grab_focus()
 
 
 func _poblar_paginas() -> void:
@@ -310,6 +317,55 @@ func _poblar_paginas() -> void:
 		# Los separadores de las secciones ya abiertas quedan a la izquierda.
 		_pestanas[indice].position.x = 31.0 if indice <= _pagina_actual else 1203.0
 		_pestanas[indice].modulate = Color.WHITE if indice == _pagina_actual else Color(0.88, 0.90, 0.92)
+	_configurar_foco_libro()
+
+
+func viewport_mando() -> Viewport:
+	if _fase != 2 or not is_visible_in_tree() or not _cuaderno.visible or MenuGlobal.capa.visible:
+		return null
+	return _contenido_libro.get_viewport()
+
+
+func _marcar_lectura(scroll: ScrollContainer, activo: bool) -> void:
+	var marco := _estilo(Color.TRANSPARENT, CORAL if activo else Color.TRANSPARENT, 5)
+	marco.draw_center = false
+	marco.set_border_width_all(4)
+	scroll.add_theme_stylebox_override("panel", marco)
+
+
+func _configurar_foco_libro() -> void:
+	var izquierda: ScrollContainer = _paginas[0].scroll
+	var derecha: ScrollContainer = _paginas[1].scroll
+	var botones: Array[Control] = []
+	for boton: Button in [_anterior, _siguiente, _boton_reintentar, _boton_menu]:
+		if not boton.disabled:
+			botones.append(boton)
+	var recorrido: Array[Control] = [izquierda, derecha]
+	recorrido.append_array(botones)
+	recorrido.append_array(_pestanas)
+	for i in recorrido.size():
+		var control := recorrido[i]
+		control.focus_next = control.get_path_to(recorrido[(i + 1) % recorrido.size()])
+		control.focus_previous = control.get_path_to(recorrido[posmod(i - 1, recorrido.size())])
+	for i in botones.size():
+		var boton := botones[i]
+		boton.focus_neighbor_left = boton.get_path_to(botones[posmod(i - 1, botones.size())])
+		boton.focus_neighbor_right = boton.get_path_to(botones[(i + 1) % botones.size()])
+		boton.focus_neighbor_top = boton.get_path_to(izquierda if boton.position.x < 640 else derecha)
+		boton.focus_neighbor_bottom = boton.get_path_to(_pestanas[_pagina_actual])
+	for i in 2:
+		var lectura: Control = _paginas[i].scroll
+		lectura.focus_neighbor_left = lectura.get_path_to(derecha if i == 0 else izquierda)
+		lectura.focus_neighbor_right = lectura.focus_neighbor_left
+		lectura.focus_neighbor_top = lectura.get_path_to(_pestanas[0 if i == 0 else 2])
+		lectura.focus_neighbor_bottom = lectura.get_path_to(botones[0] if i == 0 else (_boton_menu if _boton_reintentar.disabled else _boton_reintentar))
+	for i in _pestanas.size():
+		var pestana := _pestanas[i]
+		var lectura: Control = izquierda if pestana.position.x < 640 else derecha
+		pestana.focus_neighbor_left = pestana.get_path_to(lectura)
+		pestana.focus_neighbor_right = pestana.focus_neighbor_left
+		pestana.focus_neighbor_top = pestana.get_path_to(_pestanas[i - 1] if i > 0 else lectura)
+		pestana.focus_neighbor_bottom = pestana.get_path_to(_pestanas[i + 1] if i < 2 else lectura)
 
 
 func _llenar_balance() -> void:
@@ -528,6 +584,7 @@ func _ir_a_pagina(destino: int) -> void:
 		destino = _pagina_actual + 1
 	if destino < 0 or destino > 2 or destino == _pagina_actual:
 		return
+	var foco_anterior := _contenido_libro.get_viewport().gui_get_focus_owner()
 	_pasando_pagina = true
 	if _cuaderno.acercado:
 		_cuaderno.alternar_zoom()
@@ -546,32 +603,65 @@ func _ir_a_pagina(destino: int) -> void:
 	var siguiente: Texture2D = _cuaderno.fotografiar()
 	await _cuaderno.pasar_pagina(anterior, siguiente, direccion, origen, destino)
 	_pasando_pagina = false
-	if destino == 2:
-		_anterior.grab_focus()
+	if is_instance_valid(foco_anterior) and not (foco_anterior is Button and foco_anterior.disabled):
+		foco_anterior.grab_focus()
 	else:
-		_siguiente.grab_focus()
+		(_anterior if destino == 2 else _siguiente).grab_focus()
 
 
 func _input(evento: InputEvent) -> void:
-	if _fase != 2 or not evento is InputEventKey:
+	if viewport_mando() == null:
 		return
-	if not evento.pressed:
+	if evento is InputEventJoypadButton:
+		if evento.device != ControladorInterfaz.dispositivo_mando:
+			return
+		# El papel vive en otro viewport: A y la navegación deben llegar allí.
+		# La cruceta horizontal conserva el cambio de página, independiente del foco.
+		if not _cuaderno.ocupado and not _pasando_pagina:
+			if evento.button_index in [JOY_BUTTON_DPAD_RIGHT, JOY_BUTTON_DPAD_LEFT]:
+				if evento.pressed:
+					_ir_a_pagina(-2 if evento.button_index == JOY_BUTTON_DPAD_RIGHT else -1)
+			elif evento.button_index == JOY_BUTTON_X:
+				if evento.pressed:
+					_zoom_seleccion()
+			elif evento.is_action("ui_cancel"):
+				if evento.pressed:
+					_volver_libro()
+			else:
+				_contenido_libro.get_viewport().push_input(evento, true)
+		get_viewport().set_input_as_handled()
+		return
+	if not evento is InputEventKey:
+		return
+	if evento.pressed and not evento.echo:
+		if evento.keycode in [KEY_RIGHT, KEY_PAGEDOWN, KEY_D]:
+			_ir_a_pagina(-2)
+		elif evento.keycode in [KEY_LEFT, KEY_PAGEUP, KEY_A]:
+			_ir_a_pagina(-1)
+		elif evento.keycode == KEY_Z:
+			_zoom_seleccion()
+		elif evento.keycode == KEY_ESCAPE:
+			_volver_libro()
+		else:
+			_cuaderno.enviar_tecla(evento)
+	elif not evento.pressed:
 		_cuaderno.enviar_tecla(evento)
-		return
-	if evento.echo:
-		return
-	if evento.keycode in [KEY_RIGHT, KEY_PAGEDOWN, KEY_D]:
-		_ir_a_pagina(-2)
-		get_viewport().set_input_as_handled()
-	elif evento.keycode in [KEY_LEFT, KEY_PAGEUP, KEY_A]:
-		_ir_a_pagina(-1)
-		get_viewport().set_input_as_handled()
-	elif evento.keycode == KEY_Z or (evento.keycode == KEY_ESCAPE and _cuaderno.acercado):
+	get_viewport().set_input_as_handled()
+
+
+func _zoom_seleccion() -> void:
+	var foco := _contenido_libro.get_viewport().gui_get_focus_owner()
+	var punto := Vector2(640, 360)
+	if is_instance_valid(foco):
+		punto = foco.get_global_rect().get_center()
+	_cuaderno.alternar_zoom(punto)
+
+
+func _volver_libro() -> void:
+	if _cuaderno.acercado:
 		_cuaderno.alternar_zoom()
-		get_viewport().set_input_as_handled()
 	else:
-		_cuaderno.enviar_tecla(evento)
-		get_viewport().set_input_as_handled()
+		_boton_menu.grab_focus()
 
 
 func _agregar_estaciones(padre: VBoxContainer, ids: Array, color: Color) -> void:
@@ -621,6 +711,12 @@ func _boton(texto: String, color: Color, tamano: int) -> Button:
 	boton.add_theme_stylebox_override("normal", _estilo(color, color.darkened(0.18), 3))
 	boton.add_theme_stylebox_override("hover", _estilo(color.lightened(0.16), color, 3))
 	boton.add_theme_stylebox_override("pressed", _estilo(color.darkened(0.15), color, 3))
+	var foco := _estilo(Color.TRANSPARENT, CORAL, 3)
+	foco.draw_center = false
+	foco.set_border_width_all(4)
+	foco.set_expand_margin_all(3)
+	boton.add_theme_stylebox_override("focus", foco)
+	boton.add_theme_color_override("font_focus_color", Color.WHITE)
 	return boton
 
 

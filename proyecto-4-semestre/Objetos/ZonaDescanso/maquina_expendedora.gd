@@ -6,6 +6,7 @@ const PANEL := preload("res://UI/Descanso/panel_expendedora.gd")
 const SEGUNDOS_ENTREGA := 1.5
 const TECLAS := [KEY_Z, KEY_X, KEY_V, KEY_N]
 const ATAJOS := ["Z", "X", "V", "N"]
+const ATAJOS_MANDO := ["LB", "RB", "LT", "RT"]
 const NOMBRES := ["Chocolate", "Dona", "Papa tiempo", "El Avatar"]
 const DETALLES := ["Velocidad ×1,65 durante 25 s", "Barriguita y salto alto durante 10 s", "ZA WARUDO · detiene el mundo durante 12 s", "Una carga para resolver un evento con los cuatro elementos"]
 @export var precios: Array[int] = [50, 75, 150, 250]
@@ -26,6 +27,7 @@ var _pendiente := -1
 var _objeto_mano: Node3D
 var _pago_red_pendiente := false
 var _consumo_red_pendiente := false
+var _gatillos_mando_activos := [false, false]
 
 func _ready() -> void:
 	_configurar.call_deferred()
@@ -63,10 +65,14 @@ func interactuar(quien: Player) -> void:
 	jugador.velocity = Vector3.ZERO
 	panel.abrir()
 	_actualizar_tienda()
+	var opcion_enfocada := false
 	for boton: Button in panel.botones:
 		if not boton.disabled:
 			boton.grab_focus()
+			opcion_enfocada = true
 			break
+	if not opcion_enfocada and panel.boton_usar.visible:
+		panel.boton_usar.grab_focus()
 
 func cerrar() -> void:
 	if not is_instance_valid(panel) or not panel.visible:
@@ -132,8 +138,9 @@ func _entregar_producto(indice: int) -> void:
 	producto_listo = false
 	_tiempo_entrega = 0.0
 	_actualizar_tienda()
-	panel.recogido(indice, ATAJOS[indice])
-	_mostrar("%s guardado. Pulsa %s al salir para usarlo." % [NOMBRES[indice], ATAJOS[indice]])
+	var atajo: String = ATAJOS_MANDO[indice] if ControladorInterfaz.dispositivo_mando >= 0 else ATAJOS[indice]
+	panel.recogido(indice, atajo)
+	_mostrar("%s guardado. Pulsa USAR aquí o %s al salir." % [NOMBRES[indice], atajo])
 
 func usar(indice: int) -> bool:
 	if _consumo_red_pendiente:
@@ -203,7 +210,28 @@ func _aplicar_consumo(indice: int, evento: Node) -> void:
 	_mostrar("%s activado" % NOMBRES[indice])
 
 func _input(evento: InputEvent) -> void:
-	if not evento is InputEventKey or not evento.pressed or evento.echo or not _disponible():
+	if not _disponible():
+		return
+	if evento is InputEventJoypadButton and evento.device == ControladorInterfaz.dispositivo_mando and evento.pressed and not panel.visible:
+		var mapa_botones := {JOY_BUTTON_LEFT_SHOULDER: 0, JOY_BUTTON_RIGHT_SHOULDER: 1}
+		if mapa_botones.has(evento.button_index):
+			get_viewport().set_input_as_handled()
+			usar(int(mapa_botones[evento.button_index]))
+		return
+	if evento is InputEventJoypadMotion and evento.device == ControladorInterfaz.dispositivo_mando and not panel.visible:
+		var ejes := [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]
+		for i in 2:
+			if evento.axis != ejes[i]:
+				continue
+			var intensidad: float = evento.axis_value
+			if intensidad < 0.30:
+				_gatillos_mando_activos[i] = false
+			elif intensidad > 0.65 and not _gatillos_mando_activos[i]:
+				_gatillos_mando_activos[i] = true
+				get_viewport().set_input_as_handled()
+				usar(i + 2)
+			return
+	if not evento is InputEventKey or not evento.pressed or evento.echo:
 		return
 	var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
 	if not panel.visible and TECLAS.has(tecla):
@@ -252,7 +280,14 @@ func _crear_interfaz() -> void:
 	capa.add_child(panel)
 	panel.producto_solicitado.connect(comprar)
 	panel.recoger_solicitado.connect(recoger_producto)
+	panel.usar_solicitado.connect(_usar_desde_panel)
 	panel.cerrar_solicitado.connect(cerrar)
+
+func _usar_desde_panel(indice: int) -> void:
+	if indice < 0 or indice >= inventario.size() or inventario[indice] <= 0:
+		return
+	cerrar()
+	call_deferred("usar", indice)
 
 func _actualizar_tienda() -> void:
 	panel.actualizar(despacho.puntuacion.puntos, precios, inventario, producto_en_entrega >= 0)

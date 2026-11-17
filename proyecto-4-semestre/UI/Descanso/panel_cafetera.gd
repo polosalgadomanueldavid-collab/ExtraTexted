@@ -188,6 +188,7 @@ func _crear_boton(nombre: String, accion: Callable, objeto: MeshInstance3D = nul
 	var boton := Button.new()
 	boton.name = "BotonServir" if objeto != null else "RecogerTaza"
 	boton.accessibility_name = nombre
+	boton.focus_mode = Control.FOCUS_ALL
 	boton.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	for estilo: String in ["normal", "hover", "pressed", "disabled", "focus"]:
 		boton.add_theme_stylebox_override(estilo, StyleBoxEmpty.new())
@@ -216,6 +217,7 @@ func abrir(precio: int, taza: MeshInstance3D) -> void:
 	_preparando = false
 	_lista = false
 	_tiempo = 0.0
+	boton_servir.grab_focus()
 	_taza.show()
 	_cafe.hide()
 	_chorro.hide()
@@ -335,6 +337,10 @@ func _process(delta: float) -> void:
 
 func _input(evento: InputEvent) -> void:
 	if not visible or get_tree().paused:
+		return
+	if evento is InputEventJoypadButton and evento.pressed and not evento.is_echo() and evento.is_action_pressed("ui_cancel"):
+		cerrar_solicitado.emit()
+		get_viewport().set_input_as_handled()
 		return
 	if evento is InputEventKey:
 		var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode

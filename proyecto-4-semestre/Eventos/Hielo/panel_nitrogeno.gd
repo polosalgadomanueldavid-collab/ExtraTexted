@@ -131,6 +131,19 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if not visible or get_tree().paused:
 		return
+	if event is InputEventJoypadButton and event.pressed and not event.is_echo():
+		if event.is_action_pressed("ui_cancel"):
+			cerrar()
+		elif event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right"):
+			seleccion = seleccion ^ 1
+		elif event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down"):
+			seleccion = seleccion ^ 2
+		elif event.is_action_pressed("ui_accept"):
+			apretar(seleccion)
+		else:
+			return
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_ESCAPE:
