@@ -2,6 +2,8 @@
 
 Actualizado: 15 de noviembre de 2026. Sustituye el plan preliminar del 7 de noviembre.
 
+Para la arquitectura y las reglas vigentes, consulta [DOCUMENTACION_MULTIJUGADOR.md](DOCUMENTACION_MULTIJUGADOR.md). Las comprobaciones más recientes están en [VERIFICACION_OPTIMIZACION_2026-11-16.md](VERIFICACION_OPTIMIZACION_2026-11-16.md).
+
 ## Reglas acordadas e implementadas
 
 | Aspecto | Comportamiento |

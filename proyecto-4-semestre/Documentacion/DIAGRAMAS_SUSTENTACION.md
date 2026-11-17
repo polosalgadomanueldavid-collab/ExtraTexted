@@ -63,7 +63,7 @@ flowchart LR
 
 ## Diapositiva: Grafo del piso y ruta mínima
 
-**Idea que debe comunicar:** el mapa se transforma en nodos y conexiones; Dijkstra encuentra el camino más corto evitando obstáculos.
+**Idea que debe comunicar:** el mapa se transforma en nodos y conexiones; una búsqueda en anchura (BFS) encuentra la estación pendiente alcanzable con menos pasos.
 
 ```mermaid
 flowchart LR
@@ -86,11 +86,11 @@ flowchart LR
 
 ### Texto breve para decir
 
-> Cada celda transitable del piso es un vértice y cada movimiento horizontal o vertical es una arista de costo uno. Los muros y bloqueos no se incluyen en la adyacencia. Dijkstra compara las distancias acumuladas y devuelve la secuencia de celdas más corta desde el jugador hasta la estación que exige el protocolo. Cuando aparece un bloqueo temporal, se reconstruye el grafo y se recalcula la ruta.
+> Cada celda transitable del piso es un vértice y cada movimiento horizontal o vertical es una arista de costo uno. Los muros y bloqueos no se incluyen en la adyacencia. La búsqueda en anchura recorre el mapa por capas y devuelve la secuencia más corta hasta la estación pendiente alcanzable más cercana. Cuando aparece un bloqueo temporal, se reconstruye el grafo y se recalcula la ruta.
 
 ### Leyenda sugerida
 
-- **Verde:** ruta seleccionada por Dijkstra.
+- **Verde:** ruta seleccionada por BFS.
 - **Azul:** celdas transitables disponibles como alternativas.
 - **Rojo punteado:** bloqueo que no puede ser recorrido.
 
@@ -99,7 +99,7 @@ flowchart LR
 ```mermaid
 flowchart LR
     A["AVL\nSelecciona la denuncia prioritaria"] --> B["Protocolo libre\nLista las estaciones pendientes"]
-    B --> C["Grafo + Dijkstra\nSugiere la estación de menor recorrido"]
+    B --> C["Grafo + BFS\nSugiere la estación de menor recorrido"]
     C --> D["Jugador\nSe desplaza por el escenario"]
 ```
 

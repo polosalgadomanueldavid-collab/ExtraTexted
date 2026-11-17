@@ -24,7 +24,7 @@ Para jugar solo se conserva **Jugar → Individual** y la identificación de la 
 - Usar papa tiempo: ambos pueden moverse mientras se detienen los plazos del mundo durante 12 segundos. Intentar otro uso y comprobar que conserva la carga. Probar reparación frente a Avatar: una resolución ya confirmada impide consumir la segunda carga.
 - Abrir pausa o guía en ambos equipos. Cerrar solo una no debe reanudar el mundo. Cerrar las dos sí.
 - Agotar al anfitrión. Debe observar al compañero y seguir funcionando el servidor; el superviviente puede recuperar la hoja y continuar. Agotar al segundo debe producir un único final compartido.
-- Reintentar desde el anfitrión: ambos vuelven con 100 de cordura, sin saldo ni objetos anteriores. Cerrar una ventana durante la sesión debe llevar a la otra al menú con aviso; crear una sala nueva debe funcionar.
+- Pulsar **Reintentar** en ambos equipos: después de los dos votos, el anfitrión carga la ronda nueva y ambos vuelven con 100 de cordura, sin saldo ni objetos anteriores. Cerrar una ventana durante la sesión debe llevar a la otra al menú con aviso; crear una sala nueva debe funcionar.
 
 ## Pruebas automáticas en un computador
 

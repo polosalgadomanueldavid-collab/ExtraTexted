@@ -1,128 +1,83 @@
-# Sistema de grafos para navegación del escenario
+# Sistema de grafos para la navegación de la oficina
 
-## 1. Propósito
+## Propósito
 
-El proyecto usa un **grafo no dirigido y no ponderado** para representar las zonas transitables del piso de la comisaría. Su función es sugerir una ruta desde la posición del jugador hasta la estación pendiente que requiere menos recorrido. El jugador puede completar las estaciones de su denuncia en cualquier orden.
+`GrafoPiso` representa las casillas transitables de la oficina y calcula una ruta sugerida desde el jugador hasta la estación pendiente alcanzable con menos pasos. Las estaciones de una denuncia se pueden completar en cualquier orden. El grafo también permite comprobar que los cajones y los peligros del terremoto conserven los accesos necesarios.
 
-La ruta se actualiza cuando se inicia una denuncia, se completa una estación, el jugador cambia de celda o cambia un bloqueo temporal. Así, la navegación respeta tanto los obstáculos permanentes del mapa como los obstáculos dinámicos de la partida.
+La sugerencia se recalcula al cambiar la denuncia o sus estaciones pendientes, al entrar el jugador en otra celda y al cambiar los obstáculos. Los marcadores de **todas** las estaciones pendientes permanecen visibles; la guía destaca una sola sugerencia.
 
-## 2. Modelado del grafo
+## Modelo y coordenadas
 
-La clase `GrafoPiso` convierte una cuadrícula de `14` columnas por `25` filas en un grafo:
+La cuadrícula tiene `14` columnas por `25` filas, con celdas de `0,5` unidades. Su referencia espacial usa `ORIGEN_X = -4,5` y `ORIGEN_Z = -0,1`. `posicion_a_celda()` convierte la posición 3D en `Vector2i(columna, fila)`; `celda_a_posicion()` devuelve el centro de la celda en el piso.
 
-| Elemento del mapa | Representación en el grafo |
-|---|---|
-| Celda transitable | Vértice `Vector2i(columna, fila)` |
-| Paso a norte, sur, este u oeste | Arista entre dos vértices vecinos |
-| Muro u obstáculo fijo | No se crea el vértice |
-| Bloqueo temporal | El vértice se elimina temporalmente de la adyacencia |
-| Estación del escenario | Vértice destino identificado por nombre |
+Cada celda transitable es un vértice. Las aristas unen vecinos horizontales o verticales y cuestan un paso; no hay diagonales. `construir_adyacencia()` recorre las 350 posiciones posibles y guarda en `adyacencia` solo los vértices transitables con sus vecinos. Una celda fuera del mapa o incluida en cualquiera de estas colecciones no es transitable:
 
-No existen conexiones diagonales. Por esto, cada vértice puede tener como máximo cuatro vecinos: arriba, abajo, izquierda y derecha.
+| Colección | Procedencia |
+| --- | --- |
+| `bloqueos_fijos` | Casillas definidas en `CELDAS_BLOQUEADAS_FIJAS`. |
+| `bloqueos_mesas` | Huellas de mesas y muebles obtenidas de la escena por `GrafoDebugVisual`. |
+| `bloqueos_temporales` | Cajones que cambian durante la partida. |
+| `grietas`, `escombros` | Obstáculos del terremoto mientras dura el evento. |
 
-```text
-Cuadrícula física                         Grafo lógico
+`celda_de_acceso()` usa la propia celda si es transitable. Si una mesa ocupa lógicamente la celda donde está el personaje, busca el centro de la celda transitable más cercana y lo usa como origen. No abre la celda de la mesa. Si no existe ninguna, devuelve `(-1, -1)` y la búsqueda de ruta no produce resultado.
 
-  (2,1) ─ (3,1) ─ (4,1)                 (2,1) ─── (3,1) ─── (4,1)
-    │       │       │                      │         │         │
-  (2,2) ─ (3,2) ─ (4,2)       =>        (2,2) ─── (3,2) ─── (4,2)
-    │       X       │                      │                   │
-  (2,3) ─ (3,3) ─ (4,3)                 (2,3) ──────────── (4,3)
+`DESTINOS` contiene **casillas de aproximación**, no el centro de la mesa física:
 
-X = celda bloqueada: no es vértice ni puede formar aristas.
-```
+| Estación | Celda de acceso |
+| --- | ---: |
+| `computador` | `(7, 2)` |
+| `evidencias` | `(11, 7)` |
+| `verificacion` | `(2, 7)` |
+| `privacidad` | `(4, 10)` |
+| `reporte` | `(9, 10)` |
+| `bienestar` | `(2, 3)` |
 
-## 3. Estaciones registradas
+## Ruta mínima
 
-Las estaciones están definidas en `GrafoPiso.DESTINOS`. Cada una se asocia a la celda donde se encuentra su objeto físico.
+`calcular_ruta_a_mas_cercana(origen, destinos)` hace una **búsqueda en anchura (BFS)** sobre `adyacencia`. Como todas las aristas cuestan uno, la primera capa que contiene un destino tiene la distancia mínima. Si varios destinos están en esa capa, elige el de menor fila y luego menor columna. `calcular_ruta(origen, destino)` delega en el mismo método con un solo destino.
 
-| Identificador | Coordenada | Uso dentro del protocolo |
-|---|---:|---|
-| `computador` | `(7, 0)` | Punto de despacho. |
-| `evidencias` | `(13, 7)` | Recolección o análisis de evidencias. |
-| `verificacion` | `(1, 7)` | Verificación de información. |
-| `privacidad` | `(4, 12)` | Gestión de datos y privacidad. |
-| `reporte` | `(9, 12)` | Registro o reporte del caso. |
-| `bienestar` | `(1, 3)` | Atención asociada al bienestar. |
+La búsqueda guarda cada celda visitada en una cola y registra su predecesora. Después reconstruye la ruta desde el destino elegido hasta el origen y la invierte. La ruta incluye ambos extremos: `[origen]` significa que el jugador ya está en la casilla de acceso. Devuelve `[]` si no hay destinos, el origen no está en la adyacencia o ningún destino es alcanzable. Un destino bloqueado tampoco puede aparecer en la ruta.
 
-## 4. Construcción de la lista de adyacencia
+El recorrido cuesta `O(V + E)` en tiempo y `O(V)` en memoria, donde `V` son las celdas transitables y `E` sus conexiones. Para este mapa, `V ≤ 350` y `E ≤ 661`. La implementación anterior basada en Dijkstra ya no es la que ejecuta `GrafoPiso`.
 
-`construir_adyacencia()` recorre toda la cuadrícula. Si una celda es transitable, crea una entrada en el diccionario `adyacencia` y añade únicamente sus vecinos transitables en las cuatro direcciones permitidas.
+`celdas_alcanzables(origen)` recorre las cuatro direcciones leyendo `es_transitable()` directamente, incluso antes de reconstruir la adyacencia. Devuelve un diccionario de celdas visitadas o `{}` cuando el origen está bloqueado. Se usa para evaluar una ocupación provisional.
 
-```text
-Para cada celda del piso:
-    si es transitable:
-        crear lista de vecinos
-        revisar derecha, izquierda, abajo y arriba
-        agregar solo vecinos transitables
-        guardar la lista en adyacencia[celda]
-```
+## Cajones y conservación de accesos
 
-Una celda es transitable si está dentro de los límites y no figura ni en `bloqueos_fijos` ni en `bloqueos_temporales`.
+Cada `10` segundos, `gestor_partida.gd` retira la distribución anterior e intenta colocar hasta `30` cajones. Primero calcula las celdas alcanzables desde el acceso del jugador y prepara un `AStarGrid2D` sin diagonales para ensayar candidatos. Se excluyen las estaciones, la zona segura, el acceso del jugador y las celdas que invadirían su cuerpo o una hoja suelta, incluido su trayecto inmediato.
 
-## 5. Cálculo de la ruta mínima
+Para cada candidato, el gestor lo marca provisionalmente como sólido. `_conserva_accesos()` comprueba que el jugador conserve una salida y los destinos que eran alcanzables al inicio: estaciones y nodos del grupo `accesos_navegacion`. Solo vuelve a buscar una ruta si el candidato corta una ruta protegida conocida. En LAN, `PartidaLAN.proteger_celda()` añade la protección de **ambos** jugadores activos, sus accesos a estaciones y las hojas sueltas. Si el candidato falla, se retira del ensayo y se prueba otro. Puede quedar una distribución parcial o ninguna.
 
-El método `calcular_ruta(origen, destino)` utiliza **Dijkstra**. Todas las aristas tienen costo `1`, porque desplazarse entre dos celdas vecinas representa un paso equivalente. `calcular_ruta_a_mas_cercana(origen, destinos)` realiza una sola búsqueda y termina al alcanzar la primera estación pendiente con distancia mínima; el método de un único destino delega en esta búsqueda.
+Después se reconstruye la adyacencia, se actualiza el depurador y se recalcula la ruta sugerida. En LAN solo el anfitrión sortea los cajones; publica la lista concreta de celdas y el cliente la aplica a su grafo, sin repetir el sorteo.
 
-1. Asigna distancia infinita a cada vértice y `0` al origen.
-2. Selecciona el vértice no visitado con menor distancia.
-3. Revisa sus vecinos y mejora su distancia cuando encuentra un camino más corto.
-4. Guarda en `anterior` el vértice desde el que se llegó a cada celda.
-5. Al llegar al destino, reconstruye el camino retrocediendo desde destino hasta origen y luego invierte el resultado.
+El terremoto registra grietas y escombros en el grafo y reconstruye la adyacencia al cambiar el suelo. Para planificar su trazado usa su propio `AStarGrid2D`; el anfitrión transmite el trazado exacto al cliente. Al terminar, se limpian estas ocupaciones y se vuelve a reconstruir el mapa. Véase [la documentación del terremoto](../Eventos/Terremoto/README.md).
 
-Si el origen o el destino no son transitables, o si no existe conexión entre ellos, retorna un arreglo vacío. Esto evita mostrar rutas que atraviesen obstáculos.
-
-### Complejidad
-
-La implementación actual busca linealmente el siguiente vértice de menor distancia dentro de `sin_visitar`; por eso su complejidad es `O(V² + E)`. Es adecuada para el mapa actual, cuyo máximo teórico es de `14 × 25 = 350` celdas. Una versión para mapas mucho más grandes podría reemplazar esa búsqueda por una cola de prioridad y lograr `O((V + E) log V)`.
-
-## 6. Bloqueos dinámicos
-
-Cada 10 segundos, `gestor_partida.gd` renueva los bloqueos e intenta colocar hasta 30 cajones en celdas libres. Excluye las zonas seguras, los destinos, la celda de acceso del jugador y cualquier celda que invada su cuerpo. Antes de aceptar cada cajón, comprueba que se conserve la salida del jugador y el acceso a las estaciones que podía alcanzar al comenzar.
-
-El personaje puede caber en el borde libre de una celda que el grafo marca como ocupada por una mesa. En ese caso, `celda_de_acceso()` usa la celda transitable más cercana como origen de navegación, sin desbloquear la mesa. Esto evita que un origen lógico bloqueado haga rechazar todos los cajones aunque existan espacios disponibles.
+## Integración y diagnóstico
 
 ```text
-Elegir candidata libre
-        ↓
-Agregarla a bloqueos_temporales
-        ↓
-Consultar celdas alcanzables con la ocupación provisional
-        ↓
-¿Se conservan la salida y los destinos protegidos?
-   ├── Sí: conservar bloqueo y seguir colocando
-   └── No: retirar candidata y probar otra
+Caso activo del jugador → estaciones pendientes → DESTINOS
+Posición del jugador → celda_de_acceso()
+                ↓
+calcular_ruta_a_mas_cercana() → ruta_actual y estacion_sugerida
+                ↓
+Guía de estación y capa de diagnóstico
 ```
 
-Se recorren las candidatas hasta llegar a 30 o agotarlas. Si solo se pueden colocar tres cajones, se conservan esos tres; la cantidad parcial es un resultado normal. Al terminar se reconstruye la adyacencia, se actualizan los obstáculos visibles y se recalcula la ruta del caso activo. Si no existe ninguna candidata válida, se mantiene el mapa libre de nuevos cajones sin invadir zonas protegidas.
+`GrafoDebugVisual` compara el mapa lógico con las mesas de la escena. En una compilación de desarrollo, **F3** muestra la cuadrícula: verde libre, azul zona segura, cian ruta, amarillo destino, rojo obstáculo fijo o mesa, naranja cajón y blanco jugador; también distingue grietas, escombros y bloqueos lógicos sin mesa. Al caminar cambia el material de las casillas de la ruta sin recrear las mallas; al cambiar el mapa reconstruye la vista. Esta capa no altera las colisiones.
 
-La prueba `Pruebas/Bloqueos/prueba_generacion_bloqueos.gd` reproduce posiciones de borde en la oficina real, comprueba que el jugador no se solape con los cajones y que las estaciones sigan conectadas, y verifica mapas con tres o cero huecos disponibles. Se ejecuta con Godot mediante `--headless --path <proyecto> --script res://Pruebas/Bloqueos/prueba_generacion_bloqueos.gd`.
+| Archivo | Papel |
+| --- | --- |
+| `Scripts/Estructuras/grafo_piso.gd` | Cuadrícula, ocupación, BFS, alcanzabilidad y conversiones. |
+| `Scripts/Mundo/grafo_debug_visual.gd` | Sincronización de huellas de muebles y vista F3. |
+| `Scripts/Partida/gestor_partida.gd` | Ruta sugerida y distribución de cajones. |
+| `Scripts/Red/partida_lan.gd` | Protección adicional y sincronización de celdas en LAN. |
+| `Pruebas/Despacho/prueba_protocolo_libre.gd` | Ruta al destino más cercano, destino bloqueado y casos límite. |
+| `Pruebas/Bloqueos/prueba_generacion_bloqueos.gd` | Accesos conservados, bordes del jugador y distribuciones parciales. |
 
-## 7. Integración con el flujo de juego
+Para ejecutar la prueba de bloqueos con Godot desde la raíz del repositorio:
 
-```text
-Denuncia prioritaria activada
-        ↓
-Se obtienen todas las estaciones pendientes
-        ↓
-Posición 3D del jugador → celda transitable de acceso
-Estaciones pendientes  → celdas de destino
-        ↓
-GrafoPiso.calcular_ruta_a_mas_cercana(origen, destinos)
-        ↓
-ruta_actual: recorrido sugerido a la estación alcanzable más cercana
+```powershell
+& $Godot --headless --path .\proyecto-4-semestre --script res://Pruebas/Bloqueos/prueba_generacion_bloqueos.gd
 ```
 
-La conversión se realiza con `posicion_a_celda()` y `celda_a_posicion()`, usando el origen espacial del piso y un tamaño de celda de `0.5` unidades. `celda_de_acceso()` resuelve los bordes libres de casillas ocupadas. Todos los marcadores pendientes permanecen visibles, aunque la guía señale solo una sugerencia; las casillas del depurador actualizan sus colores sin recrear sus mallas al caminar.
-
-## 8. Archivos principales
-
-| Archivo | Responsabilidad |
-|---|---|
-| `Scripts/Estructuras/grafo_piso.gd` | Modelo de cuadrícula, adyacencia, Dijkstra y conversiones de coordenadas. |
-| `Scripts/Partida/gestor_partida.gd` | Solicita rutas, administra bloqueos temporales y los visualiza en la escena. |
-| `Pruebas/Estructuras/prueba_grafo.gd` | Prueba el cálculo de una ruta entre origen y destino. |
-
-## 9. Guion breve para la sustentación
-
-> Modelamos el piso como un grafo: cada celda transitable es un vértice y cada paso horizontal o vertical es una arista de costo uno. Cuando una denuncia exige ir a una estación, convertimos la posición del jugador y la estación a coordenadas de cuadrícula y aplicamos Dijkstra para obtener la ruta más corta. Los obstáculos fijos y temporales no forman parte de la adyacencia. Además, antes de fijar un bloqueo temporal verificamos que aún exista un camino válido, de modo que el reto cambia la ruta sin bloquear el progreso del jugador.
+`$Godot` debe ser la ruta del ejecutable. La prueba de ruta también forma parte de `prueba_protocolo_libre.gd`. `Pruebas/Estructuras/prueba_grafo.gd` solo imprime un recorrido de ejemplo con coordenadas antiguas; no verifica las casillas de aproximación actuales.
