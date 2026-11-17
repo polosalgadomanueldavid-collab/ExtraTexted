@@ -43,6 +43,8 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	resized.connect(_ajustar_presentacion)
+	if SesionLAN.en_partida:
+		_selecciones.append({"tipo": &"duelo_kamehameha", "nombre": "DUELO KAMEHAMEHA", "icono": ICONO_KAMEHAMEHA})
 	_crear_interfaz()
 	_ajustar_presentacion()
 
@@ -102,6 +104,7 @@ func _crear_interfaz() -> void:
 	add_child(_lienzo)
 
 	var rueda := FondoRuleta.new()
+	rueda.cantidad = _selecciones.size()
 	rueda.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rueda.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_lienzo.add_child(rueda)
@@ -180,6 +183,15 @@ func _crear_boton(indice: int) -> void:
 	icono.offset_right = -8.0
 	icono.offset_bottom = -8.0
 	boton.add_child(icono)
+	if item["tipo"] == &"duelo_kamehameha":
+		var placa := Label.new()
+		placa.text = "DUELO"
+		placa.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		placa.add_theme_font_size_override("font_size", 15)
+		placa.add_theme_color_override("font_color", Color.WHITE)
+		placa.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		placa.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		boton.add_child(placa)
 
 	boton.pressed.connect(_seleccionar.bind(item["tipo"]))
 	boton.mouse_entered.connect(_animar_boton.bind(boton, Vector2(1.08, 1.08)))
@@ -268,6 +280,7 @@ func _estilo_capsula(fondo: Color, borde: Color, grosor: int, sombra: int) -> St
 
 
 class FondoRuleta extends Control:
+	var cantidad := 5
 	func _draw() -> void:
 		var centro := size * 0.5
 		draw_circle(centro + Vector2(0.0, 12.0), 336.0, Color(0.0, 0.02, 0.03, 0.48), true, -1.0, true)
@@ -275,8 +288,8 @@ class FondoRuleta extends Control:
 		draw_arc(centro, 330.0, 0.0, TAU, 160, Color("fff1d8"), 8.0, true)
 		draw_arc(centro, 316.0, 0.0, TAU, 160, Color("ff785f"), 4.0, true)
 		draw_circle(centro, 292.0, Color("173b50"), true, -1.0, true)
-		for indice: int in range(5):
-			var angulo := -PI * 0.5 + TAU * float(indice) / 5.0
+		for indice: int in range(cantidad):
+			var angulo := -PI * 0.5 + TAU * float(indice) / float(cantidad)
 			var direccion := Vector2.from_angle(angulo)
 			draw_line(centro + direccion * 92.0, centro + direccion * 142.0, Color(1.0, 0.945, 0.847, 0.22), 3.0, true)
 		draw_circle(centro, 92.0, Color("0c2634"), true, -1.0, true)

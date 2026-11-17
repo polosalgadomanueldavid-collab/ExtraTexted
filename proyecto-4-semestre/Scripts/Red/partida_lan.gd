@@ -47,6 +47,10 @@ var snapshots_completos := 0
 var snapshots_delta := 0
 var _hud_previo := {}
 var _contexto_previo: Array = []
+var _duelo := {}
+var _duelo_ultimo_pulso := {}
+var _duelo_visual: MeshInstance3D
+var _duelo_aviso: Label
 
 func configurar(mundo: Node3D) -> void:
 	oficina = mundo
@@ -107,6 +111,9 @@ func comenzar() -> void:
 func _process(delta: float) -> void:
 	if not _listo or not is_instance_valid(oficina):
 		return
+	if SesionLAN.es_anfitrion() and not _duelo.is_empty() and Time.get_ticks_msec() >= int(_duelo.get("vence", 0)):
+		_terminar_duelo(0)
+	_actualizar_visual_duelo()
 	_envio += delta
 	_estado += delta
 	if not get_tree().paused:
@@ -227,6 +234,10 @@ func procesar(id: int, tipo: String, datos: Dictionary) -> Dictionary:
 		return _error("No puedes actuar durante la pausa o fuera del turno.")
 	var j: Player = jugadores[id]
 	match tipo:
+		"duelo_kamehameha":
+			return _solicitar_duelo(id)
+		"duelo_pulso":
+			return _pulso_duelo(id)
 		"gesto":
 			var gesto := str(datos.get("tipo", ""))
 			if gesto in ["recibir", "recoger", "lanzar", "interactuar", "reparar", "comer", "beber", "za_warudo", "control_agua", "control_tierra", "control_fuego", "control_aire", "kamehameha", "genkidama", "rasengan", "saludar"]:
@@ -785,6 +796,8 @@ func _arrancar_evento(datos: Dictionary) -> bool:
 
 func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 	match tipo:
+		"duelo":
+			_aplicar_duelo(datos)
 		"tarea":
 			if int(datos.jugador) == SesionLAN.id_local():
 				oficina.panel_despacho.mostrar_tarea_local(str(datos.caso), str(datos.estacion))
@@ -938,8 +951,141 @@ func _aplicar_mundo(datos: Dictionary) -> void:
 func perder_por_grieta(caso: String) -> void:
 	SesionLAN.solicitar("grieta", {"caso": caso})
 
+func _solicitar_duelo(id: int) -> Dictionary:
+	if jugadores.size() != 2:
+		return _error("El duelo requiere dos jugadores.")
+	var ahora := Time.get_ticks_msec()
+	if _duelo.is_empty():
+		_duelo = {"fase": "espera", "invitador": id, "vence": ahora + 5000}
+		SesionLAN.difundir("duelo", {"fase": "espera", "invitador": id})
+		return {"ok": true}
+	if _duelo.get("fase") != "espera" or int(_duelo.get("invitador", 0)) == id:
+		return _error("Ya hay un duelo en curso.")
+	var primero := int(_duelo.invitador)
+	if not despacho.esta_activo(primero):
+		_terminar_duelo(0)
+		return _error("El otro jugador no puede iniciar el duelo.")
+	_duelo = {"fase": "choque", "primero": primero, "segundo": id, "avance": 0, "vence": ahora + 12000}
+	_duelo_ultimo_pulso.clear()
+	SesionLAN.difundir("duelo", {"fase": "choque", "primero": primero, "segundo": id, "avance": 0})
+	return {"ok": true}
+
+func _pulso_duelo(id: int) -> Dictionary:
+	if _duelo.get("fase", "") != "choque":
+		return _error("No hay choque activo.")
+	var ahora := Time.get_ticks_msec()
+	if ahora - int(_duelo_ultimo_pulso.get(id, 0)) < 85:
+		return {"ok": true}
+	_duelo_ultimo_pulso[id] = ahora
+	_duelo.avance = clampi(int(_duelo.avance) + (1 if id == int(_duelo.primero) else -1), -14, 14)
+	SesionLAN.difundir("duelo", {"fase": "avance", "avance": int(_duelo.avance)})
+	if absi(int(_duelo.avance)) >= 14:
+		_terminar_duelo(int(_duelo.primero) if int(_duelo.avance) > 0 else int(_duelo.segundo))
+	return {"ok": true}
+
+func _terminar_duelo(ganador: int) -> void:
+	if _duelo.is_empty():
+		return
+	var perdedor := 0
+	if ganador != 0 and _duelo.has("segundo"):
+		perdedor = int(_duelo.segundo) if ganador == int(_duelo.primero) else int(_duelo.primero)
+	_duelo.clear()
+	SesionLAN.difundir("duelo", {"fase": "fin", "ganador": ganador, "perdedor": perdedor})
+
+func _aplicar_duelo(datos: Dictionary) -> void:
+	var fase := str(datos.get("fase", ""))
+	if fase == "espera":
+		_mostrar_duelo("DUELO KAMEHAMEHA · 5 s para aceptar en la ruleta")
+	elif fase == "choque":
+		if not SesionLAN.es_anfitrion():
+			_duelo = {"fase": "choque", "primero": int(datos.primero), "segundo": int(datos.segundo), "avance": 0}
+		for id: int in [int(datos.primero), int(datos.segundo)]:
+			var j: Player = jugadores.get(id)
+			var rival: Player = jugadores.get(int(datos.segundo) if id == int(datos.primero) else int(datos.primero))
+			if is_instance_valid(j) and is_instance_valid(j.gestos) and is_instance_valid(rival):
+				j.gestos.iniciar(&"kamehameha", rival, 12.0)
+				var direccion: Vector3 = rival.global_position - j.global_position
+				j.visual.rotation.y = atan2(direccion.x, direccion.z)
+		_mostrar_duelo("¡CHOQUE! Pulsa ESPACIO o A rápidamente")
+		if not is_instance_valid(_duelo_visual):
+			_duelo_visual = MeshInstance3D.new()
+			var esfera := SphereMesh.new()
+			esfera.radius = 0.38
+			esfera.height = 0.76
+			_duelo_visual.mesh = esfera
+			var material := StandardMaterial3D.new()
+			material.albedo_color = Color(0.35, 0.85, 1.0)
+			material.emission_enabled = true
+			material.emission = Color(0.2, 0.65, 1.0)
+			material.emission_energy_multiplier = 2.0
+			_duelo_visual.material_override = material
+			oficina.add_child(_duelo_visual)
+	elif fase == "avance":
+		_duelo.avance = int(datos.avance)
+	elif fase == "fin":
+		for jugador_duelo: int in jugadores:
+			var actor: Player = jugadores[jugador_duelo]
+			if is_instance_valid(actor) and is_instance_valid(actor.gestos) and actor.gestos.gesto == &"kamehameha":
+				actor.cancelar_gesto()
+		var perdedor := int(datos.get("perdedor", 0))
+		if perdedor != 0 and jugadores.has(perdedor):
+			var j: Player = jugadores[perdedor]
+			j.cancelar_gesto()
+			if perdedor == SesionLAN.id_local():
+				var ganador: Player = jugadores.get(int(datos.ganador))
+				var direccion := (j.global_position - ganador.global_position).normalized() if is_instance_valid(ganador) else Vector3.FORWARD
+				j.velocity = direccion * 9.0 + Vector3.UP * 7.0
+		_mostrar_duelo("¡IMPACTO!" if perdedor != 0 else "Duelo cancelado")
+		_duelo.clear()
+		if is_instance_valid(_duelo_visual):
+			if perdedor != 0:
+				_duelo_visual.global_position = jugadores[perdedor].global_position + Vector3.UP
+				var explosion := create_tween()
+				explosion.tween_property(_duelo_visual, "scale", Vector3.ONE * 4.0, 0.28)
+				explosion.tween_callback(_duelo_visual.queue_free)
+			else:
+				_duelo_visual.queue_free()
+		get_tree().create_timer(2.0).timeout.connect(_ocultar_duelo)
+
+func _actualizar_visual_duelo() -> void:
+	if not is_instance_valid(_duelo_visual) or _duelo.get("fase", "") != "choque":
+		return
+	var a: Player = jugadores.get(int(_duelo.primero))
+	var b: Player = jugadores.get(int(_duelo.segundo))
+	if is_instance_valid(a) and is_instance_valid(b):
+		_duelo_visual.global_position = a.global_position.lerp(b.global_position, 0.5 + float(_duelo.avance) / 32.0) + Vector3.UP * 1.0
+
+func _mostrar_duelo(mensaje: String) -> void:
+	if not is_instance_valid(_duelo_aviso):
+		_duelo_aviso = Label.new()
+		_duelo_aviso.add_theme_font_size_override("font_size", 26)
+		_duelo_aviso.add_theme_color_override("font_color", Color(1, 0.9, 0.55))
+		_duelo_aviso.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_duelo_aviso.position = Vector2(-330, 100)
+		_duelo_aviso.custom_minimum_size.x = 660
+		_duelo_aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		oficina.get_node("CanvasLayer").add_child(_duelo_aviso)
+	_duelo_aviso.text = mensaje
+	_duelo_aviso.show()
+
+func _ocultar_duelo() -> void:
+	if is_instance_valid(_duelo_aviso):
+		_duelo_aviso.hide()
+
+func _input(event: InputEvent) -> void:
+	if _duelo.get("fase", "") != "choque" or get_tree().paused:
+		return
+	if (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE) or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_A):
+		SesionLAN.solicitar("duelo_pulso", {})
+		get_viewport().set_input_as_handled()
+
 func preparar_salida() -> void:
 	_listo = false
+	_duelo.clear()
+	if is_instance_valid(_duelo_visual):
+		_duelo_visual.queue_free()
+	if is_instance_valid(_duelo_aviso):
+		_duelo_aviso.queue_free()
 	set_process(false)
 	oficina.get_node("MaquinaExpendedora").poderes.limpiar()
 	for tween: Tween in get_tree().get_processed_tweens():

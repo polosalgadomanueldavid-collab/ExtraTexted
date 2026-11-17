@@ -341,6 +341,10 @@ func _cerrar_ruleta_emotes(_cancelled: bool) -> void:
 
 func _seleccionar_emote_ruleta(tipo: StringName) -> void:
 	jugador.cerrar_menu_emotes(false)
+	if tipo == &"duelo_kamehameha":
+		if SesionLAN.en_partida:
+			SesionLAN.solicitar("duelo_kamehameha", {})
+		return
 	if tipo == &"aura_persistente":
 		if is_instance_valid(jugador.gestos):
 			jugador.gestos.alternar_aura_persistente()
