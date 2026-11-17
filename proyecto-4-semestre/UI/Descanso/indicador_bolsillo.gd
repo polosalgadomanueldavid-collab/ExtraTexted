@@ -1,12 +1,12 @@
 extends Control
 ## Medallones del inventario y café. Solo observa: las acciones siguen en sus controladores.
 const FUENTE := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
-const ICONOS := [preload("res://UI/Descanso/Arte/chocolate.png"), preload("res://UI/Descanso/Arte/dona.png"), preload("res://UI/Descanso/Arte/papa_tiempo.png"), preload("res://UI/Descanso/Arte/avatar.png"), preload("res://UI/Descanso/Arte/cafe.png")]
+const ICONOS := [preload("res://UI/Descanso/Arte/chocolate.png"), preload("res://UI/Descanso/Arte/dona.png"), preload("res://UI/Descanso/Arte/papa_tiempo.svg"), preload("res://UI/Descanso/Arte/avatar_piedra.png"), preload("res://UI/Descanso/Arte/cafe.png")]
 const TECLAS := ["Z · USAR", "X · USAR", "V · USAR", "N · USAR", "F · BEBER"]
-const TINTA := Color("173b50")
-const CREMA := Color("fff1d8")
-const CORAL := Color("ff785f")
-const MENTA := Color("8fd4ba")
+const TINTA := Color("182a3d")
+const CREMA := Color("e5ebf0")
+const CORAL := Color("c8974c")
+const MENTA := Color("79bbca")
 const SOMBRA := Color("0d2736aa")
 var oficina: Node3D
 var entradas: Array[Dictionary] = []
