@@ -43,13 +43,12 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	resized.connect(_ajustar_presentacion)
-	if SesionLAN.en_partida:
-		_selecciones.append({"tipo": &"duelo_kamehameha", "nombre": "DUELO KAMEHAMEHA", "icono": ICONO_KAMEHAMEHA})
 	_crear_interfaz()
 	_ajustar_presentacion()
 
 
 func abrir(aura_activa: bool = false, dispositivo_mando: int = -1) -> void:
+	_actualizar_opciones_multijugador()
 	_modo_mouse_previo = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_aura_activada = aura_activa
@@ -60,6 +59,23 @@ func abrir(aura_activa: bool = false, dispositivo_mando: int = -1) -> void:
 	if _dispositivo_mando >= 0 and not _botones.is_empty():
 		_indice_enfocado = 0
 		_botones[0].grab_focus()
+
+
+func _actualizar_opciones_multijugador() -> void:
+	var mostrar_duelo := SesionLAN.en_partida and SesionLAN.participantes.size() == 2
+	var tiene_duelo := _selecciones.size() == 6
+	if mostrar_duelo == tiene_duelo:
+		return
+	if mostrar_duelo:
+		_selecciones.append({"tipo": &"duelo_kamehameha", "nombre": "DUELO KAMEHAMEHA", "icono": ICONO_KAMEHAMEHA})
+	else:
+		_selecciones.remove_at(5)
+	for hijo in get_children():
+		remove_child(hijo)
+		hijo.queue_free()
+	_botones.clear()
+	_crear_interfaz()
+	_ajustar_presentacion()
 
 
 func cerrar() -> void:
