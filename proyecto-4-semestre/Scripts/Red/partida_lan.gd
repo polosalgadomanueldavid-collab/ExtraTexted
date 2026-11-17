@@ -335,6 +335,8 @@ func _estacion(id: int, tipo: String, datos: Dictionary) -> Dictionary:
 			return _error("La tarea ya no está reservada.")
 	reservas.erase(clave)
 	var correcto := despacho.interactuar_estacion(estacion, caso_id, id)
+	if correcto:
+		SesionLAN.difundir("tarea", {"jugador": id, "caso": caso_id, "estacion": estacion})
 	_limpiar_papeles()
 	return {"ok": correcto, "tarea": "completada"}
 
@@ -783,6 +785,10 @@ func _arrancar_evento(datos: Dictionary) -> bool:
 
 func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 	match tipo:
+		"tarea":
+			if int(datos.jugador) == SesionLAN.id_local():
+				oficina.panel_despacho.mostrar_tarea_local(str(datos.caso), str(datos.estacion))
+				oficina.jugador.reproducir_expresion(&"alegria")
 		"inicio":
 			if not SesionLAN.es_anfitrion():
 				if int(datos.id) <= _evento_id:

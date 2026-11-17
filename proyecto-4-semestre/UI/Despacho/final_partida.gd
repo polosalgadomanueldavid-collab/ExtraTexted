@@ -47,6 +47,7 @@ var _paginas: Array[Dictionary] = []
 var _pestanas: Array[Button] = []
 var _anterior: Button
 var _siguiente: Button
+var _reiniciar: Button
 var _estadisticas: Label
 var _alerta: AudioStreamPlayer
 var _sonido_pagina: AudioStreamPlayer
@@ -64,6 +65,9 @@ func _ready() -> void:
 	_aviso_cinematica.minimum_size_changed.connect(_ajustar.call_deferred)
 	_tarjeta.minimum_size_changed.connect(_ajustar.call_deferred)
 	_ajustar()
+	var sesion: Node = get_node_or_null("/root/SesionLAN")
+	if sesion != null:
+		sesion.reintento_actualizado.connect(_actualizar_reintento)
 	hide()
 
 
@@ -71,6 +75,7 @@ func presentar(datos: Dictionary) -> void:
 	if _fase != 0:
 		return
 	_datos = datos
+	_actualizar_reintento()
 	_fase = 1
 	_relevo_finalizado = false
 	show()
@@ -208,15 +213,14 @@ func _construir_interfaz() -> void:
 	_siguiente.size = Vector2(145, 43)
 	_siguiente.pressed.connect(_ir_a_pagina.bind(-2))
 	_contenido_libro.add_child(_siguiente)
-	var reiniciar := _boton("Reintentar", Color("5f9d88"), 17)
-	var sesion: Node = get_node_or_null("/root/SesionLAN")
-	if sesion != null and sesion.activa and not sesion.es_anfitrion():
-		reiniciar.text = "Espera al anfitrión"
-		reiniciar.disabled = true
-	reiniciar.position = Vector2(868, 609)
-	reiniciar.size = Vector2(139, 43)
-	reiniciar.pressed.connect(func() -> void: reiniciar_solicitado.emit())
-	_contenido_libro.add_child(reiniciar)
+	_reiniciar = _boton("Reintentar", Color("5f9d88"), 17)
+	_reiniciar.position = Vector2(854, 609)
+	_reiniciar.size = Vector2(153, 43)
+	_reiniciar.pressed.connect(func() -> void:
+		_reiniciar.disabled = true
+		reiniciar_solicitado.emit()
+	)
+	_contenido_libro.add_child(_reiniciar)
 	var menu := _boton("Menú", Color("60788a"), 17)
 	menu.position = Vector2(1024, 609)
 	menu.size = Vector2(110, 43)
@@ -231,12 +235,21 @@ func _construir_interfaz() -> void:
 	_ayuda_libro.add_theme_constant_override("shadow_offset_y", 1)
 	_ayuda_libro.hide()
 	add_child(_ayuda_libro)
-
 	_alerta = _crear_sonido(SONIDO_ALERTA, -7.0)
 	_sonido_pagina = _crear_sonido(SONIDO_PAGINA, -5.0)
 	_musica_derrota = _crear_sonido(MELODIA_DERROTA, -18.0)
 	_musica_derrota.bus = "Musica"
 
+func _actualizar_reintento() -> void:
+	if not is_instance_valid(_reiniciar):
+		return
+	var sesion: Node = get_node_or_null("/root/SesionLAN")
+	if sesion != null and sesion.activa:
+		_reiniciar.text = "Reintentar %d/%d" % [sesion.votos_reintento.size(), sesion.participantes.size()]
+		_reiniciar.disabled = sesion.votos_reintento.has(sesion.id_local())
+	else:
+		_reiniciar.text = "Reintentar"
+		_reiniciar.disabled = false
 
 func _crear_pagina(x: float) -> Dictionary:
 	var columna := VBoxContainer.new()
