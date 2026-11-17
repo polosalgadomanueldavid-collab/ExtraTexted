@@ -5,15 +5,17 @@ signal producto_solicitado(indice: int)
 signal recoger_solicitado
 signal cerrar_solicitado
 
-const CREMA := Color("fff1d8")
-const PETROLEO := Color("173b50")
-const CORAL := Color("ff785f")
-const METAL := Color("8c9198")
-# Carcasa plateada y paneles de grafito de MaquinaExpendedora.glb.
-const CARCASA := Color("b7b9bd")
-const OSCURO := Color("242a33")
+const CREMA := Color("e5ebf0")
+const PETROLEO := Color("182a3d")
+const DORADO := Color("c8974c")
+const METAL := Color("8795a7")
+# Tonos de acero azul, grafito y latón de la expendedora.
+const CARCASA := Color("708198")
+const OSCURO := Color("172330")
 const CODIGOS := ["A1", "A2", "B1", "B2"]
 const NOMBRES := ["CHOCOLATE", "DONA", "PAPA TIEMPO", "EL AVATAR"]
+const PAPA_TIEMPO := preload("res://Objetos/ZonaDescanso/Productos/PapaTiempo.glb")
+const AVATAR_PIEDRA := preload("res://Objetos/ZonaDescanso/Productos/PiedraElemental.glb")
 const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 
 var vista: SubViewport
@@ -198,6 +200,14 @@ func _crear_espiral(posicion: Vector3) -> void:
 
 
 func _crear_producto(indice: int) -> Node3D:
+	if indice == 2:
+		var papa := PAPA_TIEMPO.instantiate() as Node3D
+		papa.scale = Vector3.ONE * 0.3
+		return papa
+	if indice == 3:
+		var avatar := AVATAR_PIEDRA.instantiate() as Node3D
+		avatar.scale = Vector3.ONE * 0.28
+		return avatar
 	var producto := Node3D.new()
 	match indice:
 		0:
@@ -205,8 +215,7 @@ func _crear_producto(indice: int) -> Node3D:
 			for x: float in [-0.095, 0.095]:
 				for y: float in [0.14, 0.26]:
 					_caja(producto, Vector3(0.16, 0.10, 0.035), Vector3(x, y, 0.093), Color("945c3a"))
-			_caja(producto, Vector3(0.40, 0.36, 0.18), Vector3(0, -0.13, 0), CORAL)
-			_letrero(producto, "CHOCO", Vector3(0, -0.11, 0.098), 0.0014)
+			_caja(producto, Vector3(0.40, 0.36, 0.18), Vector3(0, -0.13, 0), DORADO)
 		1:
 			var dona := TorusMesh.new()
 			dona.inner_radius = 0.12
@@ -218,26 +227,8 @@ func _crear_producto(indice: int) -> Node3D:
 			_malla(producto, glaseado, Vector3(0, 0, 0.04), Color("efa6b3")).rotation.x = PI / 2.0
 			for j in 10:
 				var a := float(j) * 2.4
-				var chispa := _caja(producto, Vector3(0.045, 0.016, 0.015), Vector3(cos(a) * 0.22, sin(a) * 0.22, 0.126), CREMA if j % 2 else CORAL)
+				var chispa := _caja(producto, Vector3(0.045, 0.016, 0.015), Vector3(cos(a) * 0.22, sin(a) * 0.22, 0.126), CREMA if j % 2 else DORADO)
 				chispa.rotation.z = a
-		2:
-			_caja(producto, Vector3(0.46, 0.59, 0.22), Vector3.ZERO, Color("e9b75e"))
-			for y: float in [-0.28, 0.28]:
-				_caja(producto, Vector3(0.48, 0.04, 0.18), Vector3(0, y, 0), CREMA)
-			_letrero(producto, "PAPA\nTIEMPO", Vector3(0, 0.02, 0.118), 0.0014)
-		3:
-			var lata := CylinderMesh.new()
-			lata.top_radius = 0.22
-			lata.bottom_radius = 0.22
-			lata.height = 0.54
-			lata.radial_segments = 32
-			_malla(producto, lata, Vector3.ZERO, Color("80bcb1"), 0.3)
-			var tapa := CylinderMesh.new()
-			tapa.top_radius = 0.225
-			tapa.bottom_radius = 0.225
-			tapa.height = 0.035
-			_malla(producto, tapa, Vector3(0, 0.28, 0), METAL, 0.7)
-			_letrero(producto, "AVATAR", Vector3(0, 0.02, 0.224), 0.0013)
 	return producto
 
 
