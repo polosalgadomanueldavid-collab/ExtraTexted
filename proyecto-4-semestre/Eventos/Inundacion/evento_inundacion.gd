@@ -399,13 +399,10 @@ func _crear_agua() -> void:
 
 
 func _crear_tuberias() -> void:
-	tuberias = TuberiaRompible.new()
-	tuberias.name = "TuberiasDescanso"
-	# Cara interior de Pared3: X=2.3656; encastre de 2 mm para evitar una rendija.
-	tuberias.position = Vector3(2.368, 1.12, 9.34)
-	tuberias.scale = Vector3.ONE * 0.52
-	tuberias.rotation.y = -PI * 0.5
-	add_child(tuberias)
+	tuberias = _oficina.get_node_or_null("CompuertaEstacionInundacion") as TuberiaRompible
+	if tuberias == null:
+		push_error("No se encontró la estación CompuertaEstacionInundacion en la escena de oficina.")
+		return
 	_chorro = tuberias.chorro
 	acceso = Marker3D.new()
 	acceso.name = "AccesoTuberias"

@@ -161,6 +161,8 @@ func _run() -> void:
 		await _mover_cliente(red._buscar_estacion(estacion).global_position + Vector3(0, 0, 0.6))
 		r = await _al_cliente("minijuego", {"estacion": estacion, "caso": caso_cliente})
 		comprobar(r.get("ok", false), "El cliente completa " + estacion + " con su interfaz")
+		if estacion == "evidencias":
+			comprobar(r.get("aviso_tarea", "") == caso_cliente and oficina.panel_despacho.efecto_tarea.caso_id != caso_cliente, "El aviso de tarea aparece solo para quien la completó")
 	comprobar(despacho.puntuacion.puntos == 125 and despacho.obtener_cordura(cliente) == 85, "Resolución del cliente conserva saldo y participación")
 	# Cafetera y expendedora compiten por los últimos 50 puntos en el mismo turno.
 	despacho.puntuacion.gastar_puntos(75)
@@ -332,9 +334,20 @@ func _run() -> void:
 	comprobar(despacho.terminada and bool(r.final), "Derrota compartida al eliminarse ambos")
 	comprobar(r.aportes == despacho.aportes_jugadores, "El cliente recibe los mismos aportes que el anfitrión")
 	comprobar(r.equipo_final == oficina.final_partida._datos.get("equipo", []) and not r.equipo_final.is_empty(), "Ambos cuadernos presentan el mismo equipo y MVP al finalizar")
+	var limite_cinematica := Time.get_ticks_msec() + 70000
+	while not oficina.final_partida._relevo_finalizado and Time.get_ticks_msec() < limite_cinematica:
+		await _esperar(0.2)
+	r = await _al_cliente("estado_cinematica")
+	comprobar(oficina.final_partida._relevo_finalizado and bool(r.finalizada), "La cinemática acaba en ambos equipos")
+	comprobar(not red.jugadores[1].visible and not red.jugadores[cliente].visible and bool(r.salieron), "Ambos jugadores salen por la puerta en las dos vistas")
+	comprobar(oficina.final_partida._reiniciar.text == "Reintentar 0/2" and str(r.reintentar) == "Reintentar 0/2", "Las dos libretas muestran 0/2 antes de votar")
 	await _al_cliente("preparar_reinicio")
 	MenuGlobal.omitir_tutorial_siguiente_partida = true
-	SesionLAN.reiniciar()
+	SesionLAN.votar_reintento()
+	await _esperar(0.2)
+	r = await _al_cliente("estado_reintento")
+	comprobar(SesionLAN.votos_reintento.size() == 1 and int(r.votos) == 1 and SesionLAN.en_partida, "El primer voto muestra 1/2 y mantiene la partida")
+	await _al_cliente("votar_reintento")
 	while not SesionLAN.en_partida:
 		await _esperar(0.1)
 	red = SesionLAN.puente
@@ -407,6 +420,9 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 			SesionLAN._confirmar_tutorial.rpc_id(1, SesionLAN.ronda - 1, SesionLAN.tutorial_actual)
 			SesionLAN._confirmar_tutorial.rpc_id(1, SesionLAN.ronda, &"otro_tutorial")
 		"preparar_reinicio": MenuGlobal.omitir_tutorial_siguiente_partida = true
+		"estado_reintento": resultado = {"votos": SesionLAN.votos_reintento.size()}
+		"estado_cinematica": resultado = {"finalizada": oficina.final_partida._relevo_finalizado, "salieron": not red.jugadores[1].visible and not red.jugadores[SesionLAN.id_local()].visible, "reintentar": oficina.final_partida._reiniciar.text}
+		"votar_reintento": SesionLAN.votar_reintento()
 		"nueva_ronda":
 			red = SesionLAN.puente
 			oficina = red.oficina
@@ -425,7 +441,7 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 			_resolver_minijuego(str(datos.estacion))
 			await _esperar(0.4)
 			var caso: Denuncia = oficina.sistema_despacho.arbol.buscar_por_id(str(datos.caso))
-			resultado = {"ok": caso == null or caso.estaciones_completadas.has(str(datos.estacion))}
+			resultado = {"ok": caso == null or caso.estaciones_completadas.has(str(datos.estacion)), "aviso_tarea": oficina.panel_despacho.efecto_tarea.caso_id}
 		"charcos": resultado = {"charcos": oficina.evento_lava.charcos}
 		"rociar":
 			var foco: Node3D = oficina.evento_incendio.focos[int(datos.foco)]

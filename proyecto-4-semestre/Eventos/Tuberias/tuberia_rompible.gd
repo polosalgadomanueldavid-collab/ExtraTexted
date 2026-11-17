@@ -7,7 +7,7 @@ const NITROGENO := preload("res://Eventos/Tuberias/Nitrogeno.scn")
 enum Estado { SANA, ROMPIENDO, ROTA, SELLANDO }
 const ANGULO_PUERTA := -105.0
 
-var nitrogeno := false
+@export var nitrogeno := false
 var estado := Estado.SANA
 var salida: Marker3D
 var chorro: CPUParticles3D
@@ -31,8 +31,11 @@ var _apertura_inicial := 0.0
 
 
 func _ready() -> void:
-	modelo = (NITROGENO if nitrogeno else AGUA).instantiate()
-	add_child(modelo)
+	modelo = get_node_or_null("Modelo") as Node3D
+	if modelo == null:
+		modelo = (NITROGENO if nitrogeno else AGUA).instantiate()
+		modelo.name = "Modelo"
+		add_child(modelo)
 	tramo = modelo.get_node("Tramo")
 	_pose = tramo.transform
 	salida = modelo.get_node("Salida")
