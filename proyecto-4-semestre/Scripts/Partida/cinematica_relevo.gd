@@ -11,6 +11,7 @@ const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 const VOZ_RELEVO := preload("res://Audios/VozPersonaje/Gomosa/saludo.wav")
 
 var companero: Player
+var segundo_jugador: Player
 var camara: Camera3D
 var burbuja: PanelContainer
 var finalizada := false
@@ -32,6 +33,7 @@ var _puesto: Vector3
 var _movimientos: Dictionary = {}
 var _fuera := Vector3.ZERO
 var _listo := false
+var _salida_iniciada := false
 
 
 func iniciar(jugador: Player, puerta: Node3D, grafo: GrafoPiso, oficina: Node3D) -> void:
@@ -41,6 +43,7 @@ func iniciar(jugador: Player, puerta: Node3D, grafo: GrafoPiso, oficina: Node3D)
 	_grafo = grafo
 	_puesto = jugador.global_position
 	_preparar_jugador()
+	_preparar_segundo_jugador()
 	_preparar_camara()
 	_preparar_companero()
 	_preparar_burbuja()
@@ -98,6 +101,20 @@ func _preparar_camara() -> void:
 	camara.near = 0.05
 	camara.make_current()
 
+func _preparar_segundo_jugador() -> void:
+	if not is_instance_valid(segundo_jugador):
+		return
+	segundo_jugador.en_relevo = true
+	segundo_jugador.input_locked = true
+	segundo_jugador.process_mode = Node.PROCESS_MODE_ALWAYS
+	segundo_jugador.set_physics_process(false)
+	segundo_jugador.set_process_input(false)
+	segundo_jugador.velocity = Vector3.ZERO
+	segundo_jugador.sonido_pasos.detener()
+	segundo_jugador.terminar_descanso_sentado(true)
+	segundo_jugador.animation_player.process_mode = Node.PROCESS_MODE_ALWAYS
+	_reproducir(segundo_jugador.animation_player, "idle", 0.7)
+
 
 func _preparar_companero() -> void:
 	companero = MODELO_RELEVO.instantiate() as Player
@@ -137,7 +154,8 @@ func _secuencia() -> void:
 		var entrada := PackedVector3Array([_puerta.to_global(Vector3(0, 0, -0.65)), _puerta.to_global(Vector3(0, 0, 0.40)), interior])
 		entrada.append_array(_ruta(interior, apartadero, _jugador.global_position))
 		if _distancia_a_ruta(_jugador.global_position, entrada, companero.global_position) >= SEPARACION:
-			await _recorrer(companero, entrada, 1.2)
+			_iniciar_salida()
+			await _recorrer(companero, entrada, 1.9)
 			if not is_inside_tree():
 				return
 		else:
@@ -145,12 +163,16 @@ func _secuencia() -> void:
 	# Si se pierde el turno en la puerta, el compañero cede primero la salida.
 	if apartadero == Vector3.INF:
 		_seguir_actores = true
-		await _salir_jugador()
+		_iniciar_salida()
+		while not jugador_salio:
+			await get_tree().process_frame
+			if not is_inside_tree():
+				return
 		if not is_inside_tree():
 			return
-		await _recorrer(companero, PackedVector3Array([_puerta.to_global(Vector3(0, 0, -0.65)), _puerta.to_global(Vector3(0, 0, 0.40)), interior]), 1.2)
+		await _recorrer(companero, PackedVector3Array([_puerta.to_global(Vector3(0, 0, -0.65)), _puerta.to_global(Vector3(0, 0, 0.40)), interior]), 1.9)
 	else:
-		_salir_jugador()
+		_iniciar_salida()
 	if not is_inside_tree():
 		return
 	_reproducir(_animador, "idle")
@@ -254,31 +276,50 @@ func _segmento_libre(desde: Vector3, hasta: Vector3, mapa: GrafoPiso) -> bool:
 	return get_world_3d().direct_space_state.cast_motion(consulta)[0] > 0.999
 
 
-func _salir_jugador() -> void:
+func _iniciar_salida() -> void:
+	if _salida_iniciada:
+		return
+	_salida_iniciada = true
+	_salir_jugadores()
+
+func _salir_jugadores() -> void:
+	await _salir_jugador(_jugador)
+	if is_inside_tree() and is_instance_valid(segundo_jugador):
+		await _salir_jugador(segundo_jugador)
+	jugador_salio = true
+
+func _salir_jugador(actor: Player) -> void:
 	var interior := _puerta.to_global(Vector3(0, 0, 0.95))
 	var reserva := companero.global_position if _puerta.to_local(companero.global_position).z > 0 else Vector3.INF
-	_recorrido_salida = _ruta(_jugador.global_position, interior, reserva)
-	while _recorrido_salida.is_empty():
+	_recorrido_salida = _ruta(actor.global_position, interior, reserva)
+	var intentos := 0
+	while _recorrido_salida.is_empty() and intentos < 6:
 		await get_tree().create_timer(0.25).timeout
-		_recorrido_salida = _ruta(_jugador.global_position, interior, reserva)
-	await _recorrer(_jugador, _recorrido_salida, 0.85)
+		_recorrido_salida = _ruta(actor.global_position, interior, reserva)
+		intentos += 1
+	if _recorrido_salida.is_empty():
+		_recorrido_salida = PackedVector3Array([interior])
+	await _recorrer(actor, _recorrido_salida, 2.6)
 	if not is_inside_tree():
 		return
-	await _recorrer(_jugador, PackedVector3Array([_puerta.to_global(Vector3(0, 0, 0.30)), _puerta.to_global(Vector3(0, 0, -0.45)), _fuera]), 0.85)
+	await _recorrer(actor, PackedVector3Array([_puerta.to_global(Vector3(0, 0, 0.30)), _puerta.to_global(Vector3(0, 0, -0.45)), _fuera]), 2.6)
 	if not is_inside_tree():
 		return
-	_jugador.hide()
-	_jugador.collision_layer = 0
-	_jugador.sonido_pasos.detener()
-	jugador_salio = true
+	actor.hide()
+	actor.collision_layer = 0
+	actor.sonido_pasos.detener()
 
 
 func _ocupar_puesto() -> void:
 	_recorrido_entrada = _ruta(companero.global_position, _puesto)
-	while _recorrido_entrada.is_empty():
+	var intentos := 0
+	while _recorrido_entrada.is_empty() and intentos < 6:
 		await get_tree().create_timer(0.25).timeout
 		_recorrido_entrada = _ruta(companero.global_position, _puesto)
-	await _recorrer(companero, _recorrido_entrada, 1.35)
+		intentos += 1
+	if _recorrido_entrada.is_empty():
+		_recorrido_entrada = PackedVector3Array([_puesto])
+	await _recorrer(companero, _recorrido_entrada, 2.0)
 	if not is_inside_tree():
 		return
 	companero_llego = true
@@ -288,8 +329,13 @@ func _recorrer(actor: Player, puntos: PackedVector3Array, rapidez: float) -> voi
 	if puntos.is_empty():
 		return
 	_movimientos[actor] = {"puntos": puntos, "indice": 0, "rapidez": rapidez, "atasco": 0.0}
+	var limite := Time.get_ticks_msec() + 12000
 	while is_inside_tree() and _movimientos.has(actor):
 		await get_tree().physics_frame
+		if Time.get_ticks_msec() > limite:
+			actor.global_position = puntos[-1]
+			actor.velocity = Vector3.ZERO
+			_movimientos.erase(actor)
 
 
 func _buscar_apartadero(salida: PackedVector3Array, interior: Vector3) -> Vector3:
@@ -329,8 +375,8 @@ func _plano(punto: Vector3) -> Vector2:
 func _physics_process(delta: float) -> void:
 	if not _listo or finalizada:
 		return
-	for actor: Player in [_jugador, companero]:
-		if not actor.visible:
+	for actor: Player in [_jugador, segundo_jugador, companero]:
+		if not is_instance_valid(actor) or not actor.visible:
 			continue
 		ambiente.aplicar(actor)
 		_avanzar_actor(actor, delta)
@@ -363,12 +409,15 @@ func _avanzar_actor(actor: Player, delta: float) -> void:
 	var paso := actor.velocity * delta
 	if not actor.congelado and paso.length() > distancia:
 		paso = paso.normalized() * distancia
-	var otro: Player = companero if actor == _jugador else _jugador
-	var separacion := maxf(SEPARACION, 0.8 if actor.nadando or otro.nadando or actor.congelado or otro.congelado else 0.0)
 	# Barrido entre cuadros: también impide atravesarse con FPS bajos o hielo.
-	if otro.visible and _distancia_a_ruta(otro.global_position, PackedVector3Array([anterior + paso]), anterior) < separacion:
-		paso = Vector3.ZERO
-		actor.velocity = Vector3.ZERO
+	for otro: Player in [_jugador, segundo_jugador, companero]:
+		if not is_instance_valid(otro) or otro == actor or not otro.visible:
+			continue
+		var separacion := maxf(SEPARACION, 0.8 if actor.nadando or otro.nadando or actor.congelado or otro.congelado else 0.0)
+		if _distancia_a_ruta(otro.global_position, PackedVector3Array([anterior + paso]), anterior) < separacion:
+			paso = Vector3.ZERO
+			actor.velocity = Vector3.ZERO
+			break
 	var sismo: Node = ambiente.oficina.evento_terremoto
 	if sismo.activo:
 		for grieta: Node in sismo.grietas:
@@ -387,9 +436,11 @@ func _avanzar_actor(actor: Player, delta: float) -> void:
 			if restante.length_squared() < 0.0000001:
 				break
 		# El deslizamiento junto a una pared tampoco puede invadir al compañero.
-		if otro.visible and _distancia_a_ruta(otro.global_position, PackedVector3Array([actor.global_position]), anterior) < SEPARACION:
-			actor.global_position = anterior
-			actor.velocity = Vector3.ZERO
+		for otro: Player in [_jugador, segundo_jugador, companero]:
+			if is_instance_valid(otro) and otro != actor and otro.visible and _distancia_a_ruta(otro.global_position, PackedVector3Array([actor.global_position]), anterior) < SEPARACION:
+				actor.global_position = anterior
+				actor.velocity = Vector3.ZERO
+				break
 		var giro := atan2(paso.x, paso.z)
 		actor.visual.rotation.y = lerp_angle(actor.visual.rotation.y, giro, 1.0 - exp(-8.0 * delta))
 	# Los cuerpos permanecen sobre el apoyo, incluso si el turno terminó saltando.
@@ -409,7 +460,11 @@ func _avanzar_actor(actor: Player, delta: float) -> void:
 		viaje.atasco = viaje.atasco + delta if rapidez < 0.025 and not actor.congelado else 0.0
 		if viaje.atasco > 0.6 and _puerta.to_local(actor.global_position).z > 0.8:
 			var fin: Vector3 = viaje.puntos[-1]
-			var reserva := otro.global_position if otro.visible and _puerta.to_local(otro.global_position).z > 0 else Vector3.INF
+			var reserva := Vector3.INF
+			for otro: Player in [_jugador, segundo_jugador, companero]:
+				if is_instance_valid(otro) and otro != actor and otro.visible and _puerta.to_local(otro.global_position).z > 0:
+					reserva = otro.global_position
+					break
 			var nueva := _ruta(actor.global_position, fin, reserva)
 			if not nueva.is_empty():
 				viaje.puntos = nueva
@@ -424,9 +479,14 @@ func _process(delta: float) -> void:
 	camara.v_offset = 0.0
 	if _seguir_actores:
 		var foco := _puerta.global_position + Vector3(-0.6, 0.7, 0.0)
+		var saliente: Player = _jugador if _jugador.visible else segundo_jugador
 		if not jugador_salio:
-			foco = foco.lerp(_jugador.global_position + Vector3.UP * 0.55, 0.5)
-		var distancia := _jugador.global_position.distance_to(_puerta.global_position) if not jugador_salio else 0.0
+			if is_instance_valid(saliente):
+				foco = foco.lerp(saliente.global_position + Vector3.UP * 0.55, 0.5)
+		var distancia := 0.0
+		if not jugador_salio:
+			if is_instance_valid(saliente):
+				distancia = saliente.global_position.distance_to(_puerta.global_position)
 		var altura := 2.7 + distancia * 0.38
 		var posicion := Vector3(maxf(-3.8, foco.x - 2.6), altura, minf(11.8, foco.z + 3.5 + distancia * 0.15))
 		if _seguir_companero:

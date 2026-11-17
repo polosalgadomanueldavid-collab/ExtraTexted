@@ -4,6 +4,7 @@ signal sala_actualizada
 signal aviso(mensaje: String)
 signal respuesta_recibida(numero: int, resultado: Dictionary)
 signal tutorial_actualizado
+signal reintento_actualizado
 
 const PUERTO := 7000
 const VERSION := "extratexted-lan-5"
@@ -18,6 +19,7 @@ var tutorial_actual: StringName = &""
 var confirmaciones_tutorial: Dictionary = {}
 var _alias := ""
 var _pausas: Dictionary = {}
+var votos_reintento: Dictionary = {}
 var _cargados: Dictionary = {}
 var _numero := 0
 var _pendientes: Dictionary = {}
@@ -135,6 +137,34 @@ func reiniciar() -> void:
 	if es_anfitrion() and en_partida:
 		_cargar.rpc(ronda + 1)
 
+func votar_reintento() -> void:
+	if not activa or not en_partida or not MenuGlobal.final_de_partida_activo or votos_reintento.has(id_local()):
+		return
+	if es_anfitrion():
+		_registrar_voto(1)
+	else:
+		_votar_reintento.rpc_id(1, ronda)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _votar_reintento(ronda_cliente: int) -> void:
+	if es_anfitrion() and ronda_cliente == ronda:
+		_registrar_voto(multiplayer.get_remote_sender_id())
+
+func _registrar_voto(id: int) -> void:
+	if not en_partida or not MenuGlobal.final_de_partida_activo or not participantes.has(id) or votos_reintento.has(id):
+		return
+	votos_reintento[id] = true
+	_actualizar_votos.rpc(ronda, votos_reintento)
+	if votos_reintento.size() == participantes.size():
+		_cargar.rpc(ronda + 1)
+
+@rpc("authority", "call_local", "reliable")
+func _actualizar_votos(ronda_servidor: int, votos: Dictionary) -> void:
+	if ronda_servidor != ronda:
+		return
+	votos_reintento = votos.duplicate()
+	reintento_actualizado.emit()
+
 @rpc("authority", "call_local", "reliable")
 func _cargar(nueva_ronda: int) -> void:
 	if not activa or nueva_ronda <= ronda:
@@ -149,6 +179,8 @@ func _cargar(nueva_ronda: int) -> void:
 	_limite_carga = Time.get_ticks_msec() / 1000.0 + 60.0
 	_cargados.clear()
 	_pausas.clear()
+	votos_reintento.clear()
+	reintento_actualizado.emit()
 	tutorial_actual = &""
 	confirmaciones_tutorial.clear()
 	_respuestas.clear()
@@ -378,6 +410,8 @@ func cerrar(motivo: String = "") -> void:
 	_limite_carga = 0.0
 	participantes.clear()
 	_pausas.clear()
+	votos_reintento.clear()
+	reintento_actualizado.emit()
 	tutorial_actual = &""
 	confirmaciones_tutorial.clear()
 	_cargados.clear()

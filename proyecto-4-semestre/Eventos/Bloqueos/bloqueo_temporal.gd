@@ -70,6 +70,17 @@ func desactivar() -> void:
 	collision_mask = 0
 	visible = false
 
+func retirar_suavemente() -> void:
+	_activa = false
+	collision_layer = 0
+	collision_mask = 0
+	if _animacion != null and _animacion.is_valid():
+		_animacion.kill()
+	$Polvo.emitting = false
+	_animacion = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	_animacion.tween_property(diseño_cajon, "position:y", _reposo.origin.y - 1.1, 0.55)
+	_animacion.tween_callback(desactivar)
+
 
 func caer_en_grieta(destino: Vector2) -> void:
 	if es_ceniza:

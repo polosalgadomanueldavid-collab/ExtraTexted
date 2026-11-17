@@ -47,12 +47,17 @@ func probar() -> void:
 	abierta.tiempo_limite_segundos = 100.0
 	despacho.recibir_denuncia(abierta)
 	var posicion_inicial: Vector3 = oficina.jugador.global_position
+	var mesa_final: Node3D = oficina._bloqueos_pool[0]
+	mesa_final.call("activar_en", Vector3(-4.0, 0.0, 12.0))
+	oficina.bloqueos_visuales[Vector2i(0, 0)] = mesa_final
+	oficina.grafo_piso.bloqueos_temporales[Vector2i(0, 0)] = true
 	despacho.calma_operativa = 10
 	despacho.actualizar_tiempos(2.0)
 
 	_verificar(oficina.partida_finalizada and despacho.terminada and paused, "El primer vencimiento fatal detiene la partida")
 	_verificar(oficina.final_partida._fase == 1 and not oficina.final_partida._relevo_finalizado, "El final empieza por la cinemática de relevo")
 	_verificar(oficina.jugador.input_locked, "El jugador deja de aceptar movimiento durante el final")
+	_verificar(mesa_final.visible and mesa_final.collision_layer == 0 and oficina.bloqueos_visuales.is_empty() and oficina.grafo_piso.bloqueos_temporales.is_empty(), "Las mesas dejan libre la ruta y empiezan a retirarse suavemente al terminar")
 	_verificar(not oficina.final_partida._saltar.is_visible_in_tree() and oficina.final_partida._saltar.disabled, "La opción del cuaderno permanece oculta y bloqueada durante la cinemática")
 	_verificar(not oficina.final_partida._tarjeta.visible and not oficina.final_partida._cuaderno.visible, "Ninguna tarjeta tapa la llegada del compañero")
 	_verificar(oficina.final_partida._aviso_cinematica.visible and oficina.final_partida._titulo_caso.text == "El equipo toma el relevo", "El aviso de relevo acompaña la cinemática")
@@ -68,6 +73,8 @@ func probar() -> void:
 	_verificar(root.get_camera_3d() == cinematica.camara, "La cámara de la cinemática toma el control")
 	_verificar(puerta.to_local(cinematica.companero.global_position).z < 0.0, "El compañero comienza detrás de la puerta")
 	await create_timer(0.2, true).timeout
+	await create_timer(0.5, true).timeout
+	_verificar(not mesa_final.visible, "La mesa termina de ocultarse tras la animación de retirada")
 	var posicion_quieto: Vector3 = oficina.jugador.global_position
 	_verificar(Vector2(posicion_inicial.x, posicion_inicial.z).distance_to(Vector2(posicion_quieto.x, posicion_quieto.z)) < 0.01 and oficina.jugador.velocity.is_zero_approx(), "El jugador permanece quieto mientras la cámara descubre la puerta")
 	oficina.final_partida._abrir_cuaderno()

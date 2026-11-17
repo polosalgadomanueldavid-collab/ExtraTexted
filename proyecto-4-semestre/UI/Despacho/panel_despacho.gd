@@ -319,7 +319,12 @@ func _estilo_sobre_escenario(etiqueta: Label) -> void:
 
 func _on_estacion_completada(denuncia: Denuncia, estacion_id: String) -> void:
 	_actualizar_denuncia_activa()
-	efecto_tarea.reproducir(IconoDespacho.nombre_estacion(estacion_id), denuncia.id)
+	if SesionLAN.activa:
+		return
+	mostrar_tarea_local(denuncia.id, estacion_id)
+
+func mostrar_tarea_local(caso_id: String, estacion_id: String) -> void:
+	efecto_tarea.reproducir(IconoDespacho.nombre_estacion(estacion_id), caso_id)
 	_mostrar_mensaje("Correcto: %s completada." % IconoDespacho.nombre_estacion(estacion_id), Color("86efac"))
 
 

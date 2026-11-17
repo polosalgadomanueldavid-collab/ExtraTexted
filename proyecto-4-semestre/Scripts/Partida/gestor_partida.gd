@@ -1029,6 +1029,7 @@ func _al_terminar_partida() -> void:
 	evento_hielo._cerrar_reparacion()
 	MenuGlobal.final_de_partida_activo = true
 	jugador.input_locked = true
+	_despejar_salida_final()
 	if is_instance_valid(temporizador_denuncias):
 		temporizador_denuncias.stop()
 	temporizador_bloqueos.stop()
@@ -1071,6 +1072,14 @@ func _mostrar_companero_relevo() -> void:
 	# escuchan partida_terminada, antes de tomar el control de los personajes.
 	_iniciar_cinematica_relevo.call_deferred()
 
+func _despejar_salida_final() -> void:
+	for bloqueo: Node3D in bloqueos_visuales.values():
+		if is_instance_valid(bloqueo):
+			bloqueo.call("retirar_suavemente")
+	bloqueos_visuales.clear()
+	grafo_piso.bloqueos_temporales.clear()
+	grafo_piso.construir_adyacencia()
+
 
 func _iniciar_cinematica_relevo() -> void:
 	if is_instance_valid(cinematica_relevo):
@@ -1087,16 +1096,16 @@ func _iniciar_cinematica_relevo() -> void:
 	cinematica_relevo.name = "CinematicaRelevo"
 	add_child(cinematica_relevo)
 	cinematica_relevo.terminada.connect(final_partida.finalizar_relevo)
-	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso, self)
 	if is_instance_valid(red):
 		for otro: Player in red.jugadores.values():
 			if otro != jugador:
-				otro.hide()
+				cinematica_relevo.segundo_jugador = otro
+	cinematica_relevo.iniciar(jugador, $PuertaRelevo, grafo_piso, self)
 
 
 func _reiniciar_despues_del_final() -> void:
 	if SesionLAN.activa:
-		SesionLAN.reiniciar()
+		SesionLAN.votar_reintento()
 		return
 	MenuGlobal.final_de_partida_activo = false
 	MenuGlobal.omitir_tutorial_siguiente_partida = true
@@ -1341,7 +1350,8 @@ func _on_denuncias_actualizadas(_denuncias: Array[Denuncia]) -> void:
 
 
 func _on_estacion_completada(_denuncia: Denuncia, _estacion_id: String) -> void:
-	jugador.reproducir_expresion(&"alegria")
+	if not SesionLAN.activa:
+		jugador.reproducir_expresion(&"alegria")
 	_sincronizar_indicador_con_despacho()
 
 
