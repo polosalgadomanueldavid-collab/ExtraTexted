@@ -381,14 +381,10 @@ func _particulas(cantidad: int, color: Color, radio: float) -> CPUParticles3D:
 
 
 func _crear_tuberia() -> void:
-	tuberia = TuberiaRompible.new()
-	tuberia.nitrogeno = true
-	tuberia.name = "TuberiaNitrogeno"
-	# El respaldo queda encastrado 2 mm en la cara interior de Pared3.
-	tuberia.position = Vector3(2.368, 1.12, 10.08)
-	tuberia.scale = Vector3.ONE * 0.52
-	tuberia.rotation.y = -PI * 0.5
-	add_child(tuberia)
+	tuberia = _oficina.get_node_or_null("TuberiaNitrogeno") as TuberiaRompible
+	if tuberia == null:
+		push_error("No se encontró la estación TuberiaNitrogeno en la escena de oficina.")
+		return
 	_fuga = tuberia.chorro
 	acceso = Marker3D.new()
 	acceso.name = "AccesoNitrogeno"

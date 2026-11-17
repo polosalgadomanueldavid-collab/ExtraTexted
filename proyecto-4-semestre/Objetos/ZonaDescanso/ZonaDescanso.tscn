@@ -4,10 +4,9 @@
 [ext_resource type="PackedScene" path="res://Furniture Pack/Cafetera/Cafetera.glb" id="2_tvboh"]
 [ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/TazaAmarilla.res" id="3_tyd3d"]
 [ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/TazaBlanca.res" id="4_16fwx"]
-[ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/SofaTramo.res" id="5_o5alg"]
-[ext_resource type="ArrayMesh" path="res://Objetos/ZonaDescanso/Mallas/SofaRetorno.res" id="6_24wbo"]
 [ext_resource type="Script" path="res://Objetos/ZonaDescanso/zona_descanso.gd" id="7_control"]
 [ext_resource type="Script" path="res://Objetos/ZonaDescanso/interaccion_descanso.gd" id="8_interaccion"]
+[ext_resource type="PackedScene" path="res://Furniture Pack/Sofa/SofaAzulEsquinero.glb" id="9_sofa_azul"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_v2r1e"]
 size = Vector3(1.0079997, 0.525, 0.525)
@@ -49,12 +48,9 @@ mesh = ExtResource("4_16fwx")
 [node name="SofaL" type="Node3D" parent="." unique_id=594629206]
 transform = Transform3D(-5.4639237e-08, 0, 1.25, 0, 1.25, 0, -1.25, 0, -5.4639237e-08, -4.035, 0, 7.35)
 
-[node name="TramoLargo" type="MeshInstance3D" parent="SofaL" unique_id=2001607887]
-mesh = ExtResource("5_o5alg")
-
-[node name="Retorno" type="MeshInstance3D" parent="SofaL" unique_id=1860337020]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0.3312, 0.0004, 0.331)
-mesh = ExtResource("6_24wbo")
+[node name="SofaAzulEsquinero" parent="SofaL" instance=ExtResource("9_sofa_azul")]
+position = Vector3(0, 0.3, 0)
+scale = Vector3(0.65, 0.65, 0.65)
 
 [node name="Cuerpo" type="StaticBody3D" parent="SofaL" unique_id=1256711000]
 script = ExtResource("8_interaccion")
