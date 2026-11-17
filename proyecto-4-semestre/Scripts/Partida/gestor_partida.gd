@@ -332,7 +332,7 @@ func _ready() -> void:
 
 func _abrir_ruleta_emotes() -> void:
 	var aura_activa := is_instance_valid(jugador.gestos) and jugador.gestos.aura_persistente_activada
-	ruleta_emotes.abrir(aura_activa)
+	ruleta_emotes.abrir(aura_activa, jugador.dispositivo_mando)
 
 
 func _cerrar_ruleta_emotes(_cancelled: bool) -> void:

@@ -82,6 +82,23 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if not visible or get_tree().paused:
 		return
+	if event is InputEventJoypadButton and event.pressed and not event.is_echo():
+		if event.is_action_pressed("ui_cancel"):
+			cerrar()
+		elif event.is_action_pressed("ui_left"):
+			seleccion = (seleccion / Red.COLUMNAS) * Red.COLUMNAS + posmod(seleccion % Red.COLUMNAS - 1, Red.COLUMNAS)
+		elif event.is_action_pressed("ui_right"):
+			seleccion = (seleccion / Red.COLUMNAS) * Red.COLUMNAS + (seleccion + 1) % Red.COLUMNAS
+		elif event.is_action_pressed("ui_up"):
+			seleccion = posmod(seleccion - Red.COLUMNAS, red.piezas.size())
+		elif event.is_action_pressed("ui_down"):
+			seleccion = (seleccion + Red.COLUMNAS) % red.piezas.size()
+		elif event.is_action_pressed("ui_accept"):
+			_girar(seleccion)
+		else:
+			return
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_ESCAPE:

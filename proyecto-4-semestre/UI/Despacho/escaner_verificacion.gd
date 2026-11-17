@@ -83,7 +83,23 @@ func _process(delta: float) -> void:
 
 
 func _input(evento: InputEvent) -> void:
-	if not is_visible_in_tree() or not evento is InputEventKey or not evento.pressed or evento.echo:
+	if not is_visible_in_tree() or (not evento is InputEventJoypadButton and not evento is InputEventKey):
+		return
+	if not evento.pressed or evento.is_echo():
+		return
+	if evento is InputEventJoypadButton:
+		if evento.is_action_pressed("ui_cancel"):
+			hide()
+			entrada_restante = 0.0
+			cerrado.emit()
+		elif evento.is_action_pressed("ui_accept") and entrada_restante <= 0.0:
+			_detener()
+		else:
+			return
+		get_viewport().set_input_as_handled()
+		queue_redraw()
+		return
+	if not evento is InputEventKey:
 		return
 	var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
 	if tecla == KEY_ESCAPE:

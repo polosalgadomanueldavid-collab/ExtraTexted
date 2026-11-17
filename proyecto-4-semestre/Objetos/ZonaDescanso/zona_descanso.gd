@@ -430,6 +430,18 @@ func _cancelar_preparacion() -> void:
 func _input(evento: InputEvent) -> void:
 	if not _disponible() or evento.is_echo():
 		return
+	if evento is InputEventJoypadButton and evento.pressed:
+		if evento.is_action_pressed("ui_accept") and tiene_cafe():
+			get_viewport().set_input_as_handled()
+			beber_cafe()
+		elif evento.is_action_pressed("ui_cancel"):
+			if _jugador.esta_sentado():
+				get_viewport().set_input_as_handled()
+				levantarse()
+			elif estado == Estado.PREPARANDO:
+				get_viewport().set_input_as_handled()
+				_cancelar_preparacion()
+		return
 	if evento is InputEventKey and evento.pressed:
 		var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
 		if tecla == KEY_F and tiene_cafe():

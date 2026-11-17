@@ -73,6 +73,7 @@ func _ready() -> void:
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
+	panel_ayuda.navegacion_cambiada.connect(_reconfigurar_foco_ayuda)
 	SesionLAN.tutorial_actualizado.connect(_actualizar_tutorial_lan)
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
 	panel_clasificacion.volver_expediente.pressed.connect(_cerrar_clasificacion)
@@ -258,9 +259,14 @@ func _mostrar_ayuda(es_leyenda: bool, origen: OrigenAyuda) -> void:
 	panel_ayuda.show()
 	capa.show()
 	var controles := panel_ayuda.controles_foco()
-	_confinar_foco(controles)
+	_reconfigurar_foco_ayuda()
 	controles[0].grab_focus()
 
+
+func _reconfigurar_foco_ayuda() -> void:
+	_confinar_foco(panel_ayuda.controles_foco())
+	if panel_ayuda.leyenda.visible:
+		panel_ayuda.leyenda.configurar_navegacion(panel_ayuda.boton_cerrar)
 
 func cerrar_ayuda() -> void:
 	if not panel_ayuda.visible:
@@ -412,7 +418,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("Cancel") or event.is_echo() or _cambiando_escena or final_de_partida_activo:
 		return
 	if panel_ayuda.visible:
-		cerrar_ayuda()
+		if panel_ayuda.leyenda.visible and panel_ayuda.leyenda.pagina_mando.visible:
+			panel_ayuda.leyenda._volver_teclado()
+		else:
+			cerrar_ayuda()
 	elif panel_clasificacion.visible:
 		_cerrar_clasificacion()
 	elif panel_accesibilidad.visible:
