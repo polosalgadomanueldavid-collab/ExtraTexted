@@ -143,6 +143,7 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	add_to_group(&"oficina_emotes")
 	add_to_group("gestor_partida")
 	anuncios = AnuncioPartida.new()
 	$CanvasLayer.add_child(anuncios)
@@ -331,6 +332,8 @@ func _ready() -> void:
 
 
 func _abrir_ruleta_emotes() -> void:
+	if not emotes_permitidos():
+		return
 	var aura_activa := is_instance_valid(jugador.gestos) and jugador.gestos.aura_persistente_activada
 	ruleta_emotes.abrir(aura_activa, jugador.dispositivo_mando)
 
@@ -341,6 +344,8 @@ func _cerrar_ruleta_emotes(_cancelled: bool) -> void:
 
 func _seleccionar_emote_ruleta(tipo: StringName) -> void:
 	jugador.cerrar_menu_emotes(false)
+	if not emotes_permitidos():
+		return
 	if tipo == &"duelo_kamehameha":
 		if SesionLAN.en_partida:
 			SesionLAN.solicitar("duelo_kamehameha", {})
@@ -348,6 +353,8 @@ func _seleccionar_emote_ruleta(tipo: StringName) -> void:
 	if tipo == &"aura_persistente":
 		if is_instance_valid(jugador.gestos):
 			jugador.gestos.alternar_aura_persistente()
+			if SesionLAN.en_partida:
+				SesionLAN.solicitar("aura_emote", {"activa": jugador.gestos.aura_persistente_activada})
 		return
 	jugador.ejecutar_gesto(tipo)
 
@@ -379,6 +386,19 @@ func _crear_bloqueo_pool() -> StaticBody3D:
 func _process(_delta: float) -> void:
 	if not oficina_preparada or partida_finalizada:
 		return
+	if not emotes_permitidos():
+		for nodo: Node in get_tree().get_nodes_in_group(&"player"):
+			var actor := nodo as Player
+			if not is_instance_valid(actor):
+				continue
+			if not is_instance_valid(actor.gestos):
+				continue
+			if actor.gestos.gesto in [&"kamehameha", &"genkidama", &"rasengan", &"explosion_final"]:
+				actor.cancelar_gesto()
+			if actor.gestos.aura_persistente_activada:
+				actor.gestos.alternar_aura_persistente()
+		if ruleta_emotes.visible:
+			jugador.cerrar_menu_emotes(true)
 	if not _turno_anunciado and get_tree().current_scene == self and not MenuGlobal.capa.visible:
 		_turno_anunciado = true
 		anuncios.mostrar_inicio()
@@ -750,6 +770,10 @@ func _puede_iniciar_evento() -> bool:
 	if is_instance_valid(sistema_despacho) and sistema_despacho.tiempo_detenido:
 		return false
 	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo) and (not is_instance_valid(evento_lava) or not evento_lava.activo) and (not is_instance_valid(evento_hielo) or not evento_hielo.activo)
+
+
+func emotes_permitidos() -> bool:
+	return _puede_iniciar_evento() and not get_tree().paused
 
 
 func _programar_evento_aleatorio() -> void:
