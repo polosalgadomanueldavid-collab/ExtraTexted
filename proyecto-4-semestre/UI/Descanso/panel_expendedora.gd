@@ -215,7 +215,7 @@ func _crear_producto(indice: int) -> Node3D:
 			for x: float in [-0.095, 0.095]:
 				for y: float in [0.14, 0.26]:
 					_caja(producto, Vector3(0.16, 0.10, 0.035), Vector3(x, y, 0.093), Color("945c3a"))
-			_caja(producto, Vector3(0.40, 0.36, 0.18), Vector3(0, -0.13, 0), DORADO)
+			_caja(producto, Vector3(0.40, 0.36, 0.18), Vector3(0, -0.13, 0), Color("b83d3d"))
 		1:
 			var dona := TorusMesh.new()
 			dona.inner_radius = 0.12
