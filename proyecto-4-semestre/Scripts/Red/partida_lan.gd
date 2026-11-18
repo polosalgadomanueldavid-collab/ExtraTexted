@@ -1093,7 +1093,7 @@ func _mostrar_pulsos_duelo() -> void:
 func _input(event: InputEvent) -> void:
 	if _duelo.get("fase", "") != "choque" or get_tree().paused:
 		return
-	if (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE) or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_A):
+	if (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE) or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_A) or (event is InputEventAction and event.pressed and event.action == &"policia_prueba_saltar"):
 		SesionLAN.solicitar("duelo_pulso", {})
 		get_viewport().set_input_as_handled()
 

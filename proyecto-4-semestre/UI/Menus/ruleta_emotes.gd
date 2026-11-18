@@ -89,6 +89,15 @@ func cerrar() -> void:
 			foco.release_focus()
 
 
+func _gui_input(evento: InputEvent) -> void:
+	if not OS.has_feature("android") or not visible:
+		return
+	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT and not _lienzo.get_global_rect().has_point(evento.global_position):
+		var jugador := get_parent().get_parent().get("jugador") as Player
+		if is_instance_valid(jugador):
+			jugador.cerrar_menu_emotes(true)
+
+
 func _process(_delta: float) -> void:
 	if not visible or _dispositivo_mando < 0 or _botones.is_empty():
 		return
@@ -225,7 +234,7 @@ func _crear_pie() -> void:
 	_centrar(panel, Vector2(0.0, 350.0), Vector2(470.0, 50.0))
 
 	var texto := Label.new()
-	texto.text = "PALANCA DERECHA + A PARA ELEGIR  •  B CIERRA  •  G / ESC"
+	texto.text = "TOCA UN GESTO PARA ELEGIR  •  TOCA AFUERA PARA CERRAR" if OS.has_feature("android") else "PALANCA DERECHA + A PARA ELEGIR  •  B CIERRA  •  G / ESC"
 	texto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	texto.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	texto.add_theme_color_override("font_color", PETROLEO_OSCURO)

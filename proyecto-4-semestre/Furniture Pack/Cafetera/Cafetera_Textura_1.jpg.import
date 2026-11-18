@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://epfaxck867gp"
 path.s3tc="res://.godot/imported/Cafetera_Textura_1.jpg-1988407ca4fcbcb73ad3da970f08d47d.s3tc.ctex"
+path.etc2="res://.godot/imported/Cafetera_Textura_1.jpg-1988407ca4fcbcb73ad3da970f08d47d.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Cafetera/Cafetera_Textura_1.jpg"
-dest_files=["res://.godot/imported/Cafetera_Textura_1.jpg-1988407ca4fcbcb73ad3da970f08d47d.s3tc.ctex"]
+dest_files=["res://.godot/imported/Cafetera_Textura_1.jpg-1988407ca4fcbcb73ad3da970f08d47d.s3tc.ctex", "res://.godot/imported/Cafetera_Textura_1.jpg-1988407ca4fcbcb73ad3da970f08d47d.etc2.ctex"]
 
 [params]
 

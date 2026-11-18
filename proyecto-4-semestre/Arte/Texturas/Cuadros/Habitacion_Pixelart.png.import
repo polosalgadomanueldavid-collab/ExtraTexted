@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://oa27jsbgmgek"
 path.s3tc="res://.godot/imported/Habitacion_Pixelart.png-781b500c43d8b1f59d08b7069a776e76.s3tc.ctex"
+path.etc2="res://.godot/imported/Habitacion_Pixelart.png-781b500c43d8b1f59d08b7069a776e76.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://Arte/Texturas/Cuadros/Habitacion_Pixelart.png"
-dest_files=["res://.godot/imported/Habitacion_Pixelart.png-781b500c43d8b1f59d08b7069a776e76.s3tc.ctex"]
+dest_files=["res://.godot/imported/Habitacion_Pixelart.png-781b500c43d8b1f59d08b7069a776e76.s3tc.ctex", "res://.godot/imported/Habitacion_Pixelart.png-781b500c43d8b1f59d08b7069a776e76.etc2.ctex"]
 
 [params]
 

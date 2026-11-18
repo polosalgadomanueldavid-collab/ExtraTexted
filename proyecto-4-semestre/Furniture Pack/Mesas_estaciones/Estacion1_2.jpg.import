@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://jn215q1kc1d2"
 path.s3tc="res://.godot/imported/Estacion1_2.jpg-f0d8664117621b7ed3021f9218f873b0.s3tc.ctex"
+path.etc2="res://.godot/imported/Estacion1_2.jpg-f0d8664117621b7ed3021f9218f873b0.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Mesas_estaciones/Estacion1_2.jpg"
-dest_files=["res://.godot/imported/Estacion1_2.jpg-f0d8664117621b7ed3021f9218f873b0.s3tc.ctex"]
+dest_files=["res://.godot/imported/Estacion1_2.jpg-f0d8664117621b7ed3021f9218f873b0.s3tc.ctex", "res://.godot/imported/Estacion1_2.jpg-f0d8664117621b7ed3021f9218f873b0.etc2.ctex"]
 
 [params]
 

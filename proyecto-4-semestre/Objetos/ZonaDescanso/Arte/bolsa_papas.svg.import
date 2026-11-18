@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://ho352f6p5a23"
 path.s3tc="res://.godot/imported/bolsa_papas.svg-ada5747362d7f17e0cdc4f56a846d4af.s3tc.ctex"
+path.etc2="res://.godot/imported/bolsa_papas.svg-ada5747362d7f17e0cdc4f56a846d4af.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://Objetos/ZonaDescanso/Arte/bolsa_papas.svg"
-dest_files=["res://.godot/imported/bolsa_papas.svg-ada5747362d7f17e0cdc4f56a846d4af.s3tc.ctex"]
+dest_files=["res://.godot/imported/bolsa_papas.svg-ada5747362d7f17e0cdc4f56a846d4af.s3tc.ctex", "res://.godot/imported/bolsa_papas.svg-ada5747362d7f17e0cdc4f56a846d4af.etc2.ctex"]
 
 [params]
 

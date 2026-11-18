@@ -156,6 +156,13 @@ func _ready() -> void:
 	jugador.emote_menu_requested.connect(_abrir_ruleta_emotes)
 	jugador.emote_menu_finished.connect(_cerrar_ruleta_emotes)
 	ruleta_emotes.emote_seleccionado.connect(_seleccionar_emote_ruleta)
+	if OS.has_feature("android"):
+		var tactil := preload("res://UI/Menus/controles_tactiles.gd").new()
+		tactil.name = "ControlesTactiles"
+		tactil.jugador = jugador
+		tactil.oficina = self
+		tactil.z_index = 120
+		$CanvasLayer.add_child(tactil)
 	sonidos_mesas = SonidosMesas.new()
 	add_child(sonidos_mesas)
 	generador_aleatorio.randomize()
@@ -542,7 +549,7 @@ func _actualizar_indicador_papel() -> void:
 		return
 	var papel := jugador.papel_en_mano
 	var llevando := is_instance_valid(papel) and not papel.is_queued_for_deletion() and papel.portador == jugador
-	var disponible := llevando and not computador.is_using and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and not evento_incendio.equipado
+	var disponible := llevando and not OS.has_feature("android") and not jugador.input_locked and not computador.is_using and evento_apagon.estado != EventoApagonScript.Estado.REPARANDO and not evento_incendio.equipado
 	if indicador_papel.visible != disponible:
 		indicador_papel.visible = disponible
 		_ajustar_aviso_apagon()

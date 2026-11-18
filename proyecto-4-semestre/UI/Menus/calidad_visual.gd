@@ -3,13 +3,13 @@ extends Node
 const ARCHIVO := "user://calidad_visual.cfg"
 const ESCALAS := [0.65, 0.85, 1.0]
 const PARTICULAS := [0.5, 0.75, 1.0]
-var nivel := 2
+var nivel := 1 if OS.has_feature("android") else 2
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var config := ConfigFile.new()
 	if config.load(ARCHIVO) == OK:
-		var valor: Variant = config.get_value("visual", "nivel", 2)
+		var valor: Variant = config.get_value("visual", "nivel", nivel)
 		if valor is int:
 			nivel = clampi(valor, 0, 2)
 	get_tree().node_added.connect(_nuevo_nodo)
