@@ -111,6 +111,7 @@ var _vencidas: Array[Dictionary] = []
 var _ultima_vencida: Dictionary = {}
 var anuncios: AnuncioPartida
 var indicador_denuncia_pc: IndicadorDenunciaPC
+var _sondeo_indicadores := 0.0
 var _turno_anunciado := false
 var temporizador_eventos: Timer
 var _evento_aleatorio_pendiente := -1
@@ -244,8 +245,9 @@ func _ready() -> void:
 	panel_despacho.configurar_sistema(sistema_despacho)
 	if CargaEscenas.activa:
 		await get_tree().process_frame
-	indicador_papel = IndicadorPapel.new()
-	$CanvasLayer.add_child(indicador_papel)
+	if not OS.has_feature("android"):
+		indicador_papel = IndicadorPapel.new()
+		$CanvasLayer.add_child(indicador_papel)
 	indicador_bolsillo = IndicadorBolsillo.new()
 	$CanvasLayer.add_child(indicador_bolsillo)
 	indicador_bolsillo.configurar(self)
@@ -414,7 +416,21 @@ func _process(_delta: float) -> void:
 	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
 	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
 		_calcular_ruta_a_proxima_estacion()
-	# La misma consulta que procesa E determina si el icono ofrece interacción.
+	# Los iconos toleran un breve intervalo; la interacción real se consulta al pulsar.
+	_sondeo_indicadores -= _delta
+	if _sondeo_indicadores <= 0.0:
+		_sondeo_indicadores = 0.1
+		_actualizar_indicadores_interaccion()
+	if is_instance_valid(guia_estacion):
+		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO)
+	_actualizar_indicador_papel()
+	_actualizar_aviso_apagon()
+	if not _denuncia_en_descriptado.is_empty() and is_instance_valid(_mesa_seguridad):
+		var avance := 1.0 if _seguridad_lista else 1.0 - temporizador_seguridad.time_left / DURACION_DESENCRIPTADO
+		progreso_seguridad.actualizar(avance, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * 2.05)
+
+
+func _actualizar_indicadores_interaccion() -> void:
 	var objetivo: Node3D = null
 	if is_instance_valid(jugador) and not computador.is_using:
 		objetivo = jugador.obtener_objetivo_interaccion()
@@ -423,14 +439,7 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(indicador):
 			var disponible := indicador.visible and objetivo is Estacion and (objetivo as Estacion).estacion_id == estacion_id
 			indicador.establecer_interactuable(disponible)
-	if is_instance_valid(guia_estacion):
-		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO)
-	_actualizar_indicador_papel()
-	_actualizar_aviso_apagon()
 	_actualizar_indicador_denuncia_pc(objetivo)
-	if not _denuncia_en_descriptado.is_empty() and is_instance_valid(_mesa_seguridad):
-		var avance := 1.0 if _seguridad_lista else 1.0 - temporizador_seguridad.time_left / DURACION_DESENCRIPTADO
-		progreso_seguridad.actualizar(avance, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * 2.05)
 
 
 func _input(evento: InputEvent) -> void:
@@ -532,12 +541,13 @@ func _crear_aviso_apagon() -> void:
 
 func _ajustar_aviso_apagon() -> void:
 	var tamano := get_viewport().get_visible_rect().size
-	indicador_papel.ajustar_pantalla(tamano)
+	if is_instance_valid(indicador_papel):
+		indicador_papel.ajustar_pantalla(tamano)
 	var factor := minf(tamano.x / 1920.0, tamano.y / 1080.0)
 	_aviso_apagon.scale = Vector2.ONE * factor
 	_aviso_apagon.size = Vector2(590, 112)
 	_aviso_apagon.position = Vector2(28.0 * factor, tamano.y - 140.0 * factor)
-	if indicador_papel.visible:
+	if is_instance_valid(indicador_papel) and indicador_papel.visible:
 		var separacion := 14.0 * indicador_papel.scale.y
 		_aviso_apagon.position = Vector2(indicador_papel.position.x, indicador_papel.position.y - separacion - _aviso_apagon.size.y * factor)
 	if is_instance_valid(indicador_bolsillo) and indicador_bolsillo.visible:
@@ -1090,7 +1100,8 @@ func _al_terminar_partida() -> void:
 	depurador_grafo.hide()
 	for indicador: IndicadorProximaEstacion in indicadores_estaciones.values():
 		indicador.hide()
-	indicador_papel.hide()
+	if is_instance_valid(indicador_papel):
+		indicador_papel.hide()
 	progreso_seguridad.hide()
 	_aviso_apagon.hide()
 	anuncios.detener()

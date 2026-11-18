@@ -31,6 +31,7 @@ var segundos_mensaje: float = 0.0
 var segundos_recompensa: float = 0.0
 var _puntos_mostrados: int = 0
 var _id_activo: String = ""
+var _sondeo_relojes := 0.0
 var efecto_tarea: EfectoTarea
 
 
@@ -52,9 +53,12 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not is_instance_valid(sistema_despacho):
 		return
-	for id: String in tarjetas:
-		_actualizar_tarjeta(denuncias_visibles[id])
-	_actualizar_denuncia_activa()
+	_sondeo_relojes -= delta
+	if _sondeo_relojes <= 0.0:
+		_sondeo_relojes = 0.1
+		for id: String in tarjetas:
+			_actualizar_tarjeta(denuncias_visibles[id])
+		_actualizar_denuncia_activa()
 	_actualizar_mensaje(delta)
 	if segundos_recompensa > 0.0:
 		segundos_recompensa -= delta
@@ -151,7 +155,13 @@ func _formatear_puntos(valor: int) -> String:
 
 
 func actualizar_calma(nueva_calma: int) -> void:
-	calma_jugadores.actualizar_jugador(1, nueva_calma)
+	var indice := 1
+	if is_instance_valid(sistema_despacho) and sistema_despacho.jugadores.size() > 1:
+		var ids := sistema_despacho.jugadores.keys()
+		ids.sort()
+		indice = ids.find(sistema_despacho.jugador_local_id) + 1
+	if indice > 0:
+		calma_jugadores.actualizar_jugador(indice, nueva_calma)
 
 
 func actualizar_denuncias(denuncias: Array[Denuncia]) -> void:

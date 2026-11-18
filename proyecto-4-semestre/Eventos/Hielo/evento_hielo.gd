@@ -72,7 +72,10 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 	indicador.rotulo = "NITRÓGENO"
 	set_physics_process(false)
 	set_process(false)
-	_preparar_nieve.call_deferred()
+	if OS.has_feature("android"):
+		nieve_preparada = true
+	else:
+		_preparar_nieve.call_deferred()
 
 
 func iniciar() -> bool:
@@ -327,11 +330,19 @@ func _preparar_nieve() -> void:
 
 
 func _recubrir_mobiliario() -> void:
+	var recubiertos := 0
 	for raiz in _raices_mobiliario():
+		if not activo:
+			return
 		if raiz is MeshInstance3D:
 			_recubrir(raiz)
 		for malla: Node in raiz.find_children("*", "MeshInstance3D", true, false):
+			if not activo:
+				return
 			_recubrir(malla)
+			recubiertos += 1
+			if OS.has_feature("android") and recubiertos % 8 == 0:
+				await get_tree().process_frame
 
 
 func recubrir_bloqueo(bloqueo: Node) -> void:
@@ -348,9 +359,10 @@ func _recubrir(malla: MeshInstance3D) -> void:
 			return
 	_recubiertos.append({"nodo": malla, "material": malla.material_overlay})
 	malla.material_overlay = _escarcha
-	var monticulo := _generador_nieve.crear(malla, _material_nieve)
-	if monticulo != null:
-		_monticulos.append(monticulo)
+	if not OS.has_feature("android"):
+		var monticulo := _generador_nieve.crear(malla, _material_nieve)
+		if monticulo != null:
+			_monticulos.append(monticulo)
 
 
 func _particulas(cantidad: int, color: Color, radio: float) -> CPUParticles3D:

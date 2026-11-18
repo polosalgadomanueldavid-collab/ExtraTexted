@@ -9,6 +9,7 @@ const SALTAR := &"policia_prueba_saltar"
 const CORRER := &"policia_prueba_correr"
 const GESTOS := &"policia_menu_emotes"
 const INTERACTUAR := &"Interactuar"
+const SOLTAR := &"movil_soltar_papel"
 
 var jugador: Player
 var oficina: Node3D
@@ -18,6 +19,7 @@ var _palanca := Vector2.ZERO
 var _habilitado := false
 var _duelo := false
 var _modo_panel := false
+var _puede_soltar := false
 var _escala := 1.0
 var _centro_palanca := Vector2.ZERO
 var _botones: Array[Dictionary] = []
@@ -25,6 +27,8 @@ var _botones: Array[Dictionary] = []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if not InputMap.has_action(SOLTAR):
+		InputMap.add_action(SOLTAR)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	resized.connect(_recalcular)
@@ -40,10 +44,12 @@ func _process(_delta: float) -> void:
 	var en_duelo: bool = is_instance_valid(red) and (red.get("_duelo") as Dictionary).get("fase", "") == "choque"
 	var disponible: bool = is_instance_valid(jugador) and not get_tree().paused and not MenuGlobal.capa.visible and not oficina.ruleta_emotes.visible
 	var modo_panel: bool = disponible and jugador.input_locked and not en_duelo
-	if disponible != _habilitado or en_duelo != _duelo or modo_panel != _modo_panel:
+	var puede_soltar: bool = disponible and not modo_panel and not en_duelo and not jugador.realizando_gesto() and is_instance_valid(jugador.papel_en_mano)
+	if disponible != _habilitado or en_duelo != _duelo or modo_panel != _modo_panel or puede_soltar != _puede_soltar:
 		_habilitado = disponible
 		_duelo = en_duelo
 		_modo_panel = modo_panel
+		_puede_soltar = puede_soltar
 		if not disponible or modo_panel:
 			_liberar_todo()
 		_recalcular()
@@ -76,6 +82,8 @@ func _recalcular() -> void:
 		{"nombre": "CÁMARA", "accion": &"CambiarCamara", "centro": Vector2(size.x - 190.0 * s, size.y - 425.0 * s), "radio": 46.0 * s},
 		{"nombre": "TABLA", "accion": &"VerClasificacion", "centro": Vector2(size.x - 305.0 * s, size.y - 460.0 * s), "radio": 46.0 * s},
 	]
+	if _puede_soltar:
+		_botones.append({"nombre": "SOLTAR", "accion": SOLTAR, "centro": Vector2(size.x - 180.0 * s, size.y - 320.0 * s), "radio": 55.0 * s})
 	queue_redraw()
 
 

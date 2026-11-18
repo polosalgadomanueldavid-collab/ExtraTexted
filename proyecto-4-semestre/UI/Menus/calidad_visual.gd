@@ -3,6 +3,8 @@ extends Node
 const ARCHIVO := "user://calidad_visual.cfg"
 const ESCALAS := [0.65, 0.85, 1.0]
 const PARTICULAS := [0.5, 0.75, 1.0]
+const ESCALAS_MOVIL := [0.55, 0.7, 0.85]
+const PARTICULAS_MOVIL := [0.3, 0.5, 0.7]
 var nivel := 1 if OS.has_feature("android") else 2
 
 func _ready() -> void:
@@ -13,11 +15,11 @@ func _ready() -> void:
 		if valor is int:
 			nivel = clampi(valor, 0, 2)
 	get_tree().node_added.connect(_nuevo_nodo)
-	get_tree().root.scaling_3d_scale = ESCALAS[nivel]
+	get_tree().root.scaling_3d_scale = _escala_3d()
 
 func establecer(valor: int) -> void:
 	nivel = clampi(valor, 0, 2)
-	get_tree().root.scaling_3d_scale = ESCALAS[nivel]
+	get_tree().root.scaling_3d_scale = _escala_3d()
 	_recorrer(get_tree().root)
 	var config := ConfigFile.new()
 	config.set_value("visual", "nivel", nivel)
@@ -42,15 +44,23 @@ func _aplicar(nodo: Node) -> void:
 	elif nodo is CPUParticles3D:
 		if not nodo.has_meta("cantidad_original"):
 			nodo.set_meta("cantidad_original", nodo.amount)
-		var cantidad := maxi(1, roundi(int(nodo.get_meta("cantidad_original")) * PARTICULAS[nivel]))
+		var cantidad := maxi(1, roundi(int(nodo.get_meta("cantidad_original")) * _proporcion_particulas()))
 		if nodo.amount != cantidad:
 			nodo.amount = cantidad
 	elif nodo is GPUParticles3D:
 		if not nodo.has_meta("proporcion_original"):
 			nodo.set_meta("proporcion_original", nodo.amount_ratio)
-		nodo.amount_ratio = float(nodo.get_meta("proporcion_original")) * PARTICULAS[nivel]
+		nodo.amount_ratio = float(nodo.get_meta("proporcion_original")) * _proporcion_particulas()
 		if RenderingServer.get_current_rendering_method() == "gl_compatibility":
 			nodo.trail_enabled = false
 			if nodo.process_material is ParticleProcessMaterial and nodo.process_material.sub_emitter_mode != ParticleProcessMaterial.SUB_EMITTER_DISABLED:
 				nodo.process_material = nodo.process_material.duplicate()
 				nodo.process_material.sub_emitter_mode = ParticleProcessMaterial.SUB_EMITTER_DISABLED
+
+
+func _escala_3d() -> float:
+	return ESCALAS_MOVIL[nivel] if OS.has_feature("android") else ESCALAS[nivel]
+
+
+func _proporcion_particulas() -> float:
+	return PARTICULAS_MOVIL[nivel] if OS.has_feature("android") else PARTICULAS[nivel]

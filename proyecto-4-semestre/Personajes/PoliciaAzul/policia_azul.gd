@@ -319,6 +319,10 @@ func _input(event: InputEvent) -> void:
 		return
 	if input_locked or realizando_gesto():
 		return
+	if event.is_action_pressed(&"movil_soltar_papel"):
+		get_viewport().set_input_as_handled()
+		_soltar_papel_en_mano()
+		return
 	if nadando and (event.is_action_pressed(EMOTE_MENU) or event.is_action_pressed(KAMEHAMEHA) or event.is_action_pressed(GENKIDAMA) or event.is_action_pressed(RASENGAN)):
 		if not event.is_echo():
 			_rechazar_emote_nadando()
@@ -349,11 +353,17 @@ func _input(event: InputEvent) -> void:
 		objetivo.interactuar(self)
 	elif is_instance_valid(papel_en_mano):
 		get_viewport().set_input_as_handled()
-		var hoja := papel_en_mano
-		ejecutar_gesto(&"lanzar", func() -> void:
-			if is_instance_valid(hoja) and hoja.portador == self:
-				hoja.lanzar()
-		)
+		_soltar_papel_en_mano()
+
+
+func _soltar_papel_en_mano() -> void:
+	if not is_instance_valid(papel_en_mano):
+		return
+	var hoja := papel_en_mano
+	ejecutar_gesto(&"lanzar", func() -> void:
+		if is_instance_valid(hoja) and hoja.portador == self:
+			hoja.lanzar()
+	)
 
 
 func _notification(what: int) -> void:

@@ -280,7 +280,7 @@ func _crear_aura_persistente(esqueleto: Skeleton3D) -> void:
 	_aura_persistente.position = Vector3(0.0, ALTURA_MODELO_POLICIA * 0.5, 0.0)
 	_aura_persistente.scale = Vector3.ONE * 0.05
 	_aura_persistente.visible = false
-	_aura_persistente.set("particles_amount", 180)
+	_aura_persistente.set("particles_amount", 90 if OS.has_feature("android") else 180)
 	_aura_persistente.set("lifetime", 1.35)
 	_aura_persistente.set("emission_shape", Vector3(0.55, 1.0, 0.55))
 	_aura_persistente.set("waviness", 0.52)
@@ -1265,8 +1265,8 @@ func _crear_explosion_final_amarilla(posicion_global: Vector3) -> void:
 	var malla_centro := SphereMesh.new()
 	malla_centro.radius = RADIO_GENKIDAMA
 	malla_centro.height = RADIO_GENKIDAMA * 2.0
-	malla_centro.radial_segments = 64
-	malla_centro.rings = 40
+	malla_centro.radial_segments = 24 if OS.has_feature("android") else 64
+	malla_centro.rings = 16 if OS.has_feature("android") else 40
 	var centro_dorado := MeshInstance3D.new()
 	centro_dorado.name = "CentroSolidoExplosion"
 	centro_dorado.mesh = malla_centro
