@@ -155,9 +155,9 @@ func recibir_movimiento(id: int, datos: Dictionary, validar: bool) -> bool:
 	if validar:
 		# La validación de interacciones usa la posición más reciente; el modelo se suaviza aparte.
 		var visual_anterior := j.visual.global_position
+		j.velocity = datos.vel
 		_mover_cuerpo_remoto(j, posicion)
 		j.visual.global_position = visual_anterior
-		j.velocity = datos.vel
 	return true
 
 func _interpolar(delta: float) -> void:
@@ -166,10 +166,10 @@ func _interpolar(delta: float) -> void:
 			continue
 		var j: Player = jugadores[id]
 		var datos: Dictionary = _remotos[id]
+		j.velocity = datos.vel
 		_mover_cuerpo_remoto(j, j.global_position.lerp(datos.pos, minf(1.0, delta / 0.1)))
 		j.visual.position = j.visual.position.lerp(Vector3.ZERO, minf(1.0, delta / 0.1))
 		j.visual.rotation.y = lerp_angle(j.visual.rotation.y, float(datos.giro), minf(1.0, delta / 0.1))
-		j.velocity = datos.vel
 		j.nadando = bool(datos.get("nado", false))
 		j.nivel_agua = oficina.evento_inundacion.nivel if oficina.evento_inundacion.activo else -INF
 		j.chocolate_restante = float(datos.get("chocolate", 0.0))
@@ -204,6 +204,7 @@ func _preparar_colision(j: Player) -> void:
 				hijo.scale *= factor
 		j.scale = Vector3.ONE
 	j.set_collision_mask_value(2, true)
+	j.choque.habilitado = true
 
 func _mover_cuerpo_remoto(j: Player, destino: Vector3) -> void:
 	# El remoto ya resuelve el escenario en su equipo. Aquí barrer su cuerpo
@@ -212,6 +213,7 @@ func _mover_cuerpo_remoto(j: Player, destino: Vector3) -> void:
 	j.collision_mask = 2
 	var choque := j.move_and_collide(destino - j.global_position)
 	if choque != null:
+		j.choque.registrar(choque.get_collider(), j.velocity)
 		j.move_and_collide(choque.get_remainder().slide(choque.get_normal()))
 	j.collision_mask = mascara
 

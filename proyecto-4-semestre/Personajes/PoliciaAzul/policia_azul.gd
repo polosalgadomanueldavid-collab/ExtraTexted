@@ -24,6 +24,8 @@ const KAMEHAMEHA := &"policia_kamehameha"
 const GENKIDAMA := &"policia_genkidama"
 const RASENGAN := &"policia_rasengan"
 const AnimacionesInteraccion := preload("res://Personajes/PoliciaAzul/animaciones_interaccion.gd")
+const ChoqueAvatar := preload("res://Personajes/PoliciaAzul/choque_avatar.gd")
+var choque: ChoqueAvatar
 
 @export_category("Movimiento")
 @export var walk_speed: float = 2.0
@@ -107,6 +109,9 @@ func _ready() -> void:
 	_spawn_transform = global_transform
 	_spawn_visual_rotation = visual.rotation
 	_pose_modelo = $Visual/Modelo.transform
+	choque = ChoqueAvatar.new()
+	choque.name = "ChoqueAvatar"
+	add_child(choque)
 	if not remoto_red:
 		dispositivo_mando = ControladorInterfaz.dispositivo_mando
 		ControladorInterfaz.mando_cambiado.connect(_al_cambio_mando)
@@ -214,7 +219,11 @@ func _physics_process(delta: float) -> void:
 		var angle := atan2(direction.x, direction.z)
 		visual.rotation.y = lerp_angle(visual.rotation.y, angle, 1.0 - exp(-turn_speed * delta))
 	var posicion_anterior := global_position
+	var velocidad_entrada := velocity
 	move_and_slide()
+	if choque.habilitado:
+		for indice in get_slide_collision_count():
+			choque.registrar(get_slide_collision(indice).get_collider(), velocidad_entrada)
 	var desplazamiento := Vector2(global_position.x - posicion_anterior.x, global_position.z - posicion_anterior.z).length()
 	_rapidez_real = desplazamiento / maxf(delta, 0.0001)
 	# El desplazamiento real evita seguir pisando al empujar una pared.
@@ -429,6 +438,7 @@ func _buscar_papel_cercano() -> PapelDenuncia:
 
 
 func reset_to_spawn() -> void:
+	choque.reiniciar()
 	chocolate_restante = 0.0
 	dona_restante = 0.0
 	terminar_descanso_sentado(true)

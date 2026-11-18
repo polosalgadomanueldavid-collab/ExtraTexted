@@ -516,6 +516,8 @@ func _process_modification() -> void:
 		_aplicar_gesto(tiempo / duracion)
 	if _peso_extintor > 0.0:
 		_aplicar_extintor(_peso_extintor)
+	if jugador.choque != null:
+		jugador.choque.aplicar_pose(self)
 	_actualizar_energia()
 	var esqueleto := get_skeleton()
 	mano_izquierda.transform = esqueleto.get_bone_global_pose(_huesos["hand.L"])
