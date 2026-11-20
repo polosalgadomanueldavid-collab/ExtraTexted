@@ -2,7 +2,7 @@ extends Node
 ## Reacción cosmética compartida por los dos avatares de un contacto LAN.
 ## No mueve el cuerpo ni cambia la velocidad, las tareas o los paquetes de red.
 
-const DURACION := 0.42
+const DURACION := 0.54
 const SEPARACION := 0.82
 var habilitado := false
 var tiempo := DURACION
@@ -63,25 +63,38 @@ func reiniciar() -> void:
 func aplicar_pose(modificador: SkeletonModifier3D) -> void:
 	if tiempo >= DURACION:
 		return
-	# Compresión en 55 ms, cabezazo hacia atrás y una sola oscilación amortiguada.
-	var compresion := sin(PI * clampf(tiempo / 0.13, 0.0, 1.0)) * intensidad
-	var rebote := sin(PI * clampf((tiempo - 0.045) / 0.29, 0.0, 1.0)) * intensidad
-	var asentamiento := sin(PI * clampf((tiempo - 0.28) / 0.14, 0.0, 1.0)) * intensidad
-	var inclinacion := rebote * 0.28 - asentamiento * 0.065
+	# Golpe seco, salto elástico y recuperación: la cabeza sigue al torso con retraso.
+	# Pulsos de pendiente cero para entrar y salir sin cortes en la pose base.
+	var compresion := _pulso(0.0, 0.14) * intensidad
+	var rebote := _pulso(0.045, 0.38) * intensidad
+	var cabeza := _pulso(0.085, 0.44) * intensidad
+	var asentamiento := _pulso(0.34, DURACION) * intensidad
+	var inclinacion := rebote * 0.55 - asentamiento * 0.13
 	modificador._sumar("spine", Vector3(direccion.z * inclinacion, 0.0, -direccion.x * inclinacion))
-	modificador._sumar("head", Vector3(direccion.z * (rebote * 0.22 - compresion * 0.12), rebote * 0.07, -direccion.x * rebote * 0.20))
+	modificador._sumar("chest", Vector3(direccion.z * rebote * 0.12, cabeza * 0.12, -direccion.x * rebote * 0.10))
+	modificador._sumar("head", Vector3(direccion.z * (cabeza * 0.38 - compresion * 0.18), cabeza * 0.13, -direccion.x * cabeza * 0.32))
+	for lado: String in ["L", "R"]:
+		var signo := -1.0 if lado == "L" else 1.0
+		modificador._sumar("thigh." + lado, Vector3(-compresion * 0.28 - rebote * (0.30 if lado == "L" else 0.12), 0.0, signo * rebote * 0.14))
+		modificador._sumar("shin." + lado, Vector3(compresion * 0.40 + rebote * 0.32, 0.0, 0.0))
 	# Manos ocupadas conservan el agarre de la hoja, la taza y las herramientas.
 	if not is_instance_valid(jugador.papel_en_mano) and not jugador._taza_en_mano and not jugador.usando_extintor:
 		for lado: String in ["L", "R"]:
 			var signo := -1.0 if lado == "L" else 1.0
-			modificador._sumar("upper_arm." + lado, Vector3(-rebote * 0.24, 0.0, signo * rebote * 0.48))
-			modificador._sumar("forearm." + lado, Vector3(-rebote * 0.28, 0.0, 0.0))
+			modificador._sumar("upper_arm." + lado, Vector3(-rebote * 0.60, signo * cabeza * 0.12, signo * rebote * 1.10))
+			modificador._sumar("forearm." + lado, Vector3(-cabeza * 0.65, 0.0, signo * cabeza * 0.12))
 	var esqueleto := modificador.get_skeleton()
 	var raiz := esqueleto.find_bone("root")
 	if raiz >= 0:
-		var escala := Vector3(1.0 + compresion * 0.07, 1.0 - compresion * 0.09, 1.0 + compresion * 0.07)
+		var vertical := 1.0 - compresion * 0.22 + rebote * 0.12 - asentamiento * 0.06
+		var ancho := 1.0 / sqrt(vertical)
+		var escala := Vector3(ancho, vertical, ancho)
 		esqueleto.set_bone_pose_scale(raiz, esqueleto.get_bone_pose_scale(raiz) * escala)
-		esqueleto.set_bone_pose_position(raiz, esqueleto.get_bone_pose_position(raiz) + direccion * rebote * 0.14)
+		esqueleto.set_bone_pose_position(raiz, esqueleto.get_bone_pose_position(raiz) + direccion * rebote * 0.48 + Vector3.UP * rebote * 0.30)
+
+func _pulso(inicio: float, fin: float) -> float:
+	var onda := sin(PI * clampf((tiempo - inicio) / (fin - inicio), 0.0, 1.0))
+	return onda * onda
 
 func _destello(punto: Vector3) -> void:
 	var efecto := Node3D.new()
@@ -98,11 +111,11 @@ func _destello(punto: Vector3) -> void:
 		var angulo := TAU * i / 5.0 + 0.3
 		var rayo := MeshInstance3D.new()
 		var malla := QuadMesh.new()
-		malla.size = Vector2(0.023, 0.09)
+		malla.size = Vector2(0.035, 0.14)
 		rayo.mesh = malla
 		rayo.material_override = material
 		rayo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		rayo.position = Vector3(sin(angulo), cos(angulo), 0.0) * 0.10
+		rayo.position = Vector3(sin(angulo), cos(angulo), 0.0) * 0.14
 		rayo.rotation.z = -angulo
 		efecto.add_child(rayo)
 	var tween := efecto.create_tween()

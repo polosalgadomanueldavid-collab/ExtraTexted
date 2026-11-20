@@ -256,15 +256,17 @@ func _camera_relative_direction(input_direction: Vector2) -> Vector3:
 	return (right.normalized() * input_direction.x - forward.normalized() * input_direction.y).normalized()
 
 
-func _update_animation(moving: bool, running: bool) -> void:
+func _update_animation(_moving: bool, running: bool) -> void:
 	if nadando:
 		_play_animation(&"swim" if _rapidez_real > 0.1 and not realizando_gesto() else &"swim_idle")
 	elif not is_on_floor():
 		_play_animation(&"jump" if velocity.y > 0.0 else &"fall")
 	elif _wave_remaining > 0.0:
 		_play_animation(&"wave")
-	elif moving or Vector2(velocity.x, velocity.z).length() > 0.15:
-		_play_animation(&"run" if running else &"walk")
+	elif _rapidez_real > (0.08 if current_animation in [&"walk", &"run"] else 0.22):
+		# Histéresis: no alternar poses por pequeñas correcciones de velocidad.
+		var umbral_carrera := walk_speed * (1.10 if current_animation == &"run" else 1.30)
+		_play_animation(&"run" if running and _rapidez_real > umbral_carrera else &"walk")
 	else:
 		_play_animation(&"idle")
 
@@ -273,13 +275,32 @@ func _play_animation(clip: StringName) -> void:
 	if clip == current_animation:
 		return
 	var pista_anterior: StringName = _animation_names.get(current_animation, &"")
+	var anterior := current_animation
+	var fase_paso := -1.0
+	if animation_player != null and anterior in [&"walk", &"run"] and clip in [&"walk", &"run"] and animation_player.current_animation_length > 0.0:
+		fase_paso = fposmod(animation_player.current_animation_position / animation_player.current_animation_length, 1.0)
 	current_animation = clip
 	if animation_player != null and _animation_names.has(clip):
 		animation_player.speed_scale = 1.0
 		# Swim y swim_idle comparten base; mantener la fase del clip importado.
 		if pista_anterior != _animation_names[clip]:
-			animation_player.play(_animation_names[clip], blend_time)
+			animation_player.play(_animation_names[clip], _duracion_transicion(anterior, clip))
+			# Ambos ciclos usan la misma fase de apoyo. Evita cambiar de pie al correr.
+			if fase_paso >= 0.0:
+				animation_player.seek(fase_paso * animation_player.get_animation(_animation_names[clip]).length, false)
 	animation_state_changed.emit(clip)
+
+
+func _duracion_transicion(anterior: StringName, siguiente: StringName) -> float:
+	if anterior == &"":
+		return 0.0
+	if siguiente == &"jump":
+		return blend_time * 0.6
+	if anterior in [&"jump", &"fall"]:
+		return blend_time * (0.9 if siguiente == &"fall" else 1.2)
+	if siguiente == &"idle" or anterior == &"wave" or siguiente == &"wave":
+		return blend_time * 1.6
+	return blend_time * 1.35
 
 
 func play_wave() -> void:

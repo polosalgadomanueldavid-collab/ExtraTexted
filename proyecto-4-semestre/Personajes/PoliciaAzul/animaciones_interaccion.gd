@@ -47,6 +47,11 @@ var direcciones_antebrazos := {"L": Vector3.FORWARD, "R": Vector3.FORWARD}
 var anclaje_taza: Node3D
 var objetivo: Node3D
 var _reloj: float = 0.0
+var _fase_balanceo := 0.0
+var _ritmo_balanceo := 2.5
+var _amplitud_balanceo := 0.035
+var _aterrizaje := 0.0
+var _locomocion_anterior: StringName = &""
 var _contacto_emitido: bool = false
 var _peso_papel: float = 0.0
 var _huesos: Dictionary = {}
@@ -410,6 +415,7 @@ func cancelar() -> void:
 
 func _process(delta: float) -> void:
 	tambaleo = jugador.intensidad_tambaleo
+	_actualizar_locomocion_visual(delta)
 	if not jugador.congelado or gesto != &"":
 		_reloj += delta
 	_peso_nado = jugador.peso_nado
@@ -481,9 +487,7 @@ func _actualizar_transformacion_aura(delta: float) -> void:
 		aura_transformacion_en_curso = false
 
 
-func _process_modification() -> void:
-	if not is_instance_valid(jugador) or _huesos.is_empty():
-		return
+func _actualizar_locomocion_visual(delta: float) -> void:
 	var locomocion: StringName = jugador.current_animation
 	var ritmo := 2.5
 	var amplitud := 0.035
@@ -496,11 +500,31 @@ func _process_modification() -> void:
 	elif locomocion in [&"jump", &"fall", &"wave"]:
 		ritmo = 5.0
 		amplitud = 0.095
+	var mezcla := 1.0 - exp(-delta * 10.0)
+	_ritmo_balanceo = lerpf(_ritmo_balanceo, ritmo, mezcla)
+	_amplitud_balanceo = lerpf(_amplitud_balanceo, amplitud, mezcla)
+	if not jugador.congelado or gesto != &"":
+		_fase_balanceo = fposmod(_fase_balanceo + delta * _ritmo_balanceo, TAU)
+	_aterrizaje = maxf(0.0, _aterrizaje - delta)
+	if _locomocion_anterior in [&"jump", &"fall"] and locomocion in [&"idle", &"walk", &"run"] and not jugador.en_relevo:
+		_aterrizaje = 0.22
+	_locomocion_anterior = locomocion
+
+
+func _process_modification() -> void:
+	if not is_instance_valid(jugador) or _huesos.is_empty():
+		return
 	var peso_balanceo := (1.0 - _peso_sentado * 0.85) * (1.0 - _peso_nado) * (1.0 - _peso_quemadura)
-	var balanceo := sin(_reloj * ritmo) * amplitud * tambaleo * peso_balanceo
-	_sumar("spine", Vector3(0.015 * sin(_reloj * ritmo * 2.0) * tambaleo, 0.0, balanceo))
-	_sumar("chest", Vector3(0.025 * sin(_reloj * ritmo - 0.6) * tambaleo, balanceo * 0.35, -balanceo * 0.3))
-	_sumar("head", Vector3(0.035 * sin(_reloj * ritmo - 0.9) * tambaleo, 0.0, -sin(_reloj * ritmo - 0.7) * amplitud * 1.4 * tambaleo))
+	var balanceo := sin(_fase_balanceo) * _amplitud_balanceo * tambaleo * peso_balanceo
+	_sumar("spine", Vector3(0.015 * sin(_fase_balanceo * 2.0) * tambaleo, 0.0, balanceo))
+	_sumar("chest", Vector3(0.025 * sin(_fase_balanceo - 0.6) * tambaleo, balanceo * 0.35, -balanceo * 0.3))
+	_sumar("head", Vector3(0.035 * sin(_fase_balanceo - 0.9) * tambaleo, 0.0, -sin(_fase_balanceo - 0.7) * _amplitud_balanceo * 1.4 * tambaleo))
+	if _aterrizaje > 0.0 and not sentado and not jugador.nadando and not jugador.congelado:
+		var absorcion := pow(sin(PI * (1.0 - _aterrizaje / 0.22)), 2.0)
+		_sumar("spine", Vector3(0.09 * absorcion, 0.0, 0.0))
+		for lado: String in ["L", "R"]:
+			_sumar("thigh." + lado, Vector3(-0.16 * absorcion, 0.0, 0.0))
+			_sumar("shin." + lado, Vector3(0.24 * absorcion, 0.0, 0.0))
 	if _peso_sentado > 0.0:
 		_aplicar_sentado(_peso_sentado)
 	if _peso_nado > 0.0:
