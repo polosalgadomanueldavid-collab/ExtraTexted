@@ -1093,6 +1093,8 @@ func _iniciar_cinematica_relevo() -> void:
 	if not jugador.hielo_activo:
 		jugador.velocity = Vector3.ZERO
 	cinematica_relevo = CinematicaRelevo.new()
+	# El historial se replica en LAN: ambos equipos eligen el mismo uniforme.
+	cinematica_relevo.variante_relevo = _resueltas.size() % 2
 	cinematica_relevo.name = "CinematicaRelevo"
 	add_child(cinematica_relevo)
 	cinematica_relevo.terminada.connect(final_partida.finalizar_relevo)

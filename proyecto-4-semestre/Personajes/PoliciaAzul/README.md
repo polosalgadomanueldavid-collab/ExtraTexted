@@ -16,11 +16,20 @@ La voz provisional es **Gomosa (opción 4)**. Saluda con `play_wave()` y hace un
 
 Los pasos usan **Suela de goma (opción 3)**, con seis variaciones y dos cadencias para caminar y correr. Solo suenan con desplazamiento real sobre el suelo. Los ajustes están en el hijo `SonidosPasos`; detalles en `Audios/Pasos/README.md`.
 
-## Policía de relevo
+## Equipo y acabados del uniforme
 
-El segundo policía aparece en el menú y al tomar el relevo en la oficina. Su [uniforme](../PoliciaRelevo/ModeloRelevo.tscn) se edita en Godot sobre el mismo modelo animado. La gorra marfil lleva la insignia II y los galones dorados siguen ambos antebrazos.
+El policía principal usa `ModeloAzul.tscn`: cobalto con cuello celeste, ribete dorado, hombreras claras y botines oscuros. Conserva la silueta redondeada y la cabeza sin rostro del original.
 
-Para usarlo con movimiento e interacciones, instancia [PoliciaRelevo.tscn](../PoliciaRelevo/PoliciaRelevo.tscn). Los dos policías de la oficina heredan de `PoliciaBase.tscn`, donde comparten colisión, velocidades, pasos y voz.
+Los dos relevos comparten el rig y las seis animaciones:
+
+- `../PoliciaRelevo/ModeloRelevo.tscn` y `PoliciaRelevo.tscn`: uniforme menta, gorra marfil, pañuelo coral, radio e insignia II.
+- `../PoliciaRelevo/ModeloVioleta.tscn` y `PoliciaVioleta.tscn`: uniforme violeta, gorra lavanda, cordón de hombro, galones dobles e insignia III.
+
+`acabado_uniforme.gd` aplica las paletas y crea accesorios de malla vinculados con `BoneAttachment3D`. Los materiales se crean por instancia; el GLB fuente se conserva para editarlo en Blender. El menú, la oficina y la plataforma usan el acabado del policía principal. Los retratos del HUD y la sala LAN corresponden a los uniformes nuevos.
+
+La cinemática recibe `variante_relevo` (0 menta, 1 violeta). La oficina la elige por la paridad de los casos resueltos, cuyo historial se replica en LAN. Los dos relevos heredan movimiento, colisión, pasos y voz de `PoliciaBase.tscn`.
+
+Para capturar frente, tres cuartos, espalda y saludo de los tres modelos reales, ejecuta `Pruebas/PersonajePolicia/capturar_uniformes.gd` con una carpeta de salida después de `--`. Con `--headless` comprueba los rigs y que el puño acompaña la mano, sin generar imágenes.
 
 ## Gestos e interacción
 

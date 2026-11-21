@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cwbdee7bud80u"]
 
 [ext_resource type="Script" uid="uid://dkumt5d6kqdb" path="res://Personajes/PoliciaAzul/policia_azul.gd" id="1_controlador"]
-[ext_resource type="PackedScene" uid="uid://bergxnx112j2t" path="res://Personajes/PoliciaAzul/policia_azul.glb" id="2_modelo"]
+[ext_resource type="PackedScene" path="res://Personajes/PoliciaAzul/ModeloAzul.tscn" id="2_modelo"]
 [ext_resource type="Script" uid="uid://c4dyys7ryxy6c" path="res://Personajes/PoliciaAzul/voz_personaje.gd" id="3_voz"]
 [ext_resource type="Script" uid="uid://dvlkcr6fapqk3" path="res://Personajes/PoliciaAzul/sonidos_pasos.gd" id="4_pasos"]
 

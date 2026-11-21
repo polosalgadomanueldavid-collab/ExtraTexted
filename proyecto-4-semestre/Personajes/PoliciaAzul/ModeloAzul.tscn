@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Personajes/PoliciaAzul/policia_azul.glb" id="1_modelo"]
+[ext_resource type="Script" path="res://Personajes/PoliciaAzul/acabado_uniforme.gd" id="2_acabado"]
+
+[node name="ModeloAzul" instance=ExtResource("1_modelo")]
+script = ExtResource("2_acabado")

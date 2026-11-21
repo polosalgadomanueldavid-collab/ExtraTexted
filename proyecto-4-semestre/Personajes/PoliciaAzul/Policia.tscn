@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bfe3yjenbnsvj"]
 
 [ext_resource type="PackedScene" path="res://Personajes/PoliciaAzul/PoliciaBase.tscn" id="1_base"]
-[ext_resource type="PackedScene" uid="uid://bergxnx112j2t" path="res://Personajes/PoliciaAzul/policia_azul.glb" id="2_modelo"]
+[ext_resource type="PackedScene" path="res://Personajes/PoliciaAzul/ModeloAzul.tscn" id="2_modelo"]
 
 [node name="PoliciaAzul2" instance=ExtResource("1_base")]
 

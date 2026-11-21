@@ -4,6 +4,8 @@ extends Node3D
 signal terminada
 
 const MODELO_RELEVO := preload("res://Personajes/PoliciaRelevo/PoliciaRelevo.tscn")
+const MODELO_VIOLETA := preload("res://Personajes/PoliciaRelevo/PoliciaVioleta.tscn")
+@export_enum("Menta", "Violeta") var variante_relevo: int = 0
 const Ambiente := preload("res://Scripts/Partida/ambiente_relevo.gd")
 const SEPARACION := 0.64
 const POSE_AGOTADA := preload("res://Personajes/PoliciaAzul/pose_agotada.gd")
@@ -117,7 +119,8 @@ func _preparar_segundo_jugador() -> void:
 
 
 func _preparar_companero() -> void:
-	companero = MODELO_RELEVO.instantiate() as Player
+	var escena: PackedScene = MODELO_RELEVO if variante_relevo == 0 else MODELO_VIOLETA
+	companero = escena.instantiate() as Player
 	companero.name = "CompaneroRelevo"
 	companero.character_scale = _jugador.character_scale
 	add_child(companero)

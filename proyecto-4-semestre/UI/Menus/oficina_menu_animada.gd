@@ -267,7 +267,7 @@ func papel(pos: Vector3, tam: float) -> Node3D:
 	return p
 
 func _crear_actores() -> void:
-	for ruta: String in ["res://Personajes/PoliciaAzul/policia_azul.glb", "res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"]:
+	for ruta: String in ["res://Personajes/PoliciaAzul/ModeloAzul.tscn", "res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"]:
 		var p: Node3D=load(ruta).instantiate()
 		add_child(p)
 		actores.append(p)

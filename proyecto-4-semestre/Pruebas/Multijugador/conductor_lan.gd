@@ -562,7 +562,7 @@ func _personajes_correctos() -> bool:
 	for id: int in red.jugadores:
 		var jugador: Player = red.jugadores[id]
 		var modelo := jugador.get_node("Visual/Modelo")
-		var esperado := "res://Personajes/PoliciaAzul/policia_azul.glb" if id == 1 else "res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"
+		var esperado := "res://Personajes/PoliciaAzul/ModeloAzul.tscn" if id == 1 else "res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"
 		if modelo.scene_file_path != esperado or jugador.id_red != id or jugador.remoto_red != (id != SesionLAN.id_local()):
 			return false
 		var esqueleto := modelo.get_node("Rig/Skeleton3D")
