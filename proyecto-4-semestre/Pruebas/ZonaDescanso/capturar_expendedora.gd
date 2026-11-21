@@ -25,6 +25,15 @@ func _probar() -> void:
 	oficina.anuncios.detener()
 	await _cuadros(60)
 	oficina.anuncios.detener()
+	if OS.get_cmdline_user_args().has("--fuego-amplio"):
+		camara = Camera3D.new()
+		oficina.add_child(camara)
+		camara.current = true
+		maquina.aviso.hide()
+		maquina.set_process(false)
+		oficina.get_node("CanvasLayer").hide()
+		await _capturar_elementos(false, true)
+		return
 	for i in 100:
 		jugador.global_position = maquina.global_position + Vector3(1.6 - i * 0.01, 0.01, 0)
 		jugador.visual.rotation.y = -PI / 2.0
@@ -63,15 +72,33 @@ func _probar() -> void:
 	await _cuadros(40)
 	camara.global_position = Vector3(.15, 1.45, 10.55)
 	camara.look_at(Vector3(-1.0, .90, 8.5))
-	var duelo := OS.get_cmdline_user_args().has("--aire-fuego")
+	await _capturar_elementos(OS.get_cmdline_user_args().has("--aire-fuego"), false)
+
+func _capturar_elementos(duelo: bool, fuego_amplio: bool) -> void:
 	var secuencia := OS.get_cmdline_user_args().has("--secuencia")
 	var gestos := [&"control_fuego", &"control_aire"] if duelo else [&"control_agua", &"control_fuego", &"control_tierra", &"control_aire"]
 	if duelo:
 		camara.fov = 42
+	if fuego_amplio:
+		gestos = [&"control_fuego"]
+		carpeta = "res://.godot/fuego_avatar_qa"
+		jugador.global_position = Vector3(-1, .38, 3.0)
+		jugador.visual.rotation.y = 0
+		camara.global_position = Vector3(2.0, 5.3, 9.0)
+		camara.look_at(Vector3(-1, 1.0, 4.8))
+		camara.fov = 58
+		if OS.get_cmdline_user_args().has("--lateral"):
+			# Solo la captura retira la pared que tapa esta cámara exterior.
+			oficina.get_node("Pared, suelo, techo/Pared3").hide()
+			camara.global_position = Vector3(7, 3.3, 5.4)
+			camara.look_at(Vector3(-1, 1.0, 4.7))
+			camara.fov = 48
+			carpeta = "res://.godot/fuego_avatar_lateral_qa"
+		await _cuadros(30)
 	for gesto: StringName in gestos:
 		jugador.ejecutar_gesto(gesto)
 		maquina.poderes.animar_elemento(gesto)
-		var fases := [.12, .18, .24, .32, .38, .46, .50, .56, .64, .72, .82, .95] if duelo else [.14, .24, .32, .46, .56, .72, .90]
+		var fases := [.12, .18, .24, .32, .38, .46, .50, .56, .64, .72, .82, .95] if duelo or fuego_amplio else [.14, .24, .32, .46, .56, .72, .90]
 		if secuencia:
 			fases.clear()
 			for i in 60:

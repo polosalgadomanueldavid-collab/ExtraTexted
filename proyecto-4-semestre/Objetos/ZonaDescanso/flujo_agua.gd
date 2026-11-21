@@ -2,13 +2,17 @@ extends Node3D
 ## Dos corrientes con sección redonda, continuidad en las manos y gotas balísticas.
 const AGUA := preload("res://Objetos/ZonaDescanso/agua_flujo.gdshader")
 const RUIDO := preload("res://Objetos/ZonaDescanso/ruido_flujo.tres")
+const TORBELLINO := preload("res://Objetos/ZonaDescanso/torbellino_agua.gd")
 var jugador: Player
 var _chorros: Array[MeshInstance3D] = []
 var _material: ShaderMaterial
 var _gotas: MultiMeshInstance3D
 var _reloj := 0.0
+var _torbellino: Node3D
 
 func _ready() -> void:
+	_torbellino = TORBELLINO.new()
+	add_child(_torbellino)
 	_material = ShaderMaterial.new()
 	_material.shader = AGUA
 	_material.set_shader_parameter("ruido", RUIDO)
@@ -57,6 +61,8 @@ func actualizar(reloj: float, presencia: float) -> void:
 	var fase := clampf(reloj / 3.6, 0, 1)
 	_material.set_shader_parameter("reloj", reloj)
 	_material.set_shader_parameter("presencia", presencia)
+	var manos := to_local((jugador.gestos.mano_izquierda.global_position + jugador.gestos.mano_derecha.global_position) * .5)
+	_torbellino.actualizar(reloj, presencia, manos)
 	for lado in 2:
 		_chorros[lado].mesh = _tubo(lado, fase, presencia)
 	for i in 36:
@@ -87,7 +93,7 @@ func _tubo(lado: int, fase: float, presencia: float) -> ArrayMesh:
 			eje = tangente.cross(Vector3.FORWARD).normalized()
 		eje_anterior = eje
 		var otro := tangente.cross(eje).normalized()
-		var radio := (.025 + .033 * sin(u * PI)) * (.83 + .17 * sin(u * 22 - _reloj * 8 + lado))
+		var radio := (.045 + .085 * sin(u * PI)) * (.83 + .17 * sin(u * 22 - _reloj * 8 + lado))
 		radio *= smoothstep(0, .07, u) * (1.0 - smoothstep(.94, 1.0, u)) * sqrt(maxf(.001, presencia))
 		for k in LADOS + 1:
 			var a := k * TAU / LADOS

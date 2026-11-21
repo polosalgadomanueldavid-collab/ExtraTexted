@@ -47,18 +47,41 @@ func _probar() -> void:
 				if muestras.size() == 3:
 					var tiempo: float = jugador.gestos.tiempo
 					var tiempo_efecto: float = efecto.tiempo
+					var tiempo_agua: float = efecto._agua._torbellino._reloj if tipo == &"control_agua" else 0.0
+					var tiempo_fuego: float = efecto._barrido_fuego._reloj if tipo == &"control_fuego" else 0.0
 					paused = true
 					await _cuadros(10)
 					_verificar(is_equal_approx(tiempo, jugador.gestos.tiempo), "La pausa conserva la fase de " + tipo)
 					_verificar(is_equal_approx(tiempo_efecto, efecto.tiempo), "La pausa conserva el efecto de " + tipo)
+					if tipo == &"control_agua":
+						_verificar(is_equal_approx(tiempo_agua, efecto._agua._torbellino._reloj), "La pausa congela el torbellino y su espuma")
+					if tipo == &"control_fuego":
+						_verificar(is_equal_approx(tiempo_fuego, efecto._barrido_fuego._reloj), "La pausa congela el avance de las estelas de fuego")
+						var estela: MeshInstance3D = efecto._barrido_fuego._mallas[1]
+						_verificar(estela.visible and estela.get_aabb().get_longest_axis_size() > 2.0, "El fuego del puñetazo persiste y avanza tras recoger el brazo")
 					paused = false
+				if tipo == &"control_agua" and muestras.size() == 4:
+					var torbellino: Node3D = efecto._agua._torbellino
+					var envolvente: AABB = torbellino._manto.get_aabb()
+					_verificar(torbellino._manto.visible and envolvente.size.y > jugador.character_scale * 3.3 and envolvente.size.x > jugador.character_scale * 3.0, "El torbellino supera la altura y la anchura del personaje")
+				if tipo == &"control_agua" and muestras.size() == 7:
+					var torbellino: Node3D = efecto._agua._torbellino
+					_verificar(torbellino._ola.visible and torbellino._ola.position.z > 1.5 and torbellino._ola.get_aabb().size.x > 2.0, "El agua envolvente sale como una ola ancha hacia delante")
 				if tipo == &"control_fuego" and muestras.size() == 2:
 					var llama: Node3D = efecto._llamas[1]
 					var direccion: Vector3 = jugador.gestos.direcciones_antebrazos["R"]
 					_verificar(llama.visible and llama.global_position.distance_to(jugador.gestos.mano_derecha.global_position) < .05 and llama.global_basis.y.normalized().dot(direccion) > .95, "El chorro de fuego nace de la mano y sigue el puñetazo")
+					_verificar(llama.largo > 2.5 and llama.ancho > .85, "El puñetazo genera una llamarada varias veces mayor que el personaje")
 				if tipo == &"control_fuego" and muestras.size() == 5:
 					var llama: Node3D = efecto._llamas[6]
 					_verificar(llama.visible and llama.global_position.distance_to(jugador.gestos.posicion_pie("R")) < .05, "La patada emite fuego desde el pie")
+					_verificar(llama.largo > 3.0 and efecto._barrido_fuego._mallas[2].visible, "La patada arrastra una cortina extensa de fuego")
+				if tipo == &"control_fuego" and muestras.size() == 7:
+					var izquierda: Node3D = efecto._llamas[2]
+					var derecha: Node3D = efecto._llamas[7]
+					var punta_l: Vector3 = izquierda.position + izquierda.basis.y * izquierda.largo
+					var punta_r: Vector3 = derecha.position + derecha.basis.y * derecha.largo
+					_verificar(izquierda.visible and derecha.visible and punta_l.distance_to(punta_r) > 3.0 and efecto._llamas[4].largo > 5.0, "La descarga final abre un frente de más de tres unidades y alcanza cinco")
 		_verificar(contactos == 1, "Un solo contacto resolutivo en " + tipo)
 		_verificar(error_cuerpo < .01, "La coreografía no mueve las colisiones: " + tipo)
 		_verificar(error_apoyo < .025, "Conserva un pie de apoyo: " + tipo)
@@ -81,10 +104,13 @@ func _probar() -> void:
 		_verificar(not is_instance_valid(efecto), "El efecto se retira al terminar: " + tipo)
 		_verificar(not jugador.input_locked and absf(minf(jugador.gestos.posicion_pie("L").y, jugador.gestos.posicion_pie("R").y) - piso) < .025, "Recupera postura y controles: " + tipo)
 		jugador.ejecutar_gesto(tipo, _contactar)
+		poderes.animar_elemento(tipo)
+		var cancelado = poderes._elemento
 		await _cuadros(30)
 		jugador.cancelar_gesto()
 		await _cuadros(5)
 		_verificar(contactos == 1 and not jugador.input_locked, "Cancelar no resuelve ni bloquea: " + tipo)
+		_verificar(not is_instance_valid(cancelado), "Cancelar retira también las mallas del efecto: " + tipo)
 	oficina.queue_free()
 	await _cuadros(8)
 	print("[COREOGRAFIAS_AVATAR] %d comprobaciones, %d errores" % [comprobaciones, errores])

@@ -1,5 +1,5 @@
 extends Node3D
-## Un chorro continuo con nÃºcleo, envolvente turbulenta y brasas pequeÃ±as.
+## Llamarada de gran volumen con núcleo caliente, turbulencia y brasas.
 const SHADER := preload("res://Objetos/ZonaDescanso/fuego_flujo.gdshader")
 const RUIDO := preload("res://Objetos/ZonaDescanso/ruido_flujo.tres")
 static var _malla: ArrayMesh
@@ -11,6 +11,7 @@ var reloj := 0.0
 var semilla := 0.0
 var _materiales: Array[ShaderMaterial] = []
 var _brasas: MultiMeshInstance3D
+const BRASAS := 48
 
 func _ready() -> void:
 	if _malla == null:
@@ -19,6 +20,8 @@ func _ready() -> void:
 		var lengua := MeshInstance3D.new()
 		lengua.mesh = _malla
 		lengua.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# La deformación supera la malla unitaria, también fuera de cámara.
+		lengua.custom_aabb = AABB(Vector3(-4, -1, -4), Vector3(8, 10, 8))
 		var mat := ShaderMaterial.new()
 		mat.shader = SHADER
 		mat.set_shader_parameter("ruido", RUIDO)
@@ -42,9 +45,10 @@ func _ready() -> void:
 	multi.transform_format = MultiMesh.TRANSFORM_3D
 	multi.use_colors = true
 	multi.mesh = esfera
-	multi.instance_count = 18
+	multi.instance_count = BRASAS
 	_brasas.multimesh = multi
 	_brasas.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_brasas.custom_aabb = AABB(Vector3(-4, -1, -4), Vector3(8, 12, 8))
 	add_child(_brasas)
 	establecer_intensidad(0)
 
@@ -54,22 +58,25 @@ func establecer_intensidad(valor: float) -> void:
 	for i in _materiales.size():
 		_materiales[i].set_shader_parameter("reloj", reloj)
 		_materiales[i].set_shader_parameter("intensidad", intensidad)
-		_materiales[i].set_shader_parameter("largo", largo * (1.0 - i * .16))
-		_materiales[i].set_shader_parameter("radio", ancho * (.48 - i * .12) * sqrt(maxf(.01, intensidad)))
+		_materiales[i].set_shader_parameter("largo", largo * (1.0 - i * .10))
+		_materiales[i].set_shader_parameter("radio", ancho * (.64 - i * .16) * sqrt(maxf(.01, intensidad)))
+		_materiales[i].set_shader_parameter("profundidad", profundo / maxf(ancho, .01))
 	if _brasas == null:
 		return
-	for i in 18:
-		var edad := fposmod(reloj * 1.6 + i * .618 + semilla, 1.0)
+	if not visible:
+		return
+	for i in BRASAS:
+		var edad := fposmod(reloj * 1.35 + i * .618 + semilla, 1.0)
 		var angulo := i * 2.399 + semilla
-		var r := (.025 + edad * .12) * sin(i * 7.1)
-		var p := Vector3(cos(angulo) * r, edad * largo * 1.15, sin(angulo) * r)
-		var tamano := (.002 + (i % 3) * .0015) * (1.0 - edad) * intensidad
+		var r := (.04 + edad * ancho * .85) * sin(i * 7.1)
+		var p := Vector3(cos(angulo) * r, edad * largo * 1.2, sin(angulo) * r)
+		var tamano := (.007 + (i % 5) * .003) * sin(edad * PI) * intensidad
 		_brasas.multimesh.set_instance_transform(i, Transform3D(Basis.IDENTITY.scaled(Vector3(tamano, tamano * 2.8, tamano)), p))
 		_brasas.multimesh.set_instance_color(i, Color(1, .65 + .25 * (1.0 - edad), .2, (1.0 - edad) * intensidad))
 
 func _crear_malla() -> ArrayMesh:
-	const ANILLOS := 72
-	const LADOS := 40
+	const ANILLOS := 48
+	const LADOS := 28
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for j in ANILLOS + 1:

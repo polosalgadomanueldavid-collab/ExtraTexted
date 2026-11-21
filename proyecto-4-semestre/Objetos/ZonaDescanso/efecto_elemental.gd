@@ -19,6 +19,10 @@ var _ondas_pisada: Array[MeshInstance3D] = []
 var _fase_anterior := 0.0
 var _pisada: AudioStreamPlayer3D
 var _agua: Node3D
+var _barrido_fuego: Node3D
+var _frente_fuego := Vector3.BACK
+var _centro_fuego := Vector3.ZERO
+var _descarga_fijada := false
 
 func _ready() -> void:
 	var color := Color("43caff")
@@ -85,6 +89,8 @@ func _ready() -> void:
 			add_child(pieza)
 			_fragmentos.append(pieza)
 	if tipo == &"control_fuego":
+		_barrido_fuego = preload("res://Objetos/ZonaDescanso/barrido_fuego.gd").new()
+		add_child(_barrido_fuego)
 		for i in 8:
 			var llama := FUEGO.new()
 			llama.ancho = 0.24
@@ -123,6 +129,8 @@ func _process(delta: float) -> void:
 	_material_cinta.set_shader_parameter("tiempo", tiempo)
 	_material_cinta.set_shader_parameter("presencia", presencia)
 	_luz.light_energy = presencia * (1.2 if tipo == &"control_fuego" else .30)
+	if tipo == &"control_fuego":
+		_actualizar_fuego(fase, presencia)
 	if is_instance_valid(_agua):
 		_agua.actualizar(tiempo, presencia)
 	var expansion := smoothstep(0.56, 0.95, t)
@@ -143,28 +151,6 @@ func _process(delta: float) -> void:
 			onda.scale = Vector3(1, .035, 1) * lerpf(.12, 1.45, avance)
 			(onda.material_override as StandardMaterial3D).albedo_color.a = (1.0 - avance) * .6
 	_fase_anterior = fase
-	for i in _llamas.size():
-		# Dos manos y una patada: cada emisor es un flujo completo, sin apilar llamas.
-		if i not in [0, 1, 6]:
-			_llamas[i].establecer_intensidad(0.0)
-			continue
-		var lado := "L" if i % 2 == 0 else "R"
-		var golpe := COREOGRAFIA.pulso(fase, .345, .38, .46) if lado == "L" else COREOGRAFIA.pulso(fase, .215, .24, .32)
-		var patada := COREOGRAFIA.pulso(fase, .515, .56, .64)
-		var descarga := smoothstep(.695, .72, fase)
-		var origen := _mano_local(lado)
-		var direccion: Vector3 = (global_basis.inverse() * jugador.gestos.direcciones_antebrazos[lado]).normalized()
-		if i == 6:
-			origen = to_local(jugador.gestos.posicion_pie("R"))
-			direccion = (origen - Vector3(0, .32, 0)).normalized()
-			golpe = patada
-			descarga = 0.0
-		_llamas[i].position = origen
-		# El eje Y de la llama sigue el antebrazo: también sirve para el golpe ascendente.
-		_llamas[i].quaternion = Quaternion(Vector3.UP, direccion)
-		_llamas[i].reloj = tiempo
-		_llamas[i].largo = .28 + golpe * .80 + descarga * (.65 + smoothstep(.72, .92, fase) * .9)
-		_llamas[i].establecer_intensidad(maxf(golpe, descarga) * presencia)
 	for i in _cintas.size():
 		if tipo == &"control_aire":
 			_cinta_aire(_cintas[i].mesh as ImmediateMesh, i, fase, giro, presencia)
@@ -199,6 +185,62 @@ func _process(delta: float) -> void:
 		pieza.position.y = -.18 + elevar * (.28 + (i % 3) * .035 + columna)
 		pieza.rotation = Vector3(0.15 * elevar, angulo, 0.25 * elevar)
 		pieza.scale = Vector3.ONE * presencia * (.55 + lateral * .15)
+
+func _actualizar_fuego(fase: float, presencia: float) -> void:
+	var golpe_l := COREOGRAFIA.pulso(fase, .335, .38, .475)
+	var golpe_r := COREOGRAFIA.pulso(fase, .205, .24, .335)
+	var patada := COREOGRAFIA.pulso(fase, .50, .56, .65)
+	var carga := COREOGRAFIA.pulso(fase, .61, .665, .71) * .32
+	var descarga := smoothstep(.685, .735, fase)
+	var origenes: Array[Vector3] = [_mano_local("L"), _mano_local("R"), to_local(jugador.gestos.posicion_pie("R"))]
+	var direcciones: Array[Vector3] = []
+	for lado: String in ["L", "R"]:
+		direcciones.append((global_basis.inverse() * jugador.gestos.direcciones_antebrazos[lado]).normalized())
+	direcciones.append((origenes[2] - Vector3(0, .32, 0)).normalized())
+	var fuerzas: Array[float] = [golpe_l, golpe_r, patada]
+	for j in 3:
+		var llama: Node3D = _llamas[[0, 1, 6][j]]
+		var fuerza := fuerzas[j]
+		var remate := descarga * (1.0 - smoothstep(.80, .90, fase)) if j < 2 else 0.0
+		llama.position = origenes[j]
+		llama.quaternion = Quaternion(Vector3.UP, direcciones[j])
+		llama.reloj = tiempo
+		llama.largo = .25 + fuerza * (3.1 if j == 2 else 2.65) + remate * 4.8
+		llama.ancho = .16 + fuerza * (1.2 if j == 2 else .95) + remate * 1.4
+		llama.profundo = llama.ancho * .85
+		llama.establecer_intensidad(maxf(fuerza, maxf(remate, carga if j < 2 else 0.0)) * presencia)
+	_barrido_fuego.actualizar(tiempo, origenes, direcciones, fuerzas, presencia)
+	# Las dos palmas alimentan un frente ancho. Las lenguas secundarias abren
+	# el abanico a distancia del cuerpo para conservar el origen del impulso.
+	var centro := (origenes[0] + origenes[1]) * .5
+	var frente := (direcciones[0] + direcciones[1]).normalized()
+	if frente.is_zero_approx():
+		frente = Vector3.BACK
+	if not _descarga_fijada:
+		_centro_fuego = centro
+		_frente_fuego = frente
+		_descarga_fijada = fase >= .735
+	# La masa lanzada conserva su rumbo al bajar los brazos en la recuperación.
+	if _descarga_fijada:
+		centro = _centro_fuego
+		frente = _frente_fuego
+	var apertura := smoothstep(.715, .85, fase)
+	for j in 5:
+		var llama: Node3D = _llamas[[2, 3, 4, 5, 7][j]]
+		var abanico := (j - 2) * .24 * apertura
+		var direccion := frente.rotated(Vector3.UP, abanico)
+		direccion = (direccion + Vector3.UP * (.03 + (j % 2) * .09)).normalized()
+		llama.position = centro + frente * (.55 + apertura * .35)
+		llama.quaternion = Quaternion(Vector3.UP, direccion)
+		llama.reloj = tiempo
+		llama.largo = (3.8 + apertura * 1.5) * (1.0 - absf(j - 2) * .085)
+		llama.ancho = 1.1 + apertura * .75
+		llama.profundo = llama.ancho * .82
+		llama.establecer_intensidad(smoothstep(.715, .765, fase) * presencia * .84)
+	var energia := maxf(maxf(golpe_l, golpe_r), maxf(patada, descarga))
+	_luz.position = centro + frente * descarga * 1.2
+	_luz.omni_range = 4.0 + energia * 3.0
+	_luz.light_energy = presencia * (.35 + energia * 2.3)
 
 func _mano_local(lado: String) -> Vector3:
 	var anclaje: Node3D = jugador.gestos.mano_izquierda if lado == "L" else jugador.gestos.mano_derecha
