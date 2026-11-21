@@ -17,6 +17,12 @@ func _probar() -> void:
 	await get_tree().scene_changed
 	await _esperar_layout()
 	var menu := get_tree().current_scene
+	# La entrada negra bloquea el ratón durante el revelado inicial.
+	# Comprobar los botones cuando ya están disponibles, también sin renderizado.
+	var limite := Time.get_ticks_msec()+10000
+	while menu.get_node("EntradaNegra").visible and Time.get_ticks_msec() < limite:
+		await get_tree().process_frame
+	_verificar(not menu.get_node("EntradaNegra").visible,"El revelado inicial habilita el menú")
 	var titulo: TextureRect = menu.get_node("CenterContainer/MenuPanel/VBoxContainer/Title")
 	_verificar(titulo.texture.resource_path.ends_with("extra_texted_logo.png"), "El título utiliza el logo transparente aprobado")
 	var botones := menu.get_node("CenterContainer/MenuPanel/VBoxContainer/MenuButtons")

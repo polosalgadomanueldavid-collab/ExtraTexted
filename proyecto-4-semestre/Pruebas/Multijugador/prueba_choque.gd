@@ -39,7 +39,7 @@ func probar() -> void:
 	verificar(a.position == posicion_a and b.position == posicion_b and a.velocity == Vector3.ZERO and b.velocity == Vector3.ZERO, "La animación no altera la física")
 	verificar(not b.choque.registrar(a, Vector3(-3, 0, 0)), "El mismo contacto no se duplica")
 	await create_timer(0.7).timeout
-	verificar(a.choque.tiempo == a.choque.DURACION, "Termina en 420 ms")
+	verificar(a.choque.tiempo == a.choque.DURACION, "Termina en 540 ms")
 	verificar(not a.choque.registrar(b, Vector3(3, 0, 0)), "No vibra al permanecer pegados")
 	var esqueleto: Skeleton3D = a.gestos.get_skeleton()
 	verificar(esqueleto.get_bone_pose_scale(esqueleto.find_bone("root")).is_equal_approx(Vector3.ONE), "Recupera la escala original sin acumulación")
