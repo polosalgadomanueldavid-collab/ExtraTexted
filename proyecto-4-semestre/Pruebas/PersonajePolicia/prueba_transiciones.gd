@@ -11,7 +11,7 @@ func verificar(condicion: bool, mensaje: String) -> void:
 		push_error(mensaje)
 
 func probar() -> void:
-	for ruta: String in ["res://Personajes/PoliciaAzul/Policia.tscn", "res://Personajes/PoliciaRelevo/PoliciaRelevo.tscn"]:
+	for ruta: String in ["res://Personajes/PoliciaAzul/Policia.tscn", "res://Personajes/PoliciaRelevo/PoliciaRelevo.tscn", "res://Personajes/PoliciaRelevo/PoliciaVioleta.tscn"]:
 		var jugador: CharacterBody3D = load(ruta).instantiate()
 		jugador.remoto_red = true
 		root.add_child(jugador)

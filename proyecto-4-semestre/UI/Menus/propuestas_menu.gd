@@ -3,7 +3,7 @@ extends Control
 
 const ESCENA_MENU := preload("res://UI/Menus/MainMenu.tscn")
 const MODELOS_POLICIA: Array[PackedScene] = [
-	preload("res://Personajes/PoliciaAzul/policia_azul.glb"),
+	preload("res://Personajes/PoliciaAzul/ModeloAzul.tscn"),
 	preload("res://Personajes/PoliciaRelevo/ModeloRelevo.tscn"),
 ]
 const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
