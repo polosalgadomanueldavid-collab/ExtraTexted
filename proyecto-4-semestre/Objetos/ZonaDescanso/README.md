@@ -65,6 +65,12 @@ Los dos MP3 elegidos para la parada y la reanudación están en `Audios/Expended
 
 El evento se resuelve al 72 % del gesto; la postura se recupera al final. El esqueleto conserva la altura del pie de apoyo, sin mover las colisiones del jugador. Se mantiene el comportamiento de nado cuando el personaje está dentro de la inundación.
 
+Los flujos de agua y fuego tienen geometría y materiales propios, compatibles con GL Compatibility:
+
+- `flujo_agua.gd` genera dos corrientes de sección redonda, guiadas por las manos, con ondulaciones, reflejos, filamentos claros y 36 gotas pequeñas. La descarga conduce las corrientes hacia delante; los bordes se afinan progresivamente. El material está en `agua_flujo.gdshader`.
+- `flujo_fuego.gd` crea chorros continuos con tres capas de turbulencia y 18 brasas por emisor. Los dos puños y el pie conservan sus anclajes reales; el núcleo se aclara y la envolvente se disuelve hacia la punta. `fuego_flujo.gdshader` controla el color, el avance y el contorno. Las llamas del incendio mantienen su material independiente.
+- Ambos usan `ruido_flujo.tres`, ruido procedural compartido de FastNoiseLite, y el reloj del gesto: pausar congela ondas, turbulencia y gotas. No necesitan texturas externas, SSR ni nuevas extensiones. La captura y las pruebas de coreografía también ejercitan estos flujos.
+
 Referencias de movimiento: [Toph enseña tierra control a Aang](https://www.youtube.com/watch?v=8nF4DQj_-Vc), [evolución del aire control de Aang](https://www.youtube.com/watch?v=DoxI_3RhVUg), [evolución del fuego control de Zuko](https://www.youtube.com/watch?v=CwlTFQqdI3I). Las animaciones se generan con el esqueleto del juego; no se incluyen clips de la serie.
 
 Pruebas: `res://Pruebas/ZonaDescanso/prueba_expendedora.gd` y `res://Pruebas/ZonaDescanso/prueba_coreografias_avatar.gd` con `--headless --fixed-fps 60 --script`. Cubren compras, sonidos, detención, resolución de los seis eventos, contactos únicos, pausa, apoyos, dirección de las llamas y cancelación de las coreografías. Para revisar las poses y efectos, `res://Pruebas/ZonaDescanso/capturar_expendedora.gd` sin `--headless`; guarda siete fases por elemento en `.godot/expendedora_qa`. Añadir `-- --aire-fuego` produce doce poses de estos dos elementos en primer plano; con `--secuencia` guarda 60 cuadros por gesto para revisar la continuidad del movimiento.

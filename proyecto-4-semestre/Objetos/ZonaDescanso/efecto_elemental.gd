@@ -4,7 +4,8 @@ var tipo: StringName = &"control_agua"
 var jugador: Player
 var tiempo := 0.0
 const DURACION := 3.8
-const FUEGO := preload("res://Eventos/Incendio/fuego_3d.gd")
+const FUEGO := preload("res://Objetos/ZonaDescanso/flujo_fuego.gd")
+const AGUA := preload("res://Objetos/ZonaDescanso/flujo_agua.gd")
 const COREOGRAFIA := preload("res://Personajes/PoliciaAzul/coreografia_avatar.gd")
 var _cintas: Array[MeshInstance3D] = []
 var _fragmentos: Array[MeshInstance3D] = []
@@ -17,6 +18,7 @@ var _recorridos: Array[PackedVector3Array] = [PackedVector3Array(), PackedVector
 var _ondas_pisada: Array[MeshInstance3D] = []
 var _fase_anterior := 0.0
 var _pisada: AudioStreamPlayer3D
+var _agua: Node3D
 
 func _ready() -> void:
 	var color := Color("43caff")
@@ -41,13 +43,17 @@ func _ready() -> void:
 	_material_cinta.shader = preload("res://Objetos/ZonaDescanso/cinta_elemental.gdshader")
 	_material_cinta.set_shader_parameter("tinte", color)
 	_material_cinta.set_shader_parameter("aire", tipo == &"control_aire")
-	for i in (3 if tipo == &"control_aire" else (0 if tipo == &"control_fuego" else 2)):
+	for i in (3 if tipo == &"control_aire" else (2 if tipo == &"control_tierra" else 0)):
 		var cinta := MeshInstance3D.new()
 		cinta.mesh = ImmediateMesh.new()
 		cinta.material_override = _material_cinta
 		cinta.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(cinta)
 		_cintas.append(cinta)
+	if tipo == &"control_agua":
+		_agua = AGUA.new()
+		_agua.jugador = jugador
+		add_child(_agua)
 	if tipo == &"control_tierra":
 		_pisada = AudioStreamPlayer3D.new()
 		_pisada.stream = preload("res://Audios/Pasos/SuelaGoma/paso_03.wav")
@@ -83,9 +89,10 @@ func _ready() -> void:
 			var llama := FUEGO.new()
 			llama.ancho = 0.24
 			llama.profundo = 0.16
+			llama.semilla = i * .37
 			add_child(llama)
 			_llamas.append(llama)
-	if tipo in [&"control_agua", &"control_aire"]:
+	if tipo == &"control_aire":
 		for i in 2:
 			var estela := MeshInstance3D.new()
 			estela.mesh = ImmediateMesh.new()
@@ -115,7 +122,9 @@ func _process(delta: float) -> void:
 	_material.albedo_color.a = presencia * (0.65 if tipo == &"control_aire" else 0.88)
 	_material_cinta.set_shader_parameter("tiempo", tiempo)
 	_material_cinta.set_shader_parameter("presencia", presencia)
-	_luz.light_energy = presencia * 1.6
+	_luz.light_energy = presencia * (1.2 if tipo == &"control_fuego" else .30)
+	if is_instance_valid(_agua):
+		_agua.actualizar(tiempo, presencia)
 	var expansion := smoothstep(0.56, 0.95, t)
 	var coreografia := COREOGRAFIA.muestrear(tipo, fase)
 	var giro: float = coreografia.root.y
@@ -135,22 +144,26 @@ func _process(delta: float) -> void:
 			(onda.material_override as StandardMaterial3D).albedo_color.a = (1.0 - avance) * .6
 	_fase_anterior = fase
 	for i in _llamas.size():
+		# Dos manos y una patada: cada emisor es un flujo completo, sin apilar llamas.
+		if i not in [0, 1, 6]:
+			_llamas[i].establecer_intensidad(0.0)
+			continue
 		var lado := "L" if i % 2 == 0 else "R"
 		var golpe := COREOGRAFIA.pulso(fase, .345, .38, .46) if lado == "L" else COREOGRAFIA.pulso(fase, .215, .24, .32)
 		var patada := COREOGRAFIA.pulso(fase, .515, .56, .64)
 		var descarga := smoothstep(.695, .72, fase)
 		var origen := _mano_local(lado)
 		var direccion: Vector3 = (global_basis.inverse() * jugador.gestos.direcciones_antebrazos[lado]).normalized()
-		if i >= 6 and patada > .01:
+		if i == 6:
 			origen = to_local(jugador.gestos.posicion_pie("R"))
 			direccion = (origen - Vector3(0, .32, 0)).normalized()
 			golpe = patada
-		var tramo := float(i - 6) if i >= 6 and patada > .01 else float(i / 2)
-		var alcance := tramo * (.11 + maxf(golpe, descarga) * .13) + descarga * smoothstep(.72, .92, fase) * 2.3
-		_llamas[i].position = origen + direccion * alcance
+			descarga = 0.0
+		_llamas[i].position = origen
 		# El eje Y de la llama sigue el antebrazo: también sirve para el golpe ascendente.
 		_llamas[i].quaternion = Quaternion(Vector3.UP, direccion)
-		_llamas[i].scale = Vector3(.48, .75 + descarga * .55, .48) * (1.0 - tramo * .13)
+		_llamas[i].reloj = tiempo
+		_llamas[i].largo = .28 + golpe * .80 + descarga * (.65 + smoothstep(.72, .92, fase) * .9)
 		_llamas[i].establecer_intensidad(maxf(golpe, descarga) * presencia)
 	for i in _cintas.size():
 		if tipo == &"control_aire":
