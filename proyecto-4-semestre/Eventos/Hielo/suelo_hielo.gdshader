@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode blend_mix, cull_back;
+#include "res://Objetos/ZonaDescanso/frente_avatar.gdshaderinc"
 
 uniform float presencia : hint_range(0.0, 1.0) = 0.0;
 // El evento proporciona la posición real de la boca de la tubería.
@@ -64,4 +65,5 @@ void fragment() {
 	EMISSION = vec3(0.08, 0.16, 0.28) * (0.12 + grieta * 0.20);
 	// Frente sólido de cristalización, sin ondulación ni subida del agua.
 	ALPHA = smoothstep(distance(mundo.xz, origen) / 15.0, distance(mundo.xz, origen) / 15.0 + 0.12, presencia * 1.16);
+	ALPHA *= 1.0 - avance_avatar(mundo.xz);
 }

@@ -282,11 +282,18 @@ func _run() -> void:
 		if tipo == "terremoto":
 			r = await _al_cliente("trazado")
 			comprobar(r.formas == oficina.evento_terremoto.exportar_trazado_red().formas, "Ambos equipos usan exactamente las mismas grietas")
-		SesionLAN.difundir("avatar", {"jugador": 1, "evento": red._evento_id})
-		await _esperar(0.4)
+		if tipo not in ["apagon", "inundacion", "hielo"]:
+			red.bolsillos[1][3] = 1
+			r = await _pedir("consumir", {"indice": 3, "evento": red._evento_id})
+			comprobar(r.get("ok", false), "Avatar inicia la transición compartida de " + tipo)
+			await _esperar(0.4)
+			var evento: Node = oficina.get("evento_" + tipo)
+			comprobar(evento.resolviendo_avatar, "El evento mantiene su transición visible: " + tipo)
+		# Reparación normal: hasta 4 s de drenaje. Avatar: 2,6 s de transición.
+		await _esperar(4.3)
 		oficina.temporizador_eventos.stop()
 		r = await _al_cliente("inspeccionar")
-		comprobar(str(r.evento).is_empty(), "Avatar limpia " + tipo + " en ambos")
+		comprobar(str(r.evento).is_empty(), "La resolución termina " + tipo + " en ambos")
 		if tipo == "incendio":
 			comprobar(not red.tiene_extintor(1) and not red.tiene_extintor(cliente) and int(r.extintores) == 0, "Avatar retira ambos extintores y libera sus reservas")
 	red.bolsillos[cliente][2] = 1

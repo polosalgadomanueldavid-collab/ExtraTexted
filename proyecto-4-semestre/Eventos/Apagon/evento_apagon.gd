@@ -1,5 +1,13 @@
 class_name EventoApagon
 extends Node
+
+const ResolucionAvatar := preload("res://Objetos/ZonaDescanso/resolucion_avatar.gd")
+var _resolucion_avatar: Node3D
+var _energias_avatar: Dictionary = {}
+var resolviendo_avatar: bool:
+	get: return is_instance_valid(_resolucion_avatar)
+
+
 ## La partida coordina el apagón con los demás eventos aleatorios.
 
 signal estado_cambiado(nuevo_estado: Estado)
@@ -121,6 +129,9 @@ func _process(_delta: float) -> void:
 
 
 func _actualizar_indicador() -> void:
+	if resolviendo_avatar:
+		indicador_luz.hide()
+		return
 	if is_instance_valid(camara_relevo):
 		indicador_luz.hide()
 		return
@@ -171,7 +182,7 @@ func _al_interactuar_taco(quien: Player) -> void:
 	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("apagon"):
 		SesionLAN.puente.reservar_local("apagon", func(): _al_interactuar_taco(quien))
 		return
-	if quien != jugador or estado != Estado.APAGADO or jugador.input_locked or get_tree().paused:
+	if resolviendo_avatar or quien != jugador or estado != Estado.APAGADO or jugador.input_locked or get_tree().paused:
 		if SesionLAN.en_partida:
 			SesionLAN.puente.liberar_local("apagon")
 		return
@@ -217,6 +228,7 @@ func _al_resolver_circuito() -> void:
 
 
 func _restaurar_luces() -> void:
+	_cancelar_resolucion_avatar()
 	for luz: Light3D in _visibilidad_luces:
 		if is_instance_valid(luz):
 			luz.visible = _visibilidad_luces[luz]
@@ -239,8 +251,19 @@ func _exit_tree() -> void:
 		taco.establecer_abierto(false)
 
 
-func resolver_con_avatar() -> void:
+## Un origen inicia la transición del objeto; sin origen, limpieza inmediata de reinicio/red.
+func resolver_con_avatar(origen: Variant = null) -> void:
 	if estado == Estado.RESTAURADO:
+		return
+	if origen is Vector3:
+		if resolviendo_avatar:
+			return
+		panel.cerrar()
+		_al_cerrar_panel()
+		for luz: Light3D in _visibilidad_luces:
+			if is_instance_valid(luz):
+				_energias_avatar[luz] = luz.light_energy
+		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"luz", _avanzar_avatar, resolver_con_avatar)
 		return
 	_restaurar_luces()
 	mascara.hide()
@@ -252,3 +275,26 @@ func resolver_con_avatar() -> void:
 	panel.cerrar()
 	_al_cerrar_panel()
 	luz_restaurada.emit()
+
+func _avanzar_avatar(frente: Node3D) -> void:
+	for luz: Light3D in _energias_avatar:
+		if not is_instance_valid(luz):
+			continue
+		var peso: float = frente.peso_en(luz.global_position)
+		luz.visible = _visibilidad_luces[luz] and peso > .001
+		luz.light_energy = _energias_avatar[luz] * peso
+	mascara.material.set_shader_parameter("apertura_avatar", smoothstep(.05, 2.15, frente.tiempo))
+	luz_jugador.light_energy = 1.3 * (1.0 - smoothstep(.5, 2.6, frente.tiempo))
+
+func _cancelar_resolucion_avatar() -> void:
+	for luz: Light3D in _energias_avatar:
+		if is_instance_valid(luz):
+			luz.light_energy = _energias_avatar[luz]
+	_energias_avatar.clear()
+	if is_instance_valid(mascara):
+		mascara.material.set_shader_parameter("apertura_avatar", 0.0)
+	if is_instance_valid(luz_jugador):
+		luz_jugador.light_energy = 1.3
+	if is_instance_valid(_resolucion_avatar):
+		_resolucion_avatar.cancelar()
+	_resolucion_avatar = null

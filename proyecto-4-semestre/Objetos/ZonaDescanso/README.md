@@ -63,7 +63,7 @@ Los dos MP3 elegidos para la parada y la reanudación están en `Audios/Expended
 - **Aire / Aang:** entrada de palma circular, esquiva baja con cambio de peso, paso cruzado y giro completo. Los brazos alternan barridos altos y bajos con retraso respecto a la cintura; recogen el aire al pecho y descargan ambas palmas en zancada. Tres espirales abiertas e inclinadas convergen entre las manos y salen hacia delante.
 - **Fuego / Zuko:** guardia cruzada, preparación del puño junto a la cadera, golpe recto, golpe ascendente y patada circular que recoge la rodilla antes y después de extender la pierna. La cintura anticipa los golpes, los puños sostienen brevemente la extensión y la patada continúa el giro antes de recuperar el apoyo. Una inhalación abre el pecho antes de la doble descarga final en zancada. Los ataques tienen preparación, aceleración, suspensión y retroceso; los chorros siguen la dirección real de los antebrazos y el pie, sin aros decorativos alrededor del cuerpo.
 
-El evento se resuelve al 72 % del gesto; la postura se recupera al final. El esqueleto conserva la altura del pie de apoyo, sin mover las colisiones del jugador. Se mantiene el comportamiento de nado cuando el personaje está dentro de la inundación.
+Al 72 % del gesto se consume el objeto y comienza la restauración del evento; el escenario termina de recuperarse durante los siguientes 2,6 s. La postura se recupera al final del gesto. El esqueleto conserva la altura del pie de apoyo, sin mover las colisiones del jugador. Se mantiene el comportamiento de nado cuando el personaje está dentro de la inundación.
 
 Los flujos de agua y fuego tienen geometría y materiales propios, compatibles con GL Compatibility:
 
@@ -76,3 +76,18 @@ Referencias de movimiento: [Toph enseña tierra control a Aang](https://www.yout
 Pruebas: `res://Pruebas/ZonaDescanso/prueba_expendedora.gd` y `res://Pruebas/ZonaDescanso/prueba_coreografias_avatar.gd` con `--headless --fixed-fps 60 --script`. Cubren compras, sonidos, detención, resolución de los seis eventos, contactos únicos, pausa, apoyos, dirección de las llamas y cancelación de las coreografías. Para revisar las poses y efectos, `res://Pruebas/ZonaDescanso/capturar_expendedora.gd` sin `--headless`; guarda siete fases por elemento en `.godot/expendedora_qa`. Añadir `-- --aire-fuego` produce doce poses de estos dos elementos en primer plano; con `--secuencia` guarda 60 cuadros por gesto para revisar la continuidad del movimiento.
 
 Para revisar el fuego a escala completa, ejecutar `capturar_expendedora.gd` con `-- --fuego-amplio`: guarda doce fases en `.godot/fuego_avatar_qa`. Añadir `--secuencia` genera 60 cuadros; `--lateral` usa una cámara lateral y oculta únicamente en esa captura la pared que la tapa, guardando el resultado en `.godot/fuego_avatar_lateral_qa`. La secuencia toma como referencia visual los dos videos de Avatar proporcionados, sin incorporar sus clips al juego.
+
+### Transición al resolver con Avatar
+
+El impulso final recorre la oficina desde la posición del jugador que utilizó el objeto. `resolucion_avatar.gd` coordina el frente, los residuos y un reloj explícito; cada evento transforma sus objetos reales antes de emitir su señal de finalización:
+
+- **Inundación:** sella la tubería, orienta las corrientes y baja el nivel del agua; muebles, alfombra, papeles y estado de nado acompañan el descenso.
+- **Lava:** el frente de agua apaga el calor, deja una costra fría y la retira con vapor. Se suspende el daño durante la restauración.
+- **Incendio:** las llamas se contraen mesa por mesa según su distancia; el ambiente sonoro baja y los restos de los cajones se hunden antes de recuperar los bloqueos normales.
+- **Hielo:** sella la fuga; el barrido de aire retira escarcha y espesor de nieve en suelo y muebles, con copos arrastrados y recuperación gradual del color de las luces.
+- **Terremoto:** las losas suben y se alinean, las grietas recuperan el piso, los escombros se recogen y la alfombra regresa suavemente.
+- **Apagón:** las lámparas recuperan su intensidad por cercanía mientras el campo de visión se abre y desaparece la oscuridad.
+
+Pausar congela la transición. Repetir una confirmación no reinicia el efecto ni consume otra carga. Durante la restauración el evento sigue ocupado para impedir que se solape otro, pero ya no admite otro Avatar. En LAN el anfitrión confirma el origen del impulso; los estados periódicos no interrumpen la transición local. `resolver_con_avatar(origen)` inicia la animación; la llamada sin argumento conserva la limpieza inmediata usada por reinicio, sincronización y las pruebas anteriores, cancelando cualquier transición pendiente.
+
+Validación: `res://Pruebas/ZonaDescanso/prueba_transiciones_avatar.gd` con `--headless --fixed-fps 60 --script` comprueba fases intermedias, pausa, repetición, finalización única, limpieza y origen confirmado en LAN. Sin `--headless`, añadir `-- --capturas` guarda cinco fases por evento en `.godot/transiciones_avatar_qa`; `--evento=terremoto,apagon` filtra la revisión. `prueba_expendedora.gd` comprueba el consumo real y espera el cierre de la transición.

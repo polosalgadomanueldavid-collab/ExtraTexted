@@ -189,7 +189,13 @@ func _avatar() -> void:
 		_verificar(maquina.usar(3), "Avatar inicia el gesto para " + nombre)
 		await _cuadros(90)
 		_verificar(maquina.poderes.evento_actual() == evento and maquina.inventario[3] == 1, "El evento espera la animación: " + nombre)
-		await _cuadros(145)
+		await _cuadros(80)
+		_verificar(evento.resolviendo_avatar and maquina.inventario[3] == 0, "El contacto consume una carga e inicia la restauración visible: " + nombre)
+		for i in 200:
+			if not evento.resolviendo_avatar:
+				break
+			await process_frame
+		_verificar(not evento.resolviendo_avatar, "La transición finaliza dentro del plazo: " + nombre)
 		_verificar(maquina.poderes.evento_actual() == null and maquina.inventario[3] == 0, "Avatar resuelve y consume una carga: " + nombre)
 		_verificar(not jugador.input_locked and not jugador.nadando and not jugador.hielo_activo and not jugador.lava_activa, "Se restauran controles y estados: " + nombre)
 		if nombre == "incendio":

@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode blend_mix, depth_draw_never;
+#include "res://Objetos/ZonaDescanso/frente_avatar.gdshaderinc"
 
 uniform float presencia : hint_range(0.0, 1.0) = 0.0;
 uniform vec2 origen = vec2(2.12, 8.95);
@@ -27,4 +28,5 @@ void fragment() {
 	float frente = smoothstep(distance(mundo.xz, origen) / 15.0, distance(mundo.xz, origen) / 15.0 + 0.15, presencia * 1.16);
 	// Escarcha ligera entre los montículos: todavía se ve el material del mueble.
 	ALPHA = frente * mix(0.12, 0.14 + polvo * 0.45, arriba);
+	ALPHA *= 1.0 - avance_avatar(mundo.xz);
 }
