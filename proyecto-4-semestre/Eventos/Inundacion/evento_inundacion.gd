@@ -1,4 +1,11 @@
 extends Node3D
+
+const ResolucionAvatar := preload("res://Objetos/ZonaDescanso/resolucion_avatar.gd")
+var _resolucion_avatar: Node3D
+var resolviendo_avatar: bool:
+	get: return is_instance_valid(_resolucion_avatar)
+
+
 ## Los muebles conservan sus obstáculos de navegación mientras flotan.
 ## La alfombra tiene una colisión móvil que acompaña su superficie en el agua.
 
@@ -19,6 +26,7 @@ const ALCANCE := 1.05
 var activo := false
 var drenando := false
 var reparando := false
+var _nivel_avatar := PISO
 var nivel := PISO
 var tiempo := 0.0
 var permiso_inicio: Callable
@@ -181,6 +189,8 @@ func _actualizar_flotantes() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if resolviendo_avatar:
+		return
 	if not activo:
 		return
 	tiempo += delta
@@ -332,6 +342,7 @@ func salpicar(punto: Vector3, fuerza: float = 1.0, solo_ondas := false) -> void:
 
 
 func detener() -> void:
+	_cancelar_resolucion_avatar()
 	_cerrar_reparacion()
 	activo = false
 	drenando = false
@@ -358,6 +369,7 @@ func detener() -> void:
 			papel.nivel_agua = -INF
 	superficie.hide()
 	_volumen.hide()
+	_material.set_shader_parameter("avatar_activo", false)
 	tuberias.restablecer()
 	_ambiente.stop()
 	for sonido in _salpicaduras:
@@ -411,8 +423,36 @@ func _crear_tuberias() -> void:
 	add_child(acceso)
 
 
-func resolver_con_avatar() -> void:
+## Un origen inicia la transición del objeto; sin origen, limpieza inmediata de reinicio/red.
+func resolver_con_avatar(origen: Variant = null) -> void:
 	if not activo:
+		return
+	if origen is Vector3:
+		if resolviendo_avatar:
+			return
+		_cerrar_reparacion()
+		drenando = true
+		_nivel_avatar = nivel
+		tuberias.sellar()
+		indicador.hide()
+		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"agua", _avanzar_avatar, resolver_con_avatar)
 		return
 	detener()
 	terminado.emit()
+
+func _avanzar_avatar(frente: Node3D) -> void:
+	tiempo += get_physics_process_delta_time()
+	nivel = lerpf(_nivel_avatar, PISO, smoothstep(.05, 2.45, frente.tiempo))
+	_actualizar_flotantes()
+	_jugador.establecer_nivel_agua(nivel)
+	for bloqueo: Node3D in _oficina.bloqueos_visuales.values():
+		bloqueo.actualizar_agua(nivel, tiempo)
+	for papel: PapelDenuncia in get_tree().get_nodes_in_group("papeles_denuncia"):
+		if _oficina.is_ancestor_of(papel):
+			papel.nivel_agua = nivel + .025
+	frente.aplicar_material(_material)
+
+func _cancelar_resolucion_avatar() -> void:
+	if is_instance_valid(_resolucion_avatar):
+		_resolucion_avatar.cancelar()
+	_resolucion_avatar = null

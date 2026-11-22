@@ -1,5 +1,13 @@
 extends Node3D
 
+const ResolucionAvatar := preload("res://Objetos/ZonaDescanso/resolucion_avatar.gd")
+var _resolucion_avatar: Node3D
+var _restos_avatar: Array[Dictionary] = []
+var _alfombra_avatar := Transform3D.IDENTITY
+var resolviendo_avatar: bool:
+	get: return is_instance_valid(_resolucion_avatar)
+
+
 signal iniciado
 signal temblor_actualizado(tiempo: float, intensidad: float)
 signal suelo_roto
@@ -617,6 +625,8 @@ func atrapo_hoja(posicion: Vector3) -> bool:
 
 
 func _physics_process(delta: float) -> void:
+	if resolviendo_avatar:
+		return
 	tiempo = minf(tiempo + delta, DURACION)
 	var intensidad := 1.0
 	if tiempo + 0.00001 < SEGUNDOS_POR_ETAPA:
@@ -709,6 +719,7 @@ func _apoyo_conectado(cerca: Vector3) -> Vector3:
 
 
 func _cerrar() -> void:
+	_cancelar_resolucion_avatar()
 	if _colision_jugador != null:
 		_colision_jugador.set_deferred("disabled", false)
 	if _material_piso != null:
@@ -723,6 +734,7 @@ func _cerrar() -> void:
 	for escombro in escombros:
 		escombro.retirar()
 	escombros.clear()
+	_restos_avatar.clear()
 	_grafo.escombros.clear()
 	_grafo.grietas.clear()
 	_grafo.construir_adyacencia()
@@ -741,6 +753,8 @@ func _actualizar_mascara_huecos() -> void:
 	imagen.fill(Color.WHITE)
 	var origen := Vector2(GrafoPiso.ORIGEN_X, GrafoPiso.ORIGEN_Z)
 	for grieta in grietas:
+		if grieta.sellada_avatar:
+			continue
 		var inicio_x := clampi(int(floor((grieta.limites.position.x - origen.x) * RESOLUCION_MASCARA)), 0, ancho - 1)
 		var fin_x := clampi(int(ceil((grieta.limites.end.x - origen.x) * RESOLUCION_MASCARA)), 0, ancho - 1)
 		var inicio_y := clampi(int(floor((grieta.limites.position.y - origen.y) * RESOLUCION_MASCARA)), 0, alto - 1)
@@ -755,11 +769,57 @@ func _actualizar_mascara_huecos() -> void:
 	_material_piso.set_shader_parameter("usar_mascara_huecos", true)
 
 
-func resolver_con_avatar() -> void:
+## Un origen inicia la transición del objeto; sin origen, limpieza inmediata de reinicio/red.
+func resolver_con_avatar(origen: Variant = null) -> void:
 	if not activo:
+		return
+	if origen is Vector3:
+		if resolviendo_avatar:
+			return
+		_cerrando = true
+		_retirar_aviso_gigante()
+		_restos_avatar.clear()
+		for escombro in escombros:
+			escombro._aviso.hide()
+			_restos_avatar.append({"nodo": escombro._restos, "cuerpo": escombro, "pose": escombro._restos.transform})
+		if _animacion_alfombra != null:
+			_animacion_alfombra.kill()
+			_animacion_alfombra = null
+		if _alfombra_caida and is_instance_valid(alfombra):
+			_alfombra_avatar = alfombra.transform
+			alfombra.show()
+		temblor_actualizado.emit(DURACION, 0.0)
+		sonidos.cerrar_suelo()
+		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"tierra", _avanzar_avatar, resolver_con_avatar)
+		var polvo := PackedVector3Array()
+		for grieta in grietas:
+			for i in range(0, grieta.contorno.size(), maxi(1, grieta.contorno.size() / 3)):
+				var borde: Vector2 = grieta.contorno[i]
+				polvo.append(Vector3(borde.x, _altura + .03, borde.y))
+		_resolucion_avatar.preparar_residuos(polvo)
 		return
 	temblor_actualizado.emit(DURACION, 0.0)
 	_cerrar()
+
+func _avanzar_avatar(frente: Node3D) -> void:
+	var selladas := false
+	for grieta in grietas:
+		var peso: float = frente.peso_en(Vector3(grieta.centro.x, _altura, grieta.centro.y))
+		if grieta.reconstruir_avatar(peso):
+			selladas = true
+	if selladas:
+		_actualizar_mascara_huecos()
+	for dato in _restos_avatar:
+		if is_instance_valid(dato.nodo):
+			var peso: float = frente.peso_en(dato.nodo.global_position)
+			var pose: Transform3D = dato.pose
+			# Se recogen bajo el suelo conservando su volumen, sin encogerse en el aire.
+			pose.origin.y -= smoothstep(.15, .95, peso) * (maxf(0.0, pose.origin.y) + .75)
+			dato.nodo.transform = pose
+			if peso > .65:
+				dato.cuerpo.set_deferred("collision_layer", 0)
+	if _alfombra_caida and is_instance_valid(alfombra):
+		alfombra.transform = _alfombra_avatar.interpolate_with(_reposo_alfombra, frente.peso_en(alfombra.global_position))
 
 
 func exportar_trazado_red() -> Dictionary:
@@ -811,3 +871,8 @@ func importar_trazado_red(datos: Dictionary, grafo: GrafoPiso, jugador: Player, 
 	sonidos.iniciar_terremoto()
 	iniciado.emit()
 	return true
+
+func _cancelar_resolucion_avatar() -> void:
+	if is_instance_valid(_resolucion_avatar):
+		_resolucion_avatar.cancelar()
+	_resolucion_avatar = null

@@ -1,5 +1,11 @@
 extends Node3D
 
+const ResolucionAvatar := preload("res://Objetos/ZonaDescanso/resolucion_avatar.gd")
+var _resolucion_avatar: Node3D
+var resolviendo_avatar: bool:
+	get: return is_instance_valid(_resolucion_avatar)
+
+
 signal iniciado
 signal terminado
 const TuberiaRompible := preload("res://Eventos/Tuberias/tuberia_rompible.gd")
@@ -102,6 +108,8 @@ func iniciar() -> bool:
 
 
 func _physics_process(delta: float) -> void:
+	if resolviendo_avatar:
+		return
 	if not activo:
 		return
 	tiempo += delta
@@ -200,6 +208,7 @@ func _al_reparar() -> void:
 
 
 func detener() -> void:
+	_cancelar_resolucion_avatar()
 	_cerrar_reparacion()
 	if not activo:
 		return
@@ -393,8 +402,34 @@ func _crear_tuberia() -> void:
 	add_child(acceso)
 
 
-func resolver_con_avatar() -> void:
+## Un origen inicia la transición del objeto; sin origen, limpieza inmediata de reinicio/red.
+func resolver_con_avatar(origen: Variant = null) -> void:
 	if not activo:
+		return
+	if origen is Vector3:
+		if resolviendo_avatar:
+			return
+		_cerrar_reparacion()
+		descongelando = true
+		_jugador.congelado = false
+		tuberia.sellar()
+		_nieve.emitting = false
+		aviso.hide()
+		indicador.hide()
+		_presencia_al_reparar = minf(1.0, tiempo / ENTRADA)
+		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"aire", _avanzar_avatar, resolver_con_avatar)
 		return
 	detener()
 	terminado.emit()
+
+func _avanzar_avatar(frente: Node3D) -> void:
+	for mat in [_material, _escarcha, _material_nieve]:
+		frente.aplicar_material(mat)
+	for dato in _luces:
+		if is_instance_valid(dato.nodo):
+			dato.nodo.light_color = dato.color.lerp(Color("85afff"), _presencia_al_reparar * .68 * (1.0 - frente.peso_en(dato.nodo.global_position)))
+
+func _cancelar_resolucion_avatar() -> void:
+	if is_instance_valid(_resolucion_avatar):
+		_resolucion_avatar.cancelar()
+	_resolucion_avatar = null

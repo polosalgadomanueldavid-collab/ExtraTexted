@@ -1,5 +1,13 @@
 extends Node3D
 
+const ResolucionAvatar := preload("res://Objetos/ZonaDescanso/resolucion_avatar.gd")
+var _resolucion_avatar: Node3D
+var _luces_avatar: Dictionary = {}
+var _panel_avatar := 1.0
+var resolviendo_avatar: bool:
+	get: return is_instance_valid(_resolucion_avatar)
+
+
 signal iniciado
 signal terminado
 
@@ -93,6 +101,8 @@ func iniciar() -> bool:
 
 
 func _physics_process(delta: float) -> void:
+	if resolviendo_avatar:
+		return
 	if not activo:
 		return
 	var paso := minf(delta, tiempo_restante)
@@ -142,7 +152,7 @@ func sobre_bloqueo_temporal() -> bool:
 func tocando_suelo() -> bool:
 	if _jugador.en_relevo:
 		return activo and _jugador.visible and _jugador.quemandose_pies
-	return activo and _tiempo >= DURACION_ENTRADA and _jugador.is_on_floor() and not _jugador.esta_sentado() and not sobre_bloqueo_temporal() and _jugador.global_position.y <= PISO + 0.10
+	return activo and not resolviendo_avatar and _tiempo >= DURACION_ENTRADA and _jugador.is_on_floor() and not _jugador.esta_sentado() and not sobre_bloqueo_temporal() and _jugador.global_position.y <= PISO + 0.10
 
 
 func en_charco(punto: Vector3) -> bool:
@@ -165,6 +175,7 @@ func _actualizar_panel() -> void:
 
 
 func detener() -> void:
+	_cancelar_resolucion_avatar()
 	if not activo:
 		return
 	activo = false
@@ -356,8 +367,36 @@ func _crear_barreras() -> void:
 			barrera.global_position = Vector3(limites.get_center().x, base + caja.size.y * 0.5, limites.get_center().z)
 
 
-func resolver_con_avatar() -> void:
+## Un origen inicia la transición del objeto; sin origen, limpieza inmediata de reinicio/red.
+func resolver_con_avatar(origen: Variant = null) -> void:
 	if not activo:
+		return
+	if origen is Vector3:
+		if resolviendo_avatar:
+			return
+		_jugador.quemandose_pies = false
+		_chispas_pies.emitting = false
+		for llama in _llamas_pies:
+			llama.establecer_intensidad(0.0)
+		for chispas in _chispas_suelo:
+			chispas.emitting = false
+		for luz in _luces_calor:
+			_luces_avatar[luz] = luz.light_energy
+		_panel_avatar = panel.modulate.a
+		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"vapor", _avanzar_avatar, resolver_con_avatar)
 		return
 	detener()
 	terminado.emit()
+
+func _avanzar_avatar(frente: Node3D) -> void:
+	frente.aplicar_material(_material)
+	_material.set_shader_parameter("reloj", _tiempo + frente.tiempo)
+	for luz in _luces_calor:
+		luz.light_energy = _luces_avatar[luz] * (1.0 - frente.peso_en(luz.global_position))
+	panel.modulate.a = _panel_avatar * (1.0 - smoothstep(0.0, .6, frente.tiempo))
+
+func _cancelar_resolucion_avatar() -> void:
+	if is_instance_valid(_resolucion_avatar):
+		_resolucion_avatar.cancelar()
+	_resolucion_avatar = null
+	_luces_avatar.clear()

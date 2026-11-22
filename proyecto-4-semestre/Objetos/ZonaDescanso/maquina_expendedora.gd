@@ -205,7 +205,7 @@ func _aplicar_consumo(indice: int, evento: Node) -> void:
 		2:
 			if not SesionLAN.en_partida: poderes.detener_tiempo()
 		3:
-			if not SesionLAN.en_partida: evento.resolver_con_avatar()
+			if not SesionLAN.en_partida: evento.resolver_con_avatar(jugador.global_position)
 	_limpiar_snack()
 	_mostrar("%s activado" % NOMBRES[indice])
 

@@ -1,4 +1,14 @@
 extends Node3D
+
+const ResolucionAvatar := preload("res://Objetos/ZonaDescanso/resolucion_avatar.gd")
+var _resolucion_avatar: Node3D
+var _apagados_avatar: Array[float] = []
+var _cajones_avatar: Array[Dictionary] = []
+var _volumen_avatar := -24.0
+var resolviendo_avatar: bool:
+	get: return is_instance_valid(_resolucion_avatar)
+
+
 ## Solo las mesas registradas del perímetro se pueden extinguir.
 ## Los cajones arden diez segundos y conservan su colisión como ceniza.
 
@@ -207,7 +217,7 @@ func arde_estacion(estacion_id: String) -> bool:
 
 
 func obtener_objetivo(jugador: Player) -> Node3D:
-	if not activo or jugador != _jugador or _oficina.partida_finalizada:
+	if not activo or resolviendo_avatar or jugador != _jugador or _oficina.partida_finalizada:
 		return null
 	if not equipado:
 		var herramienta := _extintor_disponible(true)
@@ -273,7 +283,7 @@ func _equipar() -> void:
 
 
 func solicitar_apagado(foco: Foco, jugador: Player) -> void:
-	if not activo or jugador != _jugador or not focos.has(foco) or foco.apagado >= 1.0 or foco.apagando_adyacente:
+	if not activo or resolviendo_avatar or jugador != _jugador or not focos.has(foco) or foco.apagado >= 1.0 or foco.apagando_adyacente:
 		return
 	if not equipado:
 		_oficina.panel_despacho._mostrar_mensaje("¡Está en llamas! Busca el extintor en la zona de descanso.", Color("ff9b44"))
@@ -309,6 +319,8 @@ func _notification(what: int) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if resolviendo_avatar:
+		return
 	if not activo:
 		if _mostrar_completado > 0.0:
 			_mostrar_completado -= delta
@@ -375,6 +387,9 @@ func _aplicar_desgaste_cordura(tiempo_anterior: float) -> void:
 
 
 func _process(_delta: float) -> void:
+	if resolviendo_avatar:
+		indicador_extintor.hide()
+		return
 	if not activo:
 		return
 	_actualizar_indicador_extintor()
@@ -478,6 +493,7 @@ func _actualizar_panel() -> void:
 
 
 func _finalizar() -> void:
+	_cancelar_resolucion_avatar()
 	soltar()
 	activo = false
 	bloqueos_fijos = false
@@ -496,6 +512,7 @@ func _finalizar() -> void:
 
 
 func detener() -> void:
+	_cancelar_resolucion_avatar()
 	soltar()
 	activo = false
 	for foco in focos:
@@ -515,12 +532,64 @@ func _exit_tree() -> void:
 	soltar()
 
 
-func resolver_con_avatar() -> void:
+## Un origen inicia la transición del objeto; sin origen, limpieza inmediata de reinicio/red.
+func resolver_con_avatar(origen: Variant = null) -> void:
 	if not activo:
+		return
+	if origen is Vector3:
+		if resolviendo_avatar:
+			return
+		soltar()
+		_apagados_avatar.clear()
+		for foco in focos:
+			foco.cancelar_apagado_adyacente()
+			_apagados_avatar.append(foco.apagado)
+		for cajon: Node3D in _cajones.values():
+			if is_instance_valid(cajon):
+				_cajones_avatar.append({"nodo": cajon._flotacion, "pose": cajon._flotacion.transform})
+		_volumen_avatar = _ambiente.volume_db
+		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"fuego", _avanzar_avatar, resolver_con_avatar)
+		var brasas := PackedVector3Array()
+		for foco in focos:
+			if foco.apagado < 1.0:
+				brasas.append(foco.global_position + Vector3(-.12, .16, 0))
+				brasas.append(foco.global_position + Vector3(.12, .24, .08))
+		_resolucion_avatar.preparar_residuos(brasas)
 		return
 	for foco in focos:
 		foco.cancelar_apagado_adyacente()
-		foco.rociar(1.0, 1.0)
-		mesa_recuperada.emit(foco.estacion_id)
+		if foco.apagado < 1.0:
+			foco.rociar(1.0, 1.0)
+			mesa_recuperada.emit(foco.estacion_id)
 	_finalizar()
 	_actualizar_panel()
+
+func _avanzar_avatar(frente: Node3D) -> void:
+	for i in focos.size():
+		var foco := focos[i]
+		var anterior := foco.apagado
+		var peso: float = frente.peso_en(foco.global_position)
+		foco._establecer_apagado(maxf(anterior, lerpf(_apagados_avatar[i], 1.0, peso)))
+		if anterior < 1.0 and foco.apagado >= 1.0:
+			mesa_recuperada.emit(foco.estacion_id)
+	for fuego in _fuegos_cajones:
+		if is_instance_valid(fuego):
+			fuego.establecer_intensidad(1.0 - frente.peso_en(fuego.global_position))
+	for dato in _cajones_avatar:
+		if is_instance_valid(dato.nodo):
+			var peso: float = frente.peso_en(dato.nodo.global_position)
+			var pose: Transform3D = dato.pose
+			pose.origin.y -= smoothstep(.25, .95, peso) * .85
+			dato.nodo.transform = pose
+	_ambiente.volume_db = _volumen_avatar - smoothstep(0.0, 2.6, frente.tiempo) * 32.0
+	_actualizar_panel()
+
+func _cancelar_resolucion_avatar() -> void:
+	for dato in _cajones_avatar:
+		if is_instance_valid(dato.nodo):
+			dato.nodo.transform = dato.pose
+	_cajones_avatar.clear()
+	if is_instance_valid(_resolucion_avatar):
+		_ambiente.volume_db = _volumen_avatar
+		_resolucion_avatar.cancelar()
+	_resolucion_avatar = null

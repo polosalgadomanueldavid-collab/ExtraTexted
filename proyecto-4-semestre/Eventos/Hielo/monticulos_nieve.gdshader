@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode blend_mix, depth_prepass_alpha, cull_back;
+#include "res://Objetos/ZonaDescanso/frente_avatar.gdshaderinc"
 
 uniform float presencia : hint_range(0.0, 1.0) = 0.0;
 uniform vec2 origen = vec2(2.12, 8.95);
@@ -10,6 +11,7 @@ void vertex() {
 	mundo = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float distancia = distance(mundo.xz, origen) / 15.0;
 	frente = smoothstep(distancia, distancia + 0.15, presencia * 1.16);
+	frente *= 1.0 - avance_avatar(mundo.xz);
 	// Crece y se derrite desde la superficie; UV2 guarda la base y el espesor.
 	VERTEX.y = UV2.x + UV2.y * frente;
 }

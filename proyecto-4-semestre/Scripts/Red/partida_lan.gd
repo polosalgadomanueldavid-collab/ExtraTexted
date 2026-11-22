@@ -409,13 +409,13 @@ func _consumir(id: int, indice: int, evento: int) -> Dictionary:
 		_activacion_tiempo += 1
 		SesionLAN.difundir("tiempo", {"jugador": id, "activacion": _activacion_tiempo})
 	elif indice == 3:
-		SesionLAN.difundir("avatar", {"jugador": id, "evento": _evento_id})
+		SesionLAN.difundir("avatar", {"jugador": id, "evento": _evento_id, "origen": jugadores[id].global_position})
 	return {"ok": true}
 
 func _cordura(id: int, datos: Dictionary) -> Dictionary:
 	var cantidad := int(datos.get("cantidad", 0))
 	var causa := str(datos.get("causa", ""))
-	if cantidad < 0 and causa == "lava" and oficina.evento_lava.activo and jugadores[id].global_position.y < 0.5:
+	if cantidad < 0 and causa == "lava" and oficina.evento_lava.activo and not oficina.evento_lava.resolviendo_avatar and jugadores[id].global_position.y < 0.5:
 		var clave := "lava:%d" % id
 		if _reloj - float(_esperas.get(clave, -10.0)) >= 0.65:
 			_esperas[clave] = _reloj
@@ -804,11 +804,13 @@ func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 		"tiempo":
 			oficina.get_node("MaquinaExpendedora").poderes.detener_tiempo(int(datos.get("activacion", 0)))
 		"avatar":
+			if int(datos.get("evento", -1)) != _evento_id or _evento_resuelto_id == _evento_id:
+				return
 			_evento_resuelto_id = _evento_id
 			var evento: Node = oficina.get_node("MaquinaExpendedora").poderes.evento_actual()
 			if evento != null:
 				aplicando = true
-				evento.resolver_con_avatar()
+				evento.resolver_con_avatar(datos.get("origen", jugadores[int(datos.jugador)].global_position))
 				aplicando = false
 			reservas.erase("apagon")
 			reservas.erase("inundacion")
@@ -897,7 +899,7 @@ func _aplicar_mundo(datos: Dictionary) -> void:
 		poderes.restante = float(datos.papa_t)
 		if poderes.restante <= 0.0:
 			poderes.reanudar_tiempo()
-	if oficina.evento_terremoto.activo:
+	if oficina.evento_terremoto.activo and not oficina.evento_terremoto.resolviendo_avatar:
 		oficina.evento_terremoto.tiempo = float(datos.sismo_t)
 	oficina.bloqueos_iniciados = bool(datos.bloqueos_iniciados)
 	var celdas: Array = datos.bloqueos
@@ -917,22 +919,22 @@ func _aplicar_mundo(datos: Dictionary) -> void:
 				oficina._mostrar_bloqueo_temporal(celda)
 		oficina.grafo_piso.construir_adyacencia()
 		oficina.depurador_grafo.actualizar_mapa()
-	if oficina.evento_incendio.activo:
+	if oficina.evento_incendio.activo and not oficina.evento_incendio.resolviendo_avatar:
 		oficina.evento_incendio.tiempo = float(datos.incendio_t)
 		for i in mini(datos.fuegos.size(), oficina.evento_incendio.focos.size()):
 			oficina.evento_incendio.focos[i]._establecer_apagado(float(datos.fuegos[i]))
 		if not datos.incendio:
 			oficina.evento_incendio.resolver_con_avatar()
-	if oficina.evento_inundacion.activo:
+	if oficina.evento_inundacion.activo and not oficina.evento_inundacion.resolviendo_avatar:
 		oficina.evento_inundacion.nivel = float(datos.nivel)
 		oficina.evento_inundacion.tiempo = float(datos.agua_t)
 		if not datos.inundacion:
 			oficina.evento_inundacion.resolver_con_avatar()
-	if oficina.evento_hielo.activo:
+	if oficina.evento_hielo.activo and not oficina.evento_hielo.resolviendo_avatar:
 		oficina.evento_hielo.tiempo = float(datos.hielo_t)
 		if not datos.hielo:
 			oficina.evento_hielo.resolver_con_avatar()
-	if oficina.evento_lava.activo:
+	if oficina.evento_lava.activo and not oficina.evento_lava.resolviendo_avatar:
 		oficina.evento_lava.tiempo_restante = float(datos.lava_t)
 		if not datos.lava:
 			oficina.evento_lava.resolver_con_avatar()

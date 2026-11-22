@@ -4,6 +4,9 @@ extends Node3D
 const EFECTO := preload("res://Eventos/Terremoto/EfectoFractura.tscn")
 const TRAMOS := 8
 const SEPARACION_ENTRE_BORDES := 0.25
+var sellada_avatar := false
+var _animaciones_avatar: Array[Tween] = []
+var _poses_avatar: Array[Transform3D] = []
 var centro: Vector2
 var contorno := PackedVector2Array()
 var contorno_hueco := PackedVector2Array()
@@ -38,10 +41,14 @@ func trazar(origen: Vector2, largo: float, ancho: float, angulo: float, azar: Ra
 
 
 func contiene(punto: Vector2) -> bool:
+	if sellada_avatar:
+		return false
 	return limites.has_point(punto) and Geometry2D.is_point_in_polygon(punto, contorno)
 
 
 func contiene_hueco(punto: Vector2) -> bool:
+	if sellada_avatar:
+		return false
 	return not contorno_hueco.is_empty() and Geometry2D.is_point_in_polygon(punto, contorno_hueco)
 
 
@@ -223,6 +230,7 @@ func _crear_losa(puntos: PackedVector2Array, tramo: int, lado: float, color: Col
 	_losas.append(losa)
 	_origenes.append(origen)
 	var caida := create_tween()
+	_animaciones_avatar.append(caida)
 	caida.tween_interval(tramo * 0.041)
 	caida.tween_property(losa, "rotation", Vector3(lado * 0.11, 0.0, lado * 0.16), 0.09)
 	caida.tween_property(losa, "position:y", -1.52, 0.49).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -235,6 +243,7 @@ func animar_cierre() -> void:
 		var losa := _losas[i]
 		losa.show()
 		var cierre := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		_animaciones_avatar.append(cierre)
 		cierre.tween_interval(0.014 * (_losas.size() - i))
 		cierre.tween_property(losa, "position", _origenes[i], 0.34)
 		cierre.parallel().tween_property(losa, "rotation", Vector3.ZERO, 0.34)
@@ -243,8 +252,9 @@ func animar_cierre() -> void:
 func cerrar() -> void:
 	if saltable:
 		remove_from_group(&"bordes_grietas_saltables")
-	_corte.get_parent().remove_child(_corte)
-	_corte.queue_free()
+	if is_instance_valid(_corte):
+		_corte.get_parent().remove_child(_corte)
+		_corte.queue_free()
 	queue_free()
 
 
@@ -274,3 +284,28 @@ func _instanciar_malla(datos: SurfaceTool) -> MeshInstance3D:
 	pieza.material_override = _piedra
 	add_child(pieza)
 	return pieza
+
+func reconstruir_avatar(peso: float) -> bool:
+	if peso <= 0.0:
+		return false
+	if _poses_avatar.is_empty():
+		for animacion in _animaciones_avatar:
+			if animacion.is_valid():
+				animacion.kill()
+		_animaciones_avatar.clear()
+		for losa in _losas:
+			_poses_avatar.append(losa.transform)
+	for i in _losas.size():
+		_losas[i].show()
+		_losas[i].transform = _poses_avatar[i].interpolate_with(Transform3D(Basis.IDENTITY, _origenes[i]), smoothstep(0.0, .82, peso))
+	# El piso recupera su colisión antes de retirar la última capa de piedra.
+	_piedra.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_piedra.albedo_color.a = 1.0 - smoothstep(.82, 1.0, peso)
+	if peso < .82 or sellada_avatar:
+		return false
+	sellada_avatar = true
+	if is_instance_valid(_corte):
+		_corte.get_parent().remove_child(_corte)
+		_corte.queue_free()
+		_corte = null
+	return true

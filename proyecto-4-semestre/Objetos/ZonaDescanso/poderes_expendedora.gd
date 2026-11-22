@@ -57,9 +57,9 @@ func _crear_audio(nombre: String, sonido: AudioStream) -> AudioStreamPlayer:
 func evento_actual() -> Node:
 	for nombre: String in ["evento_inundacion", "evento_incendio", "evento_terremoto", "evento_hielo", "evento_lava"]:
 		var evento: Node = oficina.get(nombre)
-		if is_instance_valid(evento) and evento.get("activo"):
+		if is_instance_valid(evento) and evento.get("activo") and not evento.resolviendo_avatar:
 			return evento
-	if oficina.evento_apagon.estado != 0:
+	if oficina.evento_apagon.estado != 0 and not oficina.evento_apagon.resolviendo_avatar:
 		return oficina.evento_apagon
 	return null
 

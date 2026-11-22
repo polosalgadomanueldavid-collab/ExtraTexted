@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled;
+#include "res://Objetos/ZonaDescanso/frente_avatar.gdshaderinc"
 
 uniform float reloj = 0.0;
 uniform float presencia : hint_range(0.0, 1.0) = 0.0;
@@ -82,6 +83,9 @@ void fragment() {
 	float opacidad = encender * mix(max(grieta * 0.80, zona.r), 1.0, cubrir);
 	// Primero aparecen grietas sobre el piso original; después aflora la costra.
 	color = mix(fuego * (0.55 + encender * 0.45), color, cubrir);
+	float enfriar = avance_avatar(mundo);
+	vec3 roca_fria = mix(vec3(.045, .060, .065), vec3(.17, .20, .20), relieve);
+	color = mix(color, roca_fria, smoothstep(0.0, .48, enfriar));
 	ALBEDO = color;
-	ALPHA = opacidad;
+	ALPHA = opacidad * (1.0 - smoothstep(.55, 1.0, enfriar));
 }
