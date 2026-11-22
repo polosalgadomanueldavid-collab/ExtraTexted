@@ -244,6 +244,8 @@ func _jugar_desde_menu(nombre: String) -> bool:
 		return false
 	_verificar(MenuGlobal.nombre_partida == nombre, "La oficina recibe el nombre confirmado")
 	MenuGlobal.cerrar_ayuda()
+	if get_tree().current_scene.en_practica():
+		get_tree().current_scene.practica.omitir()
 	# El gestor termina de configurar la oficina después de un cuadro físico.
 	await get_tree().physics_frame
 	for cuadro: int in range(3):

@@ -1,10 +1,14 @@
 # Barra lateral de denuncias
 
+## Recompensa del turno y SHOP
+
+Se conserva una sola confirmación central: **¡HECHO!**, con su animación y sonido de lápiz. Las ganancias aparecen en el HUD, cuyo saldo anima durante 0,8 s sin retrasar el valor real usado para compras. Un gasto cancela el conteo anterior. No hay un sello adicional de caso resuelto ni una segunda nota de sueldo. La señal de SHOP espera a que finalice ¡HECHO!.
+
 ## Primer turno por radio
 
-La primera partida individual iniciada desde el menú ofrece una práctica jugable. `Scripts/Partida/practica_radio.gd` crea una denuncia real con una estación (Evidencias), una referencia fija (IDENTIDAD) y saldo equivalente al precio actual del chocolate. Usa la hoja física, los gestos, el archivador, la compra, la entrega y el consumo habituales; los cambios de paso dependen de esas acciones. La radio no bloquea movimiento ni ofrece un botón para completar tareas.
+Cada partida individual nueva comienza con una práctica jugable, tanto desde el menú como al ejecutar Oficina directamente en el editor. La marca guardada de una práctica vista no la oculta; F2 permite omitirla. Un reintento explícito después del final puede pasar directamente al turno. `Scripts/Partida/practica_radio.gd` crea una denuncia real con una estación (Evidencias), una referencia fija (IDENTIDAD) y saldo equivalente al precio actual del chocolate. Usa la hoja física, los gestos, el archivador, la compra, la entrega y el consumo habituales; los cambios de paso dependen de esas acciones. La radio no bloquea movimiento ni ofrece un botón para completar tareas.
 
-`radio_practica.gd` dibuja una radio y papel ilustrados con Luckiest Guy, Nunito y la paleta crema, petróleo y coral. Las indicaciones se adaptan al teclado/mando y siguen el objetivo o la hoja suelta. Incluye una breve señal sonora original en el bus Interacciones, respeta la pausa y la preferencia de movimiento de cámara. Se reduce a una línea durante el archivador y se oculta en la tienda y los menús.
+`radio_practica.gd` dibuja una radio y papel ilustrados con Luckiest Guy, Nunito y la paleta crema, petróleo y coral. Las indicaciones se adaptan al teclado/mando y siguen el objetivo o la hoja suelta. Incluye una breve señal sonora original en el bus Interacciones, respeta la pausa y la preferencia de movimiento de cámara. Se reduce a una línea durante el archivador y se oculta en la tienda, los menús y la confirmación ¡HECHO!. Los objetivos muestran destino y acción: recoger en el computador, archivar IDENTIDAD o comprar y recoger el chocolate.
 
 Mientras dura, el despacho protege calma y plazos; se detienen denuncias nuevas, bloqueos y emergencias. El caso concede saldo gastable pero no suma al récord, la duración ni las estadísticas del turno. Al terminar o pulsar F2/Vista para omitir, se retira la guía, se guarda `user://practica_radio.cfg` y empieza el turno normal. Ayuda incluye **PRÁCTICA POR RADIO · TURNO NUEVO** para repetirla en otra oficina. La introducción compartida de LAN conserva sus guías actuales.
 
@@ -65,9 +69,24 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   El flujo de granos se anima mientras el caso está activo y se congela con la pausa.
 - Los iconos de los casos en espera son estáticos; sus números siguen mostrando
   el tiempo real. Al aceptar el siguiente caso se usa su tiempo restante actual.
-- El protocolo muestra las estaciones como tareas independientes, con marca de
-  completada por ID y contador `N/T COMPLETADAS`. Todas las pendientes
-  tienen la misma importancia visual; no hay una etapa obligatoria siguiente.
+- El protocolo muestra requisitos mediante símbolos iguales a los marcadores
+  del mundo, sin nombres ni flechas de secuencia. Cada tarea terminada conserva
+  un sello verde y un check dentro de la ficha. La cola muestra los símbolos de
+  cada denuncia antes de aceptarla. Todas las pendientes tienen la misma
+  importancia; el orden y los minijuegos conservan su comportamiento.
+- Las mesas llevan una planilla plana completamente apoyada dentro del tablero,
+  con el mismo pictograma que el expediente. No añade bandejas, tapas ni piezas
+  en voladizo. Al acercarse con la hoja correcta se acentúa su borde; completar
+  deja un sello sobre el papel, sin elevarlo sobre la mesa. El resultado permanece
+  hasta aceptar otro caso y se limpia al vencer. Apagón, incendio y pausa suspenden
+  las señales correspondientes. Los marcadores usan solo el objeto 3D, sin
+  nombres ni tarjetas de acciones; E/X aparece únicamente al poder interactuar.
+  `respuestas_visuales_mesas` permite desactivar las planillas para comparar.
+
+  Prueba integrada: `Godot --headless --path proyecto-4-semestre --fixed-fps 60
+  --script res://Pruebas/Despacho/prueba_orientacion_contextual.gd`. Sin
+  `--headless`, añadir `-- --capturas` guarda los dos protocolos reales y el
+  sellado parcial en `.godot/denuncias_visuales_qa/`.
 - Repetir una estación muestra un aviso y conserva el progreso. Al completar todas,
   el caso se cierra automáticamente y el panel retira la tarjeta activa.
 - Cada estación completada reproduce **Check con garabato** durante 1,4 segundos:
@@ -191,3 +210,5 @@ Godot --headless --path proyecto-4-semestre res://Pruebas/Puntuacion/PruebaInter
 
 La escena de interfaz admite `-- --capturas` al ejecutarse sin `--headless`,
 para guardar imágenes en `.godot/puntuacion_qa/`.
+
+La entrada directa y las partidas nuevas con un perfil ya utilizado se comprueban con `Pruebas/Partida/prueba_inicio_practica.gd`.

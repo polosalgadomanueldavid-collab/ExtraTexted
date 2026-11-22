@@ -203,7 +203,7 @@ theme_override_constants/separation = 6
 
 [node name="Protocolo" type="Control" parent="Contenido/TarjetaActiva/Detalle/Estaciones"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 66)
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2

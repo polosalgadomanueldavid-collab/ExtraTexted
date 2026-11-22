@@ -50,9 +50,12 @@ func iniciar(mundo: Node3D) -> void:
 func _process(delta: float) -> void:
 	if not is_instance_valid(radio) or not activa:
 		return
+	if not is_instance_valid(maquina) or not is_instance_valid(maquina.panel):
+		omitir()
+		return
 	var ocultar: bool = MenuGlobal.capa.visible or oficina.clasificacion_partida.visible or oficina.partida_finalizada
 	var tarea: bool = oficina.clasificador_evidencias.visible or oficina.escaner_verificacion.visible or maquina.panel.visible
-	radio.visible = not ocultar and not maquina.panel.visible
+	radio.visible = not ocultar and not maquina.panel.visible and paso != Paso.PREMIO and not oficina.panel_despacho.efecto_tarea.visible
 	radio.compacta = oficina.clasificador_evidencias.visible or oficina.escaner_verificacion.visible
 	if ocultar:
 		return
@@ -96,9 +99,12 @@ func _cambiar(nuevo: Paso) -> void:
 	_actualizar_mensaje()
 
 func _actualizar_mensaje(pista := false) -> void:
+	if paso == Paso.PREMIO:
+		radio.hide()
+		return
 	var tecla := "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
 	var usar := "LB" if ControladorInterfaz.dispositivo_mando >= 0 else "Z"
-	var titulos := ["Tu primera denuncia", "Un archivo extraviado", "¡Primer caso resuelto!", "Tu primer sueldo", "Un impulso en el bolsillo", "Agente en servicio"]
+	var titulos := ["Tu primera denuncia", "Un archivo extraviado", "Archivo completado", "Visita la tienda", "Un impulso en el bolsillo", "Agente en servicio"]
 	var mensajes := [
 		"Bienvenido, agente. Ve al computador del fondo y pulsa %s para recoger tu primer expediente." % tecla,
 		"Lleva la hoja a Evidencias. Compara la referencia de la izquierda y archiva IDENTIDAD. Puedes reintentar.",
@@ -116,21 +122,28 @@ func _actualizar_mensaje(pista := false) -> void:
 func _actualizar_objetivo() -> void:
 	var objetivo: Node3D
 	var etiqueta := ""
+	var detalle := ""
+	var tecla := "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
 	if paso <= Paso.EVIDENCIAS:
 		if is_instance_valid(oficina.papel_actual) and oficina.papel_actual.portador == null:
 			objetivo = oficina.papel_actual
 			etiqueta = "RECUPERAR HOJA"
+			detalle = "%s · Recoge tu expediente del suelo" % tecla
 		elif paso == Paso.RECOGER:
 			objetivo = oficina.computador
-			etiqueta = "RECOGER EXPEDIENTE"
+			etiqueta = "COMPUTADOR · DENUNCIAS"
+			detalle = "%s · Recoge tu primer caso" % tecla
 		else:
 			objetivo = _mesa_evidencias
 			etiqueta = "EVIDENCIAS"
+			detalle = "%s · Lleva la hoja y archiva IDENTIDAD" % tecla
 	elif paso == Paso.TIENDA:
 		objetivo = maquina
-		etiqueta = "SHOP · CHOCOLATE"
+		etiqueta = "SHOP · TIENDA"
+		detalle = "%s · Compra y recoge el chocolate" % tecla
 	radio.objetivo = objetivo
 	radio.etiqueta_objetivo = etiqueta
+	radio.detalle_objetivo = detalle
 
 func omitir() -> void:
 	if not activa:
@@ -147,7 +160,8 @@ func omitir() -> void:
 			oficina.papel_actual.queue_free()
 			oficina.papel_actual = null
 		oficina.sistema_despacho._notificar_cambios()
-	maquina.cerrar()
+	if is_instance_valid(maquina) and is_instance_valid(maquina.panel):
+		maquina.cerrar()
 	_terminar()
 
 func _terminar() -> void:

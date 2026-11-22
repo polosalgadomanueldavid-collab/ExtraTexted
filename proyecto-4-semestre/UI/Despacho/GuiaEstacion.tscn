@@ -1,26 +1,19 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://UI/Despacho/guia_estacion.gd" id="1_guia"]
-[ext_resource type="Script" path="res://UI/Despacho/icono_despacho.gd" id="2_icono"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf" id="2_fuente"]
 
-[sub_resource type="StyleBoxFlat" id="Tarjeta"]
-content_margin_left = 12.0
-content_margin_top = 6.0
-content_margin_right = 12.0
-content_margin_bottom = 6.0
+[sub_resource type="StyleBoxFlat" id="Tecla"]
 bg_color = Color(1, 0.945, 0.847, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
-border_width_bottom = 2
+border_width_bottom = 3
 border_color = Color(0.09, 0.231, 0.314, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_left = 12
-corner_radius_bottom_right = 12
-shadow_color = Color(0.012, 0.098, 0.137, 0.32)
-shadow_size = 4
-shadow_offset = Vector2(0, 2)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_left = 7
+corner_radius_bottom_right = 7
 
 [node name="GuiaEstacion" type="Control"]
 visible = false
@@ -33,27 +26,18 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_guia")
 
-[node name="TarjetaDestino" type="PanelContainer" parent="."]
+[node name="Tecla" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(30, 32)
 layout_mode = 0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("Tarjeta")
+theme_override_styles/panel = SubResource("Tecla")
 
-[node name="Contenido" type="HBoxContainer" parent="TarjetaDestino"]
+[node name="Letra" type="Label" parent="Tecla"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 8
-
-[node name="IconoEstacion" type="Control" parent="TarjetaDestino/Contenido"]
-custom_minimum_size = Vector2(25, 25)
-layout_mode = 2
-mouse_filter = 2
-script = ExtResource("2_icono")
-tipo = 5
-
-[node name="NombreEstacion" type="Label" parent="TarjetaDestino/Contenido"]
-layout_mode = 2
-mouse_filter = 2
+theme_override_fonts/font = ExtResource("2_fuente")
 theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 21
+text = "E"
+horizontal_alignment = 1
 vertical_alignment = 1
-

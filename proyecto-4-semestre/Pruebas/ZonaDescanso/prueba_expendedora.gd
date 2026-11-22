@@ -12,6 +12,7 @@ func _initialize() -> void:
 	_probar.call_deferred()
 
 func _probar() -> void:
+	root.get_node("MenuGlobal").omitir_tutorial_siguiente_partida = true
 	oficina = load("res://Mundo/Oficina.tscn").instantiate()
 	root.add_child(oficina)
 	current_scene = oficina

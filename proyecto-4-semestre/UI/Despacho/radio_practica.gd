@@ -9,6 +9,7 @@ const CORAL := Color("ff785f")
 const CARTON := Color("c79e6d")
 var objetivo: Node3D
 var etiqueta_objetivo := ""
+var detalle_objetivo := ""
 var compacta := false
 var _titulo := ""
 var _mensaje := ""
@@ -78,8 +79,9 @@ func _process(delta: float) -> void:
 	_factor = minf(size.x / 1280.0, size.y / 720.0)
 	# Centro inferior: deja libres la hoja/inventario y la lista lateral de casos.
 	var ancho := minf(650.0, size.x / _factor - 32.0)
-	var y := size.y / _factor - 177.0 + smoothstep(0.0, .35, _entrada) * 20.0
-	_caja = Rect2((size.x / _factor - ancho) * .5, y, ancho, 153)
+	var alto := 153.0
+	var y := size.y / _factor - alto - 24.0 + smoothstep(0.0, .35, _entrada) * 20.0
+	_caja = Rect2((size.x / _factor - ancho) * .5, y, ancho, alto)
 	_etiqueta.visible = not compacta
 	_cuerpo.visible = not compacta
 	_salida.visible = not compacta and _paso != 5
@@ -120,14 +122,8 @@ func _draw() -> void:
 		draw_line(Vector2(_caja.position.x + 87, altura), Vector2(_caja.end.x - 16, altura), Color(CARTON, .22), 1.0, true)
 	_letra("DESPACHO · CANAL 01", _caja.position + Vector2(91, 19), 12, CORAL)
 	_dibujar_radio(_caja.position + Vector2(12, 18))
-	if _paso == 2:
-		draw_set_transform(Vector2(size.x * .5, size.y * .33), -.09, Vector2.ONE * _factor)
-		_panel(Rect2(-156, -62, 312, 120), CREMA, TINTA)
-		_letra("CASO RESUELTO", Vector2(-137, -13), 34, Color("9a3e31"))
-		_letra("+%d PTS · SALDO PARA SHOP" % _precio, Vector2(-135, 30), 19, TINTA)
-		draw_set_transform(Vector2.ZERO, 0, Vector2.ONE * _factor)
 	var leyenda := "PRÁCTICA · SIN PLAZO NI EMERGENCIAS" if _paso != 5 else "PRÁCTICA COMPLETADA"
-	_letra(leyenda, Vector2(_caja.position.x + 91, _caja.end.y - 13), 11, TINTA)
+	_letra(leyenda, Vector2(_caja.position.x + 100, _caja.end.y - 13), 11, TINTA)
 	draw_set_transform(Vector2.ZERO)
 	_dibujar_objetivo()
 
@@ -153,12 +149,14 @@ func _dibujar_objetivo() -> void:
 	var destino := camara.unproject_position(punto)
 	if camara.is_position_behind(punto):
 		destino = size - destino
-	var ancho := maxf(160, TITULO.get_string_size(etiqueta_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 24) * _factor
+	var ancho := maxf(244, TITULO.get_string_size(etiqueta_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 28) * _factor
+	ancho = maxf(ancho, TEXTO.get_string_size(detalle_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x * _factor + 24 * _factor)
 	destino.x = clampf(destino.x, ancho * .5 + 12, size.x - ancho * .5 - 12)
 	destino.y = clampf(destino.y, 110 * _factor, _caja.position.y * _factor - 40 * _factor)
-	var caja := Rect2(destino - Vector2(ancho * .5, 32 * _factor), Vector2(ancho, 28 * _factor))
-	_panel(caja, TINTA, CREMA)
-	draw_string(TITULO, caja.position + Vector2(12, 20) * _factor, etiqueta_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(16 * _factor)), CREMA)
+	var caja := Rect2(destino - Vector2(ancho * .5, 62 * _factor), Vector2(ancho, 56 * _factor))
+	_panel(caja, CREMA, TINTA)
+	draw_string(TITULO, caja.position + Vector2(12, 23) * _factor, etiqueta_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(17 * _factor)), TINTA)
+	draw_string(TEXTO, caja.position + Vector2(12, 44) * _factor, detalle_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(14 * _factor)), TINTA)
 	draw_colored_polygon(PackedVector2Array([destino + Vector2(-6, 0) * _factor, destino + Vector2(6, 0) * _factor, destino + Vector2(0, 9) * _factor]), CORAL)
 
 func _panel(caja: Rect2, color: Color, borde: Color) -> void:

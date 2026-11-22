@@ -5,14 +5,14 @@ extends Node3D
 
 const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")
 const RESALTADO := preload("res://MarcadoresEstaciones/resaltado_interaccion.gdshader")
-const AMPLITUD_FLOTACION: float = 0.045
+const AMPLITUD_FLOTACION: float = 0.015
 const VELOCIDAD_FLOTACION: float = 2.2
 const GIRO_BASE := Vector3(0.0, -0.24, -0.045)
-const ALTURA_VISUAL: float = 0.88
-const ESCALA_MARCADOR: float = 0.85
+const ALTURA_VISUAL: float = 1.35
+const ESCALA_MARCADOR: float = 0.78
 
 ## Evita que la perspectiva agrande el objeto sobre el personaje al acercarse.
-@export_range(0.08, 0.5, 0.01) var alto_maximo_pantalla: float = 0.18
+@export_range(0.08, 0.5, 0.01) var alto_maximo_pantalla: float = 0.14
 
 var estacion_id: String = ""
 var interactuable: bool = false

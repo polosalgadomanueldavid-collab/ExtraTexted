@@ -278,6 +278,9 @@ func _abrir_tutorial_inicial() -> void:
 	if id_partida == _partida_con_tutorial:
 		return
 	_partida_con_tutorial = id_partida
+	if not SesionLAN.activa:
+		get_tree().current_scene.iniciar_practica()
+		return
 	_guardar_entrada()
 	_establecer_pausa(true)
 	_mostrar_ayuda(false, OrigenAyuda.INICIO)
@@ -416,7 +419,7 @@ func _iniciar_partida(nombre: String, nombre_companero: String = "") -> void:
 	nombre_partida = nombre
 	_ultimo_nombre = nombre
 	if not SesionLAN.activa:
-		practica_siguiente_partida = not practica_vista()
+		practica_siguiente_partida = true
 		omitir_tutorial_siguiente_partida = true
 	panel_clasificacion.hide()
 	capa.hide()

@@ -40,6 +40,8 @@ const TECLA_SUBIR_CALMA_PRUEBA := KEY_O
 const PASO_CALMA_PRUEBA := 10
 const CALMA_MINIMA_PRUEBA := 10
 const ALTURA_INDICADOR_ESTACION: float = 1.25
+const RESPUESTA_MESA_SCRIPT := preload("res://MarcadoresEstaciones/respuesta_mesa.gd")
+@export var respuestas_visuales_mesas := true
 const DURACION_DESENCRIPTADO: float = 6.0
 @export_range(0.0, 1.0, 0.05) var probabilidad_atasco_reporte: float = 0.35
 const EventoApagonScript := preload("res://Eventos/Apagon/evento_apagon.gd")
@@ -81,6 +83,7 @@ var _bloqueos_pool: Array[StaticBody3D] = []
 var _bloqueos_disponibles: Array[StaticBody3D] = []
 var depurador_grafo: GrafoDebugVisual
 var indicadores_estaciones: Dictionary = {}
+var respuestas_mesas: Dictionary = {}
 var guia_estacion: Control
 var clasificacion_partida: ClasificacionPartida
 var _nombre_partida: String = ""
@@ -122,6 +125,7 @@ var tutoriales_vistos: Dictionary[StringName, bool] = {}
 var _evento_con_guia: StringName = &""
 var ruleta_emotes: RuletaEmotes
 var practica: Node
+var guia_shop: Control
 
 signal preparacion_terminada
 var oficina_preparada := false
@@ -336,6 +340,9 @@ func _ready() -> void:
 		red.name = "PartidaLAN"
 		add_child(red)
 		red.configurar(self)
+	guia_shop = preload("res://UI/Descanso/guia_shop.gd").new()
+	$CanvasLayer.add_child(guia_shop)
+	guia_shop.configurar(self)
 	oficina_preparada = true
 	preparacion_terminada.emit()
 	if SesionLAN.activa and not CargaEscenas.activa:
@@ -405,8 +412,14 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(indicador):
 			var disponible := indicador.visible and objetivo is Estacion and (objetivo as Estacion).estacion_id == estacion_id
 			indicador.establecer_interactuable(disponible)
+	_actualizar_respuestas_mesas(objetivo)
 	if is_instance_valid(guia_estacion):
-		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO)
+		var marcador_interaccion: IndicadorProximaEstacion = null
+		var caso_interaccion := sistema_despacho.obtener_denuncia_activa()
+		if objetivo is Estacion and caso_interaccion != null and is_instance_valid(jugador.papel_en_mano) and jugador.papel_en_mano.denuncia_id == caso_interaccion.id:
+			marcador_interaccion = indicadores_estaciones.get((objetivo as Estacion).estacion_id) as IndicadorProximaEstacion
+		guia_estacion.establecer_objetivo(marcador_interaccion)
+		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO)
 	_actualizar_indicador_papel()
 	_actualizar_aviso_apagon()
 	_actualizar_indicador_denuncia_pc(objetivo)
@@ -1040,6 +1053,8 @@ func _al_terminar_partida() -> void:
 	if partida_finalizada:
 		return
 	partida_finalizada = true
+	guia_estacion.hide()
+	_actualizar_respuestas_mesas()
 	# El relevo sucede en la misma emergencia; sus efectos siguen activos.
 	evento_incendio.soltar()
 	evento_inundacion._cerrar_reparacion()
@@ -1347,18 +1362,34 @@ func _crear_indicadores_estaciones() -> void:
 		add_child(indicador)
 		indicador.global_position = estacion.global_position + Vector3.UP * ALTURA_INDICADOR_ESTACION
 		indicadores_estaciones[estacion.estacion_id] = indicador
+		if respuestas_visuales_mesas:
+			var respuesta := RESPUESTA_MESA_SCRIPT.new()
+			estacion.add_child(respuesta)
+			respuesta.configurar(estacion.estacion_id)
+			respuestas_mesas[estacion.estacion_id] = respuesta
 
 	print("[Orientación] Indicadores creados: ", indicadores_estaciones.size())
 
 
+func _actualizar_respuestas_mesas(objetivo: Node3D = null) -> void:
+	var caso := sistema_despacho.obtener_denuncia_activa()
+	var encendida := not partida_finalizada and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO
+	var papel := jugador.papel_en_mano
+	var lleva_caso := caso != null and is_instance_valid(papel) and papel.denuncia_id == caso.id and papel.portador == jugador
+	for id: String in respuestas_mesas:
+		var cerca := lleva_caso and objetivo is Estacion and (objetivo as Estacion).estacion_id == id
+		respuestas_mesas[id].actualizar(caso, encendida and not evento_incendio.arde_estacion(id), cerca)
+
+
 func _actualizar_indicadores_estaciones() -> void:
+	_actualizar_respuestas_mesas()
 	for estacion_id: String in indicadores_estaciones:
 		var indicador := indicadores_estaciones[estacion_id] as IndicadorProximaEstacion
 		if is_instance_valid(indicador):
 			var activo := _estaciones_pendientes.has(estacion_id) and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and not partida_finalizada and not evento_incendio.arde_estacion(estacion_id)
 			if indicador.visible != activo or indicador.is_processing() != activo:
 				indicador.establecer_activo(activo)
-	guia_estacion.establecer_objetivo(indicadores_estaciones.get(estacion_sugerida) as IndicadorProximaEstacion)
+	guia_estacion.establecer_objetivo(null)
 
 
 func _on_denuncias_actualizadas(_denuncias: Array[Denuncia]) -> void:

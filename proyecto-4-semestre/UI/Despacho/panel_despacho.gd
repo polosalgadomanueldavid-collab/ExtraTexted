@@ -3,6 +3,7 @@ extends Control
 
 const IconoDespacho := preload("res://UI/Despacho/icono_despacho.gd")
 const EfectoTarea := preload("res://UI/Despacho/efecto_tarea_completada.gd")
+const ProtocoloVisual := preload("res://UI/Despacho/protocolo_denuncia.gd")
 const ANCHO_DISENO := 408.0
 const TAMANO_DISENO := Vector2(1920, 1080)
 const MARGEN := 28.0
@@ -32,11 +33,21 @@ var segundos_recompensa: float = 0.0
 var _puntos_mostrados: int = 0
 var _id_activo: String = ""
 var efecto_tarea: EfectoTarea
+var puntos_animados: Label
+var _animacion_saldo: Tween
+var _saldo_visual := 0.0
 
 
 func _ready() -> void:
 	efecto_tarea = EfectoTarea.new()
 	add_child(efecto_tarea)
+	puntos_animados = Label.new()
+	puntos_animados.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	puntos_animados.add_theme_font_override("font", puntos_valor.get_theme_font("font"))
+	puntos_animados.add_theme_color_override("font_color", puntos_valor.get_theme_color("font_color"))
+	puntos_valor.add_child(puntos_animados)
+	puntos_animados.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	puntos_animados.hide()
 	resized.connect(_ajustar_presentacion)
 	puntos_valor.resized.connect(_ajustar_tamano_puntos)
 	for etiqueta: Label in [%TituloActiva, $Contenido/CabeceraEspera/Titulo, %SinCasoActivo, %SinPendientes, mensaje_estacion]:
@@ -47,6 +58,8 @@ func _ready() -> void:
 	actualizar_puntos(0)
 	actualizar_calma(100)
 	actualizar_denuncias([])
+	# Los sellos muestran el avance dentro de la ficha, sin otra línea de texto.
+	progreso_estaciones.hide()
 
 
 func _process(delta: float) -> void:
@@ -80,6 +93,7 @@ func configurar_sistema(nuevo_sistema: SistemaDespacho) -> void:
 	sistema_despacho = nuevo_sistema
 	# Un HUD reutilizado no arrastra avisos ni datos del caso anterior.
 	efecto_tarea.detener()
+	_detener_animacion_saldo()
 	segundos_mensaje = 0.0
 	mensaje_estacion.hide()
 	segundos_recompensa = 0.0
@@ -122,12 +136,37 @@ func actualizar_puntos(total: int) -> void:
 	_puntos_mostrados = total
 	puntos_valor.text = _formatear_puntos(total)
 	_ajustar_tamano_puntos()
+	if ganancia > 0 and total < 1000000000000:
+		if _animacion_saldo != null:
+			_animacion_saldo.kill()
+		puntos_valor.self_modulate.a = 0.0
+		puntos_animados.show()
+		puntos_animados.add_theme_font_size_override("font_size", puntos_valor.get_theme_font_size("font_size"))
+		_animar_saldo(_saldo_visual)
+		_animacion_saldo = create_tween()
+		_animacion_saldo.tween_method(_animar_saldo, _saldo_visual, float(total), .8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_animacion_saldo.tween_callback(_detener_animacion_saldo)
+	else:
+		_detener_animacion_saldo()
 	if ganancia > 0:
 		puntos_ganancia.text = "+%s PTS" % _formatear_puntos(ganancia)
 		segundos_recompensa = 3.0
 	elif ganancia < 0:
 		puntos_ganancia.text = "-%s PTS" % _formatear_puntos(-ganancia)
 		segundos_recompensa = 3.0
+
+func _animar_saldo(valor: float) -> void:
+	_saldo_visual = valor
+	puntos_animados.text = _formatear_puntos(roundi(valor))
+
+func _detener_animacion_saldo() -> void:
+	if _animacion_saldo != null:
+		_animacion_saldo.kill()
+		_animacion_saldo = null
+	_saldo_visual = float(_puntos_mostrados)
+	if is_instance_valid(puntos_animados):
+		puntos_animados.hide()
+	puntos_valor.self_modulate.a = 1.0
 
 
 func _ajustar_tamano_puntos() -> void:
@@ -138,6 +177,8 @@ func _ajustar_tamano_puntos() -> void:
 	while tamano > 14 and fuente.get_string_size(puntos_valor.text, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano).x > ancho:
 		tamano -= 1
 	puntos_valor.add_theme_font_size_override("font_size", tamano)
+	if is_instance_valid(puntos_animados):
+		puntos_animados.add_theme_font_size_override("font_size", tamano)
 
 
 func _formatear_puntos(valor: int) -> String:
@@ -214,6 +255,13 @@ func _crear_tarjeta(denuncia: Denuncia, siguiente: bool) -> PanelContainer:
 	var titulo := _etiqueta(denuncia.titulo, 20)
 	titulo.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	texto.add_child(titulo)
+	var requisitos := ProtocoloVisual.new()
+	requisitos.name = "RequisitosVisuales"
+	requisitos.compacto = true
+	requisitos.custom_minimum_size = Vector2(0, 31)
+	var sin_completar: Array[String] = []
+	requisitos.configurar(denuncia.obtener_estaciones_requeridas(), sin_completar)
+	texto.add_child(requisitos)
 	var derecha := VBoxContainer.new()
 	derecha.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	derecha.mouse_filter = Control.MOUSE_FILTER_IGNORE
