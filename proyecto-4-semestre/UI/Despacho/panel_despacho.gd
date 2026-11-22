@@ -206,7 +206,7 @@ func _crear_tarjeta(denuncia: Denuncia, siguiente: bool) -> PanelContainer:
 	texto.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texto.add_theme_constant_override("separation", 4)
 	fila.add_child(texto)
-	var riesgo := _etiqueta("%s · N%d" % [_etiqueta_riesgo(denuncia.nivel_riesgo), denuncia.nivel_riesgo], 15)
+	var riesgo := _etiqueta("PRÁCTICA" if denuncia.es_practica else "%s · N%d" % [_etiqueta_riesgo(denuncia.nivel_riesgo), denuncia.nivel_riesgo], 15)
 	riesgo.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	riesgo.add_theme_stylebox_override("normal", _pastilla(color))
 	riesgo.add_theme_color_override("font_color", CREMA)
@@ -248,7 +248,8 @@ func _actualizar_tarjeta(denuncia: Denuncia) -> void:
 	if is_instance_valid(sistema_despacho):
 		tiempo = sistema_despacho.obtener_tiempo_restante(denuncia.id)
 	var etiqueta: Label = tarjeta.get_meta("tiempo")
-	etiqueta.text = _formatear_tiempo(tiempo)
+	etiqueta.text = "SIN PLAZO" if denuncia.es_practica else _formatear_tiempo(tiempo)
+	etiqueta.add_theme_font_size_override("font_size", 16 if denuncia.es_practica else 23)
 
 
 func _actualizar_denuncia_activa() -> void:
@@ -271,15 +272,16 @@ func _actualizar_denuncia_activa() -> void:
 		var estilo := denuncia_activa_detalle.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
 		estilo.border_color = color
 		denuncia_activa_detalle.add_theme_stylebox_override("panel", estilo)
-		%EtiquetaRiesgo.text = "%s · NIVEL %d" % [_etiqueta_riesgo(denuncia.nivel_riesgo), denuncia.nivel_riesgo]
+		%EtiquetaRiesgo.text = "PRÁCTICA" if denuncia.es_practica else "%s · NIVEL %d" % [_etiqueta_riesgo(denuncia.nivel_riesgo), denuncia.nivel_riesgo]
 		%EtiquetaRiesgo.add_theme_stylebox_override("normal", _pastilla(color))
 		%EtiquetaRiesgo.add_theme_color_override("font_color", CREMA)
 		%IconoRiesgo.acento = color.darkened(0.32)
 		%IconoRiesgo.queue_redraw()
 	recompensa_caso.text = "AL RESOLVER\n+%s PTS" % _formatear_puntos(denuncia.obtener_puntaje_recompensa())
 	var tiempo := sistema_despacho.obtener_tiempo_restante(denuncia.id)
-	denuncia_activa_tiempo.text = _formatear_tiempo(tiempo)
-	reloj_activo.sincronizar_tiempo(tiempo, denuncia.tiempo_limite_segundos, true)
+	denuncia_activa_tiempo.text = "SIN PLAZO" if denuncia.es_practica else _formatear_tiempo(tiempo)
+	denuncia_activa_tiempo.add_theme_font_size_override("font_size", 25 if denuncia.es_practica else 46)
+	reloj_activo.sincronizar_tiempo(tiempo, denuncia.tiempo_limite_segundos, not denuncia.es_practica)
 	var requeridas := denuncia.obtener_estaciones_requeridas()
 	protocolo.configurar(requeridas, denuncia.estaciones_completadas)
 	progreso_estaciones.text = "%d/%d COMPLETADAS" % [denuncia.estaciones_completadas.size(), requeridas.size()]

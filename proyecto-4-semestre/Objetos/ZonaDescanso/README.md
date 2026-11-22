@@ -27,6 +27,8 @@ La herramienta `Editor/hornear_sofa_l.gd` genera las dos mallas recortadas del s
 
 ## Máquina expendedora
 
+La escena incluye un cartel físico de pared sobre la máquina: **SHOP / SNACKS Y PODERES**, con las fuentes y colores de la interfaz. Es señalización estática, sin colisión ni luces adicionales; los avisos de interacción conservan los controles del teclado y del mando.
+
 ### Preview de objetos y café
 
 El bolsillo usa los **medallones de la propuesta A**, con crema, coral, azul petróleo y la misma fuente que la hoja. `UI/Descanso/indicador_bolsillo.gd` observa el inventario y la taza real: chocolate **Z**, dona **X**, papa tiempo **V**, Avatar **N** y café **F · BEBER**. No intercepta entradas ni cambia el flujo de compra o consumo.

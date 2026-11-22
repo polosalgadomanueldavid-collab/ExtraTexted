@@ -121,10 +121,22 @@ var evento_hielo: EventoHielo
 var tutoriales_vistos: Dictionary[StringName, bool] = {}
 var _evento_con_guia: StringName = &""
 var ruleta_emotes: RuletaEmotes
-
+var practica: Node
 
 signal preparacion_terminada
 var oficina_preparada := false
+
+
+func iniciar_practica() -> bool:
+	if SesionLAN.activa or partida_finalizada or is_instance_valid(practica):
+		return false
+	practica = load("res://Scripts/Partida/practica_radio.gd").new()
+	add_child(practica)
+	practica.iniciar.call_deferred(self)
+	return true
+
+func en_practica() -> bool:
+	return is_instance_valid(practica) and practica.activa
 
 
 func _enter_tree() -> void:
@@ -377,8 +389,9 @@ func _process(_delta: float) -> void:
 		return
 	if not _turno_anunciado and get_tree().current_scene == self and not MenuGlobal.capa.visible:
 		_turno_anunciado = true
-		anuncios.mostrar_inicio()
-	if not sistema_despacho.tiempo_detenido:
+		if not en_practica():
+			anuncios.mostrar_inicio()
+	if not sistema_despacho.tiempo_detenido and not en_practica():
 		_duracion_partida += _delta
 	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
 	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
@@ -566,7 +579,7 @@ func _actualizar_indicador_denuncia_pc(objetivo: Node3D) -> void:
 	var descanso := get_node_or_null("ZonaDescanso")
 	var cafe: bool = descanso != null and descanso.tiene_cafe()
 	var disponible := sistema_despacho.obtener_denuncia_activa() == null and not is_instance_valid(papel_actual) and not cafe
-	var oculto := anuncios.visible or computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or clasificacion_partida.visible or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or evento_incendio.arde_estacion("computador")
+	var oculto := en_practica() or anuncios.visible or computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or clasificacion_partida.visible or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or evento_incendio.arde_estacion("computador")
 	indicador_denuncia_pc.actualizar(
 		get_viewport().get_camera_3d(), computador.global_position + Vector3.UP * 0.38,
 		disponible, objetivo == computador or objetivo is SillaComputador, oculto
@@ -602,6 +615,8 @@ func _asegurar_temporizador_denuncias() -> void:
 
 
 func _recibir_denuncia_aleatoria() -> void:
+	if en_practica():
+		return
 	if SesionLAN.activa and not SesionLAN.es_anfitrion():
 		return
 	if partida_finalizada:
@@ -743,6 +758,8 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 
 
 func _puede_iniciar_evento() -> bool:
+	if en_practica():
+		return false
 	if is_instance_valid(sistema_despacho) and sistema_despacho.tiempo_detenido:
 		return false
 	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo) and (not is_instance_valid(evento_lava) or not evento_lava.activo) and (not is_instance_valid(evento_hielo) or not evento_hielo.activo)
@@ -988,7 +1005,7 @@ func _al_terminar_terremoto() -> void:
 
 func _on_caso_finalizado(denuncia: Denuncia) -> void:
 	var registro := _resumen_denuncia(denuncia)
-	if denuncia.estado == Denuncia.Estado.RESUELTA:
+	if denuncia.estado == Denuncia.Estado.RESUELTA and not denuncia.es_practica:
 		_resueltas.append(registro)
 	elif denuncia.estado == Denuncia.Estado.VENCIDA:
 		_vencidas.append(registro)
@@ -1222,7 +1239,7 @@ func _interactuar_evidencias() -> bool:
 	var denuncia := sistema_despacho.obtener_denuncia_activa()
 	if denuncia == null or not denuncia.obtener_estaciones_pendientes().has("evidencias"):
 		return false
-	clasificador_evidencias.iniciar(denuncia.id)
+	clasificador_evidencias.iniciar(denuncia.id, denuncia.es_practica)
 	jugador.input_locked = true
 	panel_despacho._mostrar_mensaje("Elige las hojas solicitadas del planillero.", Color("86efac"))
 	return true

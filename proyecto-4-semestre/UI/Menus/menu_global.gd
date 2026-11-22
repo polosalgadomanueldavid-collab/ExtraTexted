@@ -38,6 +38,9 @@ enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES, EVENTO }
 var nombre_partida: String = ""
 var final_de_partida_activo: bool = false
 var omitir_tutorial_siguiente_partida: bool = false
+var practica_siguiente_partida := false
+var archivo_practica := "user://practica_radio.cfg"
+
 var _ultimo_nombre: String = ""
 var _clasificacion := ClasificacionLocalScript.new()
 var _opciones_desde_pausa: bool = false
@@ -48,6 +51,29 @@ var _origen_ayuda := OrigenAyuda.MENU
 var _partida_con_tutorial: int = 0
 var _tutorial_lan: StringName = &""
 var _confirmacion_tutorial_enviada := false
+
+
+func practica_vista() -> bool:
+	var config := ConfigFile.new()
+	return config.load(archivo_practica) == OK and config.get_value("practica", "vista", false) == true
+
+func guardar_practica_vista() -> void:
+	var config := ConfigFile.new()
+	config.set_value("practica", "vista", true)
+	var error := config.save(archivo_practica)
+	if error != OK:
+		push_warning("No se pudo guardar la práctica completada: %s" % error_string(error))
+
+func repetir_practica() -> void:
+	if SesionLAN.activa or _cambiando_escena:
+		return
+	practica_siguiente_partida = true
+	omitir_tutorial_siguiente_partida = false
+	_cambiando_escena = true
+	_establecer_pausa(false)
+	capa.hide()
+	panel_ayuda.hide()
+	CargaEscenas.cargar(ESCENA_JUEGO)
 
 
 func _ready() -> void:
@@ -73,6 +99,7 @@ func _ready() -> void:
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
+	panel_ayuda.practica_solicitada.connect(repetir_practica)
 	panel_ayuda.navegacion_cambiada.connect(_reconfigurar_foco_ayuda)
 	SesionLAN.tutorial_actualizado.connect(_actualizar_tutorial_lan)
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)
@@ -239,6 +266,11 @@ func _abrir_tutorial_inicial() -> void:
 	if capa.visible or _cambiando_escena or not es_escena_de_juego():
 		return
 	var id_partida := get_tree().current_scene.get_instance_id()
+	if practica_siguiente_partida and not SesionLAN.activa:
+		practica_siguiente_partida = false
+		_partida_con_tutorial = id_partida
+		get_tree().current_scene.iniciar_practica()
+		return
 	if omitir_tutorial_siguiente_partida:
 		omitir_tutorial_siguiente_partida = false
 		_partida_con_tutorial = id_partida
@@ -383,6 +415,9 @@ func _iniciar_partida(nombre: String, nombre_companero: String = "") -> void:
 	_cambiando_escena = true
 	nombre_partida = nombre
 	_ultimo_nombre = nombre
+	if not SesionLAN.activa:
+		practica_siguiente_partida = not practica_vista()
+		omitir_tutorial_siguiente_partida = true
 	panel_clasificacion.hide()
 	capa.hide()
 	var menu := get_tree().current_scene

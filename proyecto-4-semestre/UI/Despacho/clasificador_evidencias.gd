@@ -39,7 +39,7 @@ func _ready() -> void:
 	hide()
 
 
-func iniciar(id: String) -> void:
+func iniciar(id: String, practica := false) -> void:
 	_detener_sonidos()
 	if caso_id != id or objetivos.is_empty():
 		caso_id = id
@@ -47,6 +47,10 @@ func iniciar(id: String) -> void:
 		objetivos.shuffle()
 		papeles = [0, 1, 2]
 		papeles.shuffle()
+		if practica:
+			# Mismo minijuego: una referencia fija y tres opciones, con reintentos.
+			objetivos = [0]
+			papeles = [1, 0, 2]
 		archivados = 0
 	seleccion = mini(1, papeles.size() - 1)
 	error_restante = 0.0
@@ -174,7 +178,7 @@ func _draw() -> void:
 	_dibujar_planillero(planillero, factor)
 	_texto("REVISA LA REFERENCIA DE LA IZQUIERDA.", planillero.position + Vector2(38, 83) * factor, 20, TINTA, factor)
 	_texto("ELIGE LA HOJA QUE COINCIDA CON EL ARCHIVO.", planillero.position + Vector2(38, 110) * factor, 19, TINTA, factor)
-	for i: int in range(3):
+	for i: int in range(maxi(1, objetivos.size())):
 		draw_circle(planillero.position + Vector2(626 + i * 26, 39) * factor, 7.0 * factor, CORAL if i < archivados else CARTON_OSCURO)
 	var tipo_objetivo: int = objetivos[archivados] if archivados < objetivos.size() else 0
 	_dibujar_referencia(planillero, factor, tipo_objetivo)

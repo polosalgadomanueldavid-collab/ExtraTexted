@@ -1,5 +1,15 @@
 # Barra lateral de denuncias
 
+## Primer turno por radio
+
+La primera partida individual iniciada desde el menú ofrece una práctica jugable. `Scripts/Partida/practica_radio.gd` crea una denuncia real con una estación (Evidencias), una referencia fija (IDENTIDAD) y saldo equivalente al precio actual del chocolate. Usa la hoja física, los gestos, el archivador, la compra, la entrega y el consumo habituales; los cambios de paso dependen de esas acciones. La radio no bloquea movimiento ni ofrece un botón para completar tareas.
+
+`radio_practica.gd` dibuja una radio y papel ilustrados con Luckiest Guy, Nunito y la paleta crema, petróleo y coral. Las indicaciones se adaptan al teclado/mando y siguen el objetivo o la hoja suelta. Incluye una breve señal sonora original en el bus Interacciones, respeta la pausa y la preferencia de movimiento de cámara. Se reduce a una línea durante el archivador y se oculta en la tienda y los menús.
+
+Mientras dura, el despacho protege calma y plazos; se detienen denuncias nuevas, bloqueos y emergencias. El caso concede saldo gastable pero no suma al récord, la duración ni las estadísticas del turno. Al terminar o pulsar F2/Vista para omitir, se retira la guía, se guarda `user://practica_radio.cfg` y empieza el turno normal. Ayuda incluye **PRÁCTICA POR RADIO · TURNO NUEVO** para repetirla en otra oficina. La introducción compartida de LAN conserva sus guías actuales.
+
+Validación: `Godot --headless --path proyecto-4-semestre --fixed-fps 60 --script res://Pruebas/Partida/prueba_practica_radio.gd`. Sin `--headless`, añadir `-- --capturas` para guardar las fases y Ayuda en `.godot/practica_radio_qa`. La prueba usa un perfil temporal independiente del usuario.
+
 HUD exclusivo de `res://UI/Despacho/PanelDespacho.tscn`: fondo general transparente,
 tarjetas crema compactas, acentos laterales por riesgo y fuente Luckiest Guy
 reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los menús.

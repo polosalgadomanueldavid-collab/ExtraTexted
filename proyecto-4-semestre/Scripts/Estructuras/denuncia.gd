@@ -28,6 +28,8 @@ enum MotivoPerdida { TIEMPO, TERREMOTO }
 @export var protocolo_estaciones: Array[String] = []
 
 var estado: Estado = Estado.PENDIENTE
+## Caso jugable de introducción: concede saldo, sin sumar al récord del turno.
+var es_practica := false
 var motivo_perdida := MotivoPerdida.TIEMPO
 var estaciones_completadas: Array[String] = []
 

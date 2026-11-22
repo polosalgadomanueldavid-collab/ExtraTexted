@@ -19,10 +19,16 @@ func _probar() -> void:
 	_probar_instancias_independientes()
 	if not "--solo-core" in OS.get_cmdline_user_args():
 		var clasificacion_real := MenuGlobal._clasificacion
+		var archivo_practica_real: String = MenuGlobal.archivo_practica
+		MenuGlobal.archivo_practica = "user://practica_puntuacion_%d.cfg" % OS.get_process_id()
+		# Esta suite comprueba el turno normal; la introducción tiene su propia suite.
+		MenuGlobal.guardar_practica_vista()
 		var ruta := "user://prueba_clasificacion_%d.json" % OS.get_process_id()
 		MenuGlobal._clasificacion = ClasificacionLocal.new(ruta)
 		await _probar_pausa_y_nueva_partida(ruta)
 		MenuGlobal._clasificacion = clasificacion_real
+		DirAccess.remove_absolute(MenuGlobal.archivo_practica)
+		MenuGlobal.archivo_practica = archivo_practica_real
 		if FileAccess.file_exists(ruta):
 			DirAccess.remove_absolute(ruta)
 	get_tree().paused = false
@@ -278,6 +284,8 @@ func _esperar_escena(ruta: String) -> bool:
 		await get_tree().process_frame
 		var escena := get_tree().current_scene
 		if is_instance_valid(escena) and escena.scene_file_path == ruta:
+			if CargaEscenas.activa or (ruta == MenuGlobal.ESCENA_JUEGO and not escena.oficina_preparada):
+				continue
 			return true
 	_verificar(false, "La escena %s está disponible después del cambio" % ruta)
 	return false
