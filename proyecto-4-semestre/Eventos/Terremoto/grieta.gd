@@ -297,11 +297,11 @@ func reconstruir_avatar(peso: float) -> bool:
 			_poses_avatar.append(losa.transform)
 	for i in _losas.size():
 		_losas[i].show()
-		_losas[i].transform = _poses_avatar[i].interpolate_with(Transform3D(Basis.IDENTITY, _origenes[i]), peso)
+		_losas[i].transform = _poses_avatar[i].interpolate_with(Transform3D(Basis.IDENTITY, _origenes[i]), smoothstep(0.0, .82, peso))
 	# El piso recupera su colisión antes de retirar la última capa de piedra.
 	_piedra.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_piedra.albedo_color.a = 1.0 - smoothstep(.90, 1.0, peso)
-	if peso < .90 or sellada_avatar:
+	_piedra.albedo_color.a = 1.0 - smoothstep(.82, 1.0, peso)
+	if peso < .82 or sellada_avatar:
 		return false
 	sellada_avatar = true
 	if is_instance_valid(_corte):

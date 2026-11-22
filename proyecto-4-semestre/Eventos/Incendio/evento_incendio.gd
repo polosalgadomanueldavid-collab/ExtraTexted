@@ -549,6 +549,12 @@ func resolver_con_avatar(origen: Variant = null) -> void:
 				_cajones_avatar.append({"nodo": cajon._flotacion, "pose": cajon._flotacion.transform})
 		_volumen_avatar = _ambiente.volume_db
 		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"fuego", _avanzar_avatar, resolver_con_avatar)
+		var brasas := PackedVector3Array()
+		for foco in focos:
+			if foco.apagado < 1.0:
+				brasas.append(foco.global_position + Vector3(-.12, .16, 0))
+				brasas.append(foco.global_position + Vector3(.12, .24, .08))
+		_resolucion_avatar.preparar_residuos(brasas)
 		return
 	for foco in focos:
 		foco.cancelar_apagado_adyacente()
@@ -573,7 +579,7 @@ func _avanzar_avatar(frente: Node3D) -> void:
 		if is_instance_valid(dato.nodo):
 			var peso: float = frente.peso_en(dato.nodo.global_position)
 			var pose: Transform3D = dato.pose
-			pose.origin.y -= peso * .85
+			pose.origin.y -= smoothstep(.25, .95, peso) * .85
 			dato.nodo.transform = pose
 	_ambiente.volume_db = _volumen_avatar - smoothstep(0.0, 2.6, frente.tiempo) * 32.0
 	_actualizar_panel()

@@ -65,5 +65,9 @@ void fragment() {
 	EMISSION = vec3(0.08, 0.16, 0.28) * (0.12 + grieta * 0.20);
 	// Frente sólido de cristalización, sin ondulación ni subida del agua.
 	ALPHA = smoothstep(distance(mundo.xz, origen) / 15.0, distance(mundo.xz, origen) / 15.0 + 0.12, presencia * 1.16);
-	ALPHA *= 1.0 - avance_avatar(mundo.xz);
+	float retirada = avance_avatar(mundo.xz);
+	// El reflejo frío pierde fuerza antes de descubrir el piso.
+	EMISSION *= 1.0 - smoothstep(0.0, .6, retirada);
+	SPECULAR *= 1.0 - retirada * .7;
+	ALPHA *= 1.0 - retirada;
 }

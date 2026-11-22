@@ -93,6 +93,14 @@ func _probar() -> void:
 		await _captura(nombre + "_02_transformacion")
 		await _cuadros(50)
 		await _captura(nombre + "_03_retirada")
+		if nombre == "terremoto":
+			var ocultos := 0
+			var paso_libre := true
+			for escombro in evento.escombros:
+				if escombro._restos.global_position.y + escombro.ALTURA < .372:
+					ocultos += 1
+					paso_libre = paso_libre and escombro.collision_layer == 0
+			_verificar(ocultos > 0 and paso_libre, "Los escombros recogidos no dejan obstáculos invisibles")
 		await _cuadros(48)
 		_verificar(finales == 1 and not evento.resolviendo_avatar and not is_instance_valid(frente), "Termina una sola vez y retira el efecto: " + nombre)
 		_verificar(not jugador.nadando and not jugador.hielo_activo and not jugador.lava_activa, "Restaura los estados del jugador: " + nombre)
@@ -102,8 +110,17 @@ func _probar() -> void:
 			reloj.stop()
 		# Una limpieza inmediata durante la transición cancela el callback antiguo.
 		_verificar(_iniciar(nombre), "Puede iniciar otra vez: " + nombre)
+		var energia_inicial: Array[float] = []
+		if nombre == "lava":
+			for luz in evento._luces_calor:
+				energia_inicial.append(luz.light_energy)
 		evento.resolver_con_avatar(jugador.global_position)
 		await _cuadros(5)
+		if nombre == "lava":
+			var sin_destello := true
+			for i in energia_inicial.size():
+				sin_destello = sin_destello and evento._luces_calor[i].light_energy <= energia_inicial[i] + .0001
+			_verificar(sin_destello, "Resolver lava recién iniciada no aumenta de golpe su iluminación")
 		var cancelado: Node3D = evento._resolucion_avatar
 		evento.resolver_con_avatar()
 		await _cuadros(4)

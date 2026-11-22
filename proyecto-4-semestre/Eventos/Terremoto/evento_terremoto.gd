@@ -781,7 +781,7 @@ func resolver_con_avatar(origen: Variant = null) -> void:
 		_restos_avatar.clear()
 		for escombro in escombros:
 			escombro._aviso.hide()
-			_restos_avatar.append({"nodo": escombro._restos, "pose": escombro._restos.transform})
+			_restos_avatar.append({"nodo": escombro._restos, "cuerpo": escombro, "pose": escombro._restos.transform})
 		if _animacion_alfombra != null:
 			_animacion_alfombra.kill()
 			_animacion_alfombra = null
@@ -791,6 +791,12 @@ func resolver_con_avatar(origen: Variant = null) -> void:
 		temblor_actualizado.emit(DURACION, 0.0)
 		sonidos.cerrar_suelo()
 		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"tierra", _avanzar_avatar, resolver_con_avatar)
+		var polvo := PackedVector3Array()
+		for grieta in grietas:
+			for i in range(0, grieta.contorno.size(), maxi(1, grieta.contorno.size() / 3)):
+				var borde: Vector2 = grieta.contorno[i]
+				polvo.append(Vector3(borde.x, _altura + .03, borde.y))
+		_resolucion_avatar.preparar_residuos(polvo)
 		return
 	temblor_actualizado.emit(DURACION, 0.0)
 	_cerrar()
@@ -807,9 +813,11 @@ func _avanzar_avatar(frente: Node3D) -> void:
 		if is_instance_valid(dato.nodo):
 			var peso: float = frente.peso_en(dato.nodo.global_position)
 			var pose: Transform3D = dato.pose
-			pose.origin.y -= peso * 1.3
-			pose.basis = pose.basis.scaled_local(Vector3.ONE * maxf(.02, 1.0 - peso))
+			# Se recogen bajo el suelo conservando su volumen, sin encogerse en el aire.
+			pose.origin.y -= smoothstep(.15, .95, peso) * (maxf(0.0, pose.origin.y) + .75)
 			dato.nodo.transform = pose
+			if peso > .65:
+				dato.cuerpo.set_deferred("collision_layer", 0)
 	if _alfombra_caida and is_instance_valid(alfombra):
 		alfombra.transform = _alfombra_avatar.interpolate_with(_reposo_alfombra, frente.peso_en(alfombra.global_position))
 

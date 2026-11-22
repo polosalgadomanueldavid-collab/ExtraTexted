@@ -81,6 +81,8 @@ Para revisar el fuego a escala completa, ejecutar `capturar_expendedora.gd` con 
 
 El impulso final recorre la oficina desde la posición del jugador que utilizó el objeto. `resolucion_avatar.gd` coordina el frente, los residuos y un reloj explícito; cada evento transforma sus objetos reales antes de emitir su señal de finalización:
 
+Cada evento tiene un ritmo propio con aceleración y frenado suaves, dentro de los mismos 2,6 s. No se dibuja un anillo común sobre la oficina: inundación y apagón se apoyan en sus superficies y luces; la lava usa vapor translúcido, el hielo unas pocas motas arrastradas, el incendio brasas ancladas a las mesas que aún arden y el terremoto polvo únicamente en los bordes de las grietas. Los residuos tienen bordes suaves y se apagan antes de retirar el efecto. Los escombros conservan su volumen al recogerse bajo el piso y dejan de bloquear el paso cuando ya están ocultos.
+
 - **Inundación:** sella la tubería, orienta las corrientes y baja el nivel del agua; muebles, alfombra, papeles y estado de nado acompañan el descenso.
 - **Lava:** el frente de agua apaga el calor, deja una costra fría y la retira con vapor. Se suspende el daño durante la restauración.
 - **Incendio:** las llamas se contraen mesa por mesa según su distancia; el ambiente sonoro baja y los restos de los cajones se hunden antes de recuperar los bloqueos normales.

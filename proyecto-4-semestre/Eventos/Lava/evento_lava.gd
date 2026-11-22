@@ -2,6 +2,8 @@ extends Node3D
 
 const ResolucionAvatar := preload("res://Objetos/ZonaDescanso/resolucion_avatar.gd")
 var _resolucion_avatar: Node3D
+var _luces_avatar: Dictionary = {}
+var _panel_avatar := 1.0
 var resolviendo_avatar: bool:
 	get: return is_instance_valid(_resolucion_avatar)
 
@@ -378,6 +380,9 @@ func resolver_con_avatar(origen: Variant = null) -> void:
 			llama.establecer_intensidad(0.0)
 		for chispas in _chispas_suelo:
 			chispas.emitting = false
+		for luz in _luces_calor:
+			_luces_avatar[luz] = luz.light_energy
+		_panel_avatar = panel.modulate.a
 		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"vapor", _avanzar_avatar, resolver_con_avatar)
 		return
 	detener()
@@ -387,10 +392,11 @@ func _avanzar_avatar(frente: Node3D) -> void:
 	frente.aplicar_material(_material)
 	_material.set_shader_parameter("reloj", _tiempo + frente.tiempo)
 	for luz in _luces_calor:
-		luz.light_energy = .32 * (1.0 - frente.peso_en(luz.global_position))
-	panel.modulate.a = 1.0 - smoothstep(0.0, .6, frente.tiempo)
+		luz.light_energy = _luces_avatar[luz] * (1.0 - frente.peso_en(luz.global_position))
+	panel.modulate.a = _panel_avatar * (1.0 - smoothstep(0.0, .6, frente.tiempo))
 
 func _cancelar_resolucion_avatar() -> void:
 	if is_instance_valid(_resolucion_avatar):
 		_resolucion_avatar.cancelar()
 	_resolucion_avatar = null
+	_luces_avatar.clear()

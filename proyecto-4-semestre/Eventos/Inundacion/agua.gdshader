@@ -55,6 +55,7 @@ void vertex() {
 	float ola_a = sin(dot(mundo, vec2(2.2, 1.1)) - reloj * 1.45);
 	float ola_b = sin(dot(mundo, vec2(-1.3, 3.1)) + reloj * 1.12);
 	float altura = amplitud * (ola_a + ola_b * 0.48);
+	if (avatar_activo) { altura *= 1.0 - avance_avatar(mundo) * .85; }
 	for (int i = 0; i < 32; i++) {
 		if (i >= cantidad_impactos) { break; }
 		float edad = reloj - impactos[i].z;
@@ -69,7 +70,7 @@ void vertex() {
 
 void fragment() {
 	vec2 corriente = mundo * 2.6 + vec2(reloj * 0.075, -reloj * 0.065);
-	if (avatar_activo) { corriente += normalize(mundo - avatar_origen + vec2(.001)) * avatar_tiempo * .55; }
+	if (avatar_activo) { corriente += normalize(mundo - avatar_origen + vec2(.001)) * avatar_tiempo * .22; }
 	// El dominio se deforma en varias escalas: sin polígonos rígidos repetidos.
 	vec2 remolino = vec2(turbulencia(corriente * 0.8 + reloj * 0.13),
 		turbulencia(corriente * 0.8 + 19.2 - reloj * 0.11)) - 0.5;
@@ -100,7 +101,8 @@ void fragment() {
 	color = mix(color, vec3(0.71, 0.97, 0.91), filamento * presencia);
 	color = mix(color, vec3(0.83, 1.0, 0.95), orilla * 0.78 * presencia);
 	float retirada = avance_avatar(mundo);
-	color = mix(color, vec3(.75, .97, 1.0), sin(retirada * PI) * .35);
+	// Una sola cresta tenue en el agua, que se calma a medida que baja el nivel.
+	color = mix(color, vec3(.75, .97, 1.0), sin(retirada * PI) * .10);
 	ALBEDO = color;
 	ALPHA = mix(0.52, 0.72, smoothstep(0.1, 1.5, distancia_fondo)) + filamento * 0.15 + orilla * 0.18;
 	if (avatar_activo) { ALPHA *= presencia * (1.0 - retirada * .45); }
