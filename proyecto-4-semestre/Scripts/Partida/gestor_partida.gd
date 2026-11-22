@@ -250,6 +250,7 @@ func _ready() -> void:
 	sistema_despacho.partida_terminada.connect(_al_terminar_partida)
 	
 	panel_despacho.configurar_sistema(sistema_despacho)
+	panel_despacho.origen_resultado = _origen_visual_resultado
 	if CargaEscenas.activa:
 		await get_tree().process_frame
 	indicador_papel = IndicadorPapel.new()
@@ -1376,9 +1377,19 @@ func _actualizar_respuestas_mesas(objetivo: Node3D = null) -> void:
 	var encendida := not partida_finalizada and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO
 	var papel := jugador.papel_en_mano
 	var lleva_caso := caso != null and is_instance_valid(papel) and papel.denuncia_id == caso.id and papel.portador == jugador
+	if caso != null and is_instance_valid(papel) and papel.denuncia_id == caso.id:
+		papel.actualizar_expediente(caso.obtener_estaciones_requeridas(), caso.estaciones_completadas)
 	for id: String in respuestas_mesas:
 		var cerca := lleva_caso and objetivo is Estacion and (objetivo as Estacion).estacion_id == id
 		respuestas_mesas[id].actualizar(caso, encendida and not evento_incendio.arde_estacion(id), cerca)
+
+
+func _origen_visual_resultado(id: String) -> Vector2:
+	var camara := get_viewport().get_camera_3d()
+	if is_instance_valid(camara) and respuestas_mesas.has(id):
+		var punto: Vector3 = respuestas_mesas[id].origen_resultado()
+		if not camara.is_position_behind(punto): return camara.unproject_position(punto)
+	return get_viewport().get_visible_rect().size * .5
 
 
 func _actualizar_indicadores_estaciones() -> void:

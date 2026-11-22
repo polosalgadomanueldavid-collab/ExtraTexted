@@ -16,6 +16,8 @@ var _contorno: ShaderMaterial
 var _material_hoja: StandardMaterial3D
 var _tiempo_resaltado: float = 0.0
 var _marcador_recoger: Node3D
+var _firma_expediente := ""
+var _piezas_expediente: Array[MeshInstance3D] = []
 var mostrar_indicador: bool = true:
 	set(valor):
 		mostrar_indicador = valor
@@ -45,10 +47,10 @@ func _ready() -> void:
 	caja.size = TAMANO
 	_malla_hoja.mesh = caja
 	_material_hoja = StandardMaterial3D.new()
-	_material_hoja.albedo_color = Color("fff1d8")
+	_material_hoja.albedo_color = Color("d7ac69")
 	_material_hoja.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_material_hoja.emission_enabled = true
-	_material_hoja.emission = Color("fff1d8")
+	_material_hoja.emission = Color("d7ac69")
 	_malla_hoja.material_override = _material_hoja
 	add_child(_malla_hoja)
 	_contorno = ShaderMaterial.new()
@@ -63,6 +65,13 @@ func _ready() -> void:
 	tinta.albedo_color = Color("173b50")
 	franja.material_override = tinta
 	add_child(franja)
+	var pestana := MeshInstance3D.new()
+	var pestana_malla := BoxMesh.new()
+	pestana_malla.size = Vector3(.085, .012, .025)
+	pestana.mesh = pestana_malla
+	pestana.position = Vector3(-.055, 0, -.095)
+	pestana.material_override = _material_hoja
+	add_child(pestana)
 	_marcador_recoger = MODELOS.crear_mano_recoger()
 	add_child(_marcador_recoger)
 	_marcador_recoger.top_level = true
@@ -75,6 +84,25 @@ func _process(delta: float) -> void:
 	_tiempo_resaltado += delta
 	_actualizar_resaltado()
 	_actualizar_marcador()
+
+
+func actualizar_expediente(requeridas: Array[String], hechas: Array[String]) -> void:
+	var firma := str(requeridas) + str(hechas)
+	if firma == _firma_expediente: return
+	_firma_expediente = firma
+	for pieza in _piezas_expediente: pieza.queue_free()
+	_piezas_expediente.clear()
+	for i in requeridas.size():
+		var pieza := MeshInstance3D.new()
+		var malla := BoxMesh.new()
+		malla.size = Vector3(.026, .003, .085)
+		pieza.mesh = malla
+		pieza.position = Vector3(-.075+i*.035, .009, .008)
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color("fff1d8") if hechas.has(requeridas[i]) else Color("ba945c")
+		pieza.material_override = material
+		add_child(pieza)
+		_piezas_expediente.append(pieza)
 
 
 func _actualizar_marcador() -> void:

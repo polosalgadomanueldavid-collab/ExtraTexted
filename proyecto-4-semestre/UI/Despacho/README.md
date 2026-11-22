@@ -69,32 +69,30 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   El flujo de granos se anima mientras el caso está activo y se congela con la pausa.
 - Los iconos de los casos en espera son estáticos; sus números siguen mostrando
   el tiempo real. Al aceptar el siguiente caso se usa su tiempo restante actual.
-- El protocolo muestra requisitos mediante símbolos iguales a los marcadores
-  del mundo, sin nombres ni flechas de secuencia. Cada tarea terminada conserva
-  un sello verde y un check dentro de la ficha. La cola muestra los símbolos de
-  cada denuncia antes de aceptarla. Todas las pendientes tienen la misma
-  importancia; el orden y los minijuegos conservan su comportamiento.
-- Las mesas llevan una planilla plana completamente apoyada dentro del tablero,
-  con el mismo pictograma que el expediente. No añade bandejas, tapas ni piezas
-  en voladizo. Al acercarse con la hoja correcta se acentúa su borde; completar
-  deja un sello sobre el papel, sin elevarlo sobre la mesa. El resultado permanece
-  hasta aceptar otro caso y se limpia al vencer. Apagón, incendio y pausa suspenden
-  las señales correspondientes. Los marcadores usan solo el objeto 3D, sin
-  nombres ni tarjetas de acciones; E/X aparece únicamente al poder interactuar.
-  `respuestas_visuales_mesas` permite desactivar las planillas para comparar.
+- El caso activo y la cola muestran los símbolos de carpeta, lupa, candado,
+  documento y corazón en una sola fila compacta. Coinciden con los flotantes de
+  las estaciones y conservan contraste petróleo/crema. Una tarea completada
+  queda verde con un check; no cambia a otro símbolo ni se convierte en una
+  miniatura. No hay nombres de estaciones, números de orden ni flechas.
+- Las cinco mesas conservan completos los diseños 3D originales, su decoración,
+  escala, ubicación, texturas y colisiones. Una luz cálida ilumina la superficie
+  de las pendientes y aumenta al poder interactuar, sin superponer materiales
+  a las mallas ni blanquearlas. Los flotantes están activos; E/X aparece al poder
+  actuar con la hoja correcta. `respuestas_visuales_mesas = false` desactiva
+  solo la luz de trabajo adicional. El orden y los minijuegos siguen siendo reales.
 
   Prueba integrada: `Godot --headless --path proyecto-4-semestre --fixed-fps 60
   --script res://Pruebas/Despacho/prueba_orientacion_contextual.gd`. Sin
   `--headless`, añadir `-- --capturas` guarda los dos protocolos reales y el
   sellado parcial en `.godot/denuncias_visuales_qa/`.
-- Repetir una estación muestra un aviso y conserva el progreso. Al completar todas,
-  el caso se cierra automáticamente y el panel retira la tarjeta activa.
-- Cada estación completada reproduce **Check con garabato** durante 1,4 segundos:
-  check verde dibujado, círculo crema irregular, chispas y subrayado coral,
-  «¡HECHO!» y nombre de la estación en el centro superior del juego. No captura
-  entradas. Incluye un sonido original estéreo de lápiz y dos notas suaves,
+- Repetir una estación o usar una ajena resalta brevemente las casillas pendientes,
+  sin añadir otro aviso de texto ni alterar el progreso. Completar todas cierra
+  el caso automáticamente; la ficha permanece 0,85 s para recibir la última pieza.
+- En la oficina cada estación completada envía su símbolo desde la herramienta
+  a la casilla correspondiente durante 0,62 s. No aparece otro check central ni texto
+  «¡HECHO!». Conserva el sonido original estéreo de lápiz y dos notas suaves,
   `Audios/tarea_completada.wav` (1,1 segundos), sincronizado con el dibujo.
-  El efecto y el audio se congelan con la pausa; repetir una tarea o usar una
+  El vuelo, la carpeta y el audio se congelan con la pausa; repetir una tarea o usar una
   estación incorrecta no los vuelve a activar. La última tarea conserva el efecto
   aunque su caso se cierre. Cambiar de sistema o vencer el mismo caso lo cancela.
   El audio sigue el volumen del bus Master, con una atenuación adicional de 6,5 dB.
@@ -109,9 +107,9 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   Su referencia es 140×158 píxeles a 1280×720, con margen de 24 píxeles;
   escala proporcionalmente y desplaza los avisos de apagón hacia arriba solo mientras
   está visible. No captura entradas. El círculo y la leyenda son controles
-  nativos; `Arte/papel_medallon.png` conserva el documento 3D aprobado sin
-  renderizar una escena adicional cada cuadro. Se regenera desde el modelo real
-  ejecutando Godot con `--path proyecto-4-semestre --script ../herramientas/renderizar_papel_hud.gd`.
+  nativos; el medallón muestra ahora la carpeta que lleva el personaje. La hoja
+  física mantiene su tamaño, colisión y manejo, con cubierta ocre y piezas claras
+  que se incorporan según el progreso de ese expediente.
 - La mesa física de seguridad (`privacidad`) inicia un desencriptado de seis
   segundos al pulsar E con la hoja. La barra coral se llena sobre la estación y
   otra línea se llena debajo de «DESENCRIPTANDO», en el centro inferior. Ambas

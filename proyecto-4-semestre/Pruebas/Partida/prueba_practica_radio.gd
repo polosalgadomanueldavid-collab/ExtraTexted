@@ -81,7 +81,7 @@ func _run() -> void:
 	clasificador._archivar()
 	await _cuadros(3)
 	_verificar(practica.paso == practica.Paso.PREMIO and sistema.puntuacion.puntos == maquina.precios[0], "El caso real concede exactamente el precio del chocolate")
-	_verificar(not practica.radio.visible and oficina.panel_despacho.efecto_tarea.visible, "Al completar solo aparece ¡Hecho!, sin sueldo ni radio superpuestos")
+	_verificar(not practica.radio.visible and oficina.panel_despacho.efecto_tarea.visible and oficina.panel_despacho.efecto_tarea.modo_expediente, "Al completar aparece la entrega del resultado, sin radio ni avisos superpuestos")
 	_verificar(sistema.puntuacion.puntos_ganados == 0 and oficina._resueltas.is_empty(), "La práctica no infla el récord ni las estadísticas del turno")
 	_verificar(not is_instance_valid(oficina.papel_actual), "Resolver retira la hoja real")
 	await _cuadros(26)

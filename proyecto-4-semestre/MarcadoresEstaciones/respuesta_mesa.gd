@@ -1,136 +1,82 @@
 extends Node3D
-## Planilla apoyada sobre el tablero. Mismo pictograma que el expediente, sin texto.
+## Luz de trabajo sobre el diseño original, sin superponer materiales a sus mallas.
 
-const ICONO := preload("res://UI/Despacho/icono_despacho.gd")
-const CREMA := Color("fff1d8")
-const TINTA := Color("173b50")
-const VERDE := Color("507b65")
-
+const REGIONES := {
+	"evidencias": AABB(Vector3(-.60,.54,-.04), Vector3(.48,.28,.33)),
+	"verificacion": AABB(Vector3(.0,.56,-.22), Vector3(.58,.42,.36)),
+	"privacidad": AABB(Vector3(-.61,.54,-.20), Vector3(.38,.22,.38)),
+	"reporte": AABB(Vector3(-.60,.52,-.20), Vector3(.46,.07,.47)),
+	"bienestar": AABB(Vector3(.20,.54,-.24), Vector3(.34,.35,.36))
+}
 var estacion_id := ""
 var caso_id := ""
 var pendiente := false
 var completada := false
 var cercana := false
 var _caso: Denuncia
+var modelo_original: Node3D
+var piezas_originales: Array[MeshInstance3D] = []
+var _capas_originales: Array[int] = []
+var luz_trabajo: SpotLight3D
 var _firma := ""
-var _tween: Tween
-var _receptor: Node3D
-var _hoja: MeshInstance3D
-var _simbolo: Node3D
-var _sello: Node3D
-var _piloto: StandardMaterial3D
-var _base: StandardMaterial3D
-
+var intensidad := 0.0:
+	set(valor):
+		intensidad = valor
+		if is_instance_valid(luz_trabajo): luz_trabajo.light_energy = valor
+var _transicion: Tween
 
 func configurar(id: String) -> void:
 	estacion_id = id
-	name = "RespuestaFisica_" + id
-	# Reservar una zona del tablero sin tocar los modelos importados.
-	var altura_tablero := {"bienestar": .53, "verificacion": .52, "evidencias": .52, "privacidad": .53, "reporte": .51}
-	position = Vector3(-0.43, float(altura_tablero.get(id, .52)) + .003, -0.16)
-	# Estas tres mesas ya tienen objetos en las esquinas: reservar el frente libre.
-	if id in ["bienestar", "verificacion", "evidencias"]:
-		position.x = .06 if id == "bienestar" else 0.0
-		position.z = .12
-	_receptor = Node3D.new()
-	if id in ["bienestar", "verificacion", "evidencias"]:
-		_receptor.rotation.y = PI
-	add_child(_receptor)
-	var tabla := _caja(_receptor, "Planilla", Vector3(.30, .006, .20), Vector3.ZERO, Color("bba071"))
-	_base = tabla.material_override as StandardMaterial3D
-	_hoja = _caja(_receptor, "DocumentoTramitado", Vector3(.27, .002, .17), Vector3(0, .004, 0), CREMA)
-	_hoja.visible = false
-	_simbolo = _crear_simbolo(id)
-	_simbolo.name = "SimboloEnReceptor"
-	_simbolo.position.y = .0065
-	_receptor.add_child(_simbolo)
-	_sello = Node3D.new()
-	_sello.name = "SelloCompletado"
-	_sello.position = Vector3(.075, .008, -.035)
-	_receptor.add_child(_sello)
-	var trazo := _caja(_sello, "CheckCorto", Vector3(.040, .003, .012), Vector3(-.018, 0, -.008), VERDE)
-	trazo.rotation.y = -.7
-	trazo = _caja(_sello, "CheckLargo", Vector3(.075, .003, .012), Vector3(.017, 0, .006), VERDE)
-	trazo.rotation.y = .75
-	_sello.hide()
-	var piloto := _caja(_receptor, "EstadoPlanilla", Vector3(.020, .003, .014), Vector3(.130, .005, -.087), Color("6b7263"))
-	_piloto = piloto.material_override as StandardMaterial3D
-	_piloto.emission_enabled = true
-	_piloto.emission = Color("d5eca8")
-	_piloto.emission_energy_multiplier = 0.0
-	_caja(_receptor, "PinzaPlanilla", Vector3(.07, .006, .021), Vector3(0, .007, .087), Color("a8b3ab"))
+	name = "RespuestaModelo_" + id
+	var mesa := get_parent().get_parent() as MeshInstance3D
+	for hijo: Node in mesa.get_children():
+		if str(hijo.name).begins_with("Diseno_") and hijo is Node3D:
+			modelo_original = hijo as Node3D
+			break
+	if modelo_original == null: return
+	for pieza: MeshInstance3D in modelo_original.find_children("*", "MeshInstance3D", true, false):
+		piezas_originales.append(pieza)
+		_capas_originales.append(pieza.layers)
+		pieza.set_layer_mask_value(19, true)
+	# No se toca material_override/material_overlay: la textura y la iluminación
+	# del GLB permanecen intactas, también durante la compilación de shaders.
+	luz_trabajo = SpotLight3D.new()
+	luz_trabajo.name = "LuzDeTrabajo"
+	luz_trabajo.position = Vector3(0, 1.55, 0)
+	luz_trabajo.rotation.x = -PI / 2.0
+	luz_trabajo.light_color = Color("fff1d8")
+	luz_trabajo.light_specular = 0.0
+	luz_trabajo.light_energy = 0.0
+	luz_trabajo.spot_range = 1.55
+	luz_trabajo.spot_angle = 50.0
+	luz_trabajo.spot_attenuation = 0.6
+	luz_trabajo.shadow_enabled = false
+	# La luz adicional alcanza solo el mobiliario, nunca los flotantes o el jugador.
+	luz_trabajo.light_cull_mask = 1 << 18
+	add_child(luz_trabajo)
 
+func _exit_tree() -> void:
+	for i in piezas_originales.size():
+		if is_instance_valid(piezas_originales[i]):
+			piezas_originales[i].layers = _capas_originales[i]
 
 func actualizar(caso: Denuncia, habilitada: bool, cerca: bool) -> void:
-	# El papel terminado queda sobre la mesa hasta recibir otro expediente.
 	if caso == null and _caso != null and _caso.estado == Denuncia.Estado.RESUELTA:
 		caso = _caso
-	var nuevo_id := caso.id if caso != null else ""
-	var cambio_caso := nuevo_id != caso_id
-	var antes_completada := completada
 	_caso = caso
-	caso_id = nuevo_id
+	caso_id = caso.id if caso != null else ""
 	completada = caso != null and caso.estaciones_completadas.has(estacion_id)
 	pendiente = caso != null and caso.estado == Denuncia.Estado.EN_PROCESO and caso.obtener_estaciones_pendientes().has(estacion_id)
 	cercana = cerca and pendiente and habilitada
-	var firma := "%s|%s|%s|%s|%s" % [caso_id, pendiente, completada, cercana, habilitada]
-	if firma == _firma:
-		return
+	var firma := "%s|%s|%s|%s|%s" % [caso_id, completada, pendiente, cercana, habilitada]
+	if firma == _firma: return
 	_firma = firma
-	if _tween != null:
-		_tween.kill()
-	_piloto.albedo_color = Color("d5eca8") if pendiente and habilitada else Color("6b7263")
-	_piloto.emission_energy_multiplier = .20 if cercana else 0.0
-	_base.albedo_color = Color("dcb581") if cercana else Color("bba071")
-	_hoja.visible = pendiente or completada
-	(_hoja.material_override as StandardMaterial3D).albedo_color = Color("e3eccf") if completada else CREMA
-	_sello.visible = completada
-	_simbolo.visible = pendiente or completada
-	_sello.scale = Vector3.ONE
-	if is_inside_tree() and not cambio_caso and completada and not antes_completada:
-		_sello.scale = Vector3(.65, 1.0, .65)
-		_tween = create_tween()
-		_tween.tween_property(_sello, "scale", Vector3.ONE, .18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var objetivo := (.85 if cercana else .45) if pendiente else (.12 if completada else 0.0)
+	if not habilitada: objetivo = 0.0
+	if _transicion != null: _transicion.kill()
+	_transicion = create_tween()
+	_transicion.tween_property(self, "intensidad", objetivo, .18)
 
-
-func _caja(padre: Node3D, nombre: String, tamano: Vector3, lugar: Vector3, color: Color) -> MeshInstance3D:
-	var pieza := MeshInstance3D.new()
-	pieza.name = nombre
-	var caja := BoxMesh.new()
-	caja.size = tamano
-	pieza.mesh = caja
-	pieza.position = lugar
-	pieza.material_override = _material(color)
-	padre.add_child(pieza)
-	return pieza
-
-
-func _crear_simbolo(id: String) -> MeshInstance3D:
-	# El mismo dibujo del expediente, impreso sobre el receptor. Se renderiza una vez.
-	var vista := SubViewport.new()
-	vista.size = Vector2i(128, 128)
-	vista.transparent_bg = true
-	vista.disable_3d = true
-	vista.render_target_update_mode = SubViewport.UPDATE_ONCE
-	var icono := ICONO.new()
-	icono.tipo = ICONO.tipo_estacion(id)
-	icono.tinta = TINTA
-	icono.size = Vector2(128, 128)
-	vista.add_child(icono)
-	add_child(vista)
-	var impresion := MeshInstance3D.new()
-	var plano := PlaneMesh.new()
-	plano.size = Vector2(.135, .135)
-	impresion.mesh = plano
-	var material := _material(Color.WHITE)
-	material.albedo_texture = vista.get_texture()
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	impresion.material_override = material
-	return impresion
-
-
-func _material(color: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = .88
-	return material
+func origen_resultado() -> Vector3:
+	var region: AABB = REGIONES[estacion_id]
+	return get_parent().to_global(region.get_center())

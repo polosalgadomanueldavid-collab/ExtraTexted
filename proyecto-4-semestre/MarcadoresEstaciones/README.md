@@ -37,6 +37,20 @@ el mobiliario.
 
 ## Integración
 
+Las cinco escenas 3D originales conservan sus diseños y materiales completos.
+Los marcadores flotantes están visibles para todas las estaciones pendientes.
+El HUD utiliza los mismos símbolos de carpeta, lupa, candado, documento y corazón,
+en tinta petróleo sobre crema, sin texto ni miniaturas difíciles de leer.
+Completar envía el mismo símbolo a su casilla y añade una marca verde.
+
+`respuesta_mesa.gd` añade una luz de trabajo cálida y localizada, más intensa al
+poder interactuar. Su máscara solo ilumina el mobiliario original (capa 19);
+no alcanza los marcadores, al jugador ni al resto del escenario. No asigna
+`material_override` ni `material_overlay`, evitando que un resaltado aditivo
+blanquee la mesa completa. Apagón, incendio y pausa se respetan.
+`respuestas_visuales_mesas = false` desactiva únicamente esta luz adicional.
+La tecla E/X conserva su alcance físico habitual y no se impone ningún orden.
+
 `MarcadoresEstaciones/indicador_proxima_estacion.gd` coloca el modelo y el puntero bajo
 `OrientacionCamara`. Los orienta a la cámara activa y aplica una flotación y
 un balanceo limitados, sin girar la cara del icono de espaldas. Todos los objetivos

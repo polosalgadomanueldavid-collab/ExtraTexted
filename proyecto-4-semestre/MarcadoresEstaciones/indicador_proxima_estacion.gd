@@ -15,6 +15,10 @@ const ESCALA_MARCADOR: float = 0.78
 @export_range(0.08, 0.5, 0.01) var alto_maximo_pantalla: float = 0.14
 
 var estacion_id: String = ""
+var mostrar_modelo := true:
+	set(valor):
+		mostrar_modelo = valor
+		if is_instance_valid(_orientacion): _orientacion.visible = valor
 var interactuable: bool = false
 var _orientacion: Node3D
 var _modelo: Node3D
@@ -51,6 +55,7 @@ func configurar(nueva_estacion_id: String, nombre_estacion: String) -> void:
 		_orientacion.free()
 	_orientacion = Node3D.new()
 	_orientacion.name = "OrientacionCamara"
+	_orientacion.visible = mostrar_modelo
 	add_child(_orientacion)
 	_modelo = MODELOS.crear(estacion_id)
 	_modelo.position.y = 0.16

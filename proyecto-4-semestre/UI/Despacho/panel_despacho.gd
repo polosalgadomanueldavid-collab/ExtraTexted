@@ -36,6 +36,9 @@ var efecto_tarea: EfectoTarea
 var puntos_animados: Label
 var _animacion_saldo: Tween
 var _saldo_visual := 0.0
+var origen_resultado: Callable
+var _caso_cierre: Denuncia
+var _segundos_cierre := 0.0
 
 
 func _ready() -> void:
@@ -67,6 +70,9 @@ func _process(delta: float) -> void:
 		return
 	for id: String in tarjetas:
 		_actualizar_tarjeta(denuncias_visibles[id])
+	if _segundos_cierre > 0.0:
+		_segundos_cierre = maxf(0, _segundos_cierre - delta)
+		if is_zero_approx(_segundos_cierre): _caso_cierre = null
 	_actualizar_denuncia_activa()
 	_actualizar_mensaje(delta)
 	if segundos_recompensa > 0.0:
@@ -99,6 +105,9 @@ func configurar_sistema(nuevo_sistema: SistemaDespacho) -> void:
 	segundos_recompensa = 0.0
 	puntos_ganancia.text = ""
 	_id_activo = ""
+	_caso_cierre = null
+	_segundos_cierre = 0.0
+	protocolo.limpiar_entregas()
 	if not is_instance_valid(sistema_despacho):
 		_puntos_mostrados = 0
 		actualizar_puntos(0)
@@ -304,6 +313,11 @@ func _actualizar_denuncia_activa() -> void:
 	var denuncia: Denuncia = null
 	if is_instance_valid(sistema_despacho):
 		denuncia = sistema_despacho.obtener_denuncia_activa()
+	if denuncia != null:
+		_caso_cierre = null
+		_segundos_cierre = 0.0
+	if denuncia == null and _segundos_cierre > 0.0:
+		denuncia = _caso_cierre
 	denuncia_activa_detalle.visible = denuncia != null
 	%SinCasoActivo.visible = denuncia == null
 	if denuncia == null:
@@ -314,6 +328,7 @@ func _actualizar_denuncia_activa() -> void:
 		progreso_estaciones.text = ""
 		return
 	if _id_activo != denuncia.id:
+		protocolo.limpiar_entregas()
 		_id_activo = denuncia.id
 		denuncia_activa_titulo.text = denuncia.titulo
 		var color := _color_riesgo(denuncia.nivel_riesgo)
@@ -325,14 +340,17 @@ func _actualizar_denuncia_activa() -> void:
 		%EtiquetaRiesgo.add_theme_color_override("font_color", CREMA)
 		%IconoRiesgo.acento = color.darkened(0.32)
 		%IconoRiesgo.queue_redraw()
+	var requeridas := denuncia.obtener_estaciones_requeridas()
+	protocolo.configurar(requeridas, denuncia.estaciones_completadas)
+	progreso_estaciones.text = "%d/%d COMPLETADAS" % [denuncia.estaciones_completadas.size(), requeridas.size()]
+	if denuncia.estado == Denuncia.Estado.RESUELTA:
+		reloj_activo.sincronizar_tiempo(reloj_activo.proporcion_restante, 1.0, false)
+		return
 	recompensa_caso.text = "AL RESOLVER\n+%s PTS" % _formatear_puntos(denuncia.obtener_puntaje_recompensa())
 	var tiempo := sistema_despacho.obtener_tiempo_restante(denuncia.id)
 	denuncia_activa_tiempo.text = "SIN PLAZO" if denuncia.es_practica else _formatear_tiempo(tiempo)
 	denuncia_activa_tiempo.add_theme_font_size_override("font_size", 25 if denuncia.es_practica else 46)
 	reloj_activo.sincronizar_tiempo(tiempo, denuncia.tiempo_limite_segundos, not denuncia.es_practica)
-	var requeridas := denuncia.obtener_estaciones_requeridas()
-	protocolo.configurar(requeridas, denuncia.estaciones_completadas)
-	progreso_estaciones.text = "%d/%d COMPLETADAS" % [denuncia.estaciones_completadas.size(), requeridas.size()]
 
 
 func _formatear_tiempo(tiempo: float) -> String:
@@ -374,22 +392,48 @@ func _on_estacion_completada(denuncia: Denuncia, estacion_id: String) -> void:
 	mostrar_tarea_local(denuncia.id, estacion_id)
 
 func mostrar_tarea_local(caso_id: String, estacion_id: String) -> void:
+	efecto_tarea.modo_expediente = origen_resultado.is_valid()
+	if efecto_tarea.modo_expediente:
+		_actualizar_denuncia_activa()
+		if _id_activo != caso_id or not protocolo.estaciones.has(estacion_id):
+			return
+		mensaje_estacion.hide()
+		segundos_mensaje = 0.0
+		efecto_tarea.resultado_id = estacion_id
+		efecto_tarea.origen_resultado = origen_resultado.call(estacion_id)
+		efecto_tarea.destino_resultado = protocolo.centro_resultado(estacion_id)
+		protocolo.iniciar_entrega(estacion_id)
 	efecto_tarea.reproducir(IconoDespacho.nombre_estacion(estacion_id), caso_id)
-	_mostrar_mensaje("Correcto: %s completada." % IconoDespacho.nombre_estacion(estacion_id), Color("86efac"))
+	if not efecto_tarea.modo_expediente:
+		_mostrar_mensaje("Correcto: %s completada." % IconoDespacho.nombre_estacion(estacion_id), Color("86efac"))
 
 
 func _on_estacion_incorrecta(denuncia: Denuncia, estacion_usada: String) -> void:
+	if origen_resultado.is_valid():
+		mensaje_estacion.hide()
+		segundos_mensaje = 0.0
+		protocolo.recordar_requisitos()
+		return
 	if denuncia.estaciones_completadas.has(estacion_usada):
 		_mostrar_mensaje("Ya completaste %s. Elige otra pendiente." % IconoDespacho.nombre_estacion(estacion_usada), CORAL)
 	else:
 		_mostrar_mensaje("Esta estación no corresponde al caso. Elige una marcada.", CORAL)
 
 
-func _on_denuncia_resuelta(_denuncia: Denuncia) -> void:
-	_mostrar_mensaje("Denuncia resuelta: +5 de calma.", Color("86efac"))
+func _on_denuncia_resuelta(denuncia: Denuncia) -> void:
+	if origen_resultado.is_valid():
+		if _id_activo != denuncia.id: return
+		_caso_cierre = denuncia
+		_segundos_cierre = .85
+		mensaje_estacion.hide()
+	else:
+		_mostrar_mensaje("Denuncia resuelta: +5 de calma.", Color("86efac"))
 
 
 func _on_denuncia_vencida(denuncia: Denuncia) -> void:
+	if _caso_cierre == denuncia:
+		_caso_cierre = null
+		_segundos_cierre = 0.0
 	if efecto_tarea.caso_id == denuncia.id:
 		efecto_tarea.detener()
 	if denuncia.motivo_perdida == Denuncia.MotivoPerdida.TERREMOTO:
