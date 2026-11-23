@@ -148,7 +148,9 @@ func _dibujar_objetivo() -> void:
 	if not is_instance_valid(objetivo) or not objetivo.is_inside_tree(): return
 	var camara := get_viewport().get_camera_3d()
 	if camara == null: return
-	var punto := objetivo.global_position+Vector3.UP*1.1
+	# El PC ya tiene su origen sobre la mesa: usar el mismo anclaje del sobre.
+	var altura := .38 if objeto_objetivo == "pc" else 1.1
+	var punto := objetivo.global_position + Vector3.UP * altura
 	var destino := camara.unproject_position(punto)
 	_ubicar_objetivo(destino, camara.is_position_behind(punto), _area_objetivo())
 	_panel(_caja_objetivo, CREMA, TINTA)
@@ -172,16 +174,19 @@ func _ubicar_objetivo(destino: Vector2, detras: bool, area: Rect2) -> void:
 	var centro := destino - Vector2(0, 48) * _factor
 	_direccion_objetivo = Vector2.DOWN
 	if detras or not area.has_point(centro):
-		# Intersección de un rayo con el área libre, en lugar de sujetar cada eje.
-		var direccion := destino - area.get_center()
+		# La tarjeta se queda lo más cerca posible del objeto. La flecha se
+		# calcula desde su posición final, también cuando el HUD la desplaza.
+		centro = centro.clamp(area.position, area.end)
+		var direccion := destino - centro
 		if detras:
 			direccion = -(destino - size * .5)
 		if direccion.is_zero_approx():
 			direccion = Vector2.UP
 		_direccion_objetivo = direccion.normalized()
-		var mitad := area.size * .5
-		var proporcion := maxf(absf(direccion.x) / mitad.x, absf(direccion.y) / mitad.y)
-		centro = area.get_center() + direccion / proporcion
+		if detras:
+			var mitad := area.size * .5
+			var proporcion := maxf(absf(direccion.x) / mitad.x, absf(direccion.y) / mitad.y)
+			centro = area.get_center() + direccion / proporcion
 	_caja_objetivo = Rect2(centro - Vector2(39, 38)*_factor, Vector2(78, 76)*_factor)
 
 func _panel(caja: Rect2, color: Color, borde: Color) -> void:

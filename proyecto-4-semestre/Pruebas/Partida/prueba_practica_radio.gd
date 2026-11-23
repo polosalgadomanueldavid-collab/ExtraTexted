@@ -155,7 +155,7 @@ func _run() -> void:
 	menu.abrir_pausa()
 	menu.abrir_tutorial()
 	await _cuadros(4)
-	_verificar(menu.panel_ayuda.boton_practica.is_visible_in_tree() and menu.panel_ayuda.controles_foco().has(menu.panel_ayuda.boton_practica), "Ayuda expone la práctica con navegación de teclado y mando")
+	_verificar(menu.panel_ayuda.find_child("RepetirPractica", true, false) == null, "Ayuda no ofrece una acción que reinicie el turno")
 	await _captura("07_ayuda")
 	menu.cerrar_ayuda()
 	menu.reanudar_juego()

@@ -51,10 +51,7 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var factor := minf(size.x / 1280.0, size.y / 720.0)
-	var ancla := Vector2(
-		clampf(ancla_pantalla.x, 112.0 * factor, size.x - 112.0 * factor),
-		maxf(ancla_pantalla.y, 148.0 * factor)
-	)
+	var ancla := ancla_pantalla
 	draw_set_transform(ancla, 0.0, Vector2.ONE * factor)
 	var avance := clampf(tiempo_llegada / 0.55, 0.0, 1.0)
 	var rebote := float(Tween.interpolate_value(0.45, 0.55, avance, 1.0, Tween.TRANS_BACK, Tween.EASE_OUT))
@@ -64,7 +61,7 @@ func _draw() -> void:
 	_caja(Rect2(-18, -39, ancho, 27), CREMA, TINTA)
 	_texto(etiqueta, Vector2(-18, -19), 19, TINTA, ancho)
 	draw_colored_polygon(PackedVector2Array([Vector2(-7, -6), Vector2(7, -6), Vector2(0, 3)]), CORAL)
-	var desplazamiento := Vector2((1.0 - avance) * 40.0, -(1.0 - avance) * 20.0 - 61.0)
+	var desplazamiento := Vector2(0, -61.0)
 	draw_set_transform(ancla + desplazamiento * factor, -0.12, Vector2.ONE * factor * rebote)
 	_caja(Rect2(-26, -16, 52, 34), CORAL, TINTA)
 	draw_polyline(PackedVector2Array([Vector2(-24, -14), Vector2(0, 5), Vector2(24, -14)]), TINTA, 2.5, true)

@@ -68,6 +68,10 @@ func _probar_guia() -> void:
 				_verificar(pantalla.encloses(caja) and not caja.intersects(barra.get_global_rect()) and caja.end.y < radio._caja.position.y * radio._factor, "Tarjeta y flecha respetan pantalla, casos y radio: %s" % resolucion)
 		radio._ubicar_objetivo(area.get_center() + Vector2(0, 48)*radio._factor, false, area)
 		_verificar(radio._caja_objetivo.get_center().is_equal_approx(area.get_center()) and radio._direccion_objetivo == Vector2.DOWN, "Un destino visible mantiene el marcador sobre el objeto")
+		# Un PC alto en pantalla no debe mover su icono hacia un lateral.
+		var pc_alto := Vector2(area.get_center().x, area.position.y - 30*radio._factor)
+		radio._ubicar_objetivo(pc_alto, false, area)
+		_verificar(is_equal_approx(radio._caja_objetivo.get_center().x, pc_alto.x) and radio._direccion_objetivo == Vector2.UP, "El PC cerca del borde superior conserva su eje y la flecha lo señala")
 	radio.queue_free()
 	barra.queue_free()
 	await process_frame

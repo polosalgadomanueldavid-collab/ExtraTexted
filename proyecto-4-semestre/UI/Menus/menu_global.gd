@@ -99,7 +99,6 @@ func _ready() -> void:
 	%CancelarSalida.pressed.connect(_mostrar_pausa)
 	%ConfirmarSalida.pressed.connect(volver_al_menu)
 	panel_ayuda.boton_cerrar.pressed.connect(cerrar_ayuda)
-	panel_ayuda.practica_solicitada.connect(repetir_practica)
 	panel_ayuda.navegacion_cambiada.connect(_reconfigurar_foco_ayuda)
 	SesionLAN.tutorial_actualizado.connect(_actualizar_tutorial_lan)
 	panel_clasificacion.boton_volver.pressed.connect(_cerrar_clasificacion)

@@ -42,7 +42,7 @@ un marcador dibujado sin texto. La radio se reduce durante el archivador y se oc
 en la tienda, los menús y el vuelo de la pieza completada. Respeta la pausa y la
 preferencia de movimiento de cámara.
 
-Mientras dura, el despacho protege calma y plazos; se detienen denuncias nuevas, bloqueos y emergencias. El caso concede saldo gastable pero no suma al récord, la duración ni las estadísticas del turno. Al terminar o pulsar F2/Vista para omitir, se retira la guía, se guarda `user://practica_radio.cfg` y empieza el turno normal. Ayuda incluye **PRÁCTICA POR RADIO · TURNO NUEVO** para repetirla en otra oficina. La introducción compartida de LAN conserva sus guías actuales.
+Mientras dura, el despacho protege calma y plazos; se detienen denuncias nuevas, bloqueos y emergencias. El caso concede saldo gastable pero no suma al récord, la duración ni las estadísticas del turno. Al terminar o pulsar F2/Vista para omitir, se retira la guía, se guarda `user://practica_radio.cfg` y empieza el turno normal. Ayuda permite consultar las guías sin reiniciar la oficina ni ofrecer un botón de turno nuevo. La introducción compartida de LAN conserva sus guías actuales.
 
 Validación: `Godot --headless --path proyecto-4-semestre --fixed-fps 60 --script res://Pruebas/Partida/prueba_practica_radio.gd`. Sin `--headless`, añadir `-- --capturas` para guardar las fases y Ayuda en `.godot/practica_radio_qa`. La prueba usa un perfil temporal independiente del usuario.
 

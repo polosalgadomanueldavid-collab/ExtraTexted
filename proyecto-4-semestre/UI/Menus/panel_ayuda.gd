@@ -1,7 +1,5 @@
 extends PanelContainer
 signal navegacion_cambiada
-signal practica_solicitada
-var boton_practica: Button
 
 const CREMA := Color("fff1d8")
 const PETROLEO := Color("173b50")
@@ -67,17 +65,6 @@ var _estilos_cierre: Dictionary = {}
 
 
 func _ready() -> void:
-	boton_practica = Button.new()
-	boton_practica.name = "RepetirPractica"
-	boton_practica.text = "PRÁCTICA POR RADIO\nTURNO NUEVO"
-	boton_practica.tooltip_text = "Abre una oficina nueva para practicar recogida, Evidencias y tienda."
-	boton_practica.theme = TEMA_AJUSTES
-	boton_practica.add_theme_font_override("font", fuente_enfasis)
-	boton_practica.add_theme_font_size_override("font_size", 20)
-	boton_practica.pressed.connect(func(): practica_solicitada.emit())
-	boton_cerrar.get_parent().add_child(boton_practica)
-	boton_cerrar.get_parent().move_child(boton_practica, boton_cerrar.get_index())
-	visibility_changed.connect(func(): boton_practica.visible = not SesionLAN.activa)
 	leyenda.navegacion_cambiada.connect(func(): navegacion_cambiada.emit())
 	_crear_pasos(tutorial, PASOS)
 	_crear_pasos(tutorial_apagon, PASOS_APAGON)
@@ -230,8 +217,6 @@ func controles_foco() -> Array[Control]:
 		controles.append_array(leyenda.controles_foco())
 	elif navegacion.visible:
 		controles.append_array(pestanas_tutorial)
-	if is_instance_valid(boton_practica) and boton_practica.visible:
-		controles.append(boton_practica)
 	controles.append(boton_cerrar)
 	return controles
 

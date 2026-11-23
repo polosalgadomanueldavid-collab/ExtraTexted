@@ -8,9 +8,12 @@ func _initialize() -> void:
 
 
 func probar() -> void:
+	root.get_node("MenuGlobal").omitir_tutorial_siguiente_partida = true
 	var oficina: Variant = (load("res://Mundo/Oficina.tscn") as PackedScene).instantiate()
 	root.add_child(oficina)
 	current_scene = oficina
+	while not oficina.oficina_preparada:
+		await process_frame
 	var intentos := 0
 	while oficina.final_partida == null and intentos < 20:
 		await physics_frame
@@ -162,7 +165,7 @@ func probar() -> void:
 	quit(1 if fallos > 0 else 0)
 
 
-func _esperar_relevo(final: FinalPartida) -> bool:
+func _esperar_relevo(final: Control) -> bool:
 	# Espera el estado real de la escena, con límite incluso si falla su señal final.
 	return await _esperar_condicion(func() -> bool: return final._relevo_finalizado)
 

@@ -12,7 +12,7 @@ func _initialize() -> void:
 func probar() -> void:
 	if DisplayServer.get_name() != "headless":
 		root.size = Vector2i(1280, 720)
-	for escenario: String in ["junto_puerta", "umbral", "pasillo", "reparando_apagon", "caida_terremoto", "aviso_terremoto", "inundacion", "hielo", "inundacion_puerta", "hielo_puerta", "incendio", "lava"]:
+	for escenario: String in ["cerca_companero", "junto_puerta", "umbral", "pasillo", "reparando_apagon", "caida_terremoto", "aviso_terremoto", "inundacion", "hielo", "inundacion_puerta", "hielo_puerta", "incendio", "lava"]:
 		if not OS.get_environment("RELEVO_ESCENARIO").is_empty() and OS.get_environment("RELEVO_ESCENARIO") != escenario:
 			continue
 		await _probar_escenario(escenario)
@@ -43,6 +43,8 @@ func _probar_escenario(escenario: String) -> void:
 	oficina.jugador.set_physics_process(false)
 	var puerta: Node3D = oficina.get_node("PuertaRelevo")
 	match escenario:
+		"cerca_companero":
+			oficina.jugador.global_position = puerta.to_global(Vector3(0, 0.0, -.99))
 		"junto_puerta":
 			oficina.jugador.global_position = puerta.to_global(Vector3(0.24, 0.0, 0.95))
 		"umbral":
@@ -66,7 +68,6 @@ func _probar_escenario(escenario: String) -> void:
 			_verificar(oficina.call("_iniciar_" + escenario.trim_suffix("_puerta")), "Se prepara " + escenario)
 			for cuadro in 270:
 				await physics_frame
-	var cajas: int = oficina.bloqueos_visuales.size()
 	if escenario == "hielo_puerta":
 		oficina.jugador.velocity = Vector3(-0.35, 0, 0.1)
 	var fatal := Denuncia.new()
@@ -81,7 +82,7 @@ func _probar_escenario(escenario: String) -> void:
 	var cine: Node3D = oficina.cinematica_relevo
 	_verificar(oficina.partida_finalizada and paused and is_instance_valid(cine), escenario + ": relevo con el despacho detenido")
 	_verificar(not oficina.final_partida._tarjeta.visible, escenario + ": la tarjeta espera a la escena")
-	_verificar(oficina.bloqueos_visuales.size() == cajas, escenario + ": se conservan los obstáculos del momento")
+	_verificar(oficina.bloqueos_visuales.is_empty(), escenario + ": las mesas temporales liberan la salida")
 	if escenario == "reparando_apagon":
 		_verificar(not oficina.evento_apagon.panel.visible and oficina.evento_apagon.mascara.visible, "Se cierra el circuito y se conserva la oscuridad")
 		var apagadas := true
@@ -101,10 +102,15 @@ func _probar_escenario(escenario: String) -> void:
 	var temblor := false
 	var cuadros := 0
 	var captura := false
+	var salto_maximo := 0.0
+	var anterior: Vector3 = oficina.jugador.global_position
 	for intento in 6600:
 		await physics_frame
 		cuadros += 1
 		var actores := [oficina.jugador, cine.companero]
+		if actores[0].visible:
+			salto_maximo = maxf(salto_maximo, actores[0].global_position.distance_to(anterior))
+		anterior = actores[0].global_position
 		if actores[0].visible:
 			var diferencia: Vector3 = actores[0].global_position - actores[1].global_position
 			separacion_minima = minf(separacion_minima, Vector2(diferencia.x, diferencia.z).length())
@@ -125,7 +131,10 @@ func _probar_escenario(escenario: String) -> void:
 			print("CAPTURA: ", ProjectSettings.globalize_path(ruta))
 		if oficina.final_partida._relevo_finalizado:
 			break
-	_verificar(separacion_minima >= cine.SEPARACION - 0.01, "%s: no se atraviesan en ningún cuadro (mínimo %.3f m)" % [escenario, separacion_minima])
+	if escenario == "cerca_companero":
+		_verificar(separacion_minima >= .49 and salto_maximo < .15, "Empezar cerca permite separarse y salir sin teletransporte")
+	else:
+		_verificar(separacion_minima >= cine.SEPARACION - 0.01, "%s: no se atraviesan en ningún cuadro (mínimo %.3f m)" % [escenario, separacion_minima])
 	_verificar(oficina.final_partida._relevo_finalizado, escenario + ": ambos completan el relevo")
 	if not oficina.final_partida._relevo_finalizado:
 		print("DIAGNOSTICO ", escenario, " jugador=", oficina.jugador.global_position, " relevo=", cine.companero.global_position, " movimientos=", cine._movimientos)
