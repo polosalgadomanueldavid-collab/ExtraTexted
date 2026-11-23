@@ -14,6 +14,9 @@ func _probar() -> void:
 	root.size = Vector2i(1280, 720)
 	_menu = root.get_node("MenuGlobal")
 	_menu.set("nombre_partida", "")
+	# Esta prueba ejercita los circuitos. La práctica inicial bloquea los eventos
+	# deliberadamente y tiene su propia suite en Pruebas/Partida.
+	_menu.omitir_tutorial_siguiente_partida = true
 	_escena = (load("res://Mundo/Oficina.tscn") as PackedScene).instantiate() as Node3D
 	root.add_child(_escena)
 	current_scene = _escena

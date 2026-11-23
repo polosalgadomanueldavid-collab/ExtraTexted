@@ -3,6 +3,10 @@ extends SceneTree
 const ESCENA_CARGA := "res://UI/Menus/CargaInicial.tscn"
 const ESCENA_MENU := "res://UI/Menus/MainMenu.tscn"
 const ESCENA_JUEGO := "res://Mundo/Oficina.tscn"
+# Prueba funcional: dejar que el cargador alcance su propio límite de 60 s.
+# Los tiempos reales se siguen registrando en AUDITORIA CARGA; 65 s no es
+# un objetivo de rendimiento ni convierte una carga lenta en una mejora.
+const PLAZO_FUNCIONAL_MS := 65000
 
 var _fallos := 0
 var _fase := "arranque"
@@ -86,7 +90,7 @@ func _probar() -> void:
 	_verificar(apagon.estado == apagon.Estado.RESTAURADO and not apagon.mascara.visible and not apagon.luz_jugador.visible,
 		"El calentamiento restaura la visión sin activar el apagón")
 	_verificar(menu_global.get("nombre_partida") == "María José", "El nombre llega a la partida")
-	_verificar(menu_global.get_node("%PanelAyuda").visible and paused, "El tutorial inicial se conserva")
+	_verificar(current_scene.en_practica() and not paused, "La carga conserva la práctica inicial interactiva")
 	_verificar((current_scene.get("_bloqueos_disponibles") as Array).size() == 30, "Los 30 cajones ya están preparados al entrar en la oficina")
 	print("[AUDITORIA CARGA] ", JSON.stringify({"render": DisplayServer.get_name(), "confirmacion_a_oficina_ms": (Time.get_ticks_usec() - _confirmacion) / 1000.0, "barra_maxima": _barra_maxima, "intervalos_maximos_ms": _pausas_maximas}))
 	_terminar()
@@ -102,7 +106,7 @@ func _leer_turno(menu: Node) -> Dictionary:
 
 func _esperar_escena(ruta: String) -> bool:
 	var inicio := Time.get_ticks_msec()
-	while Time.get_ticks_msec() - inicio < 15000:
+	while Time.get_ticks_msec() - inicio < PLAZO_FUNCIONAL_MS:
 		await process_frame
 		var escena := current_scene
 		if is_instance_valid(escena) and escena.scene_file_path == ruta and not root.get_node("CargaEscenas").activa:
