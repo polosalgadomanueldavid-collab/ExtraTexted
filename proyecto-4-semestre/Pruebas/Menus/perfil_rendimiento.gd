@@ -8,6 +8,13 @@ var midiendo := false
 var segundos := 10.0
 var rondas := 5
 var cargas: Array = []
+var ruta_reporte := "res://.godot/perfil_rendimiento.json"
+var capturas := true
+var cargando := false
+var intervalo_carga_ms := 0.0
+var vistas_medidas: Array[SubViewport] = []
+var inicio_escenario_usec := 0
+var picos: Array = []
 
 func _initialize() -> void:
 	process_frame.connect(_muestrear)
@@ -15,11 +22,21 @@ func _initialize() -> void:
 
 func _muestrear() -> void:
 	var ahora := Time.get_ticks_usec()
+	if cargando and anterior > 0:
+		intervalo_carga_ms = maxf(intervalo_carga_ms, (ahora - anterior) / 1000.0)
 	if midiendo and anterior > 0:
+		var intervalo_ms := (ahora - anterior) / 1000.0
+		if intervalo_ms > 1000.0 / 30.0 and picos.size() < 64:
+			picos.append({"desde_inicio_ms": (ahora - inicio_escenario_usec) / 1000.0, "cuadro_ms": intervalo_ms})
+		var gpu_subvistas := 0.0
+		for vista in vistas_medidas:
+			if is_instance_valid(vista):
+				gpu_subvistas += RenderingServer.viewport_get_measured_render_time_gpu(vista.get_viewport_rid())
 		muestras.append({"cuadro_ms": (ahora - anterior) / 1000.0,
 			"cpu_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000,
 			"fisica_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000,
 			"gpu_ms": RenderingServer.viewport_get_measured_render_time_gpu(root.get_viewport_rid()),
+			"gpu_subviewports_ms": gpu_subvistas,
 			"draw_calls": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			"ram_bytes": Performance.get_monitor(Performance.MEMORY_STATIC),
 			"vram_bytes": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED),
@@ -27,7 +44,14 @@ func _muestrear() -> void:
 	anterior = ahora
 
 func _medir(nombre: String, minimo_segundos := 0.0) -> void:
+	vistas_medidas.clear()
+	if is_instance_valid(current_scene):
+		for nodo in current_scene.find_children("*", "SubViewport", true, false):
+			vistas_medidas.append(nodo)
+			RenderingServer.viewport_set_measure_render_time(nodo.get_viewport_rid(), true)
 	muestras.clear()
+	picos.clear()
+	inicio_escenario_usec = anterior
 	midiendo = true
 	await create_timer(maxf(segundos, minimo_segundos)).timeout
 	midiendo = false
@@ -40,23 +64,39 @@ func _medir(nombre: String, minimo_segundos := 0.0) -> void:
 		var valores: Array = muestras.map(func(m): return m[clave])
 		valores.sort()
 		resumen[clave] = {"p50": valores[int((valores.size() - 1) * 0.50)], "p95": valores[int((valores.size() - 1) * 0.95)], "p99": valores[int((valores.size() - 1) * 0.99)], "max": valores[-1]}
+	var duracion_ms := 0.0
+	var mayores_33 := 0
+	var mayores_50 := 0
+	var mayores_100 := 0
+	for muestra in muestras:
+		duracion_ms += muestra.cuadro_ms
+		mayores_33 += int(muestra.cuadro_ms > 1000.0 / 30.0)
+		mayores_50 += int(muestra.cuadro_ms > 50.0)
+		mayores_100 += int(muestra.cuadro_ms > 100.0)
+	resumen["muestreo"] = {"cuadros": muestras.size(), "duracion_ms": duracion_ms,
+		"fps_medio": muestras.size() * 1000.0 / duracion_ms,
+		"mayores_33_ms": mayores_33, "mayores_50_ms": mayores_50, "mayores_100_ms": mayores_100}
+	resumen["primeros_64_picos"] = picos.duplicate(true)
 	resultados[nombre] = resumen
 	print("[PERFIL] ", nombre, " ", JSON.stringify(resumen))
-	if DisplayServer.get_name() != "headless":
+	if capturas and DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://.godot/perfil_%s.png" % nombre)
 
 func _cargar(ruta: String) -> bool:
 	var carga := root.get_node("CargaEscenas")
+	intervalo_carga_ms = 0.0
+	cargando = true
 	carga.cargar(ruta)
 	var limite := Time.get_ticks_msec() + 70000
 	while carga.activa and Time.get_ticks_msec() < limite:
 		await process_frame
+	cargando = false
 	if carga.activa or not is_instance_valid(current_scene) or current_scene.scene_file_path != ruta:
 		push_error("No terminó la carga del perfil: " + ruta + " (" + carga.fase + ")")
 		quit(1)
 		return false
-	cargas.append({"ruta": ruta, "fases_ms": carga.mediciones.duplicate(true)})
+	cargas.append({"ruta": ruta, "fases_ms": carga.mediciones.duplicate(true), "intervalo_max_ms": intervalo_carga_ms})
 	await process_frame
 	return true
 
@@ -69,11 +109,15 @@ func _run() -> void:
 			segundos = maxf(1, argumento.get_slice("=", 1).to_float())
 		elif argumento.begins_with("--rondas="):
 			rondas = maxi(1, argumento.get_slice("=", 1).to_int())
+		elif argumento.begins_with("--reporte="):
+			ruta_reporte = argumento.trim_prefix("--reporte=")
+		elif argumento == "--sin-capturas":
+			capturas = false
 	# No guardar preferencias del usuario desde una medición automatizada.
 	var calidad := root.get_node("CalidadVisual")
 	for argumento in OS.get_cmdline_user_args():
 		if argumento.begins_with("--calidad="):
-			calidad.nivel = clampi(argumento.get_slice("=", 1).to_int(), 0, 2)
+			calidad.nivel = clampi(argumento.get_slice("=", 1).to_int(), 0, calidad.ESCALAS.size() - 1)
 	root.scaling_3d_scale = calidad.ESCALAS[calidad.nivel]
 	if not await _cargar("res://UI/Menus/MainMenu.tscn"):
 		return
@@ -140,7 +184,11 @@ func _run() -> void:
 				_oficina_detener_relojes(oficina)
 				await create_timer(1.0).timeout
 	var reporte := {"version": Engine.get_version_info(), "render": DisplayServer.get_name(), "adaptador": RenderingServer.get_video_adapter_name(), "cpu": OS.get_processor_name(), "resolucion": [root.size.x, root.size.y], "exportado": OS.has_feature("standalone"), "calidad": calidad.nivel, "segundos_por_escenario": segundos, "gpu_cero_significa_no_disponible": true, "cargas": cargas, "resultados": resultados}
-	var archivo := FileAccess.open("res://.godot/perfil_rendimiento.json", FileAccess.WRITE)
+	var archivo := FileAccess.open(ruta_reporte, FileAccess.WRITE)
+	if archivo == null:
+		push_error("No se pudo guardar el perfil: " + ruta_reporte)
+		quit(1)
+		return
 	archivo.store_string(JSON.stringify(reporte, "\t"))
 	archivo.close()
 	if not await _cargar("res://UI/Menus/MainMenu.tscn"):

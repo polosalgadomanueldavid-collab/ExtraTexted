@@ -631,11 +631,12 @@ func _crear_selector_calidad() -> void:
 	fila.add_child(etiqueta)
 	var selector := OptionButton.new()
 	selector.name = "CalidadVisual"
-	for texto in ["Baja", "Media", "Alta"]:
+	for texto in CalidadVisual.NOMBRES:
 		selector.add_item(texto)
 	selector.select(CalidadVisual.nivel)
 	selector.item_selected.connect(CalidadVisual.establecer)
-	selector.tooltip_text = "Sombras, partículas y resolución 3D. La interfaz conserva su nitidez."
+	CalidadVisual.nivel_cambiado.connect(selector.select)
+	selector.tooltip_text = "Ultra: iluminación cálida y azul inspirada en el menú, a la misma resolución que Alta. La interfaz conserva su nitidez."
 	fila.add_child(selector)
 	var contenido := panel_opciones.get_node("Contenido")
 	contenido.add_child(fila)

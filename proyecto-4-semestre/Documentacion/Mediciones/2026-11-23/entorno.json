@@ -1,0 +1,78 @@
+{
+  "huellas_fuentes_comparacion": [
+    {
+      "ruta": "project.godot",
+      "sha256": "CB0059A9210DED5D02854981A551179C57D7742EB376C502201A8883F347D2B6"
+    },
+    {
+      "ruta": "Mundo/Oficina.tscn",
+      "sha256": "34B5F28C0203F45D4E2268B0461DE9CD7D9BF96845B2CA2B7033969BE776C89C"
+    },
+    {
+      "ruta": "Mundo/aspecto_oficina.gd",
+      "sha256": "19A3CD7735A60E75C3156D7C377B1082899C8B7968457C9C27B7DCDEAC62FFF1"
+    },
+    {
+      "ruta": "UI/Menus/calidad_visual.gd",
+      "sha256": "3B612AEEA726BC35C941DD24C88C5A1F44D0A079B1D2ABB21DB26D2F8B60254F"
+    },
+    {
+      "ruta": "UI/Menus/fondo_menu_oficina.gd",
+      "sha256": "0B309D0640D09E30C2820C58ABF7E31DC93886933C092E32617C0F4AF3EFA74F"
+    },
+    {
+      "ruta": "UI/Menus/oficina_menu_animada.gd",
+      "sha256": "589FAAB7A6F5F8CCBAA3929981B285C862FBCDFF8AE21CE1B3B18097AD7C56A8"
+    },
+    {
+      "ruta": "UI/Menus/carga_escenas.gd",
+      "sha256": "7BD22FC00D28FA536A766A84D359E7DDCEAE173CE230D6F50D2E88146C679515"
+    },
+    {
+      "ruta": "UI/Menus/calentamiento_visual.gd",
+      "sha256": "9C2896F85A9D66753C39AD77B027EA4A6E1A1D01A6A603743C349442F0D1BF45"
+    },
+    {
+      "ruta": "Pruebas/Menus/perfil_rendimiento.gd",
+      "sha256": "B95C8CC89A36896DCB690EC7A97DF9C1640B00B37DFB33CE47E957F53A47FC59"
+    },
+    {
+      "ruta": "Pruebas/Menus/comparar_tirones.gd",
+      "sha256": "B241057B574F54115805822409934A18956BD57D834BE73CE9DA14F3279A385A"
+    },
+    {
+      "ruta": "Scripts/Partida/gestor_partida.gd",
+      "sha256": "9AA2A5B517765D028CF1A426349FD1472978AB0BF3798622670621F40AE42ACF"
+    },
+    {
+      "ruta": "Eventos/Terremoto/evento_terremoto.gd",
+      "sha256": "8C5225137A86F7D98E4AAA85E7BDB7CC5EE0AE37862F851E08E17D4E4C3B9FA3"
+    },
+    {
+      "ruta": "Eventos/Terremoto/grieta.gd",
+      "sha256": "40C6EB50C9834905DB6E154762CEBACB416D9EB2E260899ED9438C773A434C96"
+    },
+    {
+      "ruta": "Eventos/Terremoto/escombro.gd",
+      "sha256": "6669CC5E5B8D7A31252100156EA1F73B20A589D61732660D0B196CC9701275C2"
+    },
+    {
+      "ruta": "Eventos/Lava/evento_lava.gd",
+      "sha256": "018D48A22636E4D705B3A05244F119B9492636D9E5B3F08FC845A14C8D784FE4"
+    },
+    {
+      "ruta": "Eventos/Lava/patron_magma.gd",
+      "sha256": "62EE03751D3F821ECF853205AB3938A2B784E2C9EC5597960A66A4671E385BB9"
+    }
+  ],
+  "zona_horaria": "America/Bogota",
+  "advertencia_cpu": "TIME_PROCESS y TIME_PHYSICS_PROCESS son monitores del motor, no perfiles exclusivos por función ni medidas de todo el proceso Windows.",
+  "fecha_local": "2026-11-23",
+  "commit_base": "57ac234fdb6938e962e7dab633917c56dba8b68d",
+  "comparacion": "Copia de fuentes a .godot/qa_rendimiento_2026_11_23/snapshot, recursos importados compartidos, 8 s por escenario y 26 s por terremoto válido. Semilla 8762; cachés de disco y driver sin vaciar.",
+  "editor_abierto": true,
+  "exportacion": false,
+  "otras_pruebas": "Prueba gráfica Ultra concurrente durante parte de la comparación; se mantuvo por instrucción del usuario.",
+  "advertencia_gpu": "gpu_ms mide solo el viewport raíz. gpu_subviewports_ms suma mediciones de los SubViewports encontrados, no es tiempo total de cuadro.",
+  "perfil_general": "Fuentes de trabajo, con cambios de iluminación en paralelo; cinco oficinas, seis eventos y cuatro poderes, dos pasadas, 10 s por escenario."
+}
