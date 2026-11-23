@@ -86,42 +86,39 @@ func _input(evento: InputEvent) -> void:
 		return
 	if not evento.pressed or evento.is_echo():
 		return
+	var paso := 0
+	var confirmar := false
+	var salir := false
 	if evento is InputEventJoypadButton:
-		if evento.is_action_pressed("ui_cancel"):
-			hide()
-			cerrado.emit()
-		elif evento.is_action_pressed("ui_left"):
-			_cambiar_hoja(-1)
+		salir = evento.is_action_pressed("ui_cancel")
+		confirmar = evento.is_action_pressed("ui_accept")
+		if evento.is_action_pressed("ui_left"):
+			paso = -1
 		elif evento.is_action_pressed("ui_right"):
-			_cambiar_hoja(1)
-		elif evento.is_action_pressed("ui_accept"):
-			_archivar()
-		else:
-			return
-		get_viewport().set_input_as_handled()
-		queue_redraw()
+			paso = 1
+	else:
+		var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
+		salir = tecla == KEY_ESCAPE
+		confirmar = tecla == KEY_E
+		if tecla in [KEY_A, KEY_LEFT]:
+			paso = -1
+		elif tecla in [KEY_D, KEY_RIGHT]:
+			paso = 1
+	if not salir and not confirmar and paso == 0:
 		return
-	if not evento is InputEventKey:
-		return
-	var tecla: int = evento.physical_keycode if evento.physical_keycode != 0 else evento.keycode
-	if entrada_restante > 0.0 and tecla != KEY_ESCAPE:
-		if tecla in [KEY_A, KEY_D, KEY_LEFT, KEY_RIGHT, KEY_E]:
-			get_viewport().set_input_as_handled()
-		return
-	if tecla == KEY_A or tecla == KEY_LEFT:
-		_cambiar_hoja(-1)
-	elif tecla == KEY_D or tecla == KEY_RIGHT:
-		_cambiar_hoja(1)
-	elif tecla == KEY_E:
-		_archivar()
-	elif tecla == KEY_ESCAPE:
+	get_viewport().set_input_as_handled()
+	# Ambos dispositivos esperan a que las hojas sean visibles; salir siempre funciona.
+	if salir:
 		_detener_sonidos()
 		hide()
 		entrada_restante = 0.0
 		cerrado.emit()
-	else:
+	elif entrada_restante > 0.0:
 		return
-	get_viewport().set_input_as_handled()
+	elif confirmar:
+		_archivar()
+	else:
+		_cambiar_hoja(paso)
 	queue_redraw()
 
 

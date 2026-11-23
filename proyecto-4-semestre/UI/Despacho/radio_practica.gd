@@ -24,6 +24,9 @@ var _salida: Button
 var _sonido: AudioStreamPlayer
 var _factor := 1.0
 var _caja := Rect2()
+var barra_despacho: Control
+var _caja_objetivo := Rect2()
+var _direccion_objetivo := Vector2.DOWN
 
 func _ready() -> void:
 	name = "RadioPractica"
@@ -147,13 +150,39 @@ func _dibujar_objetivo() -> void:
 	if camara == null: return
 	var punto := objetivo.global_position+Vector3.UP*1.1
 	var destino := camara.unproject_position(punto)
-	if camara.is_position_behind(punto): destino = size-destino
-	destino.x = clampf(destino.x,55*_factor,size.x-55*_factor)
-	destino.y = clampf(destino.y,140*_factor,_caja.position.y*_factor-30*_factor)
-	var caja := Rect2(destino-Vector2(39,86)*_factor,Vector2(78,76)*_factor)
-	_panel(caja,CREMA,TINTA)
-	ARTE.objeto(self,objeto_objetivo,caja.get_center(),58*_factor)
-	draw_colored_polygon(PackedVector2Array([destino+Vector2(-7,-5)*_factor,destino+Vector2(7,-5)*_factor,destino+Vector2(0,5)*_factor]),CORAL)
+	_ubicar_objetivo(destino, camara.is_position_behind(punto), _area_objetivo())
+	_panel(_caja_objetivo, CREMA, TINTA)
+	ARTE.objeto(self, objeto_objetivo, _caja_objetivo.get_center(), 58*_factor)
+	var mitad := _caja_objetivo.size * .5
+	var distancia := 1.0 / maxf(.001, maxf(absf(_direccion_objetivo.x) / mitad.x, absf(_direccion_objetivo.y) / mitad.y))
+	var origen := _caja_objetivo.get_center() + _direccion_objetivo * distancia
+	var tangente := Vector2(-_direccion_objetivo.y, _direccion_objetivo.x)
+	draw_colored_polygon(PackedVector2Array([origen + _direccion_objetivo*9*_factor, origen + tangente*6*_factor, origen - tangente*6*_factor]), CORAL)
+
+func _area_objetivo() -> Rect2:
+	# Límites del centro: dejan espacio para la tarjeta, la flecha y su sombra.
+	var derecha := size.x
+	if is_instance_valid(barra_despacho) and barra_despacho.is_visible_in_tree():
+		derecha = minf(derecha, barra_despacho.get_global_rect().position.x - global_position.x)
+	var inicio := Vector2(55, 140) * _factor
+	var fin := Vector2(derecha - 55*_factor, _caja.position.y*_factor - 55*_factor)
+	return Rect2(inicio, (fin - inicio).max(Vector2.ONE))
+
+func _ubicar_objetivo(destino: Vector2, detras: bool, area: Rect2) -> void:
+	var centro := destino - Vector2(0, 48) * _factor
+	_direccion_objetivo = Vector2.DOWN
+	if detras or not area.has_point(centro):
+		# Intersección de un rayo con el área libre, en lugar de sujetar cada eje.
+		var direccion := destino - area.get_center()
+		if detras:
+			direccion = -(destino - size * .5)
+		if direccion.is_zero_approx():
+			direccion = Vector2.UP
+		_direccion_objetivo = direccion.normalized()
+		var mitad := area.size * .5
+		var proporcion := maxf(absf(direccion.x) / mitad.x, absf(direccion.y) / mitad.y)
+		centro = area.get_center() + direccion / proporcion
+	_caja_objetivo = Rect2(centro - Vector2(39, 38)*_factor, Vector2(78, 76)*_factor)
 
 func _panel(caja: Rect2, color: Color, borde: Color) -> void:
 	var estilo := StyleBoxFlat.new()

@@ -43,6 +43,7 @@ func iniciar(mundo: Node3D) -> void:
 	oficina.sistema_despacho.recibir_denuncia(caso)
 	oficina.sistema_despacho.denuncia_resuelta.connect(_caso_resuelto)
 	radio = Radio.new()
+	radio.barra_despacho = oficina.panel_despacho.contenido
 	oficina.get_node("CanvasLayer").add_child(radio)
 	radio.omitir.connect(omitir)
 	_actualizar_mensaje()

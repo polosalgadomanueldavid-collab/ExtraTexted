@@ -8,7 +8,14 @@ const TEXTURAS := {
 	"bienestar": preload("res://MarcadoresEstaciones/Grafitis/bienestar.svg")
 }
 const IZQUIERDA := ["bienestar", "verificacion", "privacidad"]
+# Zonas libres de los tableros centrales, en coordenadas de cada mesa.
+# La altura queda 3 mm por encima de la madera para evitar parpadeos.
+const MARCAS_MESA := {
+	"privacidad": Vector3(-.45, .5323, -.22),
+	"reporte": Vector3(.50, .5171, -.22)
+}
 var pinturas: Dictionary = {}
+var marcas_mesa: Dictionary = {}
 
 func _ready() -> void:
 	var oficina := get_parent()
@@ -42,3 +49,16 @@ func _ready() -> void:
 		pintura.global_position = centro
 		pintura.global_rotation = Vector3(0, PI*.5 if izquierda else -PI*.5, 0)
 		pinturas[id] = pintura
+		if MARCAS_MESA.has(id):
+			var marca := MeshInstance3D.new()
+			marca.name = "Pintura_" + id
+			var sello := QuadMesh.new()
+			sello.size = Vector2.ONE * .20
+			marca.mesh = sello
+			marca.material_override = material
+			marca.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			# Hija de la mesa: acompaña al mueble sin modificar su modelo ni colisión.
+			estacion.get_parent().add_child(marca)
+			marca.position = MARCAS_MESA[id]
+			marca.rotation = Vector3(-PI * .5, 0, PI)
+			marcas_mesa[id] = marca

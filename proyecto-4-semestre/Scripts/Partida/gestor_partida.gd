@@ -1218,7 +1218,7 @@ func _interactuar_reporte() -> bool:
 		return false
 	if _reporte_atascado_id == denuncia.id:
 		if not _reporte_herramienta_recogida:
-			panel_despacho._mostrar_mensaje("Impresora atascada. Busca la herramienta junto a la zona de descanso.", PanelDespacho.CORAL)
+			panel_despacho._mostrar_mensaje("Recoge la herramienta en descanso para reparar.", PanelDespacho.CORAL)
 			return true
 		_limpiar_atasco_reporte()
 		sonidos_mesas.reparar_impresora()
@@ -1230,8 +1230,7 @@ func _interactuar_reporte() -> bool:
 		herramienta_reporte.establecer_activa(true)
 		_aviso_reporte_atasco.visible = evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO
 		sonidos_mesas.atascar_impresora()
-		anuncios.mostrar_evento("IMPRESORA", "ATASCADA", "Busca la herramienta para repararla")
-		panel_despacho._mostrar_mensaje("Impresora atascada. Busca la herramienta junto a la zona de descanso y vuelve.", PanelDespacho.CORAL)
+		panel_despacho._mostrar_mensaje("Impresora atascada. Recoge la herramienta en descanso.", PanelDespacho.CORAL)
 		return true
 	sonidos_mesas.imprimir()
 	return false
