@@ -2,10 +2,28 @@
 
 [ext_resource type="PackedScene" path="res://Objetos/ZonaDescanso/Arte/MaquinaExpendedora.glb" id="1_modelo"]
 [ext_resource type="Script" path="res://Objetos/ZonaDescanso/maquina_expendedora.gd" id="5_control"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf" id="6_titulo"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="7_detalle"]
 
 
 [sub_resource type="BoxShape3D" id="CajaMaquina"]
 size = Vector3(1.05, 1.9, 0.84)
+
+[sub_resource type="StandardMaterial3D" id="MaterialMarcoShop"]
+albedo_color = Color(0.76, 0.59, 0.32, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="MarcoShop"]
+material = SubResource("MaterialMarcoShop")
+size = Vector3(1.72, 0.66, 0.065)
+
+[sub_resource type="StandardMaterial3D" id="MaterialShop"]
+albedo_color = Color(0.055, 0.14, 0.18, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="PlacaShop"]
+material = SubResource("MaterialShop")
+size = Vector3(1.64, 0.58, 0.025)
 
 [node name="MaquinaExpendedora" type="StaticBody3D" unique_id=542444370]
 script = ExtResource("5_control")
@@ -19,3 +37,34 @@ scale = Vector3(0.84, 1, 0.918)
 [node name="Colision" type="CollisionShape3D" parent="." unique_id=2136807008 groups=["obstaculos_navegacion"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
 shape = SubResource("CajaMaquina")
+
+[node name="LetreroShop" type="Node3D" parent="."]
+position = Vector3(0, 2.25, -0.32)
+scale = Vector3(0.8, 0.8, 0.8)
+
+[node name="Marco" type="MeshInstance3D" parent="LetreroShop"]
+mesh = SubResource("MarcoShop")
+cast_shadow = 0
+
+[node name="Placa" type="MeshInstance3D" parent="LetreroShop"]
+position = Vector3(0, 0, 0.04)
+mesh = SubResource("PlacaShop")
+cast_shadow = 0
+
+[node name="Titulo" type="Label3D" parent="LetreroShop"]
+position = Vector3(0, 0.065, 0.058)
+pixel_size = 0.006
+modulate = Color(1, 0.945, 0.83, 1)
+outline_size = 0
+font = ExtResource("6_titulo")
+font_size = 64
+text = "SHOP"
+
+[node name="Detalle" type="Label3D" parent="LetreroShop"]
+position = Vector3(0, -0.19, 0.058)
+pixel_size = 0.003
+modulate = Color(0.62, 0.83, 0.83, 1)
+outline_size = 0
+font = ExtResource("7_detalle")
+font_size = 40
+text = "SNACKS Y PODERES"

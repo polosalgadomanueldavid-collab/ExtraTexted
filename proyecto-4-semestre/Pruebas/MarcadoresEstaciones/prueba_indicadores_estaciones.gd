@@ -87,7 +87,7 @@ func _validar_visual(indicador: IndicadorProximaEstacion, contexto: String) -> v
 	_verificar(indicador.find_child("RotuloSiguiente", true, false) == null, "El marcador no conserva el rótulo provisional: " + contexto)
 	for nodo: Node in indicador.find_children("*", "", true, false):
 		_verificar(not nodo is CollisionObject3D and not nodo is CollisionShape3D, "El marcador no introduce colisiones: %s/%s" % [contexto, nodo.name])
-		_verificar(not nodo is Label3D and not nodo is Label, "El marcador no introduce texto: %s/%s" % [contexto, nodo.name])
+		_verificar(not nodo is Label3D, "El símbolo no añade rótulos 3D: %s/%s" % [contexto, nodo.name])
 		if nodo is MeshInstance3D:
 			var malla := (nodo as MeshInstance3D).mesh
 			_verificar(not malla is TextMesh, "El marcador no usa texto como malla: %s/%s" % [contexto, nodo.name])
@@ -166,7 +166,9 @@ func _probar_protocolos(oficina: Node, indicadores: Dictionary) -> void:
 			oficina.call("interactuar_estacion", incorrecta)
 			_verificar(caso.estaciones_completadas.size() == paso, "Una estación incorrecta no avanza " + caso.id)
 			_validar_objetivo(indicadores, caso.obtener_estaciones_pendientes(), "tras estación incorrecta")
-			if paso % 2 == 0:
+			# Esta suite comprueba los objetivos del protocolo. Los minijuegos tienen
+			# pruebas propias; abrirlos aquí deja el caso a la espera de una entrada.
+			if paso % 2 == 0 and objetivo == "bienestar":
 				oficina.call("interactuar_estacion", objetivo)
 			else:
 				_verificar(sistema.interactuar_estacion(objetivo), "La llamada directa al despacho acepta la estación correcta")
@@ -231,54 +233,43 @@ func _probar_guia_pantalla(oficina: Node, sistema: SistemaDespacho, indicadores:
 	var guia: Control = oficina.guia_estacion
 	var hud := oficina.get("panel_despacho") as PanelDespacho
 	var camara := oficina.get_node("Gameplay/Camera3D") as Camera3D
-	var transformacion := camara.global_transform
+	var anterior := camara.global_transform
 	var procesaba := camara.is_physics_processing()
 	camara.set_physics_process(false)
-	_verificar(not guia.visible, "La guía está oculta sin caso activo")
+	oficina.set_process(false)
 	var caso := CASOS[0].duplicate(true) as Denuncia
-	caso.id = "GUIA-PANTALLA"
-	var jugador := oficina.get("jugador") as Player
-	var postura_jugador := jugador.global_transform
-	var procesaba_jugador := jugador.is_physics_processing()
-	jugador.set_physics_process(false)
-	jugador.global_position = (oficina.get("grafo_piso") as GrafoPiso).celda_a_posicion(GrafoPiso.DESTINOS["bienestar"])
+	caso.id = "TECLA-SIN-ROTULOS"
 	sistema.recibir_denuncia(caso)
 	sistema.iniciar_denuncia_prioritaria()
 	var indicador := indicadores["bienestar"] as IndicadorProximaEstacion
+	camara.global_position = indicador.global_position + Vector3(0, 2, 3)
 	camara.look_at(indicador.global_position)
-	await _cuadros(2)
-	_verificar(guia.visible and guia.objetivo == indicador and not guia.fuera_de_vista, "La guía se proyecta sobre la estación activa")
-	_verificar(guia.icono.tipo == PanelDespacho.IconoDespacho.Tipo.BIENESTAR and guia.rotulo.text == "Bienestar", "La guía presenta únicamente el nombre de la estación")
-	var centro_guia: Vector2 = guia.tarjeta.get_global_rect().get_center()
-	var punto_proyectado := camara.unproject_position(indicador.global_position)
-	_verificar(centro_guia.y < punto_proyectado.y and guia.direccion.y > 0.9, "La tarjeta apunta desde encima del modelo 3D")
-
-	# Proyecta el objetivo detrás de la barra de denuncias sin modificar su anclaje.
+	guia.establecer_objetivo(indicador)
+	indicador.establecer_interactuable(false)
+	guia.actualizar(hud.contenido, false)
+	_verificar(not guia.visible, "Sin interacción disponible no aparece otra señal")
+	indicador.establecer_interactuable(true)
+	guia.actualizar(hud.contenido, false)
+	_verificar(guia.visible and guia.tecla.text in ["E", "X"], "Solo aparece la tecla al poder interactuar")
+	_verificar(guia.find_children("*", "Label", true, false).size() == 1 and guia.find_child("IconoEstacion", true, false) == null, "No duplica el icono ni añade nombre o instrucción")
+	_verificar(guia.tarjeta.get_global_rect().size.x < 50 and guia.tarjeta.get_global_rect().size.y < 50, "El aviso ocupa solo una tecla compacta")
+	guia.actualizar(hud.contenido, true)
+	_verificar(not guia.visible, "La tecla se oculta durante una interfaz")
+	guia.actualizar(hud.contenido, false)
+	_verificar(guia.visible, "La tecla regresa al cerrar la interfaz")
 	var centro_hud := hud.contenido.get_global_rect().get_center()
 	camara.global_position += indicador.global_position - camara.project_position(centro_hud, 5.0)
-	await _cuadros(2)
-	var rectangulo: Rect2 = guia.tarjeta.get_global_rect()
-	_verificar(guia.visible and guia.fuera_de_vista and guia.direccion.x > 0.9, "Un objetivo detrás del HUD aparece a la derecha de la zona de juego")
-	_verificar(get_viewport().get_visible_rect().encloses(rectangulo) and not hud.contenido.get_global_rect().intersects(rectangulo), "La guía del borde queda dentro de pantalla y fuera del HUD")
-
-	camara.global_transform = transformacion
+	guia.actualizar(hud.contenido, false)
+	_verificar(not guia.visible, "La tecla no se sobrepone al despacho")
+	camara.global_transform = anterior
 	camara.look_at(camara.global_position * 2.0 - indicador.global_position)
-	await _cuadros(2)
-	_verificar(guia.visible and guia.fuera_de_vista and guia.direccion.y > 0.9, "La estación detrás de cámara señala hacia el borde inferior")
-	oficina.computador.is_using = true
-	await _cuadros(2)
-	_verificar(not guia.visible, "La guía se oculta mientras se usa la computadora")
-	oficina.computador.is_using = false
-	await _cuadros(2)
-	_verificar(guia.visible, "La guía vuelve al cerrar la computadora")
-	sistema.interactuar_estacion("bienestar")
-	_verificar(guia.objetivo == indicadores["reporte"] and guia.icono.tipo == PanelDespacho.IconoDespacho.Tipo.REPORTE, "Completar un paso actualiza el pictograma de la guía")
+	guia.actualizar(hud.contenido, false)
+	_verificar(not guia.visible, "No hay un cartel de borde para objetivos detrás de cámara")
 	sistema.resolver_denuncia(caso.id)
-	_verificar(not guia.visible and guia.objetivo == null, "Resolver retira la guía inmediatamente")
-	camara.global_transform = transformacion
+	_verificar(not guia.visible and guia.objetivo == null, "Resolver retira la tecla")
+	camara.global_transform = anterior
 	camara.set_physics_process(procesaba)
-	jugador.global_transform = postura_jugador
-	jugador.set_physics_process(procesaba_jugador)
+	oficina.set_process(true)
 
 
 func _validar_objetivo(indicadores: Dictionary, esperadas: Array[String], momento: String) -> void:

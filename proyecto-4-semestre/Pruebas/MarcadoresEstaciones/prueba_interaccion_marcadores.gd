@@ -348,14 +348,16 @@ func _probar_orden_libre_con_tecla() -> void:
 			_verificar(_sistema.puntuacion.puntos == saldo, "Un caso incompleto no da puntos")
 			_pulsar_interaccion()
 			await get_tree().process_frame
-			_verificar(panel.mensaje_estacion.text.begins_with("Ya completaste"), "Repetir una estación muestra un aviso específico")
+			_verificar(not panel.mensaje_estacion.visible, "Repetir una estación recuerda los requisitos sin añadir texto")
 			_verificar(caso.estaciones_completadas.size() == orden.find(estacion_id) + 1, "Repetir E conserva el avance")
 			if estacion_id == "reporte":
 				await _capturar("05_reporte_primero")
 	_verificar(caso.estado == Denuncia.Estado.RESUELTA and _sistema.obtener_denuncia_activa() == null, "La última estación pendiente cierra el caso sin volver al computador")
 	_verificar(_jugador.papel_en_mano == null and _oficina.papel_actual == null, "Resolver retira la hoja del caso")
 	_verificar(_sistema.puntuacion.puntos == saldo + caso.obtener_puntaje_recompensa(), "El cierre libre concede una sola recompensa")
-	_verificar(not panel.denuncia_activa_detalle.visible and not _oficina.guia_estacion.visible and _oficina.ruta_actual.is_empty(), "Cerrar retira tarjeta, guía y ruta")
+	_verificar(not _oficina.guia_estacion.visible and _oficina.ruta_actual.is_empty(), "Cerrar retira la tecla y la ruta")
+	await get_tree().create_timer(.95).timeout
+	_verificar(not panel.denuncia_activa_detalle.visible, "La carpeta se retira después de incorporar la última pieza")
 
 
 func _probar_cancelar_seguridad() -> void:

@@ -21,6 +21,7 @@ void fragment() {
 		}
 	}
 	ALBEDO = texture(textura_piso, uv).rgb;
-	ROUGHNESS = 0.92;
-	SPECULAR = 0.08;
+	// Reflejo ancho y tenue: conserva la lectura del suelo seco sin otra pasada.
+	ROUGHNESS = 0.74;
+	SPECULAR = 0.22;
 }

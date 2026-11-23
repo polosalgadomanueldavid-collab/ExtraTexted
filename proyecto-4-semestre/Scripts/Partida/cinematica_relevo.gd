@@ -8,6 +8,7 @@ const MODELO_VIOLETA := preload("res://Personajes/PoliciaRelevo/PoliciaVioleta.t
 @export_enum("Menta", "Violeta") var variante_relevo: int = 0
 const Ambiente := preload("res://Scripts/Partida/ambiente_relevo.gd")
 const SEPARACION := 0.64
+const RAPIDEZ_SALIDA := 2.3
 const POSE_AGOTADA := preload("res://Personajes/PoliciaAzul/pose_agotada.gd")
 const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 const VOZ_RELEVO := preload("res://Audios/VozPersonaje/Gomosa/saludo.wav")
@@ -44,6 +45,11 @@ func iniciar(jugador: Player, puerta: Node3D, grafo: GrafoPiso, oficina: Node3D)
 	_puerta = puerta
 	_grafo = grafo
 	_puesto = jugador.global_position
+	# El relevo ocupa un puesto dentro de la oficina, aunque el jugador haya
+	# terminado justo en el vano o fuera de la puerta.
+	if _puerta.to_local(_puesto).z < .8:
+		_puesto = _grafo.celda_a_posicion(_grafo.celda_de_acceso(_puerta.to_global(Vector3(0, 0, 1.5))))
+		_puesto.y = _puerta.global_position.y
 	_preparar_jugador()
 	_preparar_segundo_jugador()
 	_preparar_camara()
@@ -157,7 +163,8 @@ func _secuencia() -> void:
 		var entrada := PackedVector3Array([_puerta.to_global(Vector3(0, 0, -0.65)), _puerta.to_global(Vector3(0, 0, 0.40)), interior])
 		entrada.append_array(_ruta(interior, apartadero, _jugador.global_position))
 		if _distancia_a_ruta(_jugador.global_position, entrada, companero.global_position) >= SEPARACION:
-			_iniciar_salida()
+			# Reservar primero el apartadero evita que ambos se crucen en el umbral.
+			# La salida calculará su ruta con el compañero ya fuera del paso.
 			await _recorrer(companero, entrada, 1.9)
 			if not is_inside_tree():
 				return
@@ -292,6 +299,20 @@ func _salir_jugadores() -> void:
 	jugador_salio = true
 
 func _salir_jugador(actor: Player) -> void:
+	# Si perdió el turno ya dentro del vano o en el pasillo, continuar hacia
+	# fuera: hacerlo volver primero a la oficina lo enfrenta con el relevo.
+	var z_puerta := _puerta.to_local(actor.global_position).z
+	if z_puerta <= .30:
+		var tramo := PackedVector3Array()
+		if z_puerta > -.45:
+			tramo.append(_puerta.to_global(Vector3(0, 0, -.45)))
+		tramo.append(_fuera)
+		await _recorrer(actor, tramo, RAPIDEZ_SALIDA)
+		if is_inside_tree():
+			actor.hide()
+			actor.collision_layer = 0
+			actor.sonido_pasos.detener()
+		return
 	var interior := _puerta.to_global(Vector3(0, 0, 0.95))
 	var reserva := companero.global_position if _puerta.to_local(companero.global_position).z > 0 else Vector3.INF
 	_recorrido_salida = _ruta(actor.global_position, interior, reserva)
@@ -302,10 +323,10 @@ func _salir_jugador(actor: Player) -> void:
 		intentos += 1
 	if _recorrido_salida.is_empty():
 		_recorrido_salida = PackedVector3Array([interior])
-	await _recorrer(actor, _recorrido_salida, 2.6)
+	await _recorrer(actor, _recorrido_salida, RAPIDEZ_SALIDA)
 	if not is_inside_tree():
 		return
-	await _recorrer(actor, PackedVector3Array([_puerta.to_global(Vector3(0, 0, 0.30)), _puerta.to_global(Vector3(0, 0, -0.45)), _fuera]), 2.6)
+	await _recorrer(actor, PackedVector3Array([_puerta.to_global(Vector3(0, 0, 0.30)), _puerta.to_global(Vector3(0, 0, -0.45)), _fuera]), RAPIDEZ_SALIDA)
 	if not is_inside_tree():
 		return
 	actor.hide()
@@ -375,6 +396,15 @@ func _plano(punto: Vector3) -> Vector2:
 	return Vector2(punto.x, punto.z)
 
 
+func _invade_actor(desde: Vector3, hasta: Vector3, otro: Vector3, separacion: float) -> bool:
+	var inicial := _plano(desde - otro)
+	var movimiento := _plano(hasta - desde)
+	# Si ya están demasiado cerca, permitir alejarse evita un bloqueo mutuo.
+	if inicial.length() < separacion and inicial.dot(movimiento) > 0.0:
+		return false
+	return _distancia_a_ruta(otro, PackedVector3Array([hasta]), desde) < separacion
+
+
 func _physics_process(delta: float) -> void:
 	if not _listo or finalizada:
 		return
@@ -417,7 +447,7 @@ func _avanzar_actor(actor: Player, delta: float) -> void:
 		if not is_instance_valid(otro) or otro == actor or not otro.visible:
 			continue
 		var separacion := maxf(SEPARACION, 0.8 if actor.nadando or otro.nadando or actor.congelado or otro.congelado else 0.0)
-		if _distancia_a_ruta(otro.global_position, PackedVector3Array([anterior + paso]), anterior) < separacion:
+		if _invade_actor(anterior, anterior + paso, otro.global_position, separacion):
 			paso = Vector3.ZERO
 			actor.velocity = Vector3.ZERO
 			break
@@ -440,7 +470,7 @@ func _avanzar_actor(actor: Player, delta: float) -> void:
 				break
 		# El deslizamiento junto a una pared tampoco puede invadir al compañero.
 		for otro: Player in [_jugador, segundo_jugador, companero]:
-			if is_instance_valid(otro) and otro != actor and otro.visible and _distancia_a_ruta(otro.global_position, PackedVector3Array([actor.global_position]), anterior) < SEPARACION:
+			if is_instance_valid(otro) and otro != actor and otro.visible and _invade_actor(anterior, actor.global_position, otro.global_position, SEPARACION):
 				actor.global_position = anterior
 				actor.velocity = Vector3.ZERO
 				break

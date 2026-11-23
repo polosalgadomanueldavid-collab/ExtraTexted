@@ -37,6 +37,7 @@ var calma_operativa: int:
 var causa_agotamiento: StringName = &""
 var terminada: bool = false
 var tiempo_detenido := false
+var en_practica := false
 var denuncia_activa_id: String:
 	get:
 		return str(casos_por_jugador.get(jugador_local_id, ""))
@@ -120,7 +121,7 @@ func resolver_denuncia(id: String) -> bool:
 
 	# El saldo ya está actualizado cuando el HUD recibe la resolución.
 	puntuacion.registrar_resolucion(denuncia)
-	if autoridad:
+	if autoridad and not denuncia.es_practica:
 		# Una misión compartida cuenta para quienes completaron una estación,
 		# nunca para alguien que solo llevó la hoja o recibió la recompensa.
 		for id_jugador: int in participantes.get(id, []):
@@ -162,7 +163,7 @@ func vencer_denuncia(id: String, motivo := Denuncia.MotivoPerdida.TIEMPO) -> boo
 
 
 func actualizar_tiempos(delta: float) -> void:
-	if terminada or tiempo_detenido:
+	if terminada or tiempo_detenido or en_practica:
 		return
 	var ids: Array = tiempos_restantes.keys()
 
@@ -193,7 +194,7 @@ func perder_calma(cantidad: int, causa: StringName = &"", jugador_id: int = 0) -
 	if not autoridad and solicitar_cambio.is_valid():
 		solicitar_cambio.call("cordura", {"cantidad": -cantidad, "causa": str(causa)})
 		return 0
-	if terminada or cantidad <= 0 or not esta_activo(jugador_id):
+	if terminada or en_practica or cantidad <= 0 or not esta_activo(jugador_id):
 		return 0
 	var perdida := mini(cantidad, obtener_cordura(jugador_id))
 	causa_agotamiento = causa
@@ -238,7 +239,7 @@ func interactuar_estacion(estacion_id: String, caso_id: String = "", jugador_id:
 		participantes[caso_id] = []
 	if not participantes[caso_id].has(jugador_id):
 		participantes[caso_id].append(jugador_id)
-	if autoridad and aportes_jugadores.has(jugador_id):
+	if autoridad and not denuncia.es_practica and aportes_jugadores.has(jugador_id):
 		aportes_jugadores[jugador_id].tareas += 1
 
 	estacion_completada.emit(denuncia, estacion_id)

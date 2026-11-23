@@ -1,7 +1,6 @@
 extends Control
 ## Medallón aprobado, a escala 1:1 en 1280×720. No captura clics ni la tecla E.
 
-const PAPEL := preload("res://UI/Despacho/Arte/papel_medallon.png")
 const FUENTE := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const TINTA := Color("173b50")
 const CREMA := Color("fff1d8")
@@ -9,6 +8,7 @@ const CORAL := Color("ff785f")
 const TAMANO := Vector2(140, 158)
 const REFERENCIA := Vector2(1280, 720)
 const MARGEN := 24.0
+const EXPEDIENTE := preload("res://UI/Despacho/lenguaje_expediente.gd")
 
 var rotulo: Label
 var _fondo_leyenda: StyleBoxFlat
@@ -52,6 +52,10 @@ func ajustar_pantalla(tamano_pantalla: Vector2) -> void:
 	position = Vector2(MARGEN * factor, tamano_pantalla.y - (MARGEN + TAMANO.y) * factor)
 
 
+func _process(_delta: float) -> void:
+	rotulo.text = "X - soltar" if ControladorInterfaz.dispositivo_mando >= 0 else "E - soltar"
+
+
 func _draw() -> void:
 	draw_circle(Vector2(70, 67), 51, Color("0d2736b3"), true, -1.0, true)
 	draw_circle(Vector2(70, 61), 51, TINTA, true, -1.0, true)
@@ -59,6 +63,6 @@ func _draw() -> void:
 	draw_circle(Vector2(70, 58), 44, CREMA, true, -1.0, true)
 	draw_circle(Vector2(70, 60), 37, Color("eddec5"), true, -1.0, true)
 	draw_arc(Vector2(70, 58), 42, PI * 1.10, PI * 1.72, 48, Color("fff9ee"), 2.5, true)
-	draw_texture_rect(PAPEL, Rect2(24, 12, 92, 92), false)
+	EXPEDIENTE.resultado(self, "evidencias", Vector2(70, 58), 81, true, false)
 	draw_style_box(_sombra_leyenda, Rect2(5, 119, 130, 34))
 	draw_style_box(_fondo_leyenda, Rect2(5, 115, 130, 34))

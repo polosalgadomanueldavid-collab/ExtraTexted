@@ -37,8 +37,10 @@ func _probar() -> void:
 		sistema.interactuar_estacion(estacion)
 	await _esperar()
 	_verificar(panel.puntos_valor.text == "500", "Completar el protocolo actualiza el saldo")
-	_verificar(panel.puntos_ganancia.text == "+500 PTS", "Confirma los puntos reales obtenidos")
-	_verificar(not panel.denuncia_activa_detalle.visible, "La recompensa permanece al cerrar el caso")
+	_verificar(panel.puntos_ganancia.text == "+500", "Confirma los puntos reales obtenidos")
+	# La última pieza tarda .62 s en llegar; la ficha se retira a los .85 s.
+	await get_tree().create_timer(1.0).timeout
+	_verificar(not panel.denuncia_activa_detalle.visible, "La recompensa permanece tras la entrega de la última pieza")
 	await _capturar("02_recompensa")
 
 	var leve := _recibir("uso_excesivo", "UI-LEVE")
@@ -46,18 +48,18 @@ func _probar() -> void:
 	for estacion: String in leve.protocolo_estaciones:
 		sistema.interactuar_estacion(estacion)
 	await _esperar()
-	_verificar(panel.puntos_valor.text == "600" and panel.puntos_ganancia.text == "+100 PTS", "Acumula otro caso y anuncia solo su recompensa")
+	_verificar(panel.puntos_valor.text == "600" and panel.puntos_ganancia.text == "+100", "Acumula otro caso y anuncia solo su recompensa")
 	var vencida := _recibir("suplantacion", "UI-VENCIDA")
 	sistema.vencer_denuncia(vencida.id)
 	_verificar(panel.puntos_valor.text == "600", "El vencimiento conserva el saldo")
 	# Reinserción defensiva: un mismo ID no se puede premiar dos veces en la partida.
 	sistema.recibir_denuncia(critica)
 	sistema.resolver_denuncia(critica.id)
-	_verificar(panel.puntos_valor.text == "600" and panel.puntos_ganancia.text == "+100 PTS", "No muestra una ganancia falsa por ID repetido")
+	_verificar(panel.puntos_valor.text == "600" and panel.puntos_ganancia.text == "+100", "No muestra una ganancia falsa por ID repetido")
 	panel._process(3.1)
 	_verificar(panel.puntos_ganancia.text.is_empty(), "El aviso de ganancia desaparece")
 	_verificar(sistema.puntuacion.gastar_puntos(50), "El saldo permite comprar un café")
-	_verificar(panel.puntos_valor.text == "550" and panel.puntos_ganancia.text == "-50 PTS", "Comprar muestra el saldo disponible y el costo real en el HUD")
+	_verificar(panel.puntos_valor.text == "550" and panel.puntos_ganancia.text == "-50", "Comprar muestra el saldo disponible y el costo real en el HUD")
 	_verificar(sistema.puntuacion.puntos_ganados == 600, "El gasto conserva los puntos ganados para la clasificación")
 
 	# Cambiar a un despacho con saldo precargado no debe fingir una nueva ganancia.

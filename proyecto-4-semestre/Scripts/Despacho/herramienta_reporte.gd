@@ -36,7 +36,7 @@ func _ready() -> void:
 	llave.rotation = Vector3(0, 0, -PI / 2.0)
 	add_child(llave)
 	var texto := Label3D.new()
-	texto.text = "[E] LLAVE" + (" %d" % (indice_red + 1) if SesionLAN.activa else "")
+	texto.text = "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
 	texto.font = preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 	texto.font_size = 26
 	texto.pixel_size = 0.0045

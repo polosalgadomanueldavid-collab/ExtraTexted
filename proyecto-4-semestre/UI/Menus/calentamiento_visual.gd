@@ -53,7 +53,29 @@ func preparar(oficina: Node = null) -> void:
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 	if is_instance_valid(oficina) and DisplayServer.get_name() != "headless":
+		await _preparar_luces_oficina(oficina)
+	if is_instance_valid(oficina) and DisplayServer.get_name() != "headless":
 		await _preparar_vision_apagon(oficina)
+
+func _preparar_luces_oficina(oficina: Node) -> void:
+	# El cargador mantiene la partida pausada y cubierta. Dibujar ambas zonas
+	# prepara las combinaciones reales de focos/sombras/materiales en Compatibility,
+	# también las que no entran en el encuadre inicial del personaje.
+	var camara := oficina.get_node("Gameplay/Camera3D") as Camera3D
+	var transformacion := camara.global_transform
+	var apertura := camara.fov
+	camara.fov = 70.0
+	for centro in [Vector3(-1, 0.8, 3.4), Vector3(-1, 0.8, 9.0)]:
+		camara.global_position = centro + Vector3(0, 5, 3.6)
+		camara.look_at(centro)
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		if not is_instance_valid(oficina) or not is_instance_valid(camara):
+			return
+	camara.global_transform = transformacion
+	camara.fov = apertura
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
 
 func _preparar_vision_apagon(oficina: Node) -> void:
 	# Dibujar también la oficina con sus luces de emergencia reales prepara

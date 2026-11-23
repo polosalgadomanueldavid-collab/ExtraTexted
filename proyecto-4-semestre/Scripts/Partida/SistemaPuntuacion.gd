@@ -27,7 +27,8 @@ func registrar_resolucion(denuncia: Denuncia) -> int:
 	var recompensa := denuncia.obtener_puntaje_recompensa()
 	_casos_premiados[denuncia.id] = true
 	_puntos += recompensa
-	_puntos_ganados += recompensa
+	if not denuncia.es_practica:
+		_puntos_ganados += recompensa
 	puntos_actualizados.emit(_puntos)
 	return recompensa
 

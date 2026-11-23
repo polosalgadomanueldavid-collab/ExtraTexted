@@ -3,6 +3,7 @@ extends Control
 
 const IconoDespacho := preload("res://UI/Despacho/icono_despacho.gd")
 const EfectoTarea := preload("res://UI/Despacho/efecto_tarea_completada.gd")
+const ProtocoloVisual := preload("res://UI/Despacho/protocolo_denuncia.gd")
 const ANCHO_DISENO := 408.0
 const TAMANO_DISENO := Vector2(1920, 1080)
 const MARGEN := 28.0
@@ -32,11 +33,24 @@ var segundos_recompensa: float = 0.0
 var _puntos_mostrados: int = 0
 var _id_activo: String = ""
 var efecto_tarea: EfectoTarea
+var puntos_animados: Label
+var _animacion_saldo: Tween
+var _saldo_visual := 0.0
+var origen_resultado: Callable
+var _caso_cierre: Denuncia
+var _segundos_cierre := 0.0
 
 
 func _ready() -> void:
 	efecto_tarea = EfectoTarea.new()
 	add_child(efecto_tarea)
+	puntos_animados = Label.new()
+	puntos_animados.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	puntos_animados.add_theme_font_override("font", puntos_valor.get_theme_font("font"))
+	puntos_animados.add_theme_color_override("font_color", puntos_valor.get_theme_color("font_color"))
+	puntos_valor.add_child(puntos_animados)
+	puntos_animados.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	puntos_animados.hide()
 	resized.connect(_ajustar_presentacion)
 	puntos_valor.resized.connect(_ajustar_tamano_puntos)
 	for etiqueta: Label in [%TituloActiva, $Contenido/CabeceraEspera/Titulo, %SinCasoActivo, %SinPendientes, mensaje_estacion]:
@@ -47,6 +61,22 @@ func _ready() -> void:
 	actualizar_puntos(0)
 	actualizar_calma(100)
 	actualizar_denuncias([])
+	# Los sellos muestran el avance dentro de la ficha, sin otra línea de texto.
+	progreso_estaciones.hide()
+	# Los símbolos acompañan al título; la moneda identifica el saldo.
+	for elemento in [$Contenido/Puntuacion/Detalle/Cabecera/Titulo]:
+		elemento.hide()
+	var moneda := Control.new()
+	moneda.custom_minimum_size = Vector2(36, 36)
+	moneda.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	moneda.draw.connect(func(): preload("res://UI/Despacho/pictogramas_tarea.gd").objeto(moneda, "moneda", moneda.size*.5, 34))
+	$Contenido/Puntuacion/Detalle/Cabecera.add_child(moneda)
+	$Contenido/Puntuacion/Detalle/Cabecera.move_child(moneda, 0)
+	puntos_valor.reparent($Contenido/Puntuacion/Detalle/Cabecera)
+	$Contenido/Puntuacion/Detalle/Cabecera.move_child(puntos_valor, 1)
+	puntos_valor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	puntos_ganancia.size_flags_horizontal = Control.SIZE_SHRINK_END
+
 
 
 func _process(delta: float) -> void:
@@ -54,6 +84,9 @@ func _process(delta: float) -> void:
 		return
 	for id: String in tarjetas:
 		_actualizar_tarjeta(denuncias_visibles[id])
+	if _segundos_cierre > 0.0:
+		_segundos_cierre = maxf(0, _segundos_cierre - delta)
+		if is_zero_approx(_segundos_cierre): _caso_cierre = null
 	_actualizar_denuncia_activa()
 	_actualizar_mensaje(delta)
 	if segundos_recompensa > 0.0:
@@ -80,11 +113,15 @@ func configurar_sistema(nuevo_sistema: SistemaDespacho) -> void:
 	sistema_despacho = nuevo_sistema
 	# Un HUD reutilizado no arrastra avisos ni datos del caso anterior.
 	efecto_tarea.detener()
+	_detener_animacion_saldo()
 	segundos_mensaje = 0.0
 	mensaje_estacion.hide()
 	segundos_recompensa = 0.0
 	puntos_ganancia.text = ""
 	_id_activo = ""
+	_caso_cierre = null
+	_segundos_cierre = 0.0
+	protocolo.limpiar_entregas()
 	if not is_instance_valid(sistema_despacho):
 		_puntos_mostrados = 0
 		actualizar_puntos(0)
@@ -122,12 +159,37 @@ func actualizar_puntos(total: int) -> void:
 	_puntos_mostrados = total
 	puntos_valor.text = _formatear_puntos(total)
 	_ajustar_tamano_puntos()
+	if ganancia > 0 and total < 1000000000000:
+		if _animacion_saldo != null:
+			_animacion_saldo.kill()
+		puntos_valor.self_modulate.a = 0.0
+		puntos_animados.show()
+		puntos_animados.add_theme_font_size_override("font_size", puntos_valor.get_theme_font_size("font_size"))
+		_animar_saldo(_saldo_visual)
+		_animacion_saldo = create_tween()
+		_animacion_saldo.tween_method(_animar_saldo, _saldo_visual, float(total), .8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_animacion_saldo.tween_callback(_detener_animacion_saldo)
+	else:
+		_detener_animacion_saldo()
 	if ganancia > 0:
-		puntos_ganancia.text = "+%s PTS" % _formatear_puntos(ganancia)
+		puntos_ganancia.text = "+%s" % _formatear_puntos(ganancia)
 		segundos_recompensa = 3.0
 	elif ganancia < 0:
-		puntos_ganancia.text = "-%s PTS" % _formatear_puntos(-ganancia)
+		puntos_ganancia.text = "-%s" % _formatear_puntos(-ganancia)
 		segundos_recompensa = 3.0
+
+func _animar_saldo(valor: float) -> void:
+	_saldo_visual = valor
+	puntos_animados.text = _formatear_puntos(roundi(valor))
+
+func _detener_animacion_saldo() -> void:
+	if _animacion_saldo != null:
+		_animacion_saldo.kill()
+		_animacion_saldo = null
+	_saldo_visual = float(_puntos_mostrados)
+	if is_instance_valid(puntos_animados):
+		puntos_animados.hide()
+	puntos_valor.self_modulate.a = 1.0
 
 
 func _ajustar_tamano_puntos() -> void:
@@ -138,6 +200,8 @@ func _ajustar_tamano_puntos() -> void:
 	while tamano > 14 and fuente.get_string_size(puntos_valor.text, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano).x > ancho:
 		tamano -= 1
 	puntos_valor.add_theme_font_size_override("font_size", tamano)
+	if is_instance_valid(puntos_animados):
+		puntos_animados.add_theme_font_size_override("font_size", tamano)
 
 
 func _formatear_puntos(valor: int) -> String:
@@ -206,7 +270,7 @@ func _crear_tarjeta(denuncia: Denuncia, siguiente: bool) -> PanelContainer:
 	texto.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texto.add_theme_constant_override("separation", 4)
 	fila.add_child(texto)
-	var riesgo := _etiqueta("%s · N%d" % [_etiqueta_riesgo(denuncia.nivel_riesgo), denuncia.nivel_riesgo], 15)
+	var riesgo := _etiqueta("PRÁCTICA" if denuncia.es_practica else "%s · N%d" % [_etiqueta_riesgo(denuncia.nivel_riesgo), denuncia.nivel_riesgo], 15)
 	riesgo.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	riesgo.add_theme_stylebox_override("normal", _pastilla(color))
 	riesgo.add_theme_color_override("font_color", CREMA)
@@ -214,6 +278,13 @@ func _crear_tarjeta(denuncia: Denuncia, siguiente: bool) -> PanelContainer:
 	var titulo := _etiqueta(denuncia.titulo, 20)
 	titulo.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	texto.add_child(titulo)
+	var requisitos := ProtocoloVisual.new()
+	requisitos.name = "RequisitosVisuales"
+	requisitos.compacto = true
+	requisitos.custom_minimum_size = Vector2(0, 31)
+	var sin_completar: Array[String] = []
+	requisitos.configurar(denuncia.obtener_estaciones_requeridas(), sin_completar)
+	texto.add_child(requisitos)
 	var derecha := VBoxContainer.new()
 	derecha.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	derecha.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -248,13 +319,19 @@ func _actualizar_tarjeta(denuncia: Denuncia) -> void:
 	if is_instance_valid(sistema_despacho):
 		tiempo = sistema_despacho.obtener_tiempo_restante(denuncia.id)
 	var etiqueta: Label = tarjeta.get_meta("tiempo")
-	etiqueta.text = _formatear_tiempo(tiempo)
+	etiqueta.text = "SIN PLAZO" if denuncia.es_practica else _formatear_tiempo(tiempo)
+	etiqueta.add_theme_font_size_override("font_size", 16 if denuncia.es_practica else 23)
 
 
 func _actualizar_denuncia_activa() -> void:
 	var denuncia: Denuncia = null
 	if is_instance_valid(sistema_despacho):
 		denuncia = sistema_despacho.obtener_denuncia_activa()
+	if denuncia != null:
+		_caso_cierre = null
+		_segundos_cierre = 0.0
+	if denuncia == null and _segundos_cierre > 0.0:
+		denuncia = _caso_cierre
 	denuncia_activa_detalle.visible = denuncia != null
 	%SinCasoActivo.visible = denuncia == null
 	if denuncia == null:
@@ -265,24 +342,29 @@ func _actualizar_denuncia_activa() -> void:
 		progreso_estaciones.text = ""
 		return
 	if _id_activo != denuncia.id:
+		protocolo.limpiar_entregas()
 		_id_activo = denuncia.id
 		denuncia_activa_titulo.text = denuncia.titulo
 		var color := _color_riesgo(denuncia.nivel_riesgo)
 		var estilo := denuncia_activa_detalle.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
 		estilo.border_color = color
 		denuncia_activa_detalle.add_theme_stylebox_override("panel", estilo)
-		%EtiquetaRiesgo.text = "%s · NIVEL %d" % [_etiqueta_riesgo(denuncia.nivel_riesgo), denuncia.nivel_riesgo]
+		%EtiquetaRiesgo.text = "PRÁCTICA" if denuncia.es_practica else "%s · NIVEL %d" % [_etiqueta_riesgo(denuncia.nivel_riesgo), denuncia.nivel_riesgo]
 		%EtiquetaRiesgo.add_theme_stylebox_override("normal", _pastilla(color))
 		%EtiquetaRiesgo.add_theme_color_override("font_color", CREMA)
 		%IconoRiesgo.acento = color.darkened(0.32)
 		%IconoRiesgo.queue_redraw()
-	recompensa_caso.text = "AL RESOLVER\n+%s PTS" % _formatear_puntos(denuncia.obtener_puntaje_recompensa())
-	var tiempo := sistema_despacho.obtener_tiempo_restante(denuncia.id)
-	denuncia_activa_tiempo.text = _formatear_tiempo(tiempo)
-	reloj_activo.sincronizar_tiempo(tiempo, denuncia.tiempo_limite_segundos, true)
 	var requeridas := denuncia.obtener_estaciones_requeridas()
 	protocolo.configurar(requeridas, denuncia.estaciones_completadas)
 	progreso_estaciones.text = "%d/%d COMPLETADAS" % [denuncia.estaciones_completadas.size(), requeridas.size()]
+	if denuncia.estado == Denuncia.Estado.RESUELTA:
+		reloj_activo.sincronizar_tiempo(reloj_activo.proporcion_restante, 1.0, false)
+		return
+	recompensa_caso.text = "AL RESOLVER\n+%s PTS" % _formatear_puntos(denuncia.obtener_puntaje_recompensa())
+	var tiempo := sistema_despacho.obtener_tiempo_restante(denuncia.id)
+	denuncia_activa_tiempo.text = "SIN PLAZO" if denuncia.es_practica else _formatear_tiempo(tiempo)
+	denuncia_activa_tiempo.add_theme_font_size_override("font_size", 25 if denuncia.es_practica else 46)
+	reloj_activo.sincronizar_tiempo(tiempo, denuncia.tiempo_limite_segundos, not denuncia.es_practica)
 
 
 func _formatear_tiempo(tiempo: float) -> String:
@@ -324,26 +406,52 @@ func _on_estacion_completada(denuncia: Denuncia, estacion_id: String) -> void:
 	mostrar_tarea_local(denuncia.id, estacion_id)
 
 func mostrar_tarea_local(caso_id: String, estacion_id: String) -> void:
+	efecto_tarea.modo_expediente = origen_resultado.is_valid()
+	if efecto_tarea.modo_expediente:
+		_actualizar_denuncia_activa()
+		if _id_activo != caso_id or not protocolo.estaciones.has(estacion_id):
+			return
+		mensaje_estacion.hide()
+		segundos_mensaje = 0.0
+		efecto_tarea.resultado_id = estacion_id
+		efecto_tarea.origen_resultado = origen_resultado.call(estacion_id)
+		efecto_tarea.destino_resultado = protocolo.centro_resultado(estacion_id)
+		protocolo.iniciar_entrega(estacion_id)
 	efecto_tarea.reproducir(IconoDespacho.nombre_estacion(estacion_id), caso_id)
-	_mostrar_mensaje("Correcto: %s completada." % IconoDespacho.nombre_estacion(estacion_id), Color("86efac"))
+	if not efecto_tarea.modo_expediente:
+		_mostrar_mensaje("Correcto: %s completada." % IconoDespacho.nombre_estacion(estacion_id), Color("86efac"))
 
 
 func _on_estacion_incorrecta(denuncia: Denuncia, estacion_usada: String) -> void:
+	if origen_resultado.is_valid():
+		mensaje_estacion.hide()
+		segundos_mensaje = 0.0
+		protocolo.recordar_requisitos()
+		return
 	if denuncia.estaciones_completadas.has(estacion_usada):
 		_mostrar_mensaje("Ya completaste %s. Elige otra pendiente." % IconoDespacho.nombre_estacion(estacion_usada), CORAL)
 	else:
 		_mostrar_mensaje("Esta estación no corresponde al caso. Elige una marcada.", CORAL)
 
 
-func _on_denuncia_resuelta(_denuncia: Denuncia) -> void:
-	_mostrar_mensaje("Denuncia resuelta: +5 de calma.", Color("86efac"))
+func _on_denuncia_resuelta(denuncia: Denuncia) -> void:
+	if origen_resultado.is_valid():
+		if _id_activo != denuncia.id: return
+		_caso_cierre = denuncia
+		_segundos_cierre = .85
+		mensaje_estacion.hide()
+	else:
+		_mostrar_mensaje("Denuncia resuelta: +5 de calma.", Color("86efac"))
 
 
 func _on_denuncia_vencida(denuncia: Denuncia) -> void:
+	if _caso_cierre == denuncia:
+		_caso_cierre = null
+		_segundos_cierre = 0.0
 	if efecto_tarea.caso_id == denuncia.id:
 		efecto_tarea.detener()
 	if denuncia.motivo_perdida == Denuncia.MotivoPerdida.TERREMOTO:
-		_mostrar_mensaje("La hoja cayó en una grieta. Denuncia perdida por el terremoto.", CORAL)
+		_mostrar_mensaje("La hoja cayó en una grieta. Denuncia perdida.", CORAL)
 	else:
 		_mostrar_mensaje("La denuncia '%s' venció." % denuncia.titulo, CORAL)
 

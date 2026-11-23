@@ -37,6 +37,20 @@ el mobiliario.
 
 ## Integración
 
+Las cinco escenas 3D originales conservan sus diseños y materiales completos.
+Los marcadores flotantes están visibles para todas las estaciones pendientes.
+El HUD utiliza los mismos símbolos de carpeta, lupa, candado, documento y corazón,
+en tinta petróleo sobre crema, sin texto ni miniaturas difíciles de leer.
+Completar envía el mismo símbolo a su casilla y añade una marca verde.
+
+`respuesta_mesa.gd` añade una luz de trabajo cálida y localizada, más intensa al
+poder interactuar. Su máscara solo ilumina el mobiliario original (capa 19);
+no alcanza los marcadores, al jugador ni al resto del escenario. No asigna
+`material_override` ni `material_overlay`, evitando que un resaltado aditivo
+blanquee la mesa completa. Apagón, incendio y pausa se respetan.
+`respuestas_visuales_mesas = false` desactiva únicamente esta luz adicional.
+La tecla E/X conserva su alcance físico habitual y no se impone ningún orden.
+
 `MarcadoresEstaciones/indicador_proxima_estacion.gd` coloca el modelo y el puntero bajo
 `OrientacionCamara`. Los orienta a la cámara activa y aplica una flotación y
 un balanceo limitados, sin girar la cara del icono de espaldas. Todos los objetivos
@@ -46,8 +60,8 @@ no procesan cuadros.
 El gestor ancla cada marcador 1,25 unidades sobre su estación. La altura se
 ajusta en `ALTURA_INDICADOR_ESTACION` de `Scripts/Partida/gestor_partida.gd`; el balanceo
 y la separación del puntero se ajustan en el script del indicador. Su propiedad
-`alto_maximo_pantalla` limita el tamaño al 18 % del alto del viewport al acercarse,
-sin agrandar los objetos lejanos. `ESCALA_MARCADOR = 0.85` reduce un 15 % el
+`alto_maximo_pantalla` limita el tamaño al 14 % del alto del viewport al acercarse,
+sin agrandar los objetos lejanos. `ESCALA_MARCADOR = 0.78` reduce un 22 % el
 conjunto completo (objeto y puntero) después de ese límite, también al acercarse.
 Así se mantiene visible el personaje al usar
 las mesas inferiores. La API `establecer_activo(bool)` controla visibilidad y
@@ -55,9 +69,8 @@ animación juntas.
 
 Completar una estación oculta únicamente su marcador. La resolución y el vencimiento
 ocultan todos los marcadores del caso inmediatamente. El HUD conserva la lista de
-estaciones y marca las completadas; la flecha identifica como sugerencia la pendiente
-más cercana por camino transitable y se actualiza al cambiar de celda. La tarjeta
-muestra solo el nombre de la estación, sin el prefijo «Sugerida:».
+estaciones y marca las completadas. La ruta interna se actualiza al cambiar de
+celda, pero no añade tarjetas, nombres ni instrucciones sobre los objetos.
 
 `crear_mano_recoger()` construye el aviso de la hoja suelta con el mismo bisel,
 guante crema, canto y puño petróleo y banda coral. Incluye una tecla E en relieve;
@@ -78,3 +91,18 @@ Compatibility sin depender del bloom del escenario. Cada marcador duplica
 sus materiales antes de animarlos para no iluminar las otras estaciones.
 Desactivar o reconfigurar el marcador restablece inmediatamente su aspecto;
 al salir del alcance, el brillo desaparece suavemente en unos 0,14 segundos.
+
+Cada estación se identifica únicamente por su objeto 3D, sin Label3D ni tarjeta
+con nombre o acción. La tecla E/X aparece junto al símbolo solo si el jugador
+lleva el expediente correspondiente y puede interactuar; se oculta fuera de
+pantalla, detrás del despacho o durante una interfaz. No señala una ruta obligatoria.
+
+## Grafitis de orientación
+
+`Oficina/GrafitisEstaciones` añade una pintura fija por estación sobre la cara interior
+del muro lateral. Las de Seguridad y Reportes se alinean con el tramo más cercano
+a sus mesas centrales. No cambian de posición con la cámara ni desaparecen al
+completar el caso. No tienen texto, emisión, sombra propia ni colisiones. Los cinco
+SVG de `Grafitis/` conservan las siluetas de carpeta, lupa, candado, documento y
+corazón; el aro de color, desgaste y gotas les dan acabado de pintura sobre ladrillo.
+El HUD y las instrucciones conservan su texto de apoyo.

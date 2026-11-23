@@ -44,7 +44,7 @@ func _draw() -> void:
 		_dibujar_pista(base, CREMA)
 		var relleno := Rect2(base.position + Vector2.ONE * 3.0 * factor, Vector2(maxf(0.0, ancho - 6.0 * factor) * proporcion, alto - 6.0 * factor))
 		if relleno.size.x > 0.0:
-			_dibujar_pista(relleno, CORAL)
+			_dibujar_pista(relleno, Color("79d693") if listo_para_recoger else CORAL)
 	var texto := "LISTO · VUELVE A SEGURIDAD" if listo_para_recoger else "DESENCRIPTANDO"
 	var tamano := maxi(10, roundi(21.0 * factor))
 	var ancho_texto := FUENTE.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano).x

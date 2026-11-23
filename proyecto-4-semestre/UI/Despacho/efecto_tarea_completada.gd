@@ -9,6 +9,11 @@ const TINTA := Color("173b50")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
 const VERDE := Color("a8dcad")
+const ICONO := preload("res://UI/Despacho/icono_despacho.gd")
+var modo_expediente := false
+var resultado_id := ""
+var origen_resultado := Vector2.ZERO
+var destino_resultado := Vector2.ZERO
 
 var tiempo: float = 0.0
 var estacion: String = ""
@@ -73,6 +78,20 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	if not visible:
+		return
+	if modo_expediente:
+		if tiempo <= .62:
+			var t := smoothstep(0.0, 1.0, clampf(tiempo / .62, 0, 1))
+			var posicion := origen_resultado.lerp(destino_resultado, t) + Vector2(0, -sin(t * PI) * 55.0)
+			# El símbolo que sale de la estación es el mismo que llega a su casilla.
+			var lado := lerpf(50.0, 32.0, t)
+			var fondo := StyleBoxFlat.new()
+			fondo.bg_color = CREMA
+			fondo.border_color = TINTA
+			fondo.set_border_width_all(2)
+			fondo.set_corner_radius_all(6)
+			draw_style_box(fondo, Rect2(posicion-Vector2.ONE*lado*.5, Vector2.ONE*lado))
+			ICONO.dibujar_estacion(self, ICONO.tipo_estacion(resultado_id), posicion, lado*.70, TINTA)
 		return
 	var avance := clampf(tiempo / DURACION, 0.0, 1.0)
 	var factor := maxf(0.1, minf(size.x / 1280.0, size.y / 720.0))
