@@ -28,6 +28,7 @@ func _ready() -> void:
 	_titulo.add_theme_color_override("font_color", Color("fff1d8"))
 	columna.add_child(_titulo)
 	_detalle = Label.new()
+	_detalle.add_theme_font_override("font", preload("res://UI/Menus/fuente_lectura.tres"))
 	_detalle.add_theme_font_size_override("font_size", 16)
 	_detalle.add_theme_color_override("font_color", Color("dce9df"))
 	columna.add_child(_detalle)

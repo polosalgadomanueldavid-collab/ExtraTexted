@@ -6,7 +6,7 @@ signal reiniciar_solicitado
 signal menu_solicitado
 
 const FUENTE_TITULOS := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
-const FUENTE_TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
+const FUENTE_TEXTO := preload("res://UI/Menus/fuente_lectura.tres")
 const ARTE_CUADERNO := preload("res://UI/Despacho/cuaderno_arte.gd")
 const CUADERNO_3D := preload("res://UI/Despacho/cuaderno_3d.gd")
 const FONDO_CUADERNO := preload("res://UI/Despacho/fondo_cuaderno.gdshader")
@@ -42,7 +42,6 @@ var _saltar: Button
 var _cuaderno: Control
 var _contenido_libro: Control
 var _ayuda_libro: Label
-var _fuente_cuerpo: FontVariation
 var _paginas: Array[Dictionary] = []
 var _pestanas: Array[Button] = []
 var _anterior: Button
@@ -119,17 +118,11 @@ func finalizar_relevo() -> void:
 
 
 func _construir_interfaz() -> void:
-	_fuente_cuerpo = FontVariation.new()
-	_fuente_cuerpo.base_font = FUENTE_TEXTO
-	_fuente_cuerpo.variation_opentype = {2003265652: 550.0}
 	_fondo = ColorRect.new()
 	_fondo.color = Color(0.02, 0.08, 0.12, 0.0)
 	_fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_fondo)
-	var fuente_enfasis := FontVariation.new()
-	fuente_enfasis.base_font = FUENTE_TEXTO
-	fuente_enfasis.variation_opentype = {2003265652: 750.0}
 
 	_aviso_cinematica = PanelContainer.new()
 	_aviso_cinematica.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -143,7 +136,7 @@ func _construir_interfaz() -> void:
 	aviso.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	aviso.add_theme_constant_override("separation", 5)
 	_aviso_cinematica.add_child(aviso)
-	_rotulo = _etiqueta("RELEVO DE EMERGENCIA", 14, CORAL, fuente_enfasis)
+	_rotulo = _etiqueta("RELEVO DE EMERGENCIA", 14, CORAL, FUENTE_TEXTO)
 	aviso.add_child(_rotulo)
 	_titulo_caso = _etiqueta("El equipo toma el relevo", 25, CREMA, FUENTE_TITULOS)
 	aviso.add_child(_titulo_caso)
@@ -168,7 +161,7 @@ func _construir_interfaz() -> void:
 	_saltar.text = "Ir al cuaderno  ›"
 	_saltar.custom_minimum_size.y = 48
 	_saltar.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_saltar.add_theme_font_override("font", fuente_enfasis)
+	_saltar.add_theme_font_override("font", FUENTE_TITULOS)
 	_saltar.add_theme_font_size_override("font_size", 19)
 	_saltar.add_theme_color_override("font_color", PETROLEO)
 	_saltar.add_theme_color_override("font_hover_color", PETROLEO)
@@ -707,7 +700,7 @@ func _etiqueta(texto: String, tamano: int, color: Color, fuente: Font) -> Label:
 	var etiqueta := Label.new()
 	etiqueta.text = texto
 	etiqueta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	etiqueta.add_theme_font_override("font", _fuente_cuerpo if fuente == FUENTE_TEXTO else fuente)
+	etiqueta.add_theme_font_override("font", fuente)
 	etiqueta.add_theme_font_size_override("font_size", tamano)
 	etiqueta.add_theme_color_override("font_color", color)
 	return etiqueta

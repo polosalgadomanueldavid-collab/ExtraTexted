@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://UI/Menus/panel_clasificacion.gd" id="1_panel"]
 [ext_resource type="Theme" path="res://UI/Menus/tema_piloto.tres" id="2_tema"]
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="3_texto"]
+[ext_resource type="FontVariation" path="res://UI/Menus/fuente_lectura.tres" id="4_lectura"]
 
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/volver.svg" id="5_volver"]
 
@@ -132,7 +133,7 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.18, 0.11, 1)
-theme_override_fonts/font = ExtResource("3_texto")
+theme_override_fonts/font = ExtResource("4_lectura")
 theme_override_font_sizes/font_size = 22
 text = "No se pudo abrir la partida. Inténtalo de nuevo."
 autowrap_mode = 3
@@ -187,7 +188,7 @@ theme_override_constants/separation = 7
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_fonts/font = ExtResource("3_texto")
+theme_override_fonts/font = ExtResource("4_lectura")
 theme_override_font_sizes/font_size = 30
 autowrap_mode = 3
 

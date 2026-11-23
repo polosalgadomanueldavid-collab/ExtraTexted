@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://Objetos/MarcoFoto/visor_cuadros.gd" id="1_script"]
+[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf" id="2_titulo"]
 
 [node name="VisorCuadros" type="Control"]
 process_mode = 3
@@ -43,6 +44,7 @@ offset_top = 22.0
 offset_bottom = 64.0
 grow_horizontal = 2
 theme_override_font_sizes/font_size = 28
+theme_override_fonts/font = ExtResource("2_titulo")
 theme_override_colors/font_color = Color(0.94, 0.91, 0.82, 1)
 text = "Fotografía"
 horizontal_alignment = 1
@@ -61,4 +63,6 @@ offset_right = 90.0
 offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 0
+theme_override_fonts/font = ExtResource("2_titulo")
+theme_override_font_sizes/font_size = 20
 text = "Cerrar  ·  Esc"

@@ -79,6 +79,7 @@ func _ready() -> void:
 	_pista_mando.position = Vector2(60, 474)
 	_pista_mando.size = Vector2(740, 28)
 	_pista_mando.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pista_mando.add_theme_font_override("font", preload("res://UI/Menus/fuente_lectura.tres"))
 	_pista_mando.add_theme_font_size_override("font_size", 19)
 	_pista_mando.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lienzo.add_child(_pista_mando)

@@ -4,12 +4,7 @@
 [ext_resource type="Theme" path="res://UI/Menus/tema_piloto.tres" id="2_tema"]
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="3_texto"]
 [ext_resource type="Script" path="res://UI/Menus/manual_controles.gd" id="5_manual"]
-
-[sub_resource type="FontVariation" id="Font_lectura"]
-base_font = ExtResource("3_texto")
-variation_opentype = {
-2003265652: 550.0
-}
+[ext_resource type="FontVariation" path="res://UI/Menus/fuente_lectura.tres" id="6_lectura"]
 
 [sub_resource type="FontVariation" id="Font_enfasis"]
 base_font = ExtResource("3_texto")
@@ -156,7 +151,7 @@ custom_minimum_size = Vector2(1560, 0)
 theme = ExtResource("2_tema")
 theme_override_styles/panel = SubResource("Style_transparente")
 script = ExtResource("1_script")
-fuente_texto = SubResource("Font_lectura")
+fuente_texto = ExtResource("6_lectura")
 fuente_enfasis = SubResource("Font_enfasis")
 estilo_numero = SubResource("Style_numero")
 estilo_tecla = SubResource("Style_tecla")
@@ -256,7 +251,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.34, 0.408, 0.404, 1)
-theme_override_fonts/font = SubResource("Font_lectura")
+theme_override_fonts/font = ExtResource("6_lectura")
 theme_override_font_sizes/font_size = 24
 vertical_alignment = 1
 autowrap_mode = 3
@@ -267,7 +262,6 @@ custom_minimum_size = Vector2(340, 76)
 layout_mode = 2
 size_flags_horizontal = 8
 mouse_default_cursor_shape = 2
-theme_override_fonts/font = SubResource("Font_enfasis")
 theme_override_font_sizes/font_size = 28
 theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
 theme_override_colors/font_hover_color = Color(0.09, 0.231, 0.314, 1)

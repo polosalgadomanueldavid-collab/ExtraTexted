@@ -9,7 +9,7 @@ const TURQUESA := Color("15b7c0")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
 const FUENTE_TITULO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
-const FUENTE_TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
+const FUENTE_TEXTO := preload("res://UI/Menus/fuente_lectura.tres")
 const ICONO_KAMEHAMEHA := preload("res://UI/Menus/ArtePiloto/Emotes/kamehameha.png")
 const ICONO_RASENGAN := preload("res://UI/Menus/ArtePiloto/Emotes/rasengan.png")
 const ICONO_EXPLOSION := preload("res://UI/Menus/ArtePiloto/Emotes/explosion_final.png")
@@ -194,7 +194,7 @@ func _crear_pie() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_theme_stylebox_override("panel", _estilo_capsula(CREMA, TURQUESA, 3, 12))
 	_lienzo.add_child(panel)
-	_centrar(panel, Vector2(0.0, 350.0), Vector2(470.0, 50.0))
+	_centrar(panel, Vector2(0.0, 350.0), Vector2(540.0, 50.0))
 
 	var texto := Label.new()
 	texto.text = "PALANCA DERECHA + A PARA ELEGIR  •  B CIERRA  •  G / ESC"
