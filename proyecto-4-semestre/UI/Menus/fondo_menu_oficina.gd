@@ -45,8 +45,8 @@ func _process(_delta: float) -> void:
 func _actualizar_calidad() -> void:
 	_calidad = CalidadVisual.nivel
 	vista.scaling_3d_scale = CalidadVisual.ESCALAS[_calidad]
-	vista.positional_shadow_atlas_size = 4096 if _calidad == 2 else 2048
-	vista.msaa_3d = Viewport.MSAA_4X if _calidad == 2 else Viewport.MSAA_2X if _calidad == 1 else Viewport.MSAA_DISABLED
+	vista.positional_shadow_atlas_size = 4096 if _calidad >= 2 else 2048
+	vista.msaa_3d = Viewport.MSAA_4X if _calidad >= 2 else Viewport.MSAA_2X if _calidad == 1 else Viewport.MSAA_DISABLED
 	escenario.configurar_calidad(_calidad)
 
 

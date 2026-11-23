@@ -5,6 +5,8 @@ uniform sampler2D mascara_huecos : repeat_disable, filter_nearest;
 uniform vec2 origen_grid = vec2(-4.5, -0.1);
 uniform vec2 tamano_piso = vec2(7.0, 12.5);
 uniform bool usar_mascara_huecos = false;
+uniform float rugosidad : hint_range(0.0, 1.0) = 0.74;
+uniform float especular : hint_range(0.0, 1.0) = 0.22;
 
 varying vec3 posicion_mundo;
 
@@ -22,6 +24,6 @@ void fragment() {
 	}
 	ALBEDO = texture(textura_piso, uv).rgb;
 	// Reflejo ancho y tenue: conserva la lectura del suelo seco sin otra pasada.
-	ROUGHNESS = 0.74;
-	SPECULAR = 0.22;
+	ROUGHNESS = rugosidad;
+	SPECULAR = especular;
 }

@@ -23,7 +23,7 @@ func _run() -> void:
 		if argumento.begins_with("--etiqueta="):
 			_etiqueta = argumento.get_slice("=", 1).validate_filename()
 		elif argumento.begins_with("--calidad="):
-			calidad.nivel = clampi(argumento.get_slice("=", 1).to_int(), 0, 2)
+			calidad.nivel = clampi(argumento.get_slice("=", 1).to_int(), 0, calidad.ULTRA)
 		elif argumento.begins_with("--segundos="):
 			segundos = maxf(1.0, argumento.get_slice("=", 1).to_float())
 		elif argumento == "--referencia":
@@ -128,15 +128,12 @@ func _verificar(condicion: bool, mensaje: String) -> void:
 
 func _comprobar_calidad_y_calentamiento(luces: Array[Light3D], calidad: Node) -> void:
 	var nivel_original: int = calidad.nivel
-	for nivel in [0, 1, 2]:
-		calidad.nivel = nivel
-		# Aplicar sin escribir calidad_visual.cfg.
-		calidad._recorrer(root)
+	for nivel in [0, 1, 2, 3]:
+		calidad.establecer(nivel, false)
 		for luz in luces:
-			var esperada: bool = nivel == 2 and bool(luz.get_meta("sombra_original"))
+			var esperada: bool = nivel >= 2 and bool(luz.get_meta("sombra_original"))
 			_verificar(luz.shadow_enabled == esperada, "Sombras al cambiar calidad en " + luz.name)
-	calidad.nivel = nivel_original
-	calidad._recorrer(root)
+	calidad.establecer(nivel_original, false)
 	if DisplayServer.get_name() == "headless":
 		return
 	var calentamiento := preload("res://UI/Menus/calentamiento_visual.gd").new()

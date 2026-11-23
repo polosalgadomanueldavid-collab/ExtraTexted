@@ -1,8 +1,12 @@
 extends Node
 ## Ajustes locales: solo presentación; no modifican daño, física ni relojes.
 const ARCHIVO := "user://calidad_visual.cfg"
-const ESCALAS := [0.65, 0.85, 1.0]
-const PARTICULAS := [0.5, 0.75, 1.0]
+signal nivel_cambiado(nuevo_nivel: int)
+const ULTRA := 3
+const NOMBRES := ["Baja", "Media", "Alta", "Ultra"]
+# Ultra cambia la dirección artística, sin supersampling ni más partículas.
+const ESCALAS := [0.65, 0.85, 1.0, 1.0]
+const PARTICULAS := [0.5, 0.75, 1.0, 1.0]
 var nivel := 2
 
 func _ready() -> void:
@@ -11,14 +15,17 @@ func _ready() -> void:
 	if config.load(ARCHIVO) == OK:
 		var valor: Variant = config.get_value("visual", "nivel", 2)
 		if valor is int:
-			nivel = clampi(valor, 0, 2)
+			nivel = clampi(valor, 0, ULTRA)
 	get_tree().node_added.connect(_nuevo_nodo)
 	get_tree().root.scaling_3d_scale = ESCALAS[nivel]
 
-func establecer(valor: int) -> void:
-	nivel = clampi(valor, 0, 2)
+func establecer(valor: int, guardar_preferencia := true) -> void:
+	nivel = clampi(valor, 0, ULTRA)
 	get_tree().root.scaling_3d_scale = ESCALAS[nivel]
 	_recorrer(get_tree().root)
+	nivel_cambiado.emit(nivel)
+	if not guardar_preferencia:
+		return
 	var config := ConfigFile.new()
 	config.set_value("visual", "nivel", nivel)
 	config.save(ARCHIVO)
@@ -38,7 +45,7 @@ func _aplicar(nodo: Node) -> void:
 	if nodo is Light3D:
 		if not nodo.has_meta("sombra_original"):
 			nodo.set_meta("sombra_original", nodo.shadow_enabled)
-		nodo.shadow_enabled = nodo.get_meta("sombra_original") and (nivel == 2 or (nivel == 1 and nodo is DirectionalLight3D))
+		nodo.shadow_enabled = nodo.get_meta("sombra_original") and (nivel >= 2 or (nivel == 1 and nodo is DirectionalLight3D))
 	elif nodo is CPUParticles3D:
 		if not nodo.has_meta("cantidad_original"):
 			nodo.set_meta("cantidad_original", nodo.amount)

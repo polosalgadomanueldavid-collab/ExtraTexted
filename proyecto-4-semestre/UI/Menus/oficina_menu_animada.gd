@@ -424,5 +424,5 @@ func gesticular(indice: int) -> void:
 
 func configurar_calidad(nivel: int) -> void:
 	var avanzado := RenderingServer.get_current_rendering_method() == "forward_plus"
-	ambiente.ssao_enabled = avanzado and nivel == 2
+	ambiente.ssao_enabled = avanzado and nivel >= 2
 	ambiente.glow_enabled = RenderingServer.get_current_rendering_method() != "gl_compatibility" and nivel > 0
