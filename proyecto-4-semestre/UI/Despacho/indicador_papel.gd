@@ -52,6 +52,10 @@ func ajustar_pantalla(tamano_pantalla: Vector2) -> void:
 	position = Vector2(MARGEN * factor, tamano_pantalla.y - (MARGEN + TAMANO.y) * factor)
 
 
+func _process(_delta: float) -> void:
+	rotulo.text = "X - soltar" if ControladorInterfaz.dispositivo_mando >= 0 else "E - soltar"
+
+
 func _draw() -> void:
 	draw_circle(Vector2(70, 67), 51, Color("0d2736b3"), true, -1.0, true)
 	draw_circle(Vector2(70, 61), 51, TINTA, true, -1.0, true)

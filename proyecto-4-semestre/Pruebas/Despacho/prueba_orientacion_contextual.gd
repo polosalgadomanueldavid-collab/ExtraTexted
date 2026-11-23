@@ -40,6 +40,16 @@ func _run() -> void:
 	sistema = oficina.sistema_despacho
 	sistema.tiempo_detenido = true
 	_verificar(oficina.respuestas_mesas.size() == 5, "Cada diseño original tiene respuesta contextual")
+	var grafitis = oficina.get_node("GrafitisEstaciones")
+	_verificar(grafitis.pinturas.size() == 5, "Las cinco estaciones tienen pintura permanente")
+	for id in grafitis.pinturas:
+		var pintura: MeshInstance3D = grafitis.pinturas[id]
+		var izquierda: bool = grafitis.IZQUIERDA.has(id)
+		var normal := Vector3.RIGHT if izquierda else Vector3.LEFT
+		_verificar(pintura.global_basis.z.dot(normal) > .99, "La pintura mira hacia el interior: " + id)
+		_verificar(pintura.visible and not pintura.material_override.emission_enabled and pintura.find_children("*", "Label3D").is_empty(), "Grafiti sin texto, emisión ni dependencia del caso: " + id)
+	await _capturar_grafitis()
+
 	for id in oficina.respuestas_mesas:
 		var respuesta = oficina.respuestas_mesas[id]
 		var mesa = respuesta.get_parent().get_parent()
@@ -62,6 +72,8 @@ func _run() -> void:
 	var requisitos = oficina.panel_despacho.tarjetas[otro.id].find_child("RequisitosVisuales", true, false)
 	_verificar(requisitos != null and requisitos.estaciones == otro.obtener_estaciones_requeridas(), "La cola muestra los símbolos propios de cada denuncia")
 	_validar(caso)
+	_verificar(oficina.panel_despacho.denuncia_activa_titulo.visible and oficina.panel_despacho.denuncia_activa_titulo.text == caso.titulo, "El caso conserva su título junto a los símbolos")
+	_verificar(oficina.panel_despacho.protocolo.custom_minimum_size.y == 50, "Los requisitos conservan la fila compacta del panel original")
 	for id in oficina.indicadores_estaciones:
 		var indicador = oficina.indicadores_estaciones[id]
 		_verificar(indicador.visible == caso.obtener_estaciones_pendientes().has(id), "Los flotantes muestran todas las pendientes, sin imponer orden: "+id)
@@ -183,13 +195,16 @@ func _probar_tecla_real() -> void:
 		_tecla(KEY_E)
 		await _cuadros(75)
 		if id == "privacidad":
+			await _captura("06_seguridad_procesando")
 			await _cuadros(370)
+			await _captura("07_seguridad_lista")
 			_tecla(KEY_E)
 			await _cuadros(65)
 		elif id == "evidencias":
 			var tarea = oficina.clasificador_evidencias
 			_verificar(tarea.visible, "Evidencias abre el clasificador real")
 			if tarea.visible:
+				await _captura("08_evidencias_visual")
 				while tarea.visible and tarea.archivados < tarea.objetivos.size():
 					tarea.seleccion = tarea.papeles.find(tarea.objetivos[tarea.archivados])
 					_tecla(KEY_E)
@@ -198,6 +213,7 @@ func _probar_tecla_real() -> void:
 			var tarea = oficina.escaner_verificacion
 			_verificar(tarea.visible, "Verificación abre el escáner real")
 			if tarea.visible:
+				await _captura("09_escaner_visual")
 				tarea.marcador = tarea.zona_centro
 				_tecla(KEY_E)
 				await _cuadros(2)
@@ -272,3 +288,24 @@ func _verificar(condicion: bool, mensaje: String) -> void:
 	if not condicion:
 		errores += 1
 		push_error("[ORIENTACION CONTEXTUAL] " + mensaje)
+
+func _capturar_grafitis() -> void:
+	if not capturas: return
+	var principal = oficina.get_node("Gameplay/Camera3D")
+	var detalle := Camera3D.new()
+	detalle.fov = 70
+	oficina.add_child(detalle)
+	oficina.get_node("CanvasLayer").hide()
+	for lado in ["izquierda", "derecha"]:
+		if lado == "izquierda":
+			detalle.global_position = Vector3(-.2, 3.0, 4.0)
+			detalle.look_at(Vector3(-4.38, 1.55, 3.7))
+		else:
+			detalle.global_position = Vector3(-2.5, 2.8, 5.0)
+			detalle.look_at(Vector3(2.36, 1.55, 4.8))
+		detalle.make_current()
+		await _cuadros(3)
+		await _captura("grafitis_" + lado)
+	principal.make_current()
+	detalle.queue_free()
+	oficina.get_node("CanvasLayer").show()

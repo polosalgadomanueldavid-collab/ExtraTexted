@@ -1,6 +1,7 @@
 extends Control
 ## Radio ilustrada con los mismos materiales, fuentes y escalado del HUD.
 signal omitir
+const ARTE := preload("res://UI/Despacho/pictogramas_tarea.gd")
 const TITULO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 const TINTA := Color("173b50")
@@ -8,6 +9,7 @@ const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
 const CARTON := Color("c79e6d")
 var objetivo: Node3D
+var objeto_objetivo := "pc"
 var etiqueta_objetivo := ""
 var detalle_objetivo := ""
 var compacta := false
@@ -140,24 +142,18 @@ func _dibujar_radio(origen: Vector2) -> void:
 	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE * _factor)
 
 func _dibujar_objetivo() -> void:
-	if not is_instance_valid(objetivo) or not objetivo.is_inside_tree():
-		return
+	if not is_instance_valid(objetivo) or not objetivo.is_inside_tree(): return
 	var camara := get_viewport().get_camera_3d()
-	if camara == null:
-		return
-	var punto := objetivo.global_position + Vector3.UP * 1.1
+	if camara == null: return
+	var punto := objetivo.global_position+Vector3.UP*1.1
 	var destino := camara.unproject_position(punto)
-	if camara.is_position_behind(punto):
-		destino = size - destino
-	var ancho := maxf(244, TITULO.get_string_size(etiqueta_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 28) * _factor
-	ancho = maxf(ancho, TEXTO.get_string_size(detalle_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x * _factor + 24 * _factor)
-	destino.x = clampf(destino.x, ancho * .5 + 12, size.x - ancho * .5 - 12)
-	destino.y = clampf(destino.y, 110 * _factor, _caja.position.y * _factor - 40 * _factor)
-	var caja := Rect2(destino - Vector2(ancho * .5, 62 * _factor), Vector2(ancho, 56 * _factor))
-	_panel(caja, CREMA, TINTA)
-	draw_string(TITULO, caja.position + Vector2(12, 23) * _factor, etiqueta_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(17 * _factor)), TINTA)
-	draw_string(TEXTO, caja.position + Vector2(12, 44) * _factor, detalle_objetivo, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(14 * _factor)), TINTA)
-	draw_colored_polygon(PackedVector2Array([destino + Vector2(-6, 0) * _factor, destino + Vector2(6, 0) * _factor, destino + Vector2(0, 9) * _factor]), CORAL)
+	if camara.is_position_behind(punto): destino = size-destino
+	destino.x = clampf(destino.x,55*_factor,size.x-55*_factor)
+	destino.y = clampf(destino.y,140*_factor,_caja.position.y*_factor-30*_factor)
+	var caja := Rect2(destino-Vector2(39,86)*_factor,Vector2(78,76)*_factor)
+	_panel(caja,CREMA,TINTA)
+	ARTE.objeto(self,objeto_objetivo,caja.get_center(),58*_factor)
+	draw_colored_polygon(PackedVector2Array([destino+Vector2(-7,-5)*_factor,destino+Vector2(7,-5)*_factor,destino+Vector2(0,5)*_factor]),CORAL)
 
 func _panel(caja: Rect2, color: Color, borde: Color) -> void:
 	var estilo := StyleBoxFlat.new()

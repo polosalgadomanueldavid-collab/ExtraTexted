@@ -4,6 +4,7 @@ extends Control
 signal verificacion_terminada(caso_id: String)
 signal cerrado
 
+const ARTE := preload("res://UI/Despacho/pictogramas_tarea.gd")
 const FUENTE := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const TINTA := Color("173b50")
 const CREMA := Color("fff1d8")
@@ -147,15 +148,21 @@ func _draw() -> void:
 	var panel := Rect2(centro - Vector2(430, 255) * factor, Vector2(860, 510) * factor)
 	panel.position.y += (1.0 - avance) * (size.y - panel.position.y + 42.0 * factor)
 	_dibujar_caja(panel, TINTA, Color("426473"), 12.0, 2.0, factor)
-	_texto("VERIFICACIÓN", panel.position + Vector2(30, 48) * factor, 29, CREMA, factor)
-	_texto("DETÉN LA LUZ CORAL DENTRO DE LA FRANJA VERDE DEL DOCUMENTO.", panel.position + Vector2(30, 78) * factor, 17, CREMA, factor)
+	_texto("VERIFICACIÓN", panel.position+Vector2(30,48)*factor, 22, CREMA, factor)
+	_texto("DETÉN LA LUZ DENTRO DE LA FRANJA VERDE.", panel.position+Vector2(30,94)*factor, 17, CREMA, factor)
+	# Ejemplo visible: el haz dentro del recuadro, tecla y sello de acierto.
+	var muestra := Rect2(panel.position+Vector2(252,30)*factor,Vector2(135,48)*factor)
+	draw_rect(muestra,Color(VERDE,.35))
+	draw_rect(muestra,VERDE,false,3*factor)
+	draw_line(muestra.position+Vector2(0,24)*factor,muestra.end-Vector2(0,24)*factor,CORAL,5*factor,true)
+	_dibujar_tecla(panel.position+Vector2(423,37)*factor,38,"A" if ControladorInterfaz.dispositivo_mando >= 0 else "E",factor)
+	ARTE.flecha(self,panel.position+Vector2(479,54)*factor,panel.position+Vector2(516,54)*factor,CREMA,3*factor)
+	ARTE.marca(self,panel.position+Vector2(550,54)*factor,37*factor)
 	_dibujar_escaner(panel, factor)
 	if error_restante > 0.0:
-		_texto("FUERA DE ZONA · INTENTA DE NUEVO", panel.position + Vector2(240, 486) * factor, 18, CORAL, factor)
-	else:
-		_texto("BARRIDO EN CURSO", panel.position + Vector2(305, 486) * factor, 18, VERDE, factor)
-	_dibujar_tecla(panel.position + Vector2(674, 460) * factor, 59.0, "ESC", factor)
-	_texto("SALIR", panel.position + Vector2(746, 486) * factor, 16, CREMA, factor)
+		ARTE.marca(self,panel.position+Vector2(430,482)*factor,30*factor,false)
+	_dibujar_tecla(panel.position + Vector2(674,460)*factor,59,"B" if ControladorInterfaz.dispositivo_mando >= 0 else "ESC",factor)
+	_texto("SALIR",panel.position+Vector2(746,486)*factor,16,CREMA,factor)
 
 
 func _dibujar_escaner(panel: Rect2, factor: float) -> void:
@@ -187,14 +194,14 @@ func _dibujar_escaner(panel: Rect2, factor: float) -> void:
 	draw_line(Vector2(zona.position.x, zona.end.y), zona.end, VERDE, 3.0 * factor, true)
 	var etiqueta := Rect2(Vector2(cristal.end.x - 142.0 * factor, zona_y + 4.0 * factor), Vector2(130, 27) * factor)
 	draw_rect(etiqueta, Color(CREMA, 0.83))
-	_texto("ZONA VÁLIDA", etiqueta.position + Vector2(8, 20) * factor, 15, TINTA, factor)
+	ARTE.marca(self, etiqueta.get_center(), 21*factor)
 	var haz_y := cristal.position.y + cristal.size.y * marcador
 	draw_rect(Rect2(Vector2(cristal.position.x, haz_y - 11.0 * factor), Vector2(cristal.size.x, 22.0 * factor)), Color(CORAL, 0.14))
 	draw_rect(Rect2(Vector2(cristal.position.x, haz_y - 5.0 * factor), Vector2(cristal.size.x, 10.0 * factor)), Color(CORAL, 0.38))
 	draw_line(Vector2(cristal.position.x, haz_y), Vector2(cristal.end.x, haz_y), CORAL, 6.0 * factor, true)
-	_texto("ESCÁNER DE DOCUMENTOS", cuerpo.position + Vector2(26, 284) * factor, 16, TINTA, factor)
-	_dibujar_tecla(cuerpo.position + Vector2(605, 256) * factor, 34.0, "E", factor)
-	_texto("DETENER", cuerpo.position + Vector2(652, 282) * factor, 17, TINTA, factor)
+	ARTE.objeto(self,"verificacion",cuerpo.position+Vector2(49,275)*factor,34*factor)
+	_dibujar_tecla(cuerpo.position + Vector2(605, 256) * factor, 34.0, "A" if ControladorInterfaz.dispositivo_mando >= 0 else "E", factor)
+	_texto("DETENER",cuerpo.position+Vector2(652,282)*factor,17,TINTA,factor)
 
 
 func _dibujar_documento(cristal: Rect2, factor: float) -> void:
@@ -214,12 +221,12 @@ func _dibujar_documento(cristal: Rect2, factor: float) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(245, -95), Vector2(245, -74), Vector2(266, -74)]), Color("d8ddd3"))
 	draw_line(Vector2(245, -95), Vector2(245, -74), Color("33494b"), 2.0, true)
 	draw_line(Vector2(245, -74), Vector2(266, -74), Color("33494b"), 2.0, true)
-	draw_string(FUENTE, Vector2(-237, -59), "DOCUMENTO EN REVISIÓN", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, TINTA)
+	ARTE.archivo(self, 0, Vector2(-208,-61), 44)
 	for i: int in range(5):
 		var y := -35.0 + 19.0 * i
 		var ancho := 435.0 if i % 2 == 0 else 325.0
 		draw_line(Vector2(-235, y), Vector2(-235 + ancho, y), Color(TINTA, 0.29), 4.0, true)
-	draw_string(FUENTE, Vector2(-237, 77), "ESTACIÓN DE VERIFICACIÓN · CASO ACTIVO", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, TINTA)
+
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

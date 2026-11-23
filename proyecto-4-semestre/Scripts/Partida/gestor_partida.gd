@@ -284,7 +284,7 @@ func _ready() -> void:
 			acceso.add_to_group("accesos_navegacion")
 			add_child(acceso)
 	_aviso_reporte_atasco = Label3D.new()
-	_aviso_reporte_atasco.text = "IMPRESORA ATASCADA"
+	_aviso_reporte_atasco.text = "!"
 	_aviso_reporte_atasco.font = preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 	_aviso_reporte_atasco.font_size = 24
 	_aviso_reporte_atasco.pixel_size = 0.004
@@ -292,6 +292,11 @@ func _ready() -> void:
 	_aviso_reporte_atasco.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_aviso_reporte_atasco.visible = false
 	add_child(_aviso_reporte_atasco)
+	var llave_aviso := preload("res://Scripts/Despacho/modelo_llave.gd").new()
+	llave_aviso.position = Vector3(.18,-.2,0)
+	llave_aviso.scale = Vector3.ONE*.7
+	llave_aviso.rotation.z = -.45
+	_aviso_reporte_atasco.add_child(llave_aviso)
 	for nodo: Node in find_children("*", "Estacion", true, false):
 		var estacion_reporte := nodo as Estacion
 		if estacion_reporte.estacion_id == "reporte":
@@ -426,7 +431,7 @@ func _process(_delta: float) -> void:
 	_actualizar_indicador_denuncia_pc(objetivo)
 	if not _denuncia_en_descriptado.is_empty() and is_instance_valid(_mesa_seguridad):
 		var avance := 1.0 if _seguridad_lista else 1.0 - temporizador_seguridad.time_left / DURACION_DESENCRIPTADO
-		progreso_seguridad.actualizar(avance, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * 2.05)
+		progreso_seguridad.actualizar(avance, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * .72)
 
 
 func _input(evento: InputEvent) -> void:
@@ -1196,7 +1201,7 @@ func interactuar_estacion(estacion_id: String) -> void:
 				temporizador_seguridad.start()
 				sonidos_mesas.iniciar_seguridad()
 				progreso_seguridad.show()
-				progreso_seguridad.actualizar(0.0, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * 2.05)
+				progreso_seguridad.actualizar(0.0, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * .72)
 				panel_despacho._mostrar_mensaje("Seguridad está desencriptando. Vuelve a recoger el archivo cuando termine.", Color("86efac"))
 			elif _seguridad_lista and _denuncia_en_descriptado == denuncia.id:
 				_cancelar_descriptado()

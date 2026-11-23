@@ -58,13 +58,11 @@ func _draw() -> void:
 	draw_set_transform(ancla, 0.0, Vector2.ONE * factor)
 	var avance := clampf(tiempo_llegada / 0.55, 0.0, 1.0)
 	var rebote := float(Tween.interpolate_value(0.45, 0.55, avance, 1.0, Tween.TRANS_BACK, Tween.EASE_OUT))
-	var etiqueta := "NUEVA DENUNCIA" if pendientes.size() == 1 else "DENUNCIAS (%d)" % pendientes.size()
-	if not puede_recoger:
-		etiqueta = "EN ESPERA (%d)" % pendientes.size()
-	var ancho := FUENTE.get_string_size(etiqueta, HORIZONTAL_ALIGNMENT_LEFT, -1, 19).x + 24.0
-	_caja(Rect2(-ancho * 0.5, -39, ancho, 31), TINTA, TINTA)
-	_caja(Rect2(-ancho * 0.5, -42, ancho, 31), CREMA, TINTA)
-	_texto(etiqueta, Vector2(-ancho * 0.5, -20), 19, TINTA, ancho)
+	# El sobre y el contador comunican la cola sin una frase flotante.
+	var etiqueta := str(pendientes.size())
+	var ancho := 36.0
+	_caja(Rect2(-18, -39, ancho, 27), CREMA, TINTA)
+	_texto(etiqueta, Vector2(-18, -19), 19, TINTA, ancho)
 	draw_colored_polygon(PackedVector2Array([Vector2(-7, -6), Vector2(7, -6), Vector2(0, 3)]), CORAL)
 	var desplazamiento := Vector2((1.0 - avance) * 40.0, -(1.0 - avance) * 20.0 - 61.0)
 	draw_set_transform(ancla + desplazamiento * factor, -0.12, Vector2.ONE * factor * rebote)
@@ -74,13 +72,11 @@ func _draw() -> void:
 	draw_circle(Vector2(25, -15), 8, CREMA, true, -1.0, true)
 	_texto("!", Vector2(15, -9), 17, TINTA, 20)
 	draw_set_transform(ancla, 0.0, Vector2.ONE * factor)
-	var tecla := Rect2(-20, -127, 40, 36)
 	if interactuable:
-		_caja(tecla.grow(4), CREMA, TINTA)
-	_caja(Rect2(-20, -123, 40, 36), Color("9d672d"), TINTA)
-	_caja(tecla, AMARILLO if puede_recoger else Color("b8b8a8"), TINTA)
-	draw_line(Vector2(-14, -123), Vector2(14, -123), CREMA, 2.0, true)
-	_texto("E", Vector2(-20, -100), 28, TINTA, 40)
+		var tecla := Rect2(-20, -127, 40, 36)
+		_caja(tecla.grow(3), CREMA, TINTA)
+		_caja(tecla, AMARILLO, TINTA)
+		_texto("X" if ControladorInterfaz.dispositivo_mando >= 0 else "E", Vector2(-20, -100), 28, TINTA, 40)
 	draw_set_transform(Vector2.ZERO)
 
 

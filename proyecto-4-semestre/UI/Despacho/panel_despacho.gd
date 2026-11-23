@@ -63,6 +63,20 @@ func _ready() -> void:
 	actualizar_denuncias([])
 	# Los sellos muestran el avance dentro de la ficha, sin otra línea de texto.
 	progreso_estaciones.hide()
+	# Los símbolos acompañan al título; la moneda identifica el saldo.
+	for elemento in [$Contenido/Puntuacion/Detalle/Cabecera/Titulo]:
+		elemento.hide()
+	var moneda := Control.new()
+	moneda.custom_minimum_size = Vector2(36, 36)
+	moneda.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	moneda.draw.connect(func(): preload("res://UI/Despacho/pictogramas_tarea.gd").objeto(moneda, "moneda", moneda.size*.5, 34))
+	$Contenido/Puntuacion/Detalle/Cabecera.add_child(moneda)
+	$Contenido/Puntuacion/Detalle/Cabecera.move_child(moneda, 0)
+	puntos_valor.reparent($Contenido/Puntuacion/Detalle/Cabecera)
+	$Contenido/Puntuacion/Detalle/Cabecera.move_child(puntos_valor, 1)
+	puntos_valor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	puntos_ganancia.size_flags_horizontal = Control.SIZE_SHRINK_END
+
 
 
 func _process(delta: float) -> void:
@@ -158,10 +172,10 @@ func actualizar_puntos(total: int) -> void:
 	else:
 		_detener_animacion_saldo()
 	if ganancia > 0:
-		puntos_ganancia.text = "+%s PTS" % _formatear_puntos(ganancia)
+		puntos_ganancia.text = "+%s" % _formatear_puntos(ganancia)
 		segundos_recompensa = 3.0
 	elif ganancia < 0:
-		puntos_ganancia.text = "-%s PTS" % _formatear_puntos(-ganancia)
+		puntos_ganancia.text = "-%s" % _formatear_puntos(-ganancia)
 		segundos_recompensa = 3.0
 
 func _animar_saldo(valor: float) -> void:
@@ -437,7 +451,7 @@ func _on_denuncia_vencida(denuncia: Denuncia) -> void:
 	if efecto_tarea.caso_id == denuncia.id:
 		efecto_tarea.detener()
 	if denuncia.motivo_perdida == Denuncia.MotivoPerdida.TERREMOTO:
-		_mostrar_mensaje("La hoja cayó en una grieta. Denuncia perdida por el terremoto.", CORAL)
+		_mostrar_mensaje("La hoja cayó en una grieta. Denuncia perdida.", CORAL)
 	else:
 		_mostrar_mensaje("La denuncia '%s' venció." % denuncia.titulo, CORAL)
 

@@ -13,7 +13,7 @@ const CARTON_OSCURO := Color("a97a4d")
 const METAL := Color("8e9d97")
 const DURACION_ENTRADA: float = 0.48
 const COLORES := [Color("ff785f"), Color("54bfe4"), Color("79d693")]
-const TIPOS := ["IDENTIDAD", "MENSAJES", "ENLACES"]
+const ARTE := preload("res://UI/Despacho/pictogramas_tarea.gd")
 const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
 
 var caso_id: String = ""
@@ -176,8 +176,11 @@ func _draw() -> void:
 	var planillero := Rect2(centro - Vector2(370, 260) * factor, Vector2(740, 520) * factor)
 	planillero.position.y += (1.0 - avance) * (size.y - planillero.position.y + 40.0 * factor)
 	_dibujar_planillero(planillero, factor)
-	_texto("REVISA LA REFERENCIA DE LA IZQUIERDA.", planillero.position + Vector2(38, 83) * factor, 20, TINTA, factor)
-	_texto("ELIGE LA HOJA QUE COINCIDA CON EL ARCHIVO.", planillero.position + Vector2(38, 110) * factor, 19, TINTA, factor)
+	_texto("ELIGE LA HOJA CON EL MISMO SÍMBOLO.", planillero.position + Vector2(132, 70)*factor, 20, TINTA, factor)
+	# Una pareja idéntica refuerza la indicación breve.
+	ARTE.archivo(self, objetivos[archivados] if archivados < objetivos.size() else 0, planillero.position + Vector2(290, 112)*factor, 52*factor)
+	_texto("=", planillero.position + Vector2(345, 124)*factor, 38, TINTA, factor)
+	ARTE.archivo(self, objetivos[archivados] if archivados < objetivos.size() else 0, planillero.position + Vector2(420, 112)*factor, 52*factor)
 	for i: int in range(maxi(1, objetivos.size())):
 		draw_circle(planillero.position + Vector2(626 + i * 26, 39) * factor, 7.0 * factor, CORAL if i < archivados else CARTON_OSCURO)
 	var tipo_objetivo: int = objetivos[archivados] if archivados < objetivos.size() else 0
@@ -189,20 +192,22 @@ func _draw() -> void:
 		_dibujar_papel(seleccion, planillero, factor, true)
 	_dibujar_ayuda(planillero, factor)
 	if error_restante > 0.0:
-		_texto("ESE NO ES EL ARCHIVO", planillero.position + Vector2(335, 430) * factor, 16, Color("a74337"), factor)
+		ARTE.marca(self, planillero.position + Vector2(328, 421)*factor, 24*factor, false)
+		_texto("NO COINCIDE",planillero.position+Vector2(350,428)*factor,16,Color("a74337"),factor)
 
 
 func _dibujar_ayuda(tabla: Rect2, factor: float) -> void:
+	var mando := ControladorInterfaz.dispositivo_mando >= 0
 	var origen := tabla.position + Vector2(72, 444) * factor
-	_dibujar_tecla(origen, 34.0, "A", factor)
+	_dibujar_tecla(origen, 34.0, "←" if mando else "A", factor)
 	_texto("/", origen + Vector2(42, 25) * factor, 17, TINTA, factor)
-	_dibujar_tecla(origen + Vector2(56, 0) * factor, 34.0, "D", factor)
+	_dibujar_tecla(origen + Vector2(56, 0) * factor, 34.0, "→" if mando else "D", factor)
 	_texto("ELEGIR HOJA", origen + Vector2(101, 25) * factor, 16, TINTA, factor)
 	origen = tabla.position + Vector2(325, 444) * factor
-	_dibujar_tecla(origen, 34.0, "E", factor)
+	_dibujar_tecla(origen, 34.0, "A" if mando else "E", factor)
 	_texto("TOMAR", origen + Vector2(46, 25) * factor, 16, TINTA, factor)
 	origen = tabla.position + Vector2(488, 444) * factor
-	_dibujar_tecla(origen, 58.0, "ESC", factor)
+	_dibujar_tecla(origen, 58.0, "B" if mando else "ESC", factor)
 	_texto("SALIR", origen + Vector2(70, 25) * factor, 16, TINTA, factor)
 
 
@@ -277,13 +282,11 @@ func _dibujar_referencia(tabla: Rect2, factor: float, tipo: int) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(72, -133), Vector2(72, -106), Vector2(99, -106)]), CARTON)
 	draw_line(Vector2(72, -133), Vector2(72, -106), TINTA, 2.0, true)
 	draw_line(Vector2(72, -106), Vector2(99, -106), TINTA, 2.0, true)
-	draw_string(FUENTE, Vector2(-80, -93), "ARCHIVO SOLICITADO", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, TINTA)
-	draw_string(FUENTE, Vector2(-80, -44), TIPOS[tipo], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, TINTA)
+	ARTE.archivo(self, tipo, Vector2(0,-61), 127)
 	draw_line(Vector2(-80, -19), Vector2(78, -19), Color(TINTA, 0.35), 2.0, true)
 	draw_line(Vector2(-80, 6), Vector2(70, 6), Color(TINTA, 0.35), 2.0, true)
 	draw_line(Vector2(-80, 31), Vector2(42, 31), Color(TINTA, 0.35), 2.0, true)
-	draw_rect(Rect2(Vector2(-80, 60), Vector2(112, 29)), CORAL, false, 3.0)
-	draw_string(FUENTE, Vector2(-72, 81), "OBJETIVO", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, CORAL)
+	ARTE.flecha(self, Vector2(35,81), Vector2(75,81), CORAL, 4)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -315,13 +318,11 @@ func _dibujar_papel(indice: int, tabla: Rect2, factor: float, elegido: bool) -> 
 	draw_colored_polygon(PackedVector2Array([Vector2(54, -110), Vector2(54, -82), Vector2(82, -82)]), CREMA)
 	draw_line(Vector2(54, -110), Vector2(54, -82), TINTA, 2.5, true)
 	draw_line(Vector2(54, -82), Vector2(82, -82), TINTA, 2.5, true)
-	draw_string(FUENTE, Vector2(-68, -52), TIPOS[papeles[indice]], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, TINTA)
+	ARTE.archivo(self, papeles[indice], Vector2(0,-53), 96)
 	for linea: int in range(4):
-		var y := -26.0 + linea * 22.0
+		var y := 0.0 + linea * 16.0
 		draw_line(Vector2(-65, y), Vector2(58 if linea < 3 else 22, y), Color(TINTA, 0.43), 2.0, true)
-	draw_rect(Rect2(Vector2(-65, 72), Vector2(25, 25)), CREMA)
-	draw_line(Vector2(-59, 84), Vector2(-50, 91), TINTA, 2.5, true)
-	draw_line(Vector2(-50, 91), Vector2(-44, 78), TINTA, 2.5, true)
+
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if elegido:
 		var flecha := PackedVector2Array([

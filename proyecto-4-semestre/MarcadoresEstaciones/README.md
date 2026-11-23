@@ -96,3 +96,13 @@ Cada estación se identifica únicamente por su objeto 3D, sin Label3D ni tarjet
 con nombre o acción. La tecla E/X aparece junto al símbolo solo si el jugador
 lleva el expediente correspondiente y puede interactuar; se oculta fuera de
 pantalla, detrás del despacho o durante una interfaz. No señala una ruta obligatoria.
+
+## Grafitis de orientación
+
+`Oficina/GrafitisEstaciones` añade una pintura fija por estación sobre la cara interior
+del muro lateral. Las de Seguridad y Reportes se alinean con el tramo más cercano
+a sus mesas centrales. No cambian de posición con la cámara ni desaparecen al
+completar el caso. No tienen texto, emisión, sombra propia ni colisiones. Los cinco
+SVG de `Grafitis/` conservan las siluetas de carpeta, lupa, candado, documento y
+corazón; el aro de color, desgaste y gotas les dan acabado de pintura sobre ladrillo.
+El HUD y las instrucciones conservan su texto de apoyo.

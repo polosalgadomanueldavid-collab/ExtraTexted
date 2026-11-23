@@ -36,7 +36,7 @@ func iniciar(mundo: Node3D) -> void:
 	caso = Denuncia.new()
 	caso.id = CASO
 	caso.titulo = "Práctica: un archivo extraviado"
-	caso.descripcion_despacho = "Lleva la hoja a Evidencias y archiva IDENTIDAD. Después visita SHOP."
+	caso.descripcion_despacho = "Lleva la hoja a Evidencias y archiva el carnet. Después visita SHOP."
 	caso.protocolo_estaciones.assign(["evidencias"])
 	caso.puntaje_recompensa = _precio
 	caso.es_practica = true
@@ -107,7 +107,7 @@ func _actualizar_mensaje(pista := false) -> void:
 	var titulos := ["Tu primera denuncia", "Un archivo extraviado", "Archivo completado", "Visita la tienda", "Un impulso en el bolsillo", "Agente en servicio"]
 	var mensajes := [
 		"Bienvenido, agente. Ve al computador del fondo y pulsa %s para recoger tu primer expediente." % tecla,
-		"Lleva la hoja a Evidencias. Compara la referencia de la izquierda y archiva IDENTIDAD. Puedes reintentar.",
+		"Lleva la hoja a Evidencias. Compara la referencia de la izquierda y archiva el carnet. Puedes reintentar.",
 		"Buen trabajo. Ganaste %d puntos de saldo. Vamos a probar la tienda." % _precio,
 		"Busca el cartel SHOP. Abre la máquina con %s, compra el chocolate y recoge el producto de la bandeja." % tecla,
 		"Ya lo llevas contigo. Sal de la tienda y pulsa %s para usarlo. También puedes pulsar USAR en la máquina." % usar,
@@ -136,12 +136,13 @@ func _actualizar_objetivo() -> void:
 		else:
 			objetivo = _mesa_evidencias
 			etiqueta = "EVIDENCIAS"
-			detalle = "%s · Lleva la hoja y archiva IDENTIDAD" % tecla
+			detalle = "%s · Lleva la hoja y archiva el carnet" % tecla
 	elif paso == Paso.TIENDA:
 		objetivo = maquina
 		etiqueta = "SHOP · TIENDA"
 		detalle = "%s · Compra y recoge el chocolate" % tecla
 	radio.objetivo = objetivo
+	radio.objeto_objetivo = "tienda" if paso == Paso.TIENDA else ("pc" if objetivo == oficina.computador else "evidencias")
 	radio.etiqueta_objetivo = etiqueta
 	radio.detalle_objetivo = detalle
 

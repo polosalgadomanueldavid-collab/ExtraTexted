@@ -1,14 +1,46 @@
 # Barra lateral de denuncias
 
+## Símbolos con texto de apoyo
+
+El HUD conserva títulos de casos, riesgo, calma, estados vacíos e indicaciones de
+juego. El panel de casos recupera su formato compacto: una fila de símbolos pequeños,
+reloj y «AL RESOLVER +N PTS», sin miniaturas de aparatos ni barra adicional.
+Las tarjetas en espera vuelven a mostrar riesgo y título a la izquierda y tiempo
+a la derecha.
+La moneda, el saldo en una sola fila y los cambios numéricos de puntos se mantienen.
+El indicador inferior izquierdo vuelve a «E - soltar» (o «X - soltar» con mando).
+
+Evidencias compara dibujos de carnet, conversación y cadena, con la indicación
+«Elige la hoja con el mismo símbolo». El escáner conserva la demostración visual
+y añade «Detén la luz dentro de la franja verde». Seguridad conserva su texto de
+estado y la barra queda junto al aparato. Las teclas de los minijuegos incluyen
+sus acciones breves. La radio vuelve a presentar sus explicaciones.
+
+Los marcadores sobre objetos se mantienen sin rótulos; la tecla de interacción
+es la única letra sobre ellos. Cinco grafitis permanentes identifican las estaciones
+en las paredes laterales, usando los mismos símbolos del HUD. Seguridad y Reportes
+están en mesas centrales: sus pinturas ocupan el tramo lateral más cercano, a la
+misma altura del plano de la oficina. El arte es SVG, con trazos de aerosol, gotas
+y desgaste. Recibe la iluminación de la oficina y no tiene emisión ni colisiones.
+
+`pictogramas_tarea.gd` comparte los dibujos entre pedido y minijuegos.
+`MarcadoresEstaciones/grafitis_estaciones.gd` instala las pinturas fijas. La prueba
+de orientación comprueba cinco grafitis, sus normales hacia dentro y la ausencia
+de texto y emisión; también recorre las interacciones reales y captura ambas paredes.
+
 ## Recompensa del turno y SHOP
 
-Se conserva una sola confirmación central: **¡HECHO!**, con su animación y sonido de lápiz. Las ganancias aparecen en el HUD, cuyo saldo anima durante 0,8 s sin retrasar el valor real usado para compras. Un gasto cancela el conteo anterior. No hay un sello adicional de caso resuelto ni una segunda nota de sueldo. La señal de SHOP espera a que finalice ¡HECHO!.
+En la oficina, el símbolo de la estación vuela a su casilla con el sonido de lápiz. Las ganancias aparecen junto a la moneda del HUD, cuyo saldo anima durante 0,8 s sin retrasar el valor real usado para compras. Un gasto cancela el conteo anterior. La señal de SHOP espera a que finalice el efecto de tarea.
 
 ## Primer turno por radio
 
-Cada partida individual nueva comienza con una práctica jugable, tanto desde el menú como al ejecutar Oficina directamente en el editor. La marca guardada de una práctica vista no la oculta; F2 permite omitirla. Un reintento explícito después del final puede pasar directamente al turno. `Scripts/Partida/practica_radio.gd` crea una denuncia real con una estación (Evidencias), una referencia fija (IDENTIDAD) y saldo equivalente al precio actual del chocolate. Usa la hoja física, los gestos, el archivador, la compra, la entrega y el consumo habituales; los cambios de paso dependen de esas acciones. La radio no bloquea movimiento ni ofrece un botón para completar tareas.
+Cada partida individual nueva comienza con una práctica jugable, tanto desde el menú como al ejecutar Oficina directamente en el editor. La marca guardada de una práctica vista no la oculta; F2 permite omitirla. Un reintento explícito después del final puede pasar directamente al turno. `Scripts/Partida/practica_radio.gd` crea una denuncia real con una estación (Evidencias), una referencia fija (carnet) y saldo equivalente al precio actual del chocolate. Usa la hoja física, los gestos, el archivador, la compra, la entrega y el consumo habituales; los cambios de paso dependen de esas acciones. La radio no bloquea movimiento ni ofrece un botón para completar tareas.
 
-`radio_practica.gd` dibuja una radio y papel ilustrados con Luckiest Guy, Nunito y la paleta crema, petróleo y coral. Las indicaciones se adaptan al teclado/mando y siguen el objetivo o la hoja suelta. Incluye una breve señal sonora original en el bus Interacciones, respeta la pausa y la preferencia de movimiento de cámara. Se reduce a una línea durante el archivador y se oculta en la tienda, los menús y la confirmación ¡HECHO!. Los objetivos muestran destino y acción: recoger en el computador, archivar IDENTIDAD o comprar y recoger el chocolate.
+`radio_practica.gd` dibuja la radio y su hoja de instrucciones con la paleta crema,
+petróleo y coral. Las indicaciones se adaptan al teclado/mando; el objetivo conserva
+un marcador dibujado sin texto. La radio se reduce durante el archivador y se oculta
+en la tienda, los menús y el vuelo de la pieza completada. Respeta la pausa y la
+preferencia de movimiento de cámara.
 
 Mientras dura, el despacho protege calma y plazos; se detienen denuncias nuevas, bloqueos y emergencias. El caso concede saldo gastable pero no suma al récord, la duración ni las estadísticas del turno. Al terminar o pulsar F2/Vista para omitir, se retira la guía, se guarda `user://practica_radio.cfg` y empieza el turno normal. Ayuda incluye **PRÁCTICA POR RADIO · TURNO NUEVO** para repetirla en otra oficina. La introducción compartida de LAN conserva sus guías actuales.
 
@@ -56,7 +88,7 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   El anfitrión acumula y sincroniza los totales; reiniciar los pone a cero.
   Las demás páginas conservan su contenido.
 - La tarjeta **PUNTOS** permanece visible aunque no haya casos. Muestra el saldo
-  de la partida, separadores de miles y un aviso `+N PTS` durante tres segundos
+  de la partida, separadores de miles y un aviso `+N` durante tres segundos
   después de obtener una recompensa; el aviso se congela con la pausa.
 - La tarjeta del caso activo muestra su recompensa prevista **AL RESOLVER**.
   Por defecto corresponde a 100 puntos por nivel de riesgo (100 a 500); un valor
@@ -73,7 +105,7 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   documento y corazón en una sola fila compacta. Coinciden con los flotantes de
   las estaciones y conservan contraste petróleo/crema. Una tarea completada
   queda verde con un check; no cambia a otro símbolo ni se convierte en una
-  miniatura. No hay nombres de estaciones, números de orden ni flechas.
+  miniatura. No hay nombres de estaciones ni números de orden, y los símbolos ocupan una sola fila compacta.
 - Las cinco mesas conservan completos los diseños 3D originales, su decoración,
   escala, ubicación, texturas y colisiones. Una luz cálida ilumina la superficie
   de las pendientes y aumenta al poder interactuar, sin superponer materiales
@@ -102,7 +134,7 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   Las estaciones solo aceptan la interacción si el personaje lleva esa hoja.
   E sobre un espacio libre la lanza; E cerca de la hoja la recoge.
 - El medallón de `indicador_papel.gd` aparece abajo a la izquierda mientras el
-  jugador lleva la hoja, con la leyenda «E - soltar». Se oculta al soltarla,
+  jugador lleva la hoja, con la leyenda «E - soltar» o «X - soltar». Se oculta al soltarla,
   terminar/vencer el caso y durante las interfaces del computador o reparación.
   Su referencia es 140×158 píxeles a 1280×720, con margen de 24 píxeles;
   escala proporcionalmente y desplaza los avisos de apagón hacia arriba solo mientras
@@ -112,7 +144,7 @@ reutilizada del menú. No modifica el despacho, el AVL, las estaciones ni los me
   que se incorporan según el progreso de ese expediente.
 - La mesa física de seguridad (`privacidad`) inicia un desencriptado de seis
   segundos al pulsar E con la hoja. La barra coral se llena sobre la estación y
-  otra línea se llena debajo de «DESENCRIPTANDO», en el centro inferior. Ambas
+  otra línea debajo de «DESENCRIPTANDO», en el centro inferior. Ambas
   pistas y sus rellenos tienen extremos redondeados. La tarea
   sigue mientras el jugador se mueve y se detiene al pausar. Tras seis segundos
   queda lista: el jugador debe regresar a la mesa y pulsar E para completar la
