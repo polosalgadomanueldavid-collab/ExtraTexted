@@ -116,6 +116,7 @@ var anuncios: AnuncioPartida
 var indicador_denuncia_pc: IndicadorDenunciaPC
 var _turno_anunciado := false
 var temporizador_eventos: Timer
+var _reloj_bloqueos_antes_preparacion := false
 var _evento_aleatorio_pendiente := -1
 var evento_incendio: EventoIncendio
 var evento_inundacion: EventoInundacion
@@ -188,6 +189,10 @@ func _ready() -> void:
 	evento_apagon.luz_restaurada.connect(_al_restaurar_luz)
 	evento_apagon.permiso_inicio = _puede_iniciar_evento
 	evento_terremoto.permiso_inicio = _puede_iniciar_evento
+	evento_terremoto.permiso_aplicar = _puede_iniciar_evento.bind(true)
+	evento_terremoto.actualizar_contexto = _actualizar_contexto_terremoto
+	evento_terremoto.preparacion_iniciada.connect(_al_preparar_inicio_terremoto)
+	evento_terremoto.preparacion_terminada.connect(_al_preparar_terremoto)
 	evento_terremoto.iniciado.connect(_al_iniciar_terremoto)
 	evento_terremoto.temblor_actualizado.connect($Gameplay/Camera3D.actualizar_temblor)
 	evento_terremoto.suelo_roto.connect(_al_romper_suelo)
@@ -776,12 +781,12 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 	papel.freeze = false
 
 
-func _puede_iniciar_evento() -> bool:
+func _puede_iniciar_evento(omitir_preparacion := false) -> bool:
 	if en_practica():
 		return false
 	if is_instance_valid(sistema_despacho) and sistema_despacho.tiempo_detenido:
 		return false
-	return not partida_finalizada and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo) and (not is_instance_valid(evento_lava) or not evento_lava.activo) and (not is_instance_valid(evento_hielo) or not evento_hielo.activo)
+	return not partida_finalizada and (omitir_preparacion or not evento_terremoto.preparando) and not evento_terremoto.activo and evento_apagon.estado == EventoApagonScript.Estado.RESTAURADO and (not is_instance_valid(evento_incendio) or not evento_incendio.activo) and (not is_instance_valid(evento_inundacion) or not evento_inundacion.activo) and (not is_instance_valid(evento_lava) or not evento_lava.activo) and (not is_instance_valid(evento_hielo) or not evento_hielo.activo)
 
 
 func _programar_evento_aleatorio() -> void:
@@ -962,6 +967,30 @@ func _iniciar_terremoto() -> void:
 	if evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO:
 		return
 	evento_terremoto.iniciar(grafo_piso, jugador, bloqueos_visuales, _huella_papel_suelto())
+
+
+func _actualizar_contexto_terremoto() -> void:
+	evento_terremoto._huella_hoja = _huella_papel_suelto()
+	evento_terremoto.posiciones_red.clear()
+	evento_terremoto.hojas_red.clear()
+	if is_instance_valid(red):
+		for participante: Player in red.jugadores.values():
+			evento_terremoto.posiciones_red.append(participante.global_position)
+		for hoja: PapelDenuncia in red.papeles.values():
+			if is_instance_valid(hoja) and hoja.portador == null:
+				evento_terremoto.hojas_red.append(hoja.global_position)
+
+
+func _al_preparar_inicio_terremoto() -> void:
+	_reloj_bloqueos_antes_preparacion = temporizador_bloqueos.paused
+	temporizador_bloqueos.paused = true
+
+
+func _al_preparar_terremoto(correcto: bool) -> void:
+	if not correcto:
+		temporizador_bloqueos.paused = _reloj_bloqueos_antes_preparacion
+	if not correcto and not partida_finalizada and not is_instance_valid(red):
+		temporizador_eventos.start(2.0)
 
 
 func _al_iniciar_terremoto() -> void:
@@ -1436,7 +1465,7 @@ func _on_temporizador_bloqueos_timeout() -> void:
 func _cambiar_bloqueo_temporal() -> void:
 	if SesionLAN.activa and not SesionLAN.es_anfitrion():
 		return
-	if evento_terremoto.activo or evento_incendio.activo or evento_incendio.bloqueos_fijos:
+	if evento_terremoto.activo or evento_terremoto.preparando or evento_incendio.activo or evento_incendio.bloqueos_fijos:
 		return
 	_limpiar_bloqueos_temporales()
 

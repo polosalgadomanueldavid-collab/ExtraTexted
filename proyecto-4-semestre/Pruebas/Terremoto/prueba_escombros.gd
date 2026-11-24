@@ -32,6 +32,7 @@ func _probar() -> void:
 	jugador.set_physics_process(false)
 	oficina.temporizador_denuncias.stop()
 	evento.escombros_actualizados.connect(func() -> void: impactos += 1)
+	evento.actualizar_contexto = Callable()
 	var inicio := jugador.global_position
 	for semilla: int in [8762, 14, 927, 951, 1307, 2026, 13, 114]:
 		jugador.global_position = inicio
@@ -43,6 +44,8 @@ func _probar() -> void:
 		evento._azar.seed = semilla
 		var reloj := Time.get_ticks_msec()
 		var inicio_correcto: bool = evento.iniciar(grafo, jugador, oficina.bloqueos_visuales, Rect2())
+		if inicio_correcto:
+			inicio_correcto = await evento.preparacion_terminada
 		print("[DISTRIBUCION] %d: %d grietas, %d escombros, %d ms" % [semilla, evento._trazado.size(), evento.escombros.size(), Time.get_ticks_msec() - reloj])
 		_verificar(inicio_correcto, "El terremoto puede empezar con la distribución %d" % semilla)
 		if not inicio_correcto:
@@ -153,6 +156,7 @@ func _probar() -> void:
 		jugador.global_position = inicio
 		evento._azar.seed = semilla
 		if evento.iniciar(grafo, jugador, oficina.bloqueos_visuales, Rect2()):
+			await evento.preparacion_terminada
 			if semilla == 8762:
 				evento._abrir_suelo()
 				await _fisicas(12)
@@ -170,6 +174,8 @@ func _probar() -> void:
 		evento._azar.seed = semilla
 		var huella := Rect2(Vector2(inicio.x, inicio.z) + Vector2(0.3, -0.1), Vector2(0.2, 0.2))
 		var aceptado: bool = evento.iniciar(grafo, jugador, oficina.bloqueos_visuales, huella)
+		if aceptado:
+			aceptado = await evento.preparacion_terminada
 		_verificar(aceptado, "Se encuentra un trazado con hoja protegida para la semilla %d" % semilla)
 		if aceptado:
 			for escombro in evento.escombros:

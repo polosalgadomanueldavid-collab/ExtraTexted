@@ -25,6 +25,8 @@ var _ultima_activacion_red := 0
 func configurar(mundo: Node3D, policia: Player) -> void:
 	oficina = mundo
 	jugador = policia
+	# Se construyen una vez al cargar la oficina, nunca durante el primer golpe.
+	preload("res://Objetos/ZonaDescanso/macizos_tierra.gd").preparar_recursos()
 	process_physics_priority = -100
 	_capa = CanvasLayer.new()
 	_capa.layer = 25

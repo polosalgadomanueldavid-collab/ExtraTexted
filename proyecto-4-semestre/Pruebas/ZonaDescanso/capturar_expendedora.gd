@@ -25,8 +25,11 @@ func _probar() -> void:
 	oficina.anuncios.detener()
 	await _cuadros(60)
 	oficina.anuncios.detener()
-	if OS.get_cmdline_user_args().has("--fuego-amplio"):
+	if OS.get_cmdline_user_args().has("--fuego-amplio") or OS.get_cmdline_user_args().has("--tierra-amplia"):
 		camara = Camera3D.new()
+		if OS.get_cmdline_user_args().has("--tierra-amplia"):
+			camara.environment = oficina.get_node("Gameplay/Camera3D").environment
+			camara.cull_mask = oficina.get_node("Gameplay/Camera3D").cull_mask
 		oficina.add_child(camara)
 		camara.current = true
 		maquina.aviso.hide()
@@ -80,20 +83,29 @@ func _capturar_elementos(duelo: bool, fuego_amplio: bool) -> void:
 	if duelo:
 		camara.fov = 42
 	if fuego_amplio:
-		gestos = [&"control_fuego"]
-		carpeta = "res://.godot/fuego_avatar_qa"
+		var tierra := OS.get_cmdline_user_args().has("--tierra-amplia")
+		gestos = [&"control_tierra"] if tierra else [&"control_fuego"]
+		carpeta = "res://.godot/tierra_avatar_qa" if tierra else "res://.godot/fuego_avatar_qa"
 		jugador.global_position = Vector3(-1, .38, 3.0)
 		jugador.visual.rotation.y = 0
 		camara.global_position = Vector3(2.0, 5.3, 9.0)
 		camara.look_at(Vector3(-1, 1.0, 4.8))
 		camara.fov = 58
+		if tierra:
+			camara.global_position = Vector3(-1, 3.4, 8.8)
+			camara.look_at(Vector3(-1, 1.4, 3.3))
+			camara.fov = 65
 		if OS.get_cmdline_user_args().has("--lateral"):
 			# Solo la captura retira la pared que tapa esta cámara exterior.
 			oficina.get_node("Pared, suelo, techo/Pared3").hide()
 			camara.global_position = Vector3(7, 3.3, 5.4)
 			camara.look_at(Vector3(-1, 1.0, 4.7))
 			camara.fov = 48
-			carpeta = "res://.godot/fuego_avatar_lateral_qa"
+			carpeta = "res://.godot/tierra_avatar_lateral_qa" if tierra else "res://.godot/fuego_avatar_lateral_qa"
+			if tierra:
+				camara.global_position = Vector3(7.5, 4.5, 6.0)
+				camara.look_at(Vector3(-1, 1.35, 4.2))
+				camara.fov = 58
 		await _cuadros(30)
 	for gesto: StringName in gestos:
 		jugador.ejecutar_gesto(gesto)

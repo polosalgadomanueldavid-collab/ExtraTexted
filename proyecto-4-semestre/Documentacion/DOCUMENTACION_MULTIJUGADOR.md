@@ -4,7 +4,7 @@ Esta página describe la implementación actual del cooperativo para **dos jugad
 
 ## Sesión y ciclo de vida
 
-El juego usa **Godot 4.7**, ENet y el puerto **UDP 7000**. El anfitrión juega y es la autoridad; el segundo jugador se une por la IP del anfitrión. `SesionLAN`, cargado como autoload, mantiene participantes, alias, estado de la sala, ronda, pausas y transporte. La versión de protocolo actual es `extratexted-lan-5`; una versión distinta o una tercera conexión se rechaza.
+El juego usa **Godot 4.7**, ENet y el puerto **UDP 7000**. El anfitrión juega y es la autoridad; el segundo jugador se une por la IP del anfitrión. `SesionLAN`, cargado como autoload, mantiene participantes, alias, estado de la sala, ronda, pausas y transporte. La versión de protocolo actual es `extratexted-lan-6`; una versión distinta o una tercera conexión se rechaza.
 
 ```text
 Jugar → Crear partida LAN / Unirse por IP
@@ -46,7 +46,7 @@ Completar una estación registra al jugador como participante del caso y le suma
 
 El saldo del equipo es único y el anfitrión decide cada gasto en orden de llegada. Si solo alcanza para una compra, la primera válida obtiene el producto. El total de puntos **ganados** se conserva aparte para la clasificación. Bolsillo, café, cordura, chocolate y dona son personales; el cobro ocurre al recoger el producto. Los dos asientos del sofá se reservan por separado y recuperan solo al usuario.
 
-El anfitrión decide los cajones y publica sus celdas. El cliente reconstruye el mismo grafo sin volver a sortearlos. La generación protege a ambos personajes activos y las hojas sueltas. Apagón, terremoto, incendio, inundación, lava e hielo comparten inicio y estado; para terremoto se transmite el trazado exacto y para lava los charcos. Véase [DOCUMENTACION_GRAFOS.md](DOCUMENTACION_GRAFOS.md) para la navegación y las protecciones de acceso.
+El anfitrión decide los cajones y publica sus celdas. El cliente reconstruye el mismo grafo sin volver a sortearlos. La generación protege a ambos personajes activos y las hojas sueltas. Apagón, terremoto, incendio, inundación, lava e hielo comparten inicio y estado; para terremoto se transmite el trazado exacto y para lava los charcos. El terremoto prepara datos y montaje en lotes de 3 ms. El anfitrión valida las posiciones actuales antes de publicar el plan; cada cliente confirma el identificador y la huella del plan ya montado. Solo después de todos los acuses y otra validación del anfitrión se autoriza el aviso de ocho segundos. Una cancelación retira el montaje en ambos equipos, y los acuses antiguos no liberan la barrera. Véase [DOCUMENTACION_GRAFOS.md](DOCUMENTACION_GRAFOS.md) para la navegación y las protecciones de acceso.
 
 En incendio hay dos extintores y en el atasco de impresora dos llaves, con portadores independientes; un jugador no puede acaparar dos unidades del mismo tipo. Al eliminarse un portador, su unidad vuelve a estar disponible. Papa tiempo detiene los plazos del mundo durante `12 s` y permite actuar a ambos. Avatar resuelve el evento compartido; una resolución anterior impide gastar una segunda carga.
 

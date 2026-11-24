@@ -6,9 +6,11 @@ var tiempo := 0.0
 const DURACION := 3.8
 const FUEGO := preload("res://Objetos/ZonaDescanso/flujo_fuego.gd")
 const AGUA := preload("res://Objetos/ZonaDescanso/flujo_agua.gd")
+const TIERRA := preload("res://Objetos/ZonaDescanso/macizos_tierra.gd")
 const COREOGRAFIA := preload("res://Personajes/PoliciaAzul/coreografia_avatar.gd")
 var _cintas: Array[MeshInstance3D] = []
-var _fragmentos: Array[MeshInstance3D] = []
+var _tierra: Node3D
+var _suelo_tierra := 0.0
 var _luz: OmniLight3D
 var _material: StandardMaterial3D
 var _material_cinta: ShaderMaterial
@@ -47,7 +49,7 @@ func _ready() -> void:
 	_material_cinta.shader = preload("res://Objetos/ZonaDescanso/cinta_elemental.gdshader")
 	_material_cinta.set_shader_parameter("tinte", color)
 	_material_cinta.set_shader_parameter("aire", tipo == &"control_aire")
-	for i in (3 if tipo == &"control_aire" else (2 if tipo == &"control_tierra" else 0)):
+	for i in (3 if tipo == &"control_aire" else 0):
 		var cinta := MeshInstance3D.new()
 		cinta.mesh = ImmediateMesh.new()
 		cinta.material_override = _material_cinta
@@ -59,6 +61,8 @@ func _ready() -> void:
 		_agua.jugador = jugador
 		add_child(_agua)
 	if tipo == &"control_tierra":
+		_tierra = TIERRA.new()
+		add_child(_tierra)
 		_pisada = AudioStreamPlayer3D.new()
 		_pisada.stream = preload("res://Audios/Pasos/SuelaGoma/paso_03.wav")
 		_pisada.bus = "Interacciones"
@@ -74,20 +78,10 @@ func _ready() -> void:
 			aro.ring_segments = 6
 			onda.mesh = aro
 			onda.material_override = _material.duplicate()
+			onda.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			onda.hide()
 			add_child(onda)
 			_ondas_pisada.append(onda)
-		for i in 10:
-			var pieza := MeshInstance3D.new()
-			var malla := CylinderMesh.new()
-			malla.top_radius = 0.13
-			malla.bottom_radius = 0.24
-			malla.height = 0.48
-			malla.radial_segments = 5
-			pieza.mesh = malla
-			pieza.material_override = _material
-			add_child(pieza)
-			_fragmentos.append(pieza)
 	if tipo == &"control_fuego":
 		_barrido_fuego = preload("res://Objetos/ZonaDescanso/barrido_fuego.gd").new()
 		add_child(_barrido_fuego)
@@ -106,11 +100,12 @@ func _ready() -> void:
 			estela.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(estela)
 			_estelas.append(estela)
-	_luz = OmniLight3D.new()
-	_luz.position.y = 0.9
-	_luz.light_color = color
-	_luz.omni_range = 4.0
-	add_child(_luz)
+	if tipo != &"control_tierra":
+		_luz = OmniLight3D.new()
+		_luz.position.y = 0.9
+		_luz.light_color = color
+		_luz.omni_range = 4.0
+		add_child(_luz)
 
 func _process(delta: float) -> void:
 	if not is_instance_valid(jugador) or (tiempo < 2.5 and not jugador.realizando_gesto()):
@@ -128,21 +123,21 @@ func _process(delta: float) -> void:
 	_material.albedo_color.a = presencia * (0.65 if tipo == &"control_aire" else 0.88)
 	_material_cinta.set_shader_parameter("tiempo", tiempo)
 	_material_cinta.set_shader_parameter("presencia", presencia)
-	_luz.light_energy = presencia * (1.2 if tipo == &"control_fuego" else .30)
+	if is_instance_valid(_luz):
+		_luz.light_energy = presencia * (1.2 if tipo == &"control_fuego" else .30)
 	if tipo == &"control_fuego":
 		_actualizar_fuego(fase, presencia)
 	if is_instance_valid(_agua):
 		_agua.actualizar(tiempo, presencia)
 	var expansion := smoothstep(0.56, 0.95, t)
-	var coreografia := COREOGRAFIA.muestrear(tipo, fase)
-	var giro: float = coreografia.root.y
-	_actualizar_estelas(presencia)
+	if is_instance_valid(_tierra) and _fase_anterior == 0.0:
+		_suelo_tierra = minf(jugador.gestos.posicion_pie("L").y, jugador.gestos.posicion_pie("R").y) - global_position.y - .03
 	for i in _ondas_pisada.size():
 		var impacto: float = COREOGRAFIA.PISADAS_TIERRA[i]
 		var onda := _ondas_pisada[i]
 		if _fase_anterior < impacto and fase >= impacto:
 			onda.global_position = jugador.gestos.posicion_pie("L" if i == 0 else "R")
-			onda.global_position.y = global_position.y + .025
+			onda.global_position.y = global_position.y + _suelo_tierra + .025
 			_pisada.global_position = onda.global_position
 			_pisada.play()
 		var avance := (fase - impacto) / .18
@@ -151,6 +146,12 @@ func _process(delta: float) -> void:
 			onda.scale = Vector3(1, .035, 1) * lerpf(.12, 1.45, avance)
 			(onda.material_override as StandardMaterial3D).albedo_color.a = (1.0 - avance) * .6
 	_fase_anterior = fase
+	if is_instance_valid(_tierra):
+		_tierra.actualizar(tiempo, _mano_local("L"), _mano_local("R"), _suelo_tierra)
+		return
+	var coreografia := COREOGRAFIA.muestrear(tipo, fase)
+	var giro: float = coreografia.root.y
+	_actualizar_estelas(presencia)
 	for i in _cintas.size():
 		if tipo == &"control_aire":
 			_cinta_aire(_cintas[i].mesh as ImmediateMesh, i, fase, giro, presencia)
@@ -172,19 +173,6 @@ func _process(delta: float) -> void:
 		elif tipo == &"control_aire":
 			_cintas[i].rotation.y = giro
 		_cinta(_cintas[i].mesh as ImmediateMesh, radio, altura, ancho * presencia, i, t)
-	for i in _fragmentos.size():
-		var angulo := TAU * float(i) / _fragmentos.size()
-		var pieza := _fragmentos[i]
-		var pisada: float = COREOGRAFIA.PISADAS_TIERRA[i % 2]
-		var elevar := smoothstep(pisada, pisada + .07, fase) * (1.0 - smoothstep(.75, 1.0, fase))
-		pieza.position = Vector3(cos(angulo), 0.0, sin(angulo)) * (0.9 + expansion * 1.5)
-		# Fragmentos bajos delante para que la silueta y las pisadas se lean.
-		# Las columnas laterales suben después del segundo golpe de talón.
-		var lateral := absf(cos(angulo))
-		var columna := smoothstep(.54, .65, fase) * lateral * .25
-		pieza.position.y = -.18 + elevar * (.28 + (i % 3) * .035 + columna)
-		pieza.rotation = Vector3(0.15 * elevar, angulo, 0.25 * elevar)
-		pieza.scale = Vector3.ONE * presencia * (.55 + lateral * .15)
 
 func _actualizar_fuego(fase: float, presencia: float) -> void:
 	var golpe_l := COREOGRAFIA.pulso(fase, .335, .38, .475)

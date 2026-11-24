@@ -62,6 +62,7 @@ func _mover_cliente(posicion: Vector3) -> void:
 
 func _run() -> void:
 	_demorar_carga_prueba()
+	SesionLAN.aviso.connect(func(mensaje: String) -> void: print("[LAN AVISO] ", mensaje))
 	MenuGlobal._clasificacion = ClasificacionLocal.new("user://prueba_lan_%d.json" % OS.get_process_id())
 	MenuGlobal.omitir_tutorial_siguiente_partida = false
 	if OS.get_cmdline_user_args().has("--host"):
@@ -84,6 +85,7 @@ func _run() -> void:
 		await _esperar(0.1)
 	red = SesionLAN.puente
 	oficina = red.oficina
+	oficina.evento_terremoto.preparacion_terminada.connect(func(correcta: bool) -> void: print("[LAN PREPARACION] ", correcta, " motivo=", oficina.evento_terremoto.rechazo_preparacion))
 	comprobar(oficina.oficina_preparada and oficina._bloqueos_pool.size() == 30 and not CargaEscenas.activa, "La barrera incluye preparación, pool completo y primer cuadro")
 	if not SesionLAN.es_anfitrion():
 		return
@@ -91,6 +93,9 @@ func _run() -> void:
 	comprobar(get_tree().paused and MenuGlobal.panel_ayuda.visible, "El tutorial inicial abre sin bloquear la carga")
 	await _probar_confirmaciones_tutorial(true)
 	comprobar(red.jugadores.size() == 2 and not get_tree().paused, "Dos jugadores y barrera de carga completada")
+	if OS.get_cmdline_user_args().has("--solo-terremoto"):
+		await _probar_barrera_terremoto()
+		return
 	await _comprobar_personajes()
 	comprobar(await _probar_colision(), "El cuerpo local choca y la interpolación remota no lo atraviesa")
 	var colision_cliente := await _al_cliente("colision")
@@ -238,6 +243,9 @@ func _run() -> void:
 	for tipo in ["apagon", "incendio", "inundacion", "lava", "hielo", "terremoto"]:
 		var inicio: bool = red.iniciar_evento(tipo)
 		comprobar(inicio, "Iniciar evento compartido " + tipo)
+		if tipo == "terremoto":
+			while oficina.evento_terremoto.preparando:
+				await _esperar(0.05)
 		await _esperar(0.6)
 		r = await _al_cliente("inspeccionar")
 		comprobar(str(r.evento) == tipo, "Cliente recibe " + tipo)
@@ -460,6 +468,14 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 				await _esperar(0.1)
 				if foco.apagado >= 1.0: break
 			resultado = {"ok": foco.apagado >= 1.0}
+		"ubicar_herramientas_sismo": _ubicar_herramientas_sismo()
+		"retener_sismo":
+			oficina.evento_terremoto.preparacion_terminada.disconnect(red._preparacion_sismo_terminada)
+		"liberar_sismo":
+			oficina.evento_terremoto.preparacion_terminada.connect(red._preparacion_sismo_terminada)
+			red._preparacion_sismo_terminada(true)
+		"estado_sismo": resultado = {"preparando": oficina.evento_terremoto.preparando, "listo": oficina.evento_terremoto.plan_preparado, "activo": oficina.evento_terremoto.activo, "tiempo": oficina.evento_terremoto.tiempo, "plan": oficina.evento_terremoto.exportar_trazado_red()}
+		"cerrar_sismo": oficina.evento_terremoto._cerrar()
 		"trazado": resultado = oficina.evento_terremoto.exportar_trazado_red()
 		"accion": resultado = await _pedir(str(datos.tipo), datos.get("datos", {}))
 		"taza_remota":
@@ -497,6 +513,109 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 func _respuesta(resultado: Dictionary) -> void:
 	if multiplayer.get_remote_sender_id() == cliente:
 		respuesta_cliente.emit(resultado)
+
+func _ubicar_herramientas_sismo() -> void:
+	# Fixture de la barrera: la disposición original de los accesos de reporte
+	# rechaza las ocho semillas. Reubicar herramienta y acceso juntos, conservando
+	# todas las validaciones; el juego normal mantiene su distribución original.
+	for i in range(oficina.herramientas_reporte.size()):
+		var herramienta: Node3D = oficina.herramientas_reporte[i]
+		var anterior := herramienta.global_position
+		var destino := Vector3(0.8 + i * 0.65, anterior.y, 7.8)
+		for acceso: Node3D in get_tree().get_nodes_in_group("accesos_navegacion"):
+			if acceso.get_parent() == oficina and acceso.global_position.distance_to(anterior) < 0.01:
+				acceso.global_position = destino
+		herramienta.global_position = destino
+
+
+func _preparar_sismo_de_prueba() -> bool:
+	for semilla: int in [8762, 14, 927, 951, 1307, 2026, 13, 114]:
+		oficina.temporizador_eventos.stop()
+		if not red.iniciar_evento("terremoto"): return false
+		oficina.evento_terremoto._azar.seed = semilla
+		while oficina.evento_terremoto.preparando and not oficina.evento_terremoto.plan_preparado:
+			await _esperar(0.05)
+		if oficina.evento_terremoto.plan_preparado:
+			var presupuesto = oficina.evento_terremoto._presupuesto
+			print("[LAN LOTES] media_us=", float(presupuesto.total_lotes_usec) / presupuesto.cuadros, " sobre4ms=", presupuesto.lotes_sobre_4ms, "/", presupuesto.cuadros, " max_us=", presupuesto.maximo_lote_usec)
+			return true
+		print("[LAN DISTRIBUCION] semilla=", semilla, " rechazo=", oficina.evento_terremoto.rechazo_preparacion)
+	return false
+
+
+func _probar_barrera_terremoto() -> void:
+	oficina.tutoriales_vistos[&"terremoto"] = true
+	await _al_cliente("tutoriales")
+	_ubicar_herramientas_sismo()
+	await _al_cliente("ubicar_herramientas_sismo")
+	oficina.temporizador_eventos.stop()
+	oficina.temporizador_denuncias.stop()
+	oficina.temporizador_bloqueos.stop()
+	oficina.bloqueos_iniciados = true
+	await _mover_host(Vector3(-2.25, 0.4, 7.1))
+	await _mover_cliente(Vector3(-1.5, 0.4, 7.1))
+	oficina.generador_aleatorio.seed = 1414
+	oficina._cambiar_bloqueo_temporal()
+	oficina.temporizador_bloqueos.stop()
+	var posicion: Vector3 = oficina.jugador.global_position
+	await _al_cliente("retener_sismo")
+	comprobar(await _preparar_sismo_de_prueba(), "Se acepta la preparación LAN sin iniciar el reloj")
+	var r: Dictionary = {}
+	while not r.get("listo", false):
+		if not oficina.evento_terremoto.preparando:
+			comprobar(false, "La distribución LAN debe producir un plan válido: " + oficina.evento_terremoto.rechazo_preparacion)
+			await _al_cliente("terminar")
+			_terminando = true
+			await _finalizar_prueba(1)
+			return
+		await _esperar(0.1)
+		r = await _al_cliente("estado_sismo")
+	comprobar(oficina.evento_terremoto.plan_preparado and not oficina.evento_terremoto.activo and not r.activo and r.tiempo == 0.0, "Ambos montajes esperan el acuse del mismo plan")
+	var plan: Dictionary = oficina.evento_terremoto.exportar_trazado_red()
+	comprobar(plan == r.plan, "El cliente monta exactamente el plan del anfitrión")
+	var rechazo := await _pedir("sismo_listo", {"plan_id": red._sismo_pendiente.plan_id - 1, "huella": red._sismo_pendiente.huella})
+	comprobar(not rechazo.ok, "Un acuse atrasado no libera la barrera")
+	rechazo = await _pedir("sismo_listo", {"plan_id": red._sismo_pendiente.plan_id, "huella": 0})
+	comprobar(not rechazo.ok, "Un plan distinto no libera la barrera")
+	var forma: Dictionary = plan.formas[0]
+	oficina.jugador.global_position = Vector3(forma.centro.x, posicion.y, forma.centro.y)
+	await _al_cliente("liberar_sismo")
+	await _esperar(0.4)
+	r = await _al_cliente("estado_sismo")
+	comprobar(not oficina.evento_terremoto.preparando and not oficina.evento_terremoto.activo and not r.preparando and not r.activo, "El anfitrión cancela en ambos equipos si cambia una posición protegida")
+	oficina.temporizador_eventos.stop()
+	await _mover_host(posicion)
+	await _al_cliente("retener_sismo")
+	comprobar(await _preparar_sismo_de_prueba(), "Se puede preparar otro plan tras cancelar")
+	r = {}
+	while not r.get("listo", false):
+		if not oficina.evento_terremoto.preparando:
+			comprobar(false, "La distribución LAN debe producir un plan válido: " + oficina.evento_terremoto.rechazo_preparacion)
+			await _al_cliente("terminar")
+			_terminando = true
+			await _finalizar_prueba(1)
+			return
+		await _esperar(0.1)
+		r = await _al_cliente("estado_sismo")
+	SesionLAN.pedir_pausa(true)
+	await _esperar(0.2)
+	await _al_cliente("liberar_sismo")
+	await _esperar(0.3)
+	comprobar(get_tree().paused and not oficina.evento_terremoto.activo, "Los acuses durante pausa no adelantan el aviso")
+	SesionLAN.pedir_pausa(false)
+	await _esperar(0.5)
+	r = await _al_cliente("estado_sismo")
+	comprobar(oficina.evento_terremoto.activo and r.activo and not r.preparando, "Solo la autorización del anfitrión inicia ambos avisos")
+	comprobar(r.plan == oficina.evento_terremoto.exportar_trazado_red(), "La autorización conserva el mismo plan")
+	comprobar(absf(float(r.tiempo) - oficina.evento_terremoto.tiempo) < 0.3, "Ambos equipos conservan el reloj del aviso")
+	oficina.evento_terremoto._cerrar()
+	await _al_cliente("cerrar_sismo")
+	print("[LAN TERREMOTO] %d comprobaciones, %d fallos" % [comprobaciones, fallos])
+	await _al_cliente("terminar")
+	while SesionLAN.activa: await _esperar(0.1)
+	_terminando = true
+	await _finalizar_prueba(1 if fallos else 0)
+
 
 func _estado_guia() -> Dictionary:
 	var panel := MenuGlobal.panel_ayuda

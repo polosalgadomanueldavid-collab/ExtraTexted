@@ -73,7 +73,8 @@ func _run() -> void:
 			resultados[etiqueta + "_inicio_ms"] = (Time.get_ticks_usec() - inicio) / 1000.0
 			resultados[etiqueta + "_activado"] = activado
 			print("[INICIO] ", etiqueta, " activo=", activado, " ms=", resultados[etiqueta + "_inicio_ms"])
-			# Incluye ruptura (8 s), derrumbes y cierre (24 s).
+			if nombre == "terremoto": evento_preparandose = evento
+			# Incluye preparación, ruptura (8 s), derrumbes y cierre (24 s).
 			await _medir(etiqueta, 26.0 if nombre == "terremoto" and activado else 0.0)
 			evento.resolver_con_avatar()
 			_oficina_detener_relojes(oficina)

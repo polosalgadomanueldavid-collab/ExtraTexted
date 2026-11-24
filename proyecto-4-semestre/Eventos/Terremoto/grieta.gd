@@ -22,22 +22,19 @@ var _piedra: StandardMaterial3D
 
 
 func trazar(origen: Vector2, largo: float, ancho: float, angulo: float, azar: RandomNumberGenerator) -> void:
-	centro = origen
-	limites = Rect2(centro, Vector2.ZERO)
-	var desvio := minf(0.14, ancho * 0.11)
-	for i in range(TRAMOS + 1):
-		var t := float(i) / TRAMOS
-		var eje := Vector2(azar.randf_range(-desvio, desvio), (t - 0.5) * largo)
-		# Las puntas terminan en cuña y el tramo central conserva su anchura.
-		var radio := ancho * 0.5 * minf(1.0, minf(t, 1.0 - t) * 6.8)
-		var izq := centro + (eje - Vector2.RIGHT * radio * azar.randf_range(0.96, 1.08)).rotated(angulo)
-		var der := centro + (eje + Vector2.RIGHT * radio * azar.randf_range(0.96, 1.08)).rotated(angulo)
-		_izquierda.append(izq)
-		_derecha.append(der)
-		limites = limites.expand(izq).expand(der)
-	contorno.append_array(_izquierda)
-	for i in range(TRAMOS - 1, 0, -1):
-		contorno.append(_derecha[i])
+	var forma := preload("res://Eventos/Terremoto/forma_grieta.gd").new()
+	forma.trazar(origen, largo, ancho, angulo, azar)
+	forma.saltable = saltable
+	cargar_forma(forma.serializar())
+
+
+func cargar_forma(forma: Dictionary) -> void:
+	centro = forma.centro
+	contorno = forma.contorno
+	limites = forma.limites
+	saltable = forma.saltable
+	_izquierda = forma.izquierda
+	_derecha = forma.derecha
 
 
 func contiene(punto: Vector2) -> bool:
