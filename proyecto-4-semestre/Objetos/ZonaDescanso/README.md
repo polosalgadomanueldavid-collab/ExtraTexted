@@ -50,7 +50,7 @@ Los cinco iconos son PNG transparentes prerenderizados desde los modelos del pro
 | Objeto | Usar | Precio inicial | Efecto |
 | --- | --- | --- | --- |
 | Chocolate | Z | 50 | Velocidad de caminar/correr ×1,65 durante 25 s. |
-| Dona | X | 75 | Silueta ancha y salto de 1,65 m durante 10 s; permite subir a las mesas, también en lava. |
+| Dona | X | 75 | Silueta ancha y salto de 1,65 m durante 10 s; permite subir a los cajones temporales. Las mesas y los muebles fijos siguen bloqueados, también en lava. |
 | Papa tiempo | V | 150 | Pose ZA WARUDO, burbuja expansiva gris, sonidos de parada/reanudación y tic-tac; congela el mundo 12 s. |
 | El Avatar | N | 250 | Un uso para resolver el evento activo con una animación elemental. Sin evento conserva la carga. |
 

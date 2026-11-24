@@ -192,7 +192,7 @@ func _probar() -> void:
 	_verificar(jugador.jump_velocity == salto_original and jugador.collision_mask == mascara_original, "Se recuperan exactamente el salto y las capas originales")
 	_verificar(oficina.temporizador_bloqueos.wait_time == 10.0 and oficina.temporizador_bloqueos.is_stopped(), "Se restaura el intervalo original y el estado detenido previo")
 	_verificar(oficina.temporizador_eventos.time_left >= 39.0, "El final programa la espera compartida del siguiente evento")
-	_verificar(lava.charcos.is_empty() and lava.get_child_count() == 0, "No quedan magma, partículas ni barreras tras terminar")
+	_verificar(lava.charcos.is_empty() and not is_instance_valid(lava._visuales) and is_instance_valid(lava._barreras), "Se retiran los efectos de lava y se conservan las barreras de muebles para la dona")
 	# Medir el minuto completo y el reciclaje automático, sin adelantar el reloj.
 	oficina.temporizador_bloqueos.start(10.0)
 	_verificar(oficina._iniciar_lava(), "El evento puede repetirse limpiamente")

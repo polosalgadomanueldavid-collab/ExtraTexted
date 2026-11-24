@@ -371,7 +371,7 @@ func presentar_items() -> void:
 	tutorial_evento.add_child(rejilla)
 	var fichas := [
 		["CHOCOLATE  ·  Z", "Camina y corre a ×1,65 de velocidad durante 25 segundos.", preload("res://UI/Descanso/Arte/chocolate.png")],
-		["DONA  ·  X", "Aumenta tu tamaño y permite saltar hasta 1,65 m durante 10 segundos para subir a las mesas.", preload("res://UI/Descanso/Arte/dona.png")],
+		["DONA  ·  X", "Aumenta tu tamaño y permite saltar hasta 1,65 m durante 10 segundos. Puedes subir a los cajones temporales, pero no a las mesas.", preload("res://UI/Descanso/Arte/dona.png")],
 		["PAPA TIEMPO  ·  V", "Detiene el mundo y los plazos de los casos durante 12 segundos. Puedes seguir moviéndote y trabajando.", preload("res://UI/Descanso/Arte/papa_tiempo.svg")],
 		["EL AVATAR  ·  N", "Resuelve un evento activo con los cuatro elementos. Sin evento, conserva la carga.", preload("res://UI/Descanso/Arte/avatar_piedra.png")],
 		["CAFÉ  ·  F", "Se prepara en la cafetera. Recoge la taza y bebe para recuperar hasta 15 de calma, de pie o sentado.", preload("res://UI/Descanso/Arte/cafe.png")],

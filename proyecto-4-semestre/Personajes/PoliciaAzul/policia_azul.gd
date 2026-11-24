@@ -19,6 +19,7 @@ const RUN := &"policia_prueba_correr"
 const JUMP := &"policia_prueba_saltar"
 const ALTURA_SALTO_DE_GRIETA := 0.25
 const MARGEN_SALTO_LAVA := 1.10
+const CAPA_MUEBLES_NO_TREPABLES := 8
 const EMOTE_MENU := &"policia_menu_emotes"
 const KAMEHAMEHA := &"policia_kamehameha"
 const GENKIDAMA := &"policia_genkidama"
@@ -106,6 +107,8 @@ func _ready() -> void:
 	# La escena de Oficina instancia este personaje y puede conservar el scale
 	# de la instancia. Aplicarlo aquí garantiza el tamaño también durante el juego.
 	scale = Vector3.ONE * character_scale
+	# La dona y la lava aumentan el salto, pero nunca habilitan subir a los muebles fijos.
+	set_collision_mask_value(CAPA_MUEBLES_NO_TREPABLES, true)
 	_spawn_transform = global_transform
 	_spawn_visual_rotation = visual.rotation
 	_pose_modelo = $Visual/Modelo.transform
@@ -154,13 +157,6 @@ func _physics_process(delta: float) -> void:
 		chocolate_restante = maxf(0.0, chocolate_restante - delta)
 		dona_restante = maxf(0.0, dona_restante - delta)
 	_peso_dona = move_toward(_peso_dona, float(dona_restante > 0.0), delta * 3.0)
-	if lava_activa:
-		# Las barreras altas de lava no impiden trepar con dona. Reponerlas al
-		# volver al suelo evita introducir una barrera dentro del cuerpo al caducar.
-		if dona_restante > 0.0:
-			set_collision_mask_value(8, false)
-		elif global_position.y < 0.5:
-			set_collision_mask_value(8, true)
 	if en_relevo:
 		return # La cinemática dirige el cuerpo, conservando las poses del evento.
 	if _descanso_sentado:

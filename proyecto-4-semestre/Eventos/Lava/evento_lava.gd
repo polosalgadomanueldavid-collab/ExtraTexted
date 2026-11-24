@@ -18,7 +18,7 @@ const PERDIDA_POR_SEGUNDO := 0.7
 const EXTRA_CHARCO := 0.45
 const CANTIDAD_CHARCOS := 6
 const PISO := 0.372
-const CAPA_ANTITREPAR := 8
+const CAPA_ANTITREPAR := Player.CAPA_MUEBLES_NO_TREPABLES
 const MAGMA := preload("res://Eventos/Lava/magma.gdshader")
 const PatronMagma := preload("res://Eventos/Lava/patron_magma.gd")
 const PanelLava := preload("res://Eventos/Lava/panel_lava.gd")
@@ -49,7 +49,6 @@ var _origen_calor := Vector2.ZERO
 var _perdida_acumulada := 0.0
 var _intervalo_anterior := 10.0
 var _reloj_estaba_parado := false
-var _capa_anterior := false
 var _tiempo := 0.0
 var _sonido_quemadura: AudioStreamPlayer
 var _tiempo_sonido_quemadura := 0.0
@@ -58,6 +57,8 @@ var _tiempo_sonido_quemadura := 0.0
 func configurar(oficina: Node3D, jugador: Player) -> void:
 	_oficina = oficina
 	_jugador = jugador
+	# Preparadas una sola vez: también protegen las estaciones con dona y sin lava.
+	_crear_barreras()
 	_sonido_quemadura = AudioStreamPlayer.new()
 	_sonido_quemadura.stream = SONIDO_LAVA
 	_sonido_quemadura.bus = "Interacciones"
@@ -89,8 +90,6 @@ func iniciar() -> bool:
 	_intervalo_anterior = _oficina.temporizador_bloqueos.wait_time
 	_reloj_estaba_parado = _oficina.temporizador_bloqueos.is_stopped()
 	_oficina.temporizador_bloqueos.start(INTERVALO_BLOQUEOS)
-	_capa_anterior = _jugador.get_collision_mask_value(CAPA_ANTITREPAR)
-	_jugador.set_collision_mask_value(CAPA_ANTITREPAR, true)
 	_jugador.lava_activa = true
 	for bloqueo: Node3D in _oficina._bloqueos_pool:
 		var forma := bloqueo.get_node("CollisionShape3D") as CollisionShape3D
@@ -100,7 +99,6 @@ func iniciar() -> bool:
 	_crear_visuales()
 	for bloqueo: Node in _oficina.bloqueos_visuales.values():
 		bloqueo.actualizar_lava(true)
-	_crear_barreras()
 	_actualizar_panel()
 	panel.show()
 	set_physics_process(true)
@@ -199,7 +197,6 @@ func detener() -> void:
 	set_physics_process(false)
 	_jugador.lava_activa = false
 	_jugador.quemandose_pies = false
-	_jugador.set_collision_mask_value(CAPA_ANTITREPAR, _capa_anterior)
 	for bloqueo: Node in get_tree().get_nodes_in_group("bloqueos_temporales"):
 		if _oficina.is_ancestor_of(bloqueo):
 			bloqueo.actualizar_lava(false)
@@ -211,7 +208,6 @@ func detener() -> void:
 	panel.hide()
 	_visuales.hide()
 	_visuales.queue_free()
-	_barreras.queue_free()
 	charcos.clear()
 	_patron.reiniciar()
 	_llamas_pies.clear()

@@ -229,21 +229,25 @@ func _mesa_con_dona() -> void:
 	await _cuadros(2)
 	Input.action_release(jugador.JUMP)
 	var sobre_mesa := false
+	var choco_barrera := false
 	for i in 65:
 		await process_frame
+		for j in jugador.get_slide_collision_count():
+			if jugador.get_slide_collision(j).get_collider() == barrera:
+				choco_barrera = true
 		if jugador.global_position.x <= centro.x + forma.shape.size.x * 0.25:
 			Input.action_release(jugador.LEFT)
 		if jugador.is_on_floor() and jugador.global_position.y > 0.7:
 			sobre_mesa = true
 	Input.action_release(jugador.LEFT)
-	_verificar(sobre_mesa and not jugador.get_collision_mask_value(8), "La dona permite aterrizar encima de una mesa durante lava")
+	_verificar(choco_barrera and not sobre_mesa and jugador.get_collision_mask_value(8), "La dona mantiene las barreras y no permite subir a una mesa durante lava")
 	jugador.dona_restante = 0.0
 	await _cuadros(12)
-	_verificar(jugador.is_on_floor() and jugador.global_position.y > 0.7, "Caducar sobre la mesa no introduce una barrera dentro del jugador")
+	_verificar(jugador.is_on_floor() and jugador.global_position.y < 0.5, "Al caducar la dona el jugador permanece en el piso, fuera de la mesa")
 	jugador.global_position = Vector3(-1.5, 0.38, 3.2)
 	jugador.velocity = Vector3.ZERO
 	await _cuadros(10)
-	_verificar(jugador.get_collision_mask_value(8), "Al bajar se restaura la restricción habitual de lava")
+	_verificar(jugador.get_collision_mask_value(8), "La restricción de muebles permanece activa al bajar")
 	lava.resolver_con_avatar()
 	_parar_relojes()
 	await _cuadros(5)

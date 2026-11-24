@@ -309,7 +309,7 @@ func _crear_objetos(pagina: VBoxContainer) -> void:
 	pagina.add_child(_texto("MÁQUINA EXPENDEDORA", 38, true))
 	pagina.add_child(_texto("Abre con E en descanso. Compra con puntos y guarda una unidad.", 25))
 	pagina.add_child(_fila("Chocolate", ["Z"], "Corre más rápido durante 25 segundos"))
-	pagina.add_child(_fila("Dona", ["X"], "Barriguita y salto sobre mesas durante 10 segundos"))
+	pagina.add_child(_fila("Dona", ["X"], "Barriguita y salto alto durante 10 segundos; las mesas siguen bloqueadas"))
 	pagina.add_child(_fila("Papa tiempo", ["V"], "Detiene el mundo 12 segundos; puedes resolver denuncias"))
 	pagina.add_child(_fila("El Avatar", ["N"], "Resuelve el evento activo con su elemento; un solo uso"))
 
