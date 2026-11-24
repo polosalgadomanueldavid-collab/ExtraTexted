@@ -190,8 +190,21 @@ func iniciar(bloqueos: Dictionary) -> bool:
 	_cajones = bloqueos.duplicate()
 	for foco in focos:
 		foco.encender()
+	_crear_fuegos_cajones()
+	_ambiente.play()
+	_jugador.reproducir_expresion(&"estres")
+	iniciado.emit()
+	_actualizar_panel()
+	_actualizar_indicador_extintor()
+	return true
+
+
+func _crear_fuegos_cajones() -> void:
+	var creados := 0
 	for cajon: StaticBody3D in _cajones.values():
-		if cajon.get("es_ceniza") == true:
+		if not activo:
+			return
+		if not is_instance_valid(cajon) or cajon.get("es_ceniza") == true:
 			continue
 		var fuego := Fuego.new()
 		fuego.ancho = 0.45
@@ -199,12 +212,9 @@ func iniciar(bloqueos: Dictionary) -> bool:
 		add_child(fuego)
 		fuego.global_position = cajon.global_position + Vector3.UP * 0.85
 		_fuegos_cajones.append(fuego)
-	_ambiente.play()
-	_jugador.reproducir_expresion(&"estres")
-	iniciado.emit()
-	_actualizar_panel()
-	_actualizar_indicador_extintor()
-	return true
+		creados += 1
+		if OS.has_feature("android") and creados % 2 == 0:
+			await get_tree().process_frame
 
 
 func arde_estacion(estacion_id: String) -> bool:

@@ -7,6 +7,8 @@ const ESCALA_PAUSA := 0.8
 const PanelAyuda = preload("res://UI/Menus/panel_ayuda.gd")
 const PanelClasificacion := preload("res://UI/Menus/panel_clasificacion.gd")
 const ClasificacionLocalScript := preload("res://Scripts/Partida/ClasificacionLocal.gd")
+const SONIDO_FOCO := preload("res://Audios/Menu/foco.wav")
+const SONIDO_CONFIRMAR := preload("res://Audios/Menu/confirmar.wav")
 
 enum OrigenAyuda { MENU, PAUSA, INICIO, OPCIONES, EVENTO }
 
@@ -51,6 +53,9 @@ var _origen_ayuda := OrigenAyuda.MENU
 var _partida_con_tutorial: int = 0
 var _tutorial_lan: StringName = &""
 var _confirmacion_tutorial_enviada := false
+var _audio_foco: AudioStreamPlayer
+var _audio_confirmar: AudioStreamPlayer
+var _ultimo_foco_sonado := 0
 
 
 func practica_vista() -> bool:
@@ -78,6 +83,11 @@ func repetir_practica() -> void:
 
 func _ready() -> void:
 	musica_menu.bus = "Musica"
+	_audio_foco = _crear_audio_menu(SONIDO_FOCO, -13.0)
+	_audio_confirmar = _crear_audio_menu(SONIDO_CONFIRMAR, -10.0)
+	get_tree().node_added.connect(_registrar_boton_menu)
+	_registrar_botones_menu(self)
+	_registrar_botones_menu(get_tree().current_scene)
 	_crear_selector_calidad.call_deferred()
 	%Reanudar.pressed.connect(reanudar_juego)
 	%OpcionesPausa.pressed.connect(abrir_opciones)
@@ -507,6 +517,7 @@ func _restaurar_entrada() -> void:
 
 
 func _al_cambiar_escena() -> void:
+	_registrar_botones_menu.call_deferred(get_tree().current_scene)
 	final_de_partida_activo = false
 	capa.hide()
 	panel_pausa.hide()
@@ -525,6 +536,48 @@ func _al_cambiar_escena() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_actualizar_musica_menu()
 	_abrir_tutorial_inicial()
+
+
+func _crear_audio_menu(pista: AudioStream, volumen: float) -> AudioStreamPlayer:
+	var reproductor := AudioStreamPlayer.new()
+	reproductor.stream = pista
+	reproductor.bus = "Interacciones"
+	reproductor.volume_db = volumen
+	reproductor.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(reproductor)
+	return reproductor
+
+
+func _registrar_botones_menu(raiz: Node) -> void:
+	if not is_instance_valid(raiz):
+		return
+	_registrar_boton_menu(raiz)
+	for descendiente in raiz.find_children("*", "BaseButton", true, false):
+		_registrar_boton_menu(descendiente)
+
+
+func _registrar_boton_menu(nodo: Node) -> void:
+	if not nodo is BaseButton or nodo.has_meta(&"audio_menu_registrado"):
+		return
+	var escena := get_tree().current_scene
+	if not is_ancestor_of(nodo) and not (is_instance_valid(escena) and escena.scene_file_path == ESCENA_MENU and escena.is_ancestor_of(nodo)):
+		return
+	nodo.set_meta(&"audio_menu_registrado", true)
+	nodo.focus_entered.connect(_sonar_foco_menu)
+	nodo.mouse_entered.connect(_sonar_foco_menu)
+	nodo.pressed.connect(_sonar_confirmacion_menu)
+
+
+func _sonar_foco_menu() -> void:
+	var ahora := Time.get_ticks_msec()
+	if ahora - _ultimo_foco_sonado < 75:
+		return
+	_ultimo_foco_sonado = ahora
+	_audio_foco.play()
+
+
+func _sonar_confirmacion_menu() -> void:
+	_audio_confirmar.play()
 
 
 func _actualizar_musica_menu() -> void:

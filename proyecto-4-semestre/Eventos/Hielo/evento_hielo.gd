@@ -17,6 +17,8 @@ const SUELO := preload("res://Eventos/Hielo/suelo_hielo.gdshader")
 const ESCARCHA := preload("res://Eventos/Hielo/escarcha.gdshader")
 const NieveAcumulada := preload("res://Eventos/Hielo/nieve_acumulada.gd")
 const MONTICULOS := preload("res://Eventos/Hielo/monticulos_nieve.gdshader")
+const SONIDO_PISO := preload("res://Audios/Eventos/hielo_piso.wav")
+const SONIDO_PERSONAJE := preload("res://Audios/Eventos/hielo_personaje.wav")
 const PISO := 0.372
 const ENTRADA := 3.0
 const INTERVALO := 4.0
@@ -53,11 +55,24 @@ var _tiempo_deshielo := 0.0
 var _presencia_al_reparar := 1.0
 var _raton_anterior: Input.MouseMode
 var _bloqueo_anterior := false
+var _audio_piso: AudioStreamPlayer
+var _audio_personaje: AudioStreamPlayer
+var _congelado_anterior := false
 
 
 func configurar(oficina: Node3D, jugador: Player) -> void:
 	_oficina = oficina
 	_jugador = jugador
+	_audio_piso = AudioStreamPlayer.new()
+	_audio_piso.stream = SONIDO_PISO
+	_audio_piso.bus = "Interacciones"
+	_audio_piso.volume_db = -10.0
+	add_child(_audio_piso)
+	_audio_personaje = AudioStreamPlayer.new()
+	_audio_personaje.stream = SONIDO_PERSONAJE
+	_audio_personaje.bus = "Interacciones"
+	_audio_personaje.volume_db = -9.0
+	add_child(_audio_personaje)
 	jugador.control_hielo = self
 	jugador.reset_performed.connect(_cerrar_reparacion)
 	# La congelación se decide antes de que el personaje integre el movimiento.
@@ -78,7 +93,10 @@ func configurar(oficina: Node3D, jugador: Player) -> void:
 	indicador.rotulo = "NITRÓGENO"
 	set_physics_process(false)
 	set_process(false)
-	_preparar_nieve.call_deferred()
+	if OS.has_feature("android"):
+		nieve_preparada = true
+	else:
+		_preparar_nieve.call_deferred()
 
 
 func iniciar() -> bool:
@@ -92,6 +110,8 @@ func iniciar() -> bool:
 	_tiempo_deshielo = 0.0
 	_jugador.hielo_activo = true
 	_jugador.congelado = false
+	_congelado_anterior = false
+	_audio_piso.play()
 	panel.preparar(_oficina.generador_aleatorio.randi())
 	_crear_visuales()
 	_recubrir_mobiliario()
@@ -117,6 +137,9 @@ func _physics_process(delta: float) -> void:
 	var fase := fposmod(tiempo, INTERVALO)
 	if not _jugador.en_relevo:
 		_jugador.congelado = not descongelando and tiempo >= INTERVALO and fase < CONGELACION
+	if _jugador.congelado and not _congelado_anterior:
+		_audio_personaje.play()
+	_congelado_anterior = _jugador.congelado
 	if descongelando:
 		_tiempo_deshielo += delta
 		presencia = _presencia_al_reparar * (1.0 - clampf(_tiempo_deshielo / DESHIELO, 0.0, 1.0))
@@ -336,11 +359,19 @@ func _preparar_nieve() -> void:
 
 
 func _recubrir_mobiliario() -> void:
+	var recubiertos := 0
 	for raiz in _raices_mobiliario():
+		if not activo:
+			return
 		if raiz is MeshInstance3D:
 			_recubrir(raiz)
 		for malla: Node in raiz.find_children("*", "MeshInstance3D", true, false):
+			if not activo:
+				return
 			_recubrir(malla)
+			recubiertos += 1
+			if OS.has_feature("android") and recubiertos % 8 == 0:
+				await get_tree().process_frame
 
 
 func recubrir_bloqueo(bloqueo: Node) -> void:
@@ -357,9 +388,10 @@ func _recubrir(malla: MeshInstance3D) -> void:
 			return
 	_recubiertos.append({"nodo": malla, "material": malla.material_overlay})
 	malla.material_overlay = _escarcha
-	var monticulo := _generador_nieve.crear(malla, _material_nieve)
-	if monticulo != null:
-		_monticulos.append(monticulo)
+	if not OS.has_feature("android"):
+		var monticulo := _generador_nieve.crear(malla, _material_nieve)
+		if monticulo != null:
+			_monticulos.append(monticulo)
 
 
 func _particulas(cantidad: int, color: Color, radio: float) -> CPUParticles3D:

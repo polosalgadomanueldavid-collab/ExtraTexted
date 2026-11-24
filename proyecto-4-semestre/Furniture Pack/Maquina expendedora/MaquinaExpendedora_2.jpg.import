@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dcs3b8irt2gja"
 path.s3tc="res://.godot/imported/MaquinaExpendedora_2.jpg-45bb1b977305112b23b5afd668fe31ec.s3tc.ctex"
+path.etc2="res://.godot/imported/MaquinaExpendedora_2.jpg-45bb1b977305112b23b5afd668fe31ec.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Maquina expendedora/MaquinaExpendedora_2.jpg"
-dest_files=["res://.godot/imported/MaquinaExpendedora_2.jpg-45bb1b977305112b23b5afd668fe31ec.s3tc.ctex"]
+dest_files=["res://.godot/imported/MaquinaExpendedora_2.jpg-45bb1b977305112b23b5afd668fe31ec.s3tc.ctex", "res://.godot/imported/MaquinaExpendedora_2.jpg-45bb1b977305112b23b5afd668fe31ec.etc2.ctex"]
 
 [params]
 

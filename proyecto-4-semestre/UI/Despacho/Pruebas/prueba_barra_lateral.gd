@@ -38,6 +38,12 @@ func _probar() -> void:
 	sistema.calma_operativa = 72
 	sistema.calma_actualizada.emit(72)
 	_verificar(primera.calma == 72 and segunda.calma == 24, "Actualizar la calma local no altera la del compañero")
+	sistema.configurar_jugadores([1, 2], 2)
+	calma.actualizar_jugador(1, 40)
+	sistema.calma_operativa = 63
+	sistema.calma_actualizada.emit(63)
+	_verificar(primera.calma == 40 and segunda.calma == 63, "El invitado actualiza su propia fila sin sobrescribir la del anfitrión")
+	sistema.configurar_jugadores([1], 1)
 	calma.quitar_jugador(2)
 	sistema.calma_operativa = 100
 	sistema.calma_actualizada.emit(100)

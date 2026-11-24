@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://esm1m8qu40y5"
 path.s3tc="res://.godot/imported/Taco_Luz_1.jpg-45de3b74d8593142b7d3c731d0d6d8a7.s3tc.ctex"
+path.etc2="res://.godot/imported/Taco_Luz_1.jpg-45de3b74d8593142b7d3c731d0d6d8a7.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Tacos_luz/Taco_Luz_1.jpg"
-dest_files=["res://.godot/imported/Taco_Luz_1.jpg-45de3b74d8593142b7d3c731d0d6d8a7.s3tc.ctex"]
+dest_files=["res://.godot/imported/Taco_Luz_1.jpg-45de3b74d8593142b7d3c731d0d6d8a7.s3tc.ctex", "res://.godot/imported/Taco_Luz_1.jpg-45de3b74d8593142b7d3c731d0d6d8a7.etc2.ctex"]
 
 [params]
 

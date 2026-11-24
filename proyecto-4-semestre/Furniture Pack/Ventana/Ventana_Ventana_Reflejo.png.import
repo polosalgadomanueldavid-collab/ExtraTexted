@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c2frtdw5d16t3"
 path.s3tc="res://.godot/imported/Ventana_Ventana_Reflejo.png-435834274e0f7f41b4a1a3b35ffd4de3.s3tc.ctex"
+path.etc2="res://.godot/imported/Ventana_Ventana_Reflejo.png-435834274e0f7f41b4a1a3b35ffd4de3.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Ventana/Ventana_Ventana_Reflejo.png"
-dest_files=["res://.godot/imported/Ventana_Ventana_Reflejo.png-435834274e0f7f41b4a1a3b35ffd4de3.s3tc.ctex"]
+dest_files=["res://.godot/imported/Ventana_Ventana_Reflejo.png-435834274e0f7f41b4a1a3b35ffd4de3.s3tc.ctex", "res://.godot/imported/Ventana_Ventana_Reflejo.png-435834274e0f7f41b4a1a3b35ffd4de3.etc2.ctex"]
 
 [params]
 

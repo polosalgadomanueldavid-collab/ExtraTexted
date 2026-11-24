@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dksy3k61ydnfw"
 path.s3tc="res://.godot/imported/Deep_Shadows.png-a9d52b0f09e413db82d024227adb2ee8.s3tc.ctex"
+path.etc2="res://.godot/imported/Deep_Shadows.png-a9d52b0f09e413db82d024227adb2ee8.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://Arte/Texturas/Cuadros/Deep_Shadows.png"
-dest_files=["res://.godot/imported/Deep_Shadows.png-a9d52b0f09e413db82d024227adb2ee8.s3tc.ctex"]
+dest_files=["res://.godot/imported/Deep_Shadows.png-a9d52b0f09e413db82d024227adb2ee8.s3tc.ctex", "res://.godot/imported/Deep_Shadows.png-a9d52b0f09e413db82d024227adb2ee8.etc2.ctex"]
 
 [params]
 
