@@ -28,6 +28,10 @@ var _vencidos: Dictionary = {}
 var _eliminados: Dictionary = {}
 var _esperas: Dictionary = {}
 var _evento_id := 0
+var _sismo_secuencia := 0
+var _sismo_pendiente: Dictionary = {}
+var _sismo_listos: Dictionary = {}
+var _sismo_espera := 0.0
 var _activacion_tiempo := 0
 var _evento_resuelto_id := -1
 var _ultima_distribucion: Array = []
@@ -54,6 +58,7 @@ var _duelo_aviso: Label
 
 func configurar(mundo: Node3D) -> void:
 	oficina = mundo
+	oficina.evento_terremoto.preparacion_terminada.connect(_preparacion_sismo_terminada)
 	despacho = oficina.sistema_despacho
 	for estacion in oficina.find_children("*", "Estacion", true, false):
 		_estaciones[estacion.estacion_id] = estacion
@@ -115,6 +120,12 @@ func _process(delta: float) -> void:
 		_terminar_duelo(0)
 	if SesionLAN.es_anfitrion() and not _duelo.is_empty() and not oficina.emotes_permitidos():
 		_terminar_duelo(0)
+	if SesionLAN.es_anfitrion() and not _sismo_pendiente.is_empty() and not get_tree().paused:
+		_sismo_espera += delta
+		if _sismo_espera > 30.0:
+			_cancelar_sismo()
+		else:
+			_intentar_autorizar_sismo()
 	_actualizar_visual_duelo()
 	_envio += delta
 	_estado += delta
@@ -229,6 +240,11 @@ func _mover_cuerpo_remoto(j: Player, destino: Vector3) -> void:
 func procesar(id: int, tipo: String, datos: Dictionary) -> Dictionary:
 	if not _listo or not jugadores.has(id):
 		return _error("La oficina todavía está cargando.")
+	if tipo == "sismo_listo":
+		if _sismo_pendiente.is_empty() or int(datos.get("plan_id", -1)) != int(_sismo_pendiente.plan_id) or int(datos.get("huella", 0)) != int(_sismo_pendiente.get("huella", -1)):
+			return _error("El plan de terremoto ya no está pendiente.")
+		_sismo_listos[id] = true
+		return {"ok": true}
 	if tipo == "liberar":
 		var clave := str(datos.get("objetivo", ""))
 		if int(reservas.get(clave, {}).get("jugador", 0)) == id:
@@ -757,6 +773,17 @@ func proteger_celda(celda: Vector2i, ensayo: AStarGrid2D = null) -> bool:
 func iniciar_evento(tipo: String) -> bool:
 	if not SesionLAN.es_anfitrion() or not _listo or get_tree().paused or not oficina._puede_iniciar_evento():
 		return false
+	if not _sismo_pendiente.is_empty(): return false
+	if tipo == "terremoto":
+		_sismo_secuencia += 1
+		_sismo_pendiente = {"id": _evento_id + 1, "plan_id": _sismo_secuencia}
+		_sismo_listos.clear()
+		_sismo_espera = 0.0
+		oficina.evento_terremoto._azar.seed = randi()
+		if not oficina.evento_terremoto.iniciar(oficina.grafo_piso, oficina.jugador, oficina.bloqueos_visuales, oficina._huella_papel_suelto(), true):
+			_sismo_pendiente.clear()
+			return false
+		return true
 	var posiciones: Array = []
 	for j: Player in jugadores.values():
 		posiciones.append(j.global_position)
@@ -767,14 +794,53 @@ func iniciar_evento(tipo: String) -> bool:
 			datos.hojas.append(papel.global_position)
 	if not _arrancar_evento(datos):
 		return false
-	if tipo == "terremoto":
-		datos["trazado"] = oficina.evento_terremoto.exportar_trazado_red()
 	if tipo == "lava":
 		datos["charcos"] = oficina.evento_lava.charcos.duplicate()
 	_evento_id = int(datos.id)
 	publicar()
 	SesionLAN.difundir("inicio", datos)
 	return true
+
+func _preparacion_sismo_terminada(correcta: bool) -> void:
+	if _sismo_pendiente.is_empty(): return
+	if not correcta:
+		if SesionLAN.es_anfitrion(): _cancelar_sismo()
+		return
+	if SesionLAN.es_anfitrion():
+		var plan: Dictionary = oficina.evento_terremoto.exportar_trazado_red()
+		# Enviar los mismos bytes que se firman evita diferencias de tipado o
+		# precisión al codificar diccionarios anidados mediante RPC.
+		var serializado := var_to_bytes(plan)
+		_sismo_pendiente["plan_serializado"] = serializado
+		_sismo_pendiente["huella"] = hash(serializado)
+		_sismo_listos[SesionLAN.id_local()] = true
+		SesionLAN.difundir("sismo_plan", _sismo_pendiente.duplicate(true))
+	else:
+		SesionLAN.solicitar("sismo_listo", {"plan_id": _sismo_pendiente.plan_id, "huella": _sismo_pendiente.huella})
+
+
+func _intentar_autorizar_sismo() -> void:
+	if not _sismo_pendiente.has("plan_serializado"): return
+	for id: int in SesionLAN.participantes:
+		if not _sismo_listos.has(id): return
+	# Última validación con las posiciones actuales del anfitrión. Ningún cliente
+	# inicia el reloj hasta recibir la autorización para este mismo plan.
+	if not oficina.evento_terremoto.validar_plan_actual():
+		_cancelar_sismo()
+		return
+	var datos := {"id": _sismo_pendiente.id, "plan_id": _sismo_pendiente.plan_id, "huella": _sismo_pendiente.huella}
+	SesionLAN.difundir("sismo_inicio", datos)
+
+
+func _cancelar_sismo() -> void:
+	if _sismo_pendiente.is_empty(): return
+	var plan_id: int = _sismo_pendiente.plan_id
+	_sismo_pendiente.clear()
+	_sismo_listos.clear()
+	oficina.evento_terremoto.cancelar_preparacion()
+	SesionLAN.difundir("sismo_cancelar", {"plan_id": plan_id})
+	if not oficina.partida_finalizada: oficina.temporizador_eventos.start(2.0)
+
 
 func _arrancar_evento(datos: Dictionary) -> bool:
 	iniciando_evento = true
@@ -799,10 +865,8 @@ func _arrancar_evento(datos: Dictionary) -> bool:
 	match str(datos.tipo):
 		"apagon": resultado = oficina.evento_apagon.iniciar_apagon()
 		"terremoto":
-			if datos.has("trazado"):
-				resultado = oficina.evento_terremoto.importar_trazado_red(datos.trazado, oficina.grafo_piso, j, oficina.bloqueos_visuales)
-			else:
-				resultado = oficina.evento_terremoto.iniciar(oficina.grafo_piso, j, oficina.bloqueos_visuales, oficina._huella_papel_suelto())
+			# El terremoto usa la barrera de plan/montaje/autorización.
+			resultado = false
 		"incendio": resultado = oficina.evento_incendio.iniciar(oficina.bloqueos_visuales)
 		"inundacion": resultado = oficina.evento_inundacion.iniciar()
 		"lava": resultado = oficina.evento_lava.iniciar()
@@ -815,6 +879,37 @@ func _arrancar_evento(datos: Dictionary) -> bool:
 
 func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 	match tipo:
+		"sismo_plan":
+			if SesionLAN.es_anfitrion() or int(datos.id) <= _evento_id or int(datos.plan_id) <= _sismo_secuencia: return
+			_sismo_secuencia = int(datos.plan_id)
+			if hash(datos.plan_serializado) != int(datos.huella):
+				SesionLAN.cerrar("El plan de terremoto no coincide con el del anfitrión.")
+				return
+			var plan: Dictionary = bytes_to_var(datos.plan_serializado)
+			_sismo_pendiente = datos.duplicate(true)
+			if not oficina.evento_terremoto.importar_trazado_red(plan, oficina.grafo_piso, oficina.jugador, oficina.bloqueos_visuales):
+				SesionLAN.cerrar("No se pudo preparar el terremoto compartido.")
+		"sismo_cancelar":
+			if int(_sismo_pendiente.get("plan_id", -1)) != int(datos.plan_id): return
+			_sismo_pendiente.clear()
+			_sismo_listos.clear()
+			oficina.evento_terremoto.cancelar_preparacion()
+		"sismo_inicio":
+			if _sismo_pendiente.is_empty() or int(datos.plan_id) != int(_sismo_pendiente.plan_id) or int(datos.huella) != int(_sismo_pendiente.huella) or int(datos.id) <= _evento_id: return
+			iniciando_evento = true
+			# El anfitrión acaba de validar en _intentar_autorizar_sismo, sin cesión.
+			var autorizado: bool = oficina.evento_terremoto.autorizar_plan(false)
+			iniciando_evento = false
+			if not autorizado:
+				SesionLAN.cerrar("No se pudo autorizar el terremoto compartido.")
+				return
+			_evento_id = int(datos.id)
+			_sismo_pendiente.clear()
+			_sismo_listos.clear()
+			if anuncio_pendiente.size() == 4:
+				oficina._anunciar_inicio_evento.callv(anuncio_pendiente)
+				anuncio_pendiente.clear()
+			if SesionLAN.es_anfitrion(): publicar()
 		"duelo":
 			_aplicar_duelo(datos)
 		"tarea":
@@ -1112,6 +1207,9 @@ func _input(event: InputEvent) -> void:
 
 func preparar_salida() -> void:
 	_listo = false
+	_sismo_pendiente.clear()
+	_sismo_listos.clear()
+	oficina.evento_terremoto.cancelar_preparacion()
 	_duelo.clear()
 	if is_instance_valid(_duelo_aviso):
 		_duelo_aviso.queue_free()

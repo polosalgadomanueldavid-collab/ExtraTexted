@@ -9,6 +9,9 @@ const ALTURA := 0.48
 const AVISO := 0.85
 const CAIDA := 0.72
 
+static var _piedra_compartida: StandardMaterial3D
+static var _metal_compartido: StandardMaterial3D
+
 var celda: Vector2i
 var celdas: Array[Vector2i] = []
 var asentado := false
@@ -26,7 +29,7 @@ var _poses: Array[Transform3D] = []
 var _giro := 0.0
 
 
-func preparar(altura_techo: float, azar: RandomNumberGenerator, tamano: Vector2 = Vector2.ONE * RADIO * 2.0) -> void:
+func preparar(altura_techo: float, azar: RandomNumberGenerator, tamano: Vector2 = Vector2.ONE * RADIO * 2.0, presupuesto: RefCounted = null) -> void:
 	collision_layer = 0
 	collision_mask = 0
 	_altura_techo = altura_techo
@@ -40,15 +43,21 @@ func preparar(altura_techo: float, azar: RandomNumberGenerator, tamano: Vector2 
 	forma.position.y = ALTURA * 0.5
 	add_child(forma)
 	_restos = Node3D.new()
+	_restos.hide()
 	add_child(_restos)
 	_giro = azar.randf_range(-PI, PI)
-	var piedra := StandardMaterial3D.new()
-	piedra.vertex_color_use_as_albedo = true
-	piedra.roughness = 1.0
-	piedra.emission_enabled = true
-	piedra.emission = Color(0.07, 0.058, 0.04)
+	if _piedra_compartida == null:
+		_piedra_compartida = StandardMaterial3D.new()
+		_piedra_compartida.vertex_color_use_as_albedo = true
+		_piedra_compartida.roughness = 1.0
+		_piedra_compartida.emission_enabled = true
+		_piedra_compartida.emission = Color(0.07, 0.058, 0.04)
+	var piedra := _piedra_compartida
 	# Base ancha de fragmentos, evitando la silueta de columnas de piedra.
 	for i in range(13):
+		if presupuesto != null:
+			await presupuesto.paso()
+			if presupuesto.cancelado: return
 		var angulo := TAU * i / 13.0 + _giro
 		var radio := azar.randf_range(0.20, 0.34)
 		var medidas := Vector3(azar.randf_range(0.17, 0.29), azar.randf_range(0.07, 0.14), azar.randf_range(0.15, 0.26))
@@ -59,11 +68,16 @@ func preparar(altura_techo: float, azar: RandomNumberGenerator, tamano: Vector2 
 	_agregar_losa(Vector3(0.69, 0.11, 0.62), Vector3(-0.09, 0.22, 0.06), Vector3(0.32, _giro + 1.2, 0.16), Color("e0d7bd"), piedra, azar)
 	_agregar_losa(Vector3(0.53, 0.09, 0.48), Vector3(0.09, 0.34, -0.06), Vector3(-0.24, _giro - 0.8, -0.18), Color("eee3c7"), piedra, azar)
 	for i in range(3):
+		if presupuesto != null:
+			await presupuesto.paso()
+			if presupuesto.cancelado: return
 		var varilla := MeshInstance3D.new()
-		var material := StandardMaterial3D.new()
-		material.albedo_color = Color("67503b")
-		material.metallic = 0.6
-		material.roughness = 0.68
+		if _metal_compartido == null:
+			_metal_compartido = StandardMaterial3D.new()
+			_metal_compartido.albedo_color = Color("67503b")
+			_metal_compartido.metallic = 0.6
+			_metal_compartido.roughness = 0.68
+		var material := _metal_compartido
 		var datos := SurfaceTool.new()
 		datos.begin(Mesh.PRIMITIVE_TRIANGLES)
 		var x := -0.19 + i * 0.16

@@ -42,11 +42,14 @@ func _probar() -> void:
 	var alfombra := oficina.get_node("AlfombraCentro") as Node3D
 	var reposo_alfombra := alfombra.transform
 	await _fisicas(65)
+	while evento.preparando:
+		await process_frame
 	_verificar(evento.activo and evento.etapa == evento.Etapa.AVISO, "El reloj aleatorio inicia el aviso")
 	if not evento.activo:
 		quit(1)
 		return
 	_verificar(jugador.voz.stream == jugador.voz.estres, "El policía expresa estrés al primer temblor")
+	await _fisicas(2)
 	var plazo_evento: float = evento.tiempo
 	paused = true
 	await _fisicas(12)
@@ -167,6 +170,8 @@ func _probar() -> void:
 	jugador.global_position = grafo.celda_a_posicion(Vector2i(7, 19)) + Vector3.UP * evento._altura
 	await _pulsar(KEY_F3)
 	await _pulsar(KEY_T)
+	while evento.preparando:
+		await process_frame
 	_verificar(evento.activo, "F3 y T también inician el terremoto desde descanso")
 	if evento.activo:
 		await _hasta(8.85)

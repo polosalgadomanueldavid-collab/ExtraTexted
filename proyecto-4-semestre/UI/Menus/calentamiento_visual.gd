@@ -52,6 +52,17 @@ func preparar(oficina: Node = null) -> void:
 	await get_tree().process_frame
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
+	# Dibuja las variantes instanciadas reales antes de descubrir la oficina.
+	# Es un efecto aislado: no ejecuta gestos, sonido ni restauración del evento.
+	var tierra := preload("res://Objetos/ZonaDescanso/macizos_tierra.gd").new()
+	add_child(tierra)
+	tierra.scale = Vector3.ONE * .45
+	tierra.position.y = -.6
+	tierra.actualizar(2.25, Vector3(-.3, .6, 0), Vector3(.3, .6, 0), 0.0)
+	await get_tree().process_frame
+	if DisplayServer.get_name() != "headless":
+		await RenderingServer.frame_post_draw
+	tierra.queue_free()
 	if is_instance_valid(oficina) and DisplayServer.get_name() != "headless":
 		await _preparar_luces_oficina(oficina)
 	if is_instance_valid(oficina) and DisplayServer.get_name() != "headless":
@@ -64,8 +75,14 @@ func _preparar_luces_oficina(oficina: Node) -> void:
 	var camara := oficina.get_node("Gameplay/Camera3D") as Camera3D
 	var transformacion := camara.global_transform
 	var apertura := camara.fov
+	# La muestra aislada no cubre las combinaciones de focos/sombras reales.
+	# Preparar también esos programas mientras el overlay todavía cubre la escena.
+	var tierra := preload("res://Objetos/ZonaDescanso/macizos_tierra.gd").new()
+	oficina.add_child(tierra)
+	tierra.actualizar(2.25, Vector3(-.3, .6, 0), Vector3(.3, .6, 0), 0.0)
 	camara.fov = 70.0
 	for centro in [Vector3(-1, 0.8, 3.4), Vector3(-1, 0.8, 9.0)]:
+		tierra.global_position = centro - Vector3.UP * .4
 		camara.global_position = centro + Vector3(0, 5, 3.6)
 		camara.look_at(centro)
 		await get_tree().process_frame
@@ -74,6 +91,7 @@ func _preparar_luces_oficina(oficina: Node) -> void:
 			return
 	camara.global_transform = transformacion
 	camara.fov = apertura
+	tierra.queue_free()
 	await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 

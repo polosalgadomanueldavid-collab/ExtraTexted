@@ -15,6 +15,7 @@ var intervalo_carga_ms := 0.0
 var vistas_medidas: Array[SubViewport] = []
 var inicio_escenario_usec := 0
 var picos: Array = []
+var evento_preparandose: Node
 
 func _initialize() -> void:
 	process_frame.connect(_muestrear)
@@ -53,6 +54,15 @@ func _medir(nombre: String, minimo_segundos := 0.0) -> void:
 	picos.clear()
 	inicio_escenario_usec = anterior
 	midiendo = true
+	if is_instance_valid(evento_preparandose):
+		var inicio_preparacion := Time.get_ticks_usec()
+		var aceptada: bool = evento_preparandose.preparando
+		if aceptada:
+			await evento_preparandose.preparacion_terminada
+		resultados[nombre + "_solicitud_aceptada"] = aceptada
+		resultados[nombre + "_activado"] = evento_preparandose.activo
+		resultados[nombre + "_preparacion_ms"] = (Time.get_ticks_usec() - inicio_preparacion) / 1000.0
+		evento_preparandose = null
 	await create_timer(maxf(segundos, minimo_segundos)).timeout
 	midiendo = false
 	if muestras.is_empty():
@@ -157,6 +167,7 @@ func _run() -> void:
 					activado = evento.iniciar()
 				resultados[escenario + "_inicio_ms"] = (Time.get_ticks_usec() - inicio) / 1000.0
 				resultados[escenario + "_activado"] = activado
+				if nombre == "terremoto": evento_preparandose = evento
 				await _medir(escenario)
 				evento.resolver_con_avatar()
 				oficina.temporizador_eventos.stop()

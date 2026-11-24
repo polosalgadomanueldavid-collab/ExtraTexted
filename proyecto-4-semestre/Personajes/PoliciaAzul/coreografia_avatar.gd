@@ -41,24 +41,26 @@ static func _tierra(p: Dictionary, t: float) -> void:
 	var izquierda := curva(t, [Vector2(0, 0), Vector2(.16, 0), Vector2(.24, 1), Vector2(.29, 0), Vector2(1, 0)])
 	var derecha := curva(t, [Vector2(0, 0), Vector2(.37, 0), Vector2(.46, 1), Vector2(.51, 0), Vector2(1, 0)])
 	var impacto := pulso(t, .285, .30, .35) + pulso(t, .505, .52, .57)
-	var alzar := smoothstep(.54, .65, t)
-	var empujar := smoothstep(.66, .72, t)
+	var alzar := smoothstep(.535, .635, t)
+	var reunir := smoothstep(.625, .685, t)
+	var empujar := smoothstep(.685, .72, t)
+	var torsion := -.22 * izquierda + .28 * derecha + .48 * reunir - .42 * empujar
 	var peso := sin(t * PI * 2.0) * .10 + (derecha - izquierda) * .14
-	p.desplazamiento = Vector3(peso, 0, empujar * .10)
-	p.pelvis = Vector3(.05, 0, (izquierda - derecha) * .10)
-	p.spine = Vector3(.12 + impacto * .12 - empujar * .16, 0, -peso * .35)
-	p.chest = Vector3(-.06, (izquierda - derecha) * .14, 0)
-	p.head = Vector3(.12 * (1.0 - alzar), 0, peso * .15)
+	p.desplazamiento = Vector3(peso, 0, empujar * .22 - reunir * .08)
+	p.pelvis = Vector3(.05, torsion * .20, (izquierda - derecha) * .10)
+	p.spine = Vector3(.12 + impacto * .18 - alzar * .13 + empujar * .16, torsion * .50, -peso * .35)
+	p.chest = Vector3(-.06, torsion * .30, 0)
+	p.head = Vector3(.12 * (1.0 - alzar), -torsion * .65, peso * .15)
 	for lado: String in ["L", "R"]:
 		var s := 1.0 if lado == "L" else -1.0
 		var levantar := izquierda if lado == "L" else derecha
 		p["thigh." + lado] = Vector3(-.32 - levantar * 1.15 - impacto * .12, -s * .13, -s * .24)
 		p["shin." + lado] = Vector3(.52 + levantar * 1.1 + impacto * .18, 0, 0)
 		p["foot." + lado] = Vector3(-.20 - levantar * .35, -s * .14, s * .08)
-		# Codos recogidos al pecho; palmas elevan la roca y golpean al frente.
-		p["upper_arm." + lado] = Vector3(-.28 - alzar * .65 - empujar * .55, s * .12, -s * (.48 - empujar * .27))
-		p["forearm." + lado] = Vector3(-1.25 + alzar * .3 + empujar * .83, 0, 0)
-		p["hand." + lado] = Vector3(-.35 + empujar * .85, s * .08, 0)
+		# Abrir y alzar ambas palmas, reunir desde la cintura y descargar al 72 %.
+		p["upper_arm." + lado] = Vector3(-.28 - alzar * .95 + reunir * .40 - empujar * .70, s * .12 + torsion * .3, -s * (.48 + alzar * .48 - reunir * .38 - empujar * .35))
+		p["forearm." + lado] = Vector3(-1.25 + alzar * .5 - reunir * .35 + empujar * .98, 0, 0)
+		p["hand." + lado] = Vector3(-.35 + alzar * .22 + empujar * .63, s * .08, -s * alzar * .15)
 
 static func _agua(p: Dictionary, t: float) -> void:
 	# Korra: recoger desde la cadera, rodear con ambos brazos y conducir la ola

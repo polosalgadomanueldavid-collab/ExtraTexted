@@ -8,6 +8,8 @@ var resolviendo_avatar: bool:
 	get: return is_instance_valid(_resolucion_avatar)
 
 
+signal preparacion_iniciada
+signal preparacion_terminada(correcta: bool)
 signal iniciado
 signal temblor_actualizado(tiempo: float, intensidad: float)
 signal suelo_roto
@@ -17,35 +19,34 @@ signal terminado
 
 enum Etapa { INACTIVO, AVISO, RUPTURA, RECUPERACION }
 
+const Planificador := preload("res://Eventos/Terremoto/planificador_terremoto.gd")
+const Presupuesto := preload("res://Eventos/Terremoto/presupuesto_preparacion.gd")
 const Grieta := preload("res://Eventos/Terremoto/grieta.gd")
 const Escombro := preload("res://Eventos/Terremoto/escombro.gd")
 const SonidosEventos := preload("res://Eventos/sonidos_eventos.gd")
-const ZONA_MESAS := Rect2(-3.72, 1.04, 5.42, 4.72)
-const ZONA_SISMO := Rect2(-3.72, 1.04, 5.42, 10.65)
-const ZONA_DESCANSO := Rect2(-3.45, 6.95, 5.15, 4.65)
-const ZONA_DERRUMBES_SUPERIOR := Rect2(-4.05, 0.40, 6.15, 6.50)
 const SEGUNDOS_POR_ETAPA := 8.0
 const DURACION := 3.0 * SEGUNDOS_POR_ETAPA
 const TIEMPO_CIERRE := 0.60
 const ANCHO_PISO := 7.0
 const LARGO_PISO := 12.5
 const RESOLUCION_MASCARA := 32
-# La base del policía mide 0.45 × 0.31 m y proyecta hasta 0.55 m en diagonal.
-const ANCHOS: Array[float] = [1.33, 0.79, 0.73, 0.69, 0.73, 0.69, 0.73, 0.69, 0.73, 0.69, 0.69]
-const LARGOS: Array[float] = [2.18, 1.70, 1.42, 1.15, 1.05, 1.00, 1.25, 1.15, 1.10, 1.00, 0.95]
-const MINIMO_GRIETAS := 10
-const MINIMO_ESCOMBROS := 14
-const MAXIMO_ESCOMBROS := 23
-const MINIMO_ESCOMBROS_SUPERIORES := 14
-const MAXIMO_ESCOMBROS_SUPERIORES := 20
-const MAXIMO_ESCOMBROS_DESCANSO := 3
-const MINIMO_PASOS_CERRADOS := 4
+const ANCHOS: Array[float] = Planificador.ANCHOS
+const LARGOS: Array[float] = Planificador.LARGOS
 
 @export var suelo: CSGBox3D
 @export var techo: CSGBox3D
 @export var alfombra: Node3D
 
 var permiso_inicio: Callable
+var permiso_aplicar: Callable
+var actualizar_contexto: Callable
+var preparando := false
+var plan_preparado := false
+var rechazo_preparacion := ""
+var _esperar_autorizacion := false
+var _presupuesto: Presupuesto
+var _plan: Dictionary = {}
+var _base_transitable: Array[bool] = []
 var sonidos: SonidosEventos
 
 var etapa := Etapa.INACTIVO
@@ -96,87 +97,200 @@ func _ready() -> void:
 	set_physics_process(false)
 
 
-func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoja: Rect2) -> bool:
+## Devuelve aceptación de la solicitud. El resultado se entrega en preparacion_terminada.
+func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoja: Rect2, esperar_autorizacion := false) -> bool:
 	if permiso_inicio.is_valid() and not permiso_inicio.call():
 		return false
-	var celda_jugador := grafo.posicion_a_celda(jugador.global_position)
-	if activo or get_tree().paused or not grafo.es_celda_valida(celda_jugador):
+	if activo or preparando or get_tree().paused or not grafo.es_celda_valida(grafo.posicion_a_celda(jugador.global_position)):
 		return false
 	_grafo = grafo
 	_jugador = jugador
 	_colision_jugador = jugador.get_node_or_null("Colision") as CollisionShape3D
 	_bloqueos = bloqueos
 	_huella_hoja = huella_hoja
-	var origen := grafo.celda_de_acceso(jugador.global_position)
-	var alcanzables := grafo.celdas_alcanzables(origen)
-	var destinos := GrafoPiso.DESTINOS.values()
-	for punto: Vector3 in posiciones_red:
-		var acceso_red := grafo.celda_de_acceso(punto)
-		if not destinos.has(acceso_red):
-			destinos.append(acceso_red)
-	for acceso: Node3D in get_tree().get_nodes_in_group("accesos_navegacion"):
-		destinos.append(grafo.posicion_a_celda(acceso.global_position))
-	var protegidos: Array[Vector2i] = []
-	for celda: Vector2i in destinos:
-		if alcanzables.has(celda):
-			protegidos.append(celda)
+	_esperar_autorizacion = esperar_autorizacion
+	tiempo = 0.0
+	rechazo_preparacion = ""
+	preparando = true
+	plan_preparado = false
+	_presupuesto = Presupuesto.new()
+	_presupuesto.arbol = get_tree()
+	preparacion_iniciada.emit()
+	_preparar_plan.call_deferred()
+	return true
 
-	# Si el jugador espera en descanso, la gigante puede abrirse bajo sus
-	# pies después del aviso. Las rutas y el rescate parten de un acceso firme.
-	if grafo.es_zona_segura(origen) and not protegidos.is_empty():
-		origen = protegidos[0]
-	_origen_seguro = origen
 
-	# La copia permite validar grietas y derrumbes y mantener intactos los
-	# caminos, las colisiones y las mesas hasta el instante de la rotura.
+func _capturar_transitables() -> Array[bool]:
+	var celdas: Array[bool] = []
+	for fila in range(GrafoPiso.FILAS):
+		for columna in range(GrafoPiso.COLUMNAS):
+			celdas.append(_grafo.es_transitable(Vector2i(columna, fila)))
+	return celdas
+
+
+func _refrescar_contexto() -> void:
+	if actualizar_contexto.is_valid():
+		actualizar_contexto.call()
+
+
+func _preparar_plan() -> void:
+	await _presupuesto.paso()
+	if _presupuesto.cancelado:
+		_fallar_preparacion()
+		return
+	# Si alguien se mueve sobre el plan durante el montaje, descartar y volver
+	# a planificar con posiciones actuales, sin iniciar avisos ni reloj.
+	for intento_actualizacion in range(3):
+		_refrescar_contexto()
+		_base_transitable = _capturar_transitables()
+		var planificador := Planificador.new()
+		planificador.presupuesto = _presupuesto
+		var copia := GrafoPiso.new()
+		copia.bloqueos_fijos = _grafo.bloqueos_fijos.duplicate()
+		copia.bloqueos_mesas = _grafo.bloqueos_mesas.duplicate()
+		copia.bloqueos_temporales = _grafo.bloqueos_temporales.duplicate()
+		copia.grietas.assign(_grafo.grietas)
+		copia.escombros.assign(_grafo.escombros)
+		copia.adyacencia = _grafo.adyacencia.duplicate(true)
+		planificador._grafo = copia
+		planificador._posicion_jugador = _jugador.global_position
+		for celda: Vector2i in _bloqueos:
+			planificador._bloqueos[celda] = true
+		planificador._huella_hoja = _huella_hoja
+		planificador.posiciones_red.assign(posiciones_red)
+		planificador.hojas_red.assign(hojas_red)
+		planificador._azar.state = _azar.state
+		for acceso: Node3D in get_tree().get_nodes_in_group("accesos_navegacion"):
+			planificador.accesos.append(acceso.global_position)
+		var datos: Dictionary = await planificador.planificar()
+		_azar.state = planificador._azar.state
+		if _presupuesto.cancelado or datos.is_empty():
+			rechazo_preparacion = "cancelado" if _presupuesto.cancelado else "sin distribución válida"
+			break
+		_plan = datos
+		await _presupuesto.paso(2500)
+		if _presupuesto.cancelado: break
+		if not validar_plan_actual():
+			continue
+		await _montar_plan()
+		if _presupuesto.cancelado:
+			break
+		await _presupuesto.paso(2500)
+		if _presupuesto.cancelado: break
+		if validar_plan_actual():
+			plan_preparado = true
+			if not _esperar_autorizacion and not autorizar_plan(false):
+				_fallar_preparacion()
+				return
+			preparacion_terminada.emit(true)
+			return
+		_limpiar_preparacion_visual()
+	_fallar_preparacion()
+
+
+func validar_plan_actual() -> bool:
+	_refrescar_contexto()
+	if _plan.is_empty() or _presupuesto.cancelado or get_tree().paused or not is_instance_valid(_jugador):
+		return _rechazar_plan("estado de preparación")
+	if permiso_aplicar.is_valid() and not permiso_aplicar.call():
+		return _rechazar_plan("permiso de aplicación")
+	if _capturar_transitables() != _base_transitable:
+		return _rechazar_plan("ocupación del grafo")
+	var formas: Array = _plan.formas
+	for i in range(formas.size()):
+		var forma := preload("res://Eventos/Terremoto/forma_grieta.gd").new()
+		var datos: Dictionary = formas[i]
+		forma.centro = datos.centro
+		forma.contorno = datos.contorno
+		forma.limites = datos.limites
+		if _huella_hoja.has_area() and forma.limites.intersects(_huella_hoja):
+			return _rechazar_plan("hoja local en grieta")
+		for hoja: Vector3 in hojas_red:
+			if forma.toca_cuadro(Vector2(hoja.x, hoja.z), 0.35): return _rechazar_plan("hoja LAN en grieta")
+		if i != int(_plan.gigante):
+			for punto: Vector3 in posiciones_red + [_jugador.global_position]:
+				if forma.toca_cuadro(Vector2(punto.x, punto.z), 0.32): return _rechazar_plan("jugador en grieta")
 	var ensayo := AStarGrid2D.new()
 	ensayo.region = Rect2i(0, 0, GrafoPiso.COLUMNAS, GrafoPiso.FILAS)
 	ensayo.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	ensayo.update()
-	var espacios_escombros: Array[Rect2i] = []
-	var plan_valido := false
-	for intento in range(32):
-		_limpiar_trazado()
-		espacios_escombros.clear()
-		for fila in range(GrafoPiso.FILAS):
-			for columna in range(GrafoPiso.COLUMNAS):
-				var celda := Vector2i(columna, fila)
-				ensayo.set_point_solid(celda, not grafo.es_transitable(celda))
-		if not _elegir_gigante(origen, protegidos, ensayo):
-			continue
-		var cantidad := ANCHOS.size() if intento < 3 else MINIMO_GRIETAS - 1
-		for i in range(cantidad):
-			# Reservar los derrumbes junto a las primeras grietas, antes de que
-			# las restantes consuman todo el suelo firme de la oficina.
-			if i == 6:
-				var cupo := MAXIMO_ESCOMBROS_SUPERIORES if intento < 3 else (16 if intento < 6 else MINIMO_ESCOMBROS_SUPERIORES)
-				espacios_escombros = _elegir_espacios_escombros(origen, protegidos, ensayo, cupo, true)
-				if espacios_escombros.size() < MINIMO_ESCOMBROS:
-					break
-				for espacio in espacios_escombros:
-					for celda in _celdas_del_espacio(espacio):
-						_reservas_escombros[celda] = true
-			# Si la oficina está muy ocupada, acortar sin estrechar los saltos.
-			var escala := (0.85 if i == 0 else (0.65 if intento < 16 else 0.60)) if intento >= 6 else 1.0
-			if not _elegir_grieta(i, origen, protegidos, ensayo, escala):
-				break
-		if _trazado.size() >= MINIMO_GRIETAS and espacios_escombros.size() >= MINIMO_ESCOMBROS:
-			var inferiores := _elegir_espacios_escombros(origen, protegidos, ensayo, 0, false)
-			if not inferiores.is_empty():
-				espacios_escombros.append_array(inferiores)
-				plan_valido = true
-				break
-	if not plan_valido:
-		_limpiar_trazado()
-		return false
-	# Mantener primero la grieta grande de oficina, luego las saltables.
-	_trazado.erase(grieta_gigante)
-	_trazado.append(grieta_gigante)
-	_estado_escombros_red = _azar.state
-	_espacios_red.assign(espacios_escombros)
-	_preparar_escombros(espacios_escombros)
-	for grieta in _trazado:
+	for fila in range(GrafoPiso.FILAS):
+		for columna in range(GrafoPiso.COLUMNAS):
+			var celda := Vector2i(columna, fila)
+			ensayo.set_point_solid(celda, (not _grafo.es_transitable(celda) and not _plan.caidas.has(celda)) or _plan.rotas.has(celda))
+	for espacio: Rect2i in _plan.espacios:
+		var p := _grafo.celda_a_posicion(espacio.position)
+		var medidas := Vector2(espacio.size) * GrafoPiso.TAMANO_CELDA - Vector2.ONE * 0.04
+		var centro := Vector2(p.x, p.z) + Vector2(espacio.size - Vector2i.ONE) * GrafoPiso.TAMANO_CELDA * 0.5
+		var huella := Rect2(centro - medidas * 0.5, medidas)
+		if huella.grow(0.32).has_point(Vector2(_jugador.global_position.x, _jugador.global_position.z)): return _rechazar_plan("jugador local bajo derrumbe")
+		if _huella_hoja.has_area() and huella.grow(0.12).intersects(_huella_hoja): return _rechazar_plan("hoja local bajo derrumbe")
+		for punto: Vector3 in posiciones_red + hojas_red:
+			if huella.grow(0.35).has_point(Vector2(punto.x, punto.z)): return _rechazar_plan("jugador u hoja LAN bajo derrumbe")
+		for celda in _celdas_del_espacio(espacio):
+			ensayo.set_point_solid(celda)
+	var origen: Vector2i = _plan.origen
+	var alcanzables := _grafo.celdas_alcanzables(origen)
+	var destinos := GrafoPiso.DESTINOS.values()
+	for acceso: Node3D in get_tree().get_nodes_in_group("accesos_navegacion"):
+		destinos.append(_grafo.posicion_a_celda(acceso.global_position))
+	for punto: Vector3 in posiciones_red + [_jugador.global_position]:
+		if not _grafo.es_celda_valida(_grafo.posicion_a_celda(punto)): return _rechazar_plan("jugador fuera del grafo")
+		var acceso := _grafo.celda_de_acceso(punto)
+		# La gigante puede abrirse bajo los pies tras los ocho segundos de aviso.
+		if not _plan.rotas.has(acceso): destinos.append(acceso)
+	# Un recorrido comprueba todos los destinos de una vez y evita repetir
+	# búsquedas AStar durante la validación atómica justo antes de autorizar.
+	var conectadas: Dictionary[Vector2i, bool] = {}
+	var pendientes: Array[Vector2i] = []
+	if not ensayo.is_point_solid(origen):
+		conectadas[origen] = true
+		pendientes.append(origen)
+	var indice := 0
+	while indice < pendientes.size():
+		var celda := pendientes[indice]
+		indice += 1
+		for direccion in GrafoPiso.DIRECCIONES:
+			var vecina := celda + direccion
+			if _grafo.es_celda_valida(vecina) and not conectadas.has(vecina) and not ensayo.is_point_solid(vecina):
+				conectadas[vecina] = true
+				pendientes.append(vecina)
+	for destino: Vector2i in destinos:
+		if alcanzables.has(destino) and not conectadas.has(destino): return _rechazar_plan("acceso desconectado")
+	return true
+
+
+func _rechazar_plan(motivo: String) -> bool:
+	rechazo_preparacion = motivo
+	return false
+
+
+func _montar_plan() -> void:
+	_origen_seguro = _plan.origen
+	_celdas_rotas.assign(_plan.rotas)
+	_reservas_escombros.assign(_plan.reservas)
+	for forma: Dictionary in _plan.formas:
+		await _presupuesto.paso()
+		if _presupuesto.cancelado: return
+		var grieta := Grieta.new()
+		grieta.cargar_forma(forma)
+		_trazado.append(grieta)
 		add_child(grieta)
+	grieta_gigante = _trazado[int(_plan.gigante)]
+	for celda: Vector2i in _plan.caidas:
+		_celdas_caidas[celda] = _trazado[int(_plan.caidas[celda])]
+	_estado_escombros_red = int(_plan.azar_escombros)
+	_espacios_red.assign(_plan.espacios)
+	var azar_visual := RandomNumberGenerator.new()
+	azar_visual.state = _estado_escombros_red
+	await _preparar_escombros(_espacios_red, azar_visual)
+
+
+func autorizar_plan(validar := true) -> bool:
+	if not preparando or not plan_preparado or (validar and not validar_plan_actual()):
+		return false
+	preparando = false
+	plan_preparado = false
 	_mostrar_aviso_gigante()
 	etapa = Etapa.AVISO
 	tiempo = 0.0
@@ -186,6 +300,33 @@ func iniciar(grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary, huella_hoj
 	sonidos.iniciar_terremoto()
 	iniciado.emit()
 	return true
+
+
+func cancelar_preparacion() -> void:
+	if not preparando: return
+	_presupuesto.cancelado = true
+	if plan_preparado:
+		_fallar_preparacion()
+
+
+func _limpiar_preparacion_visual() -> void:
+	_limpiar_trazado()
+	for escombro in escombros:
+		escombro.hide()
+		escombro.queue_free()
+	escombros.clear()
+
+
+func _fallar_preparacion() -> void:
+	_limpiar_preparacion_visual()
+	_plan.clear()
+	preparando = false
+	plan_preparado = false
+	preparacion_terminada.emit(false)
+
+
+func _exit_tree() -> void:
+	if _presupuesto != null: _presupuesto.cancelado = true
 
 
 func _abrir_suelo() -> void:
@@ -273,27 +414,6 @@ func _retirar_aviso_gigante() -> void:
 		_aviso_gigante = null
 
 
-func _elegir_gigante(origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarGrid2D) -> bool:
-	for intento in range(48):
-		var centro := Vector2(_azar.randf_range(-1.1, -0.25), _azar.randf_range(9.1, 9.5))
-		var angulo := _azar.randf_range(-0.16, 0.16)
-		var largo := _azar.randf_range(3.85, 4.3)
-		var ancho := _azar.randf_range(2.05, 2.4)
-		if intento >= 24:
-			centro = Vector2(-0.25, 8.18 if intento % 2 == 0 else 10.45)
-			angulo = PI * 0.5
-			largo = _azar.randf_range(3.70, 3.85)
-			ancho = _azar.randf_range(2.0, 2.1)
-		var candidata := Grieta.new()
-		candidata.trazar(centro, largo, ancho, angulo, _azar)
-		if ZONA_DESCANSO.encloses(candidata.limites) and _validar_trazado(candidata, origen, destinos, ensayo, true):
-			grieta_gigante = candidata
-			_trazado.append(candidata)
-			return true
-		candidata.free()
-	return false
-
-
 func _celdas_del_espacio(espacio: Rect2i) -> Array[Vector2i]:
 	var celdas: Array[Vector2i] = []
 	for z in range(espacio.position.y, espacio.end.y):
@@ -306,180 +426,12 @@ func _cajon_bajo_derrumbe(espacio: Rect2i) -> bool:
 	return espacio.size == Vector2i.ONE and _bloqueos.has(espacio.position) and not _celdas_caidas.has(espacio.position)
 
 
-func _paso_abierto(celda: Vector2i, ensayo: AStarGrid2D) -> float:
-	# Romper los recorridos rectos largos, especialmente donde se cruzan.
-	if ensayo.is_point_solid(celda):
-		return 0.0
-	var horizontal := 1
-	var vertical := 1
-	for direccion in GrafoPiso.DIRECCIONES:
-		var siguiente := celda + direccion
-		var largo := 0
-		while _grafo.es_celda_valida(siguiente) and siguiente.y < 14 and not ensayo.is_point_solid(siguiente):
-			largo += 1
-			siguiente += direccion
-		if direccion.x != 0:
-			horizontal += largo
-		else:
-			vertical += largo
-	return float(maxi(horizontal, vertical)) + float(mini(horizontal, vertical)) * 0.5
-
-
-func _elegir_espacios_escombros(origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarGrid2D, cupo_superior: int, solo_superior: bool) -> Array[Rect2i]:
-	var candidatas: Array[Rect2i] = []
-	var puntuaciones: Dictionary[Rect2i, float] = {}
-	for fila in range(GrafoPiso.FILAS - 1):
-		for columna in range(GrafoPiso.COLUMNAS - 1):
-			for tamano: Vector2i in [Vector2i(2, 1), Vector2i(1, 2), Vector2i.ONE]:
-				var espacio := Rect2i(Vector2i(columna, fila), tamano)
-				var sobre_cajon := _cajon_bajo_derrumbe(espacio)
-				var valida := true
-				for celda in _celdas_del_espacio(espacio):
-					if (ensayo.is_point_solid(celda) and not sobre_cajon) or celda == origen or destinos.has(celda):
-						valida = false
-						break
-				if not valida:
-					continue
-				var p := _grafo.celda_a_posicion(espacio.position)
-				var medidas := Vector2(tamano) * GrafoPiso.TAMANO_CELDA - Vector2.ONE * 0.04
-				var punto := Vector2(p.x, p.z) + Vector2(tamano - Vector2i.ONE) * GrafoPiso.TAMANO_CELDA * 0.5
-				var huella := Rect2(punto - medidas * 0.5, medidas)
-				var arriba := ZONA_DERRUMBES_SUPERIOR.encloses(huella)
-				if arriba != solo_superior:
-					continue
-				if (not arriba and not ZONA_SISMO.encloses(huella)) or huella.grow(0.32).has_point(Vector2(_jugador.global_position.x, _jugador.global_position.z)):
-					continue
-				if _huella_hoja.has_area() and huella.grow(0.12).intersects(_huella_hoja):
-					continue
-				for protegido: Vector3 in posiciones_red + hojas_red:
-					if huella.grow(0.35).has_point(Vector2(protegido.x, protegido.z)):
-						valida = false
-						break
-				if not valida:
-					continue
-				var bordes: Array[Vector2] = []
-				for grieta in _trazado:
-					for celda in _celdas_del_espacio(espacio):
-						var centro := _grafo.celda_a_posicion(celda)
-						if grieta.toca_cuadro(Vector2(centro.x, centro.z), 0.25):
-							valida = false
-							break
-					if not valida:
-						break
-					var cercano := grieta.contorno[0]
-					for j in range(grieta.contorno.size()):
-						var borde := Geometry2D.get_closest_point_to_segment(punto, grieta.contorno[j - 1], grieta.contorno[j])
-						if punto.distance_squared_to(borde) < punto.distance_squared_to(cercano):
-							cercano = borde
-					if punto.distance_to(cercano) < 1.35:
-						bordes.append(cercano - punto)
-				if not valida or (bordes.is_empty() and not arriba):
-					continue
-				# Priorizar pasos entre dos grietas y montones de dos casillas.
-				var puntuacion := 6.0 if bordes.is_empty() else 4.0 + bordes[0].length()
-				for a in range(bordes.size()):
-					for b in range(a + 1, bordes.size()):
-						if bordes[a].normalized().dot(bordes[b].normalized()) < -0.25:
-							puntuacion = minf(puntuacion, bordes[a].length() + bordes[b].length())
-				candidatas.append(espacio)
-				# Primero saturar oficina; descanso no puede consumir el cupo.
-				var preferencia_ancho := (-2.0 if arriba else 5.0) if tamano != Vector2i.ONE else 0.0
-				var paso := _paso_abierto(espacio.position, ensayo) if arriba else 0.0
-				puntuaciones[espacio] = puntuacion - (40.0 if arriba else 0.0) - preferencia_ancho - paso * 1.3 + (3.0 if sobre_cajon else 0.0)
-	candidatas.sort_custom(func(a: Rect2i, b: Rect2i) -> bool: return puntuaciones[a] < puntuaciones[b])
-	var elegidas: Array[Rect2i] = []
-	var superiores := 0
-	var descanso := 0
-	var indice := 0
-	var sin_cambios := 0
-	# Reconsiderar los pasos antes rechazados: al ocupar el fondo de un
-	# callejón, el siguiente tramo ya puede cerrarse sin aislar suelo libre.
-	while sin_cambios < candidatas.size():
-		var espacio := candidatas[indice % candidatas.size()]
-		indice += 1
-		sin_cambios += 1
-		if elegidas.has(espacio):
-			continue
-		var arriba := espacio.end.y <= 14
-		if arriba and superiores >= cupo_superior:
-			continue
-		if not arriba and descanso >= MAXIMO_ESCOMBROS_DESCANSO:
-			continue
-		var celdas := _celdas_del_espacio(espacio)
-		# Un derrumbe puede aplastar un cajón que ya ocupaba esa casilla.
-		# La ocupación no cambia: los caminos siguen siendo los ya validados.
-		if _cajon_bajo_derrumbe(espacio):
-			elegidas.append(espacio)
-			sin_cambios = 0
-			if arriba:
-				superiores += 1
-			else:
-				descanso += 1
-			if elegidas.size() >= MAXIMO_ESCOMBROS:
-				break
-			continue
-		var conectado := true
-		for celda in celdas:
-			if ensayo.is_point_solid(celda):
-				conectado = false
-		if not conectado:
-			continue
-		var vecinos_conectados: Array[Vector2i] = []
-		for celda in celdas:
-			for direccion in GrafoPiso.DIRECCIONES:
-				var vecina := celda + direccion
-				if _grafo.es_celda_valida(vecina) and not celdas.has(vecina) and not ensayo.is_point_solid(vecina) and not ensayo.get_id_path(origen, vecina).is_empty():
-					vecinos_conectados.append(vecina)
-		for celda in celdas:
-			ensayo.set_point_solid(celda)
-		for destino in destinos:
-			if ensayo.get_id_path(origen, destino).is_empty():
-				conectado = false
-		# Mantener conectados los pasos vecinos para no encerrar al jugador.
-		for vecina in vecinos_conectados:
-			if ensayo.get_id_path(origen, vecina).is_empty():
-				conectado = false
-		if not conectado:
-			for celda in celdas:
-				ensayo.set_point_solid(celda, false)
-			continue
-		elegidas.append(espacio)
-		sin_cambios = 0
-		if arriba:
-			superiores += 1
-		else:
-			descanso += 1
-		if elegidas.size() >= MAXIMO_ESCOMBROS:
-			break
-	var anchos := 0
-	var pasos_cerrados := 0
-	for espacio in elegidas:
-		if espacio.get_area() > 1:
-			anchos += 1
-		for celda in _celdas_del_espacio(espacio):
-			if _grafo.es_transitable(celda):
-				pasos_cerrados += 1
-	# Repartir algunas huellas dobles en dos caídas independientes permite
-	# mantener la densidad incluso sin cajones, sin ocupar ni cerrar más suelo.
-	for i in range(elegidas.size() - 1, -1, -1):
-		if superiores >= MINIMO_ESCOMBROS_SUPERIORES and elegidas.size() >= MINIMO_ESCOMBROS:
-			break
-		var espacio := elegidas[i]
-		if espacio.end.y > 14 or espacio.get_area() != 2 or anchos <= 2:
-			continue
-		var celdas := _celdas_del_espacio(espacio)
-		elegidas[i] = Rect2i(celdas[0], Vector2i.ONE)
-		elegidas.insert(i + 1, Rect2i(celdas[1], Vector2i.ONE))
-		superiores += 1
-		anchos -= 1
-	if (solo_superior and (superiores < MINIMO_ESCOMBROS_SUPERIORES or pasos_cerrados < MINIMO_PASOS_CERRADOS)) or (not solo_superior and anchos < 2):
-		elegidas.clear()
-	return elegidas
-
-
-func _preparar_escombros(espacios: Array[Rect2i]) -> void:
+func _preparar_escombros(espacios: Array[Rect2i], azar_visual: RandomNumberGenerator) -> void:
 	for espacio in espacios:
+		await _presupuesto.paso()
+		if _presupuesto.cancelado: return
 		var escombro := Escombro.new()
+		escombros.append(escombro)
 		escombro.celda = espacio.position
 		escombro.celdas = _celdas_del_espacio(espacio)
 		add_child(escombro)
@@ -488,11 +440,11 @@ func _preparar_escombros(espacios: Array[Rect2i]) -> void:
 		p.y = _altura
 		escombro.global_position = p
 		var altura_techo := techo.to_global(Vector3.DOWN * techo.size.y * 0.5).y if is_instance_valid(techo) else _altura + 5.8
-		escombro.preparar(altura_techo - _altura, _azar, Vector2(espacio.size) * GrafoPiso.TAMANO_CELDA - Vector2.ONE * 0.04)
+		await escombro.preparar(altura_techo - _altura, azar_visual, Vector2(espacio.size) * GrafoPiso.TAMANO_CELDA - Vector2.ONE * 0.04, _presupuesto)
+		if _presupuesto.cancelado: return
 		if _cajon_bajo_derrumbe(espacio):
 			# La marca se proyecta sobre el cajón, donde se puede ver desde arriba.
 			escombro._aviso.position.y = 0.94
-		escombros.append(escombro)
 
 
 func _actualizar_escombros(delta: float) -> void:
@@ -520,99 +472,15 @@ func _actualizar_escombros(delta: float) -> void:
 func _limpiar_trazado() -> void:
 	_retirar_aviso_gigante()
 	for grieta in _trazado:
-		grieta.free()
+		if grieta.is_inside_tree():
+			grieta.queue_free()
+		else:
+			grieta.free()
 	_trazado.clear()
 	grieta_gigante = null
 	_celdas_caidas.clear()
 	_celdas_rotas.clear()
 	_reservas_escombros.clear()
-
-
-func _elegir_grieta(indice: int, origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarGrid2D, escala_general: float = 1.0) -> bool:
-	var zona := ZONA_MESAS if indice < 6 else ZONA_SISMO
-	var mesas := _bloqueos.keys()
-	var libres: Array[Vector2i] = []
-	for celda: Vector2i in _grafo.adyacencia:
-		var p := _grafo.celda_a_posicion(celda)
-		if zona.has_point(Vector2(p.x, p.z)) and not _celdas_rotas.has(celda):
-			libres.append(celda)
-	# En pasillos estrechos se acorta el trazado, conservando el ancho del salto.
-	for escala: float in [1.0, 0.78, 0.60]:
-		for grupo: Array in [mesas, libres]:
-			var candidatas := grupo.duplicate()
-			while not candidatas.is_empty():
-				var celda: Vector2i = candidatas.pop_at(_azar.randi_range(0, candidatas.size() - 1))
-				if _celdas_rotas.has(celda) or origen == celda or destinos.has(celda):
-					continue
-				var p := _grafo.celda_a_posicion(celda)
-				var centro := Vector2(p.x + _azar.randf_range(-0.17, 0.17), p.z + _azar.randf_range(-0.17, 0.17))
-				var candidata := Grieta.new()
-				candidata.trazar(centro, LARGOS[indice] * escala * escala_general, ANCHOS[indice], _azar.randf_range(-PI, PI), _azar)
-				if zona.encloses(candidata.limites) and _validar_trazado(candidata, origen, destinos, ensayo):
-					candidata.saltable = indice > 0
-					_trazado.append(candidata)
-					return true
-				candidata.free()
-	return false
-
-
-func _validar_trazado(candidata: Grieta, origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarGrid2D, avisar_bajo_jugador: bool = false) -> bool:
-	for hoja: Vector3 in hojas_red:
-		if candidata.toca_cuadro(Vector2(hoja.x, hoja.z), 0.35):
-			return false
-	if not avisar_bajo_jugador:
-		for punto: Vector3 in posiciones_red:
-			if candidata.toca_cuadro(Vector2(punto.x, punto.z), 0.32):
-				return false
-	var p := _jugador.global_position
-	if not avisar_bajo_jugador and candidata.toca_cuadro(Vector2(p.x, p.z), 0.32):
-		return false
-	if _huella_hoja.has_area() and candidata.limites.intersects(_huella_hoja):
-		return false
-	for otra in _trazado:
-		if otra.invade_borde(candidata.contorno, candidata.limites):
-			return false
-	for celda in _reservas_escombros:
-		var apoyo := _grafo.celda_a_posicion(celda)
-		if candidata.toca_cuadro(Vector2(apoyo.x, apoyo.z), 0.31 if _bloqueos.has(celda) else 0.25):
-			return false
-	var peligros: Array[Vector2i] = []
-	var colindantes: Array[Vector2i] = []
-	var limites := candidata.limites.grow(0.32)
-	var inicio := _grafo.posicion_a_celda(Vector3(limites.position.x, 0, limites.position.y))
-	var fin := _grafo.posicion_a_celda(Vector3(limites.end.x, 0, limites.end.y))
-	for z in range(inicio.y, fin.y + 1):
-		for x in range(inicio.x, fin.x + 1):
-			var celda := Vector2i(x, z)
-			var posicion := _grafo.celda_a_posicion(celda)
-			var punto := Vector2(posicion.x, posicion.z)
-			if not _grafo.es_celda_valida(celda):
-				return false
-			if _bloqueos.has(celda) and not _celdas_caidas.has(celda) and candidata.toca_cuadro(punto, 0.31):
-				colindantes.append(celda)
-			# El grafo guía los pies entre centros de celda. Una punta que
-			# apenas toca una esquina todavía deja una orilla transitable.
-			if not _celdas_rotas.has(celda) and candidata.toca_cuadro(punto, 0.15):
-				if celda == origen or destinos.has(celda):
-					return false
-				peligros.append(celda)
-	var anteriores: Dictionary[Vector2i, bool] = {}
-	for celda: Vector2i in peligros + colindantes:
-		anteriores[celda] = ensayo.is_point_solid(celda)
-	for celda in colindantes:
-		ensayo.set_point_solid(celda, _celdas_rotas.has(celda))
-	for celda in peligros:
-		ensayo.set_point_solid(celda)
-	for destino in destinos:
-		if ensayo.get_id_path(origen, destino).is_empty():
-			for celda in anteriores:
-				ensayo.set_point_solid(celda, anteriores[celda])
-			return false
-	for celda in peligros:
-		_celdas_rotas[celda] = true
-	for celda in colindantes:
-		_celdas_caidas[celda] = candidata
-	return true
 
 
 func atrapo_hoja(posicion: Vector3) -> bool:
@@ -719,6 +587,9 @@ func _apoyo_conectado(cerca: Vector3) -> Vector3:
 
 
 func _cerrar() -> void:
+	if preparando:
+		cancelar_preparacion()
+		return
 	_cancelar_resolucion_avatar()
 	if _colision_jugador != null:
 		_colision_jugador.set_deferred("disabled", false)
@@ -729,6 +600,7 @@ func _cerrar() -> void:
 	for grieta in grietas:
 		grieta.cerrar()
 	grietas.clear()
+	_plan.clear()
 	_restaurar_alfombra()
 	_limpiar_trazado()
 	for escombro in escombros:
@@ -823,54 +695,38 @@ func _avanzar_avatar(frente: Node3D) -> void:
 
 
 func exportar_trazado_red() -> Dictionary:
-	var formas: Array = []
-	for grieta: Grieta in _trazado:
-		formas.append({"centro": grieta.centro, "contorno": grieta.contorno, "limites": grieta.limites, "saltable": grieta.saltable, "izquierda": grieta._izquierda, "derecha": grieta._derecha})
-	var caidas := {}
-	for celda: Vector2i in _celdas_caidas:
-		caidas[celda] = _trazado.find(_celdas_caidas[celda])
-	return {"formas": formas, "gigante": _trazado.find(grieta_gigante), "rotas": _celdas_rotas, "caidas": caidas, "reservas": _reservas_escombros, "espacios": _espacios_red, "azar_escombros": _estado_escombros_red, "origen": _origen_seguro}
+	return _plan.duplicate(true)
 
 
 func importar_trazado_red(datos: Dictionary, grafo: GrafoPiso, jugador: Player, bloqueos: Dictionary) -> bool:
-	if activo:
-		return false
+	if activo or preparando or datos.is_empty(): return false
 	_grafo = grafo
 	_jugador = jugador
 	_colision_jugador = jugador.get_node_or_null("Colision") as CollisionShape3D
 	_bloqueos = bloqueos
-	_origen_seguro = datos.origen
-	_celdas_rotas.assign(datos.rotas)
-	_reservas_escombros.assign(datos.reservas)
-	_trazado.clear()
-	for forma: Dictionary in datos.formas:
-		var grieta := Grieta.new()
-		grieta.centro = forma.centro
-		grieta.contorno = forma.contorno
-		grieta.limites = forma.limites
-		grieta.saltable = forma.saltable
-		grieta._izquierda = forma.izquierda
-		grieta._derecha = forma.derecha
-		_trazado.append(grieta)
-	grieta_gigante = _trazado[int(datos.gigante)]
-	_celdas_caidas.clear()
-	for celda: Vector2i in datos.caidas:
-		_celdas_caidas[celda] = _trazado[int(datos.caidas[celda])]
-	_azar.state = int(datos.azar_escombros)
-	var espacios: Array[Rect2i] = []
-	espacios.assign(datos.espacios)
-	_preparar_escombros(espacios)
-	for grieta: Grieta in _trazado:
-		add_child(grieta)
-	_mostrar_aviso_gigante()
-	etapa = Etapa.AVISO
+	_plan = datos.duplicate(true)
+	_base_transitable = _capturar_transitables()
 	tiempo = 0.0
-	_cerrando = false
-	_jugador_en_grieta = false
-	set_physics_process(true)
-	sonidos.iniciar_terremoto()
-	iniciado.emit()
+	rechazo_preparacion = ""
+	preparando = true
+	plan_preparado = false
+	_esperar_autorizacion = true
+	_presupuesto = Presupuesto.new()
+	_presupuesto.arbol = get_tree()
+	preparacion_iniciada.emit()
+	_montar_importado.call_deferred()
 	return true
+
+
+func _montar_importado() -> void:
+	# Los clientes montan exclusivamente el plan autorizado, sin sortearlo otra vez.
+	await _montar_plan()
+	if _presupuesto.cancelado:
+		_fallar_preparacion()
+		return
+	plan_preparado = true
+	preparacion_terminada.emit(true)
+
 
 func _cancelar_resolucion_avatar() -> void:
 	if is_instance_valid(_resolucion_avatar):
