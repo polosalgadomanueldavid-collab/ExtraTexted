@@ -232,6 +232,12 @@ func _entrada_pestana(evento: InputEvent, indice: int) -> void:
 
 
 func _crear_movimiento(pagina: VBoxContainer) -> void:
+	if OS.has_feature("android"):
+		pagina.add_child(_texto("MUÉVETE POR LA OFICINA", 38, true))
+		pagina.add_child(_fila("Caminar", ["Palanca izquierda"], "Arrastra el círculo en la dirección deseada"))
+		pagina.add_child(_fila("Correr", ["CORRER"], "Mantén pulsado mientras te mueves"))
+		pagina.add_child(_fila("Saltar", ["SALTAR"]))
+		return
 	pagina.add_child(_texto("DOMINA LA OFICINA", 38, true))
 	var grupos := HBoxContainer.new()
 	grupos.add_theme_constant_override("separation", 72)
@@ -257,6 +263,12 @@ func _crear_movimiento(pagina: VBoxContainer) -> void:
 
 
 func _crear_acciones(pagina: VBoxContainer) -> void:
+	if OS.has_feature("android"):
+		pagina.add_child(_texto("MANOS A LA OBRA", 38, true))
+		pagina.add_child(_fila("Interactuar y recoger", ["USAR"], "También sirve para imprimir y trabajar en estaciones"))
+		pagina.add_child(_fila("Emotes", ["GESTOS"], "Toca un gesto en la ruleta; toca afuera para cerrarla"))
+		pagina.add_child(_fila("Cámara y puntos", ["CÁMARA", "TABLA"]))
+		return
 	var interaccion := HBoxContainer.new()
 	interaccion.add_theme_constant_override("separation", 28)
 	pagina.add_child(interaccion)
@@ -274,6 +286,12 @@ func _crear_acciones(pagina: VBoxContainer) -> void:
 
 
 func _crear_menus(pagina: VBoxContainer) -> void:
+	if OS.has_feature("android"):
+		pagina.add_child(_texto("ENTRE PANTALLAS", 38, true))
+		pagina.add_child(_fila("Menús y tienda", ["Tocar"], "Toca botones y desliza las listas para recorrerlas"))
+		pagina.add_child(_fila("Pruebas de estaciones", ["‹", "USAR", "›"], "Cambia de opción y confirma con los botones táctiles"))
+		pagina.add_child(_fila("Pausar o volver", ["PAUSA", "VOLVER"]))
+		return
 	pagina.add_child(_texto("ENTRE PANTALLAS", 38, true))
 	pagina.add_child(_fila("Siguiente opción", ["Tab"]))
 	pagina.add_child(_fila("Opción anterior", ["Mayús", "+", "Tab"]))
@@ -282,6 +300,12 @@ func _crear_menus(pagina: VBoxContainer) -> void:
 
 
 func _crear_objetos(pagina: VBoxContainer) -> void:
+	if OS.has_feature("android"):
+		pagina.add_child(_texto("MÁQUINA EXPENDEDORA", 38, true))
+		pagina.add_child(_fila("Comprar", ["USAR"], "Toca el producto y recógelo de la bandeja"))
+		pagina.add_child(_fila("Usar un objeto", ["TOCA"], "Toca su medallón de inventario en la parte superior izquierda"))
+		pagina.add_child(_fila("Café", ["BEBER"], "Toca el medallón cuando lleves café"))
+		return
 	pagina.add_child(_texto("MÁQUINA EXPENDEDORA", 38, true))
 	pagina.add_child(_texto("Abre con E en descanso. Compra con puntos y guarda una unidad.", 25))
 	pagina.add_child(_fila("Chocolate", ["Z"], "Corre más rápido durante 25 segundos"))

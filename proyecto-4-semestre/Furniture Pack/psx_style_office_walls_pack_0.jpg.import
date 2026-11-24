@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bgolp0sln4s6l"
 path.s3tc="res://.godot/imported/psx_style_office_walls_pack_0.jpg-5bff95d8630c2b93d6a9b805e5f76c7c.s3tc.ctex"
+path.etc2="res://.godot/imported/psx_style_office_walls_pack_0.jpg-5bff95d8630c2b93d6a9b805e5f76c7c.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/psx_style_office_walls_pack_0.jpg"
-dest_files=["res://.godot/imported/psx_style_office_walls_pack_0.jpg-5bff95d8630c2b93d6a9b805e5f76c7c.s3tc.ctex"]
+dest_files=["res://.godot/imported/psx_style_office_walls_pack_0.jpg-5bff95d8630c2b93d6a9b805e5f76c7c.s3tc.ctex", "res://.godot/imported/psx_style_office_walls_pack_0.jpg-5bff95d8630c2b93d6a9b805e5f76c7c.etc2.ctex"]
 
 [params]
 

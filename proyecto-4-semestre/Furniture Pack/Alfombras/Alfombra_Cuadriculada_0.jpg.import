@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dh02g6qajwccq"
 path.s3tc="res://.godot/imported/Alfombra_Cuadriculada_0.jpg-7b2b378242184dfcb42a4866d22b0078.s3tc.ctex"
+path.etc2="res://.godot/imported/Alfombra_Cuadriculada_0.jpg-7b2b378242184dfcb42a4866d22b0078.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Alfombras/Alfombra_Cuadriculada_0.jpg"
-dest_files=["res://.godot/imported/Alfombra_Cuadriculada_0.jpg-7b2b378242184dfcb42a4866d22b0078.s3tc.ctex"]
+dest_files=["res://.godot/imported/Alfombra_Cuadriculada_0.jpg-7b2b378242184dfcb42a4866d22b0078.s3tc.ctex", "res://.godot/imported/Alfombra_Cuadriculada_0.jpg-7b2b378242184dfcb42a4866d22b0078.etc2.ctex"]
 
 [params]
 

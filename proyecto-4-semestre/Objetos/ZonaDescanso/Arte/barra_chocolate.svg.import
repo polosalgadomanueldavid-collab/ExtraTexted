@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c6f8pttxu4k14"
 path.s3tc="res://.godot/imported/barra_chocolate.svg-48122a4de0b0f20080f1c4c891490588.s3tc.ctex"
+path.etc2="res://.godot/imported/barra_chocolate.svg-48122a4de0b0f20080f1c4c891490588.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://Objetos/ZonaDescanso/Arte/barra_chocolate.svg"
-dest_files=["res://.godot/imported/barra_chocolate.svg-48122a4de0b0f20080f1c4c891490588.s3tc.ctex"]
+dest_files=["res://.godot/imported/barra_chocolate.svg-48122a4de0b0f20080f1c4c891490588.s3tc.ctex", "res://.godot/imported/barra_chocolate.svg-48122a4de0b0f20080f1c4c891490588.etc2.ctex"]
 
 [params]
 

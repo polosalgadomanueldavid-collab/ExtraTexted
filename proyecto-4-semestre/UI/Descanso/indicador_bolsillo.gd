@@ -18,7 +18,7 @@ var _cantidad: StyleBoxFlat
 
 func _ready() -> void:
 	name = "IndicadorBolsillo"
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP if OS.has_feature("android") else Control.MOUSE_FILTER_IGNORE
 	# Permite ocultarlo al abrir pausa/ayuda. No avanza ningún reloj propio.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
@@ -49,7 +49,7 @@ func actualizar() -> void:
 			var cantidad: int = maquina.inventario[i]
 			if cantidad <= 0 and tiempos[i] <= 0:
 				continue
-			var etiqueta: String = MANDO[i] if ControladorInterfaz.dispositivo_mando >= 0 else TECLAS[i]
+			var etiqueta: String = "TOCA" if OS.has_feature("android") else (MANDO[i] if ControladorInterfaz.dispositivo_mando >= 0 else TECLAS[i])
 			var estado := "listo"
 			if tiempos[i] > 0:
 				etiqueta = "%d s" % ceili(tiempos[i])
@@ -63,7 +63,7 @@ func actualizar() -> void:
 			entradas.append({"id": i, "cantidad": cantidad, "etiqueta": etiqueta, "estado": estado, "progreso": clampf(tiempos[i] / duraciones[i], 0, 1)})
 	if is_instance_valid(descanso) and descanso.tiene_cafe():
 		var bebiendo: bool = descanso.obtener_estado().bebiendo
-		entradas.append({"id": 4, "cantidad": 1, "etiqueta": "BEBIENDO" if bebiendo else TECLAS[4], "estado": "usando" if bebiendo else "listo", "progreso": 0.0})
+		entradas.append({"id": 4, "cantidad": 1, "etiqueta": "BEBIENDO" if bebiendo else ("BEBER" if OS.has_feature("android") else TECLAS[4]), "estado": "usando" if bebiendo else "listo", "progreso": 0.0})
 	visible = not entradas.is_empty() and not _interfaz_ocupada(maquina, descanso)
 	ajustar_pantalla(get_viewport().get_visible_rect().size)
 	# El aro necesita redibujarse durante los efectos; el inventario en reposo no.
@@ -88,8 +88,23 @@ func ajustar_pantalla(pantalla: Vector2) -> void:
 	var factor := minf(pantalla.x / 1280.0, pantalla.y / 720.0)
 	scale = Vector2.ONE * factor
 	var con_papel: bool = is_instance_valid(oficina) and is_instance_valid(oficina.indicador_papel) and oficina.indicador_papel.visible
-	position = Vector2((192.0 if con_papel else 24.0) * factor, pantalla.y - 200.0 * factor)
+	position = Vector2((192.0 if con_papel else 24.0) * factor, 110.0 * factor if OS.has_feature("android") else pantalla.y - 200.0 * factor)
 	size = Vector2(maxf(80, entradas.size() * 96 - 16), 176)
+
+func _gui_input(evento: InputEvent) -> void:
+	if not OS.has_feature("android") or not visible or not evento is InputEventMouseButton or not evento.pressed or evento.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if evento.position.y < 20.0 or evento.position.y > 165.0:
+		return
+	var indice := floori(evento.position.x / 96.0)
+	if indice < 0 or indice >= entradas.size() or entradas[indice].cantidad <= 0:
+		return
+	var id: int = entradas[indice].id
+	if id == 4:
+		oficina.get_node("ZonaDescanso").beber_cafe()
+	else:
+		oficina.get_node("MaquinaExpendedora").usar(id)
+	accept_event()
 
 func _estilo(color: Color, borde: Color, grosor: int, radio: int) -> StyleBoxFlat:
 	var estilo := StyleBoxFlat.new()

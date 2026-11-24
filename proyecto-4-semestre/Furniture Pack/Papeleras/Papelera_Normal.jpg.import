@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cfvx8d64d65v5"
 path.s3tc="res://.godot/imported/Papelera_Normal.jpg-222dff7502e40071eecf196f1f2278ca.s3tc.ctex"
+path.etc2="res://.godot/imported/Papelera_Normal.jpg-222dff7502e40071eecf196f1f2278ca.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Papeleras/Papelera_Normal.jpg"
-dest_files=["res://.godot/imported/Papelera_Normal.jpg-222dff7502e40071eecf196f1f2278ca.s3tc.ctex"]
+dest_files=["res://.godot/imported/Papelera_Normal.jpg-222dff7502e40071eecf196f1f2278ca.s3tc.ctex", "res://.godot/imported/Papelera_Normal.jpg-222dff7502e40071eecf196f1f2278ca.etc2.ctex"]
 
 [params]
 
