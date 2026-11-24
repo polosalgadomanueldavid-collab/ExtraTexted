@@ -25,6 +25,8 @@ func _probar() -> void:
 	jugador.visual.rotation.y = 0
 	await _cuadros(65)
 	var origen: Vector3 = jugador.global_position
+	var capa = jugador.gestos.capa_avatar
+	var mallas_capa: Array[Mesh] = [capa.cuerpo.mesh, capa.esclavina.mesh, capa.ribetes.mesh]
 	var piso: float = minf(jugador.gestos.posicion_pie("L").y, jugador.gestos.posicion_pie("R").y)
 	for tipo: StringName in [&"control_tierra", &"control_agua", &"control_aire", &"control_fuego"]:
 		contactos = 0
@@ -44,13 +46,18 @@ func _probar() -> void:
 			error_cuerpo = maxf(error_cuerpo, jugador.global_position.distance_to(origen))
 			if muestras.size() < fases.size() and jugador.gestos.tiempo / 3.6 >= fases[muestras.size()]:
 				muestras.append({"l": l, "r": r, "mano_l": jugador.gestos.mano_izquierda.global_position, "mano_r": jugador.gestos.mano_derecha.global_position, "frente": jugador.gestos.pie_izquierdo.global_basis.x.normalized()})
+				if muestras.size() == 1:
+					_verificar(capa.is_visible_in_tree() and capa.cuerpo.mesh != null and capa.esclavina.mesh != null, "La capa aparece con tela y esclavina: " + tipo)
 				if muestras.size() == 3:
+					_verificar(capa.cuerpo.mesh == mallas_capa[0] and capa.esclavina.mesh == mallas_capa[1] and capa.ribetes.mesh == mallas_capa[2], "La capa reutiliza sus mallas durante la animacion: " + tipo)
+					var tiempo_capa: float = jugador.gestos.capa_avatar.tiempo
 					var tiempo: float = jugador.gestos.tiempo
 					var tiempo_efecto: float = efecto.tiempo
 					var tiempo_agua: float = efecto._agua._torbellino._reloj if tipo == &"control_agua" else 0.0
 					var tiempo_fuego: float = efecto._barrido_fuego._reloj if tipo == &"control_fuego" else 0.0
 					paused = true
 					await _cuadros(10)
+					_verificar(jugador.gestos.capa_avatar.is_visible_in_tree() and is_equal_approx(tiempo_capa, jugador.gestos.capa_avatar.tiempo), "La pausa conserva la capa y sus pliegues: " + tipo)
 					_verificar(is_equal_approx(tiempo, jugador.gestos.tiempo), "La pausa conserva la fase de " + tipo)
 					_verificar(is_equal_approx(tiempo_efecto, efecto.tiempo), "La pausa conserva el efecto de " + tipo)
 					if tipo == &"control_agua":
@@ -101,6 +108,7 @@ func _probar() -> void:
 			&"control_fuego":
 				_verificar(muestras[4].r.y - muestras[0].r.y > .05, "La patada de fuego levanta el pie")
 		await _cuadros(20)
+		_verificar(not jugador.gestos.capa_avatar.visible, "La capa se retira al terminar: " + tipo)
 		_verificar(not is_instance_valid(efecto), "El efecto se retira al terminar: " + tipo)
 		_verificar(not jugador.input_locked and absf(minf(jugador.gestos.posicion_pie("L").y, jugador.gestos.posicion_pie("R").y) - piso) < .025, "Recupera postura y controles: " + tipo)
 		jugador.ejecutar_gesto(tipo, _contactar)
@@ -109,6 +117,7 @@ func _probar() -> void:
 		await _cuadros(30)
 		jugador.cancelar_gesto()
 		await _cuadros(5)
+		_verificar(not jugador.gestos.capa_avatar.visible, "Cancelar retira la capa: " + tipo)
 		_verificar(contactos == 1 and not jugador.input_locked, "Cancelar no resuelve ni bloquea: " + tipo)
 		_verificar(not is_instance_valid(cancelado), "Cancelar retira también las mallas del efecto: " + tipo)
 	oficina.queue_free()
