@@ -7,8 +7,6 @@ signal fallo(mensaje: String)
 
 const OFICINA := "res://Mundo/Oficina.tscn"
 const MENU := "res://UI/Menus/MainMenu.tscn"
-const TEMA_AJUSTES := preload("res://UI/Menus/tema_ajustes.tres")
-const FUENTE_TEXTO := preload("res://UI/Menus/fuente_lectura.tres")
 var activa := false
 var progreso := 0.0
 var fase := ""
@@ -22,66 +20,41 @@ var _cuadros := 0
 var _inicio := 0
 var _inicio_fase := 0
 var _limite := 0
-var _fondo: ColorRect
+var _vista: Control
+var _fondo_oficina: Texture2D
+var _saliendo := false
 var _texto: Label
 var _barra: ProgressBar
 var _cancelar: Button
 var _precargas := {}
-var _centro: CenterContainer
+
 var _calentamiento: SubViewport
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 120
-	_fondo = ColorRect.new()
-	_fondo.color = Color("102c3b")
-	_fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(_fondo)
-	_centro = CenterContainer.new()
-	var centro := _centro
-	centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_fondo.add_child(centro)
-	var caja := VBoxContainer.new()
-	caja.custom_minimum_size.x = 540
-	caja.add_theme_constant_override("separation", 24)
-	centro.add_child(caja)
-	var titulo := Label.new()
-	titulo.text = "EXTRATEXTED"
-	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	titulo.add_theme_font_override("font", TEMA_AJUSTES.default_font)
-	titulo.add_theme_font_size_override("font_size", 48)
-	titulo.add_theme_color_override("font_color", Color("fff1d8"))
-	caja.add_child(titulo)
-	_texto = Label.new()
-	_texto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_texto.add_theme_font_override("font", FUENTE_TEXTO)
-	_texto.add_theme_font_size_override("font_size", 22)
-	_texto.add_theme_color_override("font_color", Color("83e0ed"))
-	caja.add_child(_texto)
-	_barra = ProgressBar.new()
-	_barra.custom_minimum_size.y = 18
-	_barra.show_percentage = false
-	for tipo in ["background", "fill"]:
-		var estilo := StyleBoxFlat.new()
-		estilo.bg_color = Color("ff785f") if tipo == "fill" else Color("284e60")
-		estilo.set_corner_radius_all(8)
-		_barra.add_theme_stylebox_override(tipo, estilo)
-	caja.add_child(_barra)
-	var consejo := Label.new()
-	consejo.text = "Una hoja por policía. El saldo lo comparte el equipo."
-	consejo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	consejo.add_theme_font_override("font", FUENTE_TEXTO)
-	consejo.add_theme_font_size_override("font_size", 18)
-	consejo.add_theme_color_override("font_color", Color("fff1d8"))
-	caja.add_child(consejo)
-	_cancelar = Button.new()
-	_cancelar.text = "Volver al menú"
-	_cancelar.add_theme_font_override("font", TEMA_AJUSTES.get_font("font", "Button"))
-	_cancelar.add_theme_font_size_override("font_size", 24)
-	_cancelar.custom_minimum_size.y = 48
+	_vista = preload("res://UI/Menus/vista_carga.gd").new()
+	add_child(_vista)
+	_texto = _vista.texto
+	_barra = _vista.barra
+	_cancelar = _vista.cancelar
 	_cancelar.pressed.connect(cancelar)
-	caja.add_child(_cancelar)
 	hide()
+
+func _presentar(ruta: String) -> void:
+	var menu := get_tree().current_scene
+	var dialogos: Array = [["Consejo", "Lleva la hoja a las estaciones marcadas."]]
+	if ruta == OFICINA and is_instance_valid(menu) and menu.scene_file_path == MENU:
+		if DisplayServer.get_name() != "headless":
+			var imagen: Image = menu.fondo.vista.get_texture().get_image()
+			if imagen != null and not imagen.is_empty():
+				_fondo_oficina = ImageTexture.create_from_image(imagen)
+		if menu._dialogo_activo:
+			dialogos = [[menu.hablante.text, menu.frase.text]]
+			for i in menu._lineas_activas:
+				var linea: Array = menu.DIALOGO[i]
+				dialogos.append([menu._nombres[linea[0]], str(linea[1]).replace("{compañero}", menu._nombres[menu.Voz.OFICIAL_2])])
+	_vista.preparar(ruta == MENU, _fondo_oficina, dialogos)
 
 func precargar(ruta: String) -> Error:
 	if _precargas.has(ruta):
@@ -106,15 +79,7 @@ func cargar(ruta: String) -> void:
 	_limite = Time.get_ticks_msec() + 60000
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_cancelar.visible = ruta != MENU
-	_fondo.color.a = 1.0
-	_centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var menu := get_tree().current_scene
-	if is_instance_valid(menu) and menu.scene_file_path == MENU and menu._dialogo_activo:
-		_fondo.color.a = 0.15
-		_centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_centro.anchor_left = 0.5
-		_centro.anchor_top = 0.5
+	_presentar(ruta)
 	show()
 	_cambiar_fase("presentacion", "Preparando el turno…", 0)
 	_cuadros = 2 # El overlay se dibuja antes de solicitar/instanciar recursos.
@@ -159,8 +124,6 @@ func _process(_delta: float) -> void:
 					return
 			_cambiar_fase("entrada", "Preparando estaciones e interfaces…", 80)
 		"entrada":
-			_fondo.color.a = 1.0
-			_centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			var escena := _instancia
 			_instancia = null # El árbol adquiere la propiedad; nunca liberar desde cancelar.
 			_escena_preparandose = escena
@@ -206,8 +169,21 @@ func _finalizar() -> void:
 	finalizar_espera()
 
 func finalizar_espera() -> void:
-	if not activa:
+	if not activa or _saliendo:
 		return
+	_saliendo = true
+	var generacion := _generacion
+	if DisplayServer.get_name() != "headless":
+		_vista.fundido = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		_vista.fundido.tween_property(_vista, "modulate:a", 0.0, 0.35)
+		_vista.fundido.tween_callback(_completar_transicion.bind(generacion))
+	else:
+		_completar_transicion(generacion)
+
+func _completar_transicion(generacion: int) -> void:
+	if generacion != _generacion or not activa:
+		return
+	_saliendo = false
 	mediciones[_fase + "_ms"] = (Time.get_ticks_usec() - _inicio_fase) / 1000.0
 	mediciones["total_ms"] = (Time.get_ticks_usec() - _inicio) / 1000.0
 	print("[CARGA] ", _ruta, " ", JSON.stringify(mediciones))
@@ -223,9 +199,9 @@ func finalizar_espera() -> void:
 func _actualizar(texto: String, valor: float) -> void:
 	progreso = maxf(progreso, valor)
 	fase = texto
-	_texto.text = texto
+	_texto.text = ("Abriendo menú…" if _ruta == MENU else ("Esperando al compañero…" if _fase == "compañero" else "Preparando turno…"))
 	_barra.value = progreso
-	_barra.indeterminate = _fase in ["instancia", "entrada", "preparacion", "render", "compañero"]
+	_barra.indeterminate = _fase == "compañero"
 	fase_cambiada.emit(fase, progreso)
 
 func _cambiar_fase(nueva: String, texto: String, valor: float) -> void:
@@ -237,6 +213,9 @@ func _cambiar_fase(nueva: String, texto: String, valor: float) -> void:
 
 func _invalidar() -> void:
 	_generacion += 1
+	_saliendo = false
+	if is_instance_valid(_vista) and is_instance_valid(_vista.fundido): _vista.fundido.kill()
+	if is_instance_valid(_vista): _vista.modulate.a = 1.0
 	activa = false
 	_fase = ""
 	if is_instance_valid(_calentamiento):

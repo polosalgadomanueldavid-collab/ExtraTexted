@@ -63,7 +63,9 @@ func _ready() -> void:
 
 func _revelar_menu() -> void:
 	if CargaEscenas.activa:
-		await CargaEscenas.terminada
+		# La transición persistente revela el menú sin pasar por negro.
+		entrada_negra.hide()
+		return
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return
@@ -128,7 +130,8 @@ func iniciar_discusion() -> void:
 	_dialogo_activo = true
 	presentacion.hide()
 	pantalla_discusion.show()
-	fila_carga.show()
+	contenido.hide()
+	fila_carga.hide()
 	estado_carga.text = "Preparando el turno..."
 	progreso_carga.value = 0.0
 	fondo.call("establecer_discusion", true)

@@ -1,5 +1,14 @@
 # Menú piloto
 
+La carga inicial usa `carga_escritorio.webp`: fondo de escritorio aprobado,
+generado con ImageGen (mesa de comisaría vista desde arriba, expedientes,
+radio y café, estilo low poly, paleta petróleo/crema/coral, sin texto).
+El logo y los controles siguen siendo recursos nativos del juego.
+`vista_carga.gd` mantiene una sola composición durante cada transición.
+Al entrar a la partida conserva una captura del fondo de la oficina, incluso
+después de liberar el menú, y muestra una frase a la vez. La ficha del nombre
+no muestra progreso. El cargador revela la escena lista mediante un fundido.
+
 Implementado en `res://UI/Menus/MainMenu.tscn` y en los paneles de `UI/Menus/MenuGlobal.tscn`.
 Paleta: petróleo `#173B50`, crema
 `#FFF1D8` y coral `#FF785F`. El menú principal muestra la oficina

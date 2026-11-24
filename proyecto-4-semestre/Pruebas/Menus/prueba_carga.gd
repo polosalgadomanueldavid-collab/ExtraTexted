@@ -44,9 +44,9 @@ func _probar() -> void:
 	var menu := current_scene
 	_fase = "menu"
 	var entrada := menu.get_node("EntradaNegra") as ColorRect
-	_verificar(entrada.visible and entrada.modulate.a > 0.9, "El menú empieza cubierto por negro")
+	_verificar(not entrada.visible, "La carga revela el menú sin otra pantalla negra")
 	await create_timer(0.35).timeout
-	_verificar(entrada.modulate.a > 0.0 and entrada.modulate.a < 1.0, "El menú aparece con un fundido gradual")
+	_verificar(not root.get_node("CargaEscenas").visible, "La transición libera el menú al terminar")
 	await create_timer(0.8).timeout
 	_verificar(not entrada.visible, "El fundido termina y libera el menú")
 	var dialogo := menu.get_node("PantallaDiscusion/Dialogo") as Control
@@ -58,6 +58,8 @@ func _probar() -> void:
 	menu.panel_lan.individual.pressed.emit()
 	_verificar(menu.get_node("PantallaDiscusion").visible, "Jugar muestra a los policías discutiendo")
 	_verificar(panel.get_node("%Formulario").is_visible_in_tree(), "El formulario permite ingresar el nombre")
+	_verificar(not menu.fila_carga.visible, "Escribir el nombre no muestra otra carga")
+	await _capturar("02_nombre")
 	_verificar(_leer_turno(menu).values().all(func(voz): return voz == "Consejo"), "Antes de confirmar el nombre sólo aparecen consejos")
 	menu.confirmar_discusion("Álex", "Lina")
 	var pareja := _leer_turno(menu)
@@ -91,10 +93,18 @@ func _probar() -> void:
 		"El calentamiento restaura la visión sin activar el apagón")
 	_verificar(menu_global.get("nombre_partida") == "María José", "El nombre llega a la partida")
 	_verificar(current_scene.en_practica() and not paused, "La carga conserva la práctica inicial interactiva")
+	await _capturar("04_partida")
 	_verificar((current_scene.get("_bloqueos_disponibles") as Array).size() == 30, "Los 30 cajones ya están preparados al entrar en la oficina")
 	print("[AUDITORIA CARGA] ", JSON.stringify({"render": DisplayServer.get_name(), "confirmacion_a_oficina_ms": (Time.get_ticks_usec() - _confirmacion) / 1000.0, "barra_maxima": _barra_maxima, "intervalos_maximos_ms": _pausas_maximas}))
 	_terminar()
 
+
+func _capturar(nombre: String) -> void:
+	if DisplayServer.get_name() == "headless" or not "--capturas" in OS.get_cmdline_user_args(): return
+	await process_frame
+	await RenderingServer.frame_post_draw
+	DirAccess.make_dir_recursive_absolute("res://output/carga_unificada")
+	root.get_texture().get_image().save_png("res://output/carga_unificada/" + nombre + ".png")
 
 func _leer_turno(menu: Node) -> Dictionary:
 	var voces := {}
