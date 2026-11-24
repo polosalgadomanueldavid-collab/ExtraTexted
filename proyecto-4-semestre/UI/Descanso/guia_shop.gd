@@ -2,7 +2,6 @@ extends Control
 ## Una invitación local por turno; solo observa el saldo y las compras reales.
 const TITULO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
-const ICONOS := [preload("res://UI/Descanso/Arte/chocolate.png"), preload("res://UI/Descanso/Arte/dona.png"), preload("res://UI/Descanso/Arte/papa_tiempo.svg"), preload("res://UI/Descanso/Arte/avatar_piedra.png")]
 const CREMA := Color("fff1d8")
 const TINTA := Color("173b50")
 const CORAL := Color("ff785f")
@@ -15,7 +14,6 @@ var restante := 0.0
 var _demora := 0.0
 var _saldo := 0
 var _saldo_antes := 0
-var _indice := -1
 var _casos: Dictionary = {}
 var marcador := Rect2()
 var en_borde := false
@@ -47,19 +45,11 @@ func _al_cambiar_menu() -> void:
 func _al_saldo(total: int) -> void:
 	_saldo_antes = _saldo
 	_saldo = total
-	if (pendiente or restante > 0) and _producto_disponible() < 0:
+	if (pendiente or restante > 0) and not _compra_disponible():
 		_cancelar()
 
-func _producto_disponible() -> int:
-	if not is_instance_valid(maquina):
-		return -1
-	var elegido := -1
-	for i in maquina.precios.size():
-		if maquina.precios[i] <= 0 or maquina.inventario[i] > 0 or _saldo < maquina.precios[i]:
-			continue
-		if elegido < 0 or maquina.precios[i] < maquina.precios[elegido]:
-			elegido = i
-	return elegido
+func _compra_disponible() -> bool:
+	return is_instance_valid(maquina) and _saldo >= maquina.precio
 
 func _al_resolver(caso: Denuncia) -> void:
 	if caso == null or caso.es_practica or oficina.en_practica() or ofrecida or pendiente or _casos.has(caso.id):
@@ -67,8 +57,7 @@ func _al_resolver(caso: Denuncia) -> void:
 	_casos[caso.id] = true
 	if _saldo <= _saldo_antes:
 		return
-	_indice = _producto_disponible()
-	if _indice < 0 or _saldo_antes >= maquina.precios[_indice]:
+	if not _compra_disponible() or _saldo_antes >= maquina.precio:
 		return
 	# La recompensa y la tarea terminan antes de que entre el mensaje de radio.
 	pendiente = true
@@ -105,8 +94,7 @@ func _process(delta: float) -> void:
 			return
 		_demora -= delta
 		if _demora <= 0.0:
-			_indice = _producto_disponible()
-			if _indice < 0:
+			if not _compra_disponible():
 				_cancelar()
 				return
 			pendiente = false
@@ -158,11 +146,10 @@ func _draw() -> void:
 	draw_style_box(estilo, marcador)
 	var tecla := "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
 	var texto := "%s · ABRIR TIENDA" % tecla if interactuable else "SHOP · TIENDA"
-	draw_texture_rect(ICONOS[maxi(0, _indice)], Rect2(marcador.position + Vector2(8, 10) * factor, Vector2(46, 46) * factor), false)
-	draw_string(TITULO, marcador.position + Vector2(64, 25) * factor, texto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(17 * factor)), TINTA)
-	draw_string(TEXTO, marcador.position + Vector2(64, 43) * factor, "Snacks y poderes", HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(14 * factor)), TINTA)
-	var producto: String = "%s · %d pts" % [maquina.NOMBRES[maxi(0, _indice)], maquina.precios[maxi(0, _indice)]]
-	draw_string(TEXTO, marcador.position + Vector2(64, 59) * factor, producto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(10, roundi(12 * factor)), TINTA)
+	draw_string(TITULO, marcador.position + Vector2(16, 25) * factor, texto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(17 * factor)), TINTA)
+	draw_string(TEXTO, marcador.position + Vector2(16, 43) * factor, "Snacks y poderes", HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(14 * factor)), TINTA)
+	var producto: String = "Al azar · %d pts" % maquina.precio
+	draw_string(TEXTO, marcador.position + Vector2(16, 59) * factor, producto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(10, roundi(12 * factor)), TINTA)
 	var direccion := _direccion if en_borde else Vector2.DOWN
 	var tangente := Vector2(-direccion.y, direccion.x)
 	var mitad := marcador.size * .5

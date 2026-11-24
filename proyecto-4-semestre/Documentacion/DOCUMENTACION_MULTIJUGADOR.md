@@ -4,7 +4,7 @@ Esta página describe la implementación actual del cooperativo para **dos jugad
 
 ## Sesión y ciclo de vida
 
-El juego usa **Godot 4.7**, ENet y el puerto **UDP 7000**. El anfitrión juega y es la autoridad; el segundo jugador se une por la IP del anfitrión. `SesionLAN`, cargado como autoload, mantiene participantes, alias, estado de la sala, ronda, pausas y transporte. La versión de protocolo actual es `extratexted-lan-5`; una versión distinta o una tercera conexión se rechaza.
+El juego usa **Godot 4.7**, ENet y el puerto **UDP 7000**. El anfitrión juega y es la autoridad; el segundo jugador se une por la IP del anfitrión. `SesionLAN`, cargado como autoload, mantiene participantes, alias, estado de la sala, ronda, pausas y transporte. La versión de protocolo actual es `extratexted-lan-6`; una versión distinta o una tercera conexión se rechaza.
 
 ```text
 Jugar → Crear partida LAN / Unirse por IP

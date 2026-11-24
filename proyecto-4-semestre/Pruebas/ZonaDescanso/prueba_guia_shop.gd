@@ -43,7 +43,7 @@ func _run() -> void:
 	await _cuadros(95)
 	_verificar(guia.visible and guia.ofrecida, "La primera compra disponible señala la tienda")
 	_verificar(guia.get_child_count() == 0, "No hay un segundo mensaje de radio ni un sello superpuesto")
-	_verificar(guia._indice == 0 and maquina.precios[guia._indice] == 50, "El marcador utiliza el producto y su precio real")
+	_verificar(maquina.precio == 50, "El marcador utiliza el producto y su precio real")
 	_verificar(guia.restante > 0 and not jugador.input_locked and not paused, "La invitación deja continuar el turno")
 	_verificar(panel.puntos_valor.self_modulate.a == 1 and not panel.puntos_animados.visible, "El contador termina mostrando la cifra exacta")
 	await _captura("02_tienda_descriptiva")
@@ -69,7 +69,7 @@ func _run() -> void:
 	maquina.interactuar(jugador)
 	_verificar(maquina.panel.visible and not guia.visible and guia.restante == 0, "Abrir la tienda retira radio e indicador inmediatamente")
 	await _captura("04_tienda")
-	_verificar(maquina.comprar(0), "La recompensa sirve para comprar de verdad")
+	_verificar(maquina.comprar(), "La recompensa sirve para comprar de verdad")
 	await _cuadros(100)
 	_verificar(maquina.recoger_producto() and oficina.sistema_despacho.puntuacion.puntos == 0, "La entrega cobra una sola vez el producto")
 	maquina.cerrar()
@@ -85,10 +85,10 @@ func _run() -> void:
 	await _oficina()
 	_verificar(not guia.ofrecida, "Un turno nuevo permite otra invitación")
 	maquina.inventario[0] = 1
-	maquina.precios[1] = 63
+	maquina.precio = 63
 	_premiar("SHOP-PRECIO", 70)
 	await _cuadros(100)
-	_verificar(guia.visible and guia._indice == 1 and maquina.precios[1] == 63, "Ofrece un producto no poseído con el precio configurado")
+	_verificar(guia.visible and maquina.precio == 63, "Ofrece el sorteo con el precio configurado")
 	await _cuadros(370)
 	_verificar(guia.ofrecida and not guia.visible and guia.restante == 0, "El aviso desaparece solo después de seis segundos visibles")
 	_premiar("SHOP-OTRO", 100)

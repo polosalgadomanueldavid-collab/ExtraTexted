@@ -302,12 +302,12 @@ func _crear_menus(pagina: VBoxContainer) -> void:
 func _crear_objetos(pagina: VBoxContainer) -> void:
 	if OS.has_feature("android"):
 		pagina.add_child(_texto("MÁQUINA EXPENDEDORA", 38, true))
-		pagina.add_child(_fila("Comprar", ["USAR"], "Toca el producto y recógelo de la bandeja"))
+		pagina.add_child(_fila("Comprar", ["USAR"], "Toca AZAR y recoge el producto de la bandeja"))
 		pagina.add_child(_fila("Usar un objeto", ["TOCA"], "Toca su medallón de inventario en la parte superior izquierda"))
 		pagina.add_child(_fila("Café", ["BEBER"], "Toca el medallón cuando lleves café"))
 		return
 	pagina.add_child(_texto("MÁQUINA EXPENDEDORA", 38, true))
-	pagina.add_child(_texto("Abre con E en descanso. Compra con puntos y guarda una unidad.", 25))
+	pagina.add_child(_texto("Abre con E en descanso. Pulsa AZAR y recoge tu premio. Cada compra cuesta puntos.", 25))
 	pagina.add_child(_fila("Chocolate", ["Z"], "Corre más rápido durante 25 segundos"))
 	pagina.add_child(_fila("Dona", ["X"], "Barriguita y salto alto durante 10 segundos; las mesas siguen bloqueadas"))
 	pagina.add_child(_fila("Papa tiempo", ["V"], "Detiene el mundo 12 segundos; puedes resolver denuncias"))

@@ -71,6 +71,9 @@ func _probar() -> void:
 	_verificar(blanca.get_parent() == _zona.get_node("RinconCafe"), "Al terminar vuelve la taza vacía a la mesa")
 	await _colocar(_postura_cafe)
 	await _tecla(KEY_E)
+	_verificar(not panel.visible and _oficina.espera_compra("cafe", _despacho.jugador_local_id) > 0, "La cafetera rechaza otra taza durante la espera")
+	_oficina._duracion_partida += 30.0
+	await _tecla(KEY_E)
 	_verificar(panel._taza_visual.mesh == amarilla.mesh, "La segunda preparación conserva la malla y textura amarillas")
 	await _clic_boton(panel.boton_servir)
 	await _segundos(0.6)
@@ -89,6 +92,7 @@ func _probar() -> void:
 	await _esperar_estado("bebiendo", false, 3.0)
 	_verificar(_despacho.calma_operativa == 90, "La taza amarilla recupera calma al beberla")
 	_verificar(amarilla.get_parent() == _zona.get_node("RinconCafe"), "La amarilla regresa vacía a su mesa")
+	_oficina._duracion_partida += 30.0
 	_saldo_y_calma(150, 75)
 	await _colocar(_postura_cafe)
 	await _tecla(KEY_E)

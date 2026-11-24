@@ -52,20 +52,22 @@ func _compras() -> void:
 	_tecla(KEY_E)
 	await _cuadros(2)
 	_verificar(maquina.panel.visible and jugador.input_locked, "E abre la tienda y fija al comprador")
-	_verificar(not maquina.comprar(0) and despacho.puntuacion.puntos == 0, "Saldo insuficiente no entrega productos")
+	_verificar(not maquina.comprar() and despacho.puntuacion.puntos == 0, "Saldo insuficiente no entrega productos")
 	for i in 40:
 		var premio := Denuncia.new()
 		premio.id = "PREMIO-%d" % i
 		premio.estado = Denuncia.Estado.RESUELTA
 		despacho.puntuacion.registrar_resolucion(premio)
 	var saldo := despacho.puntuacion.puntos
-	for i in 4:
-		_verificar(maquina.comprar(i), "Compra del producto %d" % i)
-		await _cuadros(95)
-		_verificar(maquina.producto_listo and maquina.recoger_producto(), "Recogida del producto %d después de caer" % i)
-	_verificar(despacho.puntuacion.puntos == saldo - 525, "Cobra una vez los cuatro precios")
-	saldo = despacho.puntuacion.puntos
-	_verificar(not maquina.comprar(0) and despacho.puntuacion.puntos == saldo, "No cobra duplicados")
+	_verificar(maquina.comprar(), "Compra un producto al azar")
+	await _cuadros(95)
+	var premio: int = maquina.producto_en_entrega
+	maquina.inventario[premio] = 1
+	_verificar(premio in [0, 1, 2, 3] and maquina.recoger_producto(), "Recoge el producto sorteado")
+	_verificar(maquina.inventario[premio] == 2 and despacho.puntuacion.puntos == saldo - maquina.precio, "Guarda el premio repetido y cobra una sola vez")
+	_verificar(not maquina.comprar(), "La espera impide una segunda compra")
+	# El resto de la prueba recorre los cuatro poderes sin depender del sorteo.
+	maquina.inventario.assign([1, 1, 1, 1])
 	_tecla(KEY_ESCAPE)
 	await _cuadros(2)
 	_verificar(not maquina.panel.visible and not jugador.input_locked and not paused, "Escape cierra sin abrir la pausa")

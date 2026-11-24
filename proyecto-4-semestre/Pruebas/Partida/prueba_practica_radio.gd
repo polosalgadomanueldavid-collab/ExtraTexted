@@ -80,7 +80,7 @@ func _run() -> void:
 	clasificador.seleccion = 1
 	clasificador._archivar()
 	await _cuadros(3)
-	_verificar(practica.paso == practica.Paso.PREMIO and sistema.puntuacion.puntos == maquina.precios[0], "El caso real concede exactamente el precio del chocolate")
+	_verificar(practica.paso == practica.Paso.PREMIO and sistema.puntuacion.puntos == maquina.precio, "El caso real concede exactamente el precio del chocolate")
 	_verificar(not practica.radio.visible and oficina.panel_despacho.efecto_tarea.visible and oficina.panel_despacho.efecto_tarea.modo_expediente, "Al completar aparece la entrega del resultado, sin radio ni avisos superpuestos")
 	_verificar(sistema.puntuacion.puntos_ganados == 0 and oficina._resueltas.is_empty(), "La práctica no infla el récord ni las estadísticas del turno")
 	_verificar(not is_instance_valid(oficina.papel_actual), "Resolver retira la hoja real")
@@ -103,7 +103,7 @@ func _run() -> void:
 	_tecla(KEY_E, false)
 	await _cuadros(5)
 	_verificar(maquina.panel.visible, "E abre la tienda desde el pasillo")
-	_verificar(maquina.comprar(0), "Compra con el saldo ganado por el caso")
+	_verificar(maquina.comprar(), "Compra con el saldo ganado por el caso")
 	await _cuadros(100)
 	_verificar(maquina.producto_listo and maquina.recoger_producto(), "Recoge el producto físico de la bandeja")
 	await _cuadros(5)

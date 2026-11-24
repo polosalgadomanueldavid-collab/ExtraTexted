@@ -151,11 +151,17 @@ func _run() -> void:
 	comprobar(int(r.saldo) == 100, "Saldo compartido replicado")
 	await _mover_host(red._objeto("tienda").global_position + Vector3(0.5, 0, 0))
 	r = await _pedir("reservar", {"objetivo": "tienda"})
-	r = await _pedir("comprar", {"producto": "snack", "indice": 1})
-	comprobar(r.get("ok", false) and despacho.puntuacion.puntos == 25, "Compra descuenta fondo común")
-	r = await _pedir("comprar", {"producto": "snack", "indice": 0})
-	comprobar(not r.get("ok", true) and despacho.puntuacion.puntos == 25, "Saldo insuficiente no entrega ni cobra")
+	r = await _pedir("comprar", {"producto": "snack"})
+	comprobar(r.get("ok", false) and despacho.puntuacion.puntos == 50, "Compra descuenta fondo común")
+	r = await _pedir("comprar", {"producto": "snack"})
+	comprobar(not r.get("ok", true) and despacho.puntuacion.puntos == 50, "La espera personal no entrega ni cobra")
+	comprobar(oficina.espera_compra("snack", cliente) == 0 and oficina.espera_compra("cafe", 1) == 0, "La espera respeta el jugador y el servicio")
 	await _pedir("liberar", {"objetivo": "tienda"})
+	await _mover_cliente(red._objeto("tienda").global_position + Vector3(0, 0, 0.6))
+	await _al_cliente("accion", {"tipo": "reservar", "datos": {"objetivo": "tienda"}})
+	r = await _al_cliente("accion", {"tipo": "comprar", "datos": {"producto": "snack"}})
+	comprobar(r.get("ok", false) and red.bolsillos[cliente][r.indice] == 1 and despacho.puntuacion.puntos == 0, "El compañero compra su premio durante la espera del anfitrión")
+	await _al_cliente("accion", {"tipo": "liberar", "datos": {"objetivo": "tienda"}})
 	# El cliente completa ambas interfaces y la resolución llega por RPC.
 	for estacion in ["evidencias", "verificacion", "bienestar"]:
 		await _mover_cliente(red._buscar_estacion(estacion).global_position + Vector3(0, 0, 0.6))
@@ -163,21 +169,26 @@ func _run() -> void:
 		comprobar(r.get("ok", false), "El cliente completa " + estacion + " con su interfaz")
 		if estacion == "evidencias":
 			comprobar(r.get("aviso_tarea", "") == caso_cliente and oficina.panel_despacho.efecto_tarea.caso_id != caso_cliente, "El aviso de tarea aparece solo para quien la completó")
-	comprobar(despacho.puntuacion.puntos == 125 and despacho.obtener_cordura(cliente) == 85, "Resolución del cliente conserva saldo y participación")
+	comprobar(despacho.puntuacion.puntos == 100 and despacho.obtener_cordura(cliente) == 85, "Resolución del cliente conserva saldo y participación")
 	# Cafetera y expendedora compiten por los últimos 50 puntos en el mismo turno.
-	despacho.puntuacion.gastar_puntos(75)
+	despacho.puntuacion.gastar_puntos(50)
+	oficina._duracion_partida += 70.0
 	await _mover_host(red._objeto("tienda").global_position + Vector3(0.5, 0, 0))
 	await _pedir("reservar", {"objetivo": "tienda"})
 	await _mover_cliente(red._objeto("cafetera").global_position + Vector3(0, 0, 0.6))
 	r = await _al_cliente("accion", {"tipo": "reservar", "datos": {"objetivo": "cafetera"}})
 	comprobar(r.get("ok", false) and red.reservas.has("tienda"), "Ambos compradores tienen una operación reservada antes de competir por el saldo")
+	var bolsillo_previo: Array = red.bolsillos[1].duplicate()
+	var bolsillo_cliente: Array = red.bolsillos[cliente].duplicate()
 	var compras: Array = []
 	_orden.rpc_id(cliente, "accion", {"tipo": "comprar", "datos": {"producto": "cafe"}})
-	SesionLAN.solicitar("comprar", {"producto": "snack", "indice": 0}, func(valor: Dictionary): compras.append(valor))
+	SesionLAN.solicitar("comprar", {"producto": "snack"}, func(valor: Dictionary): compras.append(valor))
 	r = await respuesta_cliente
 	await _esperar()
 	comprobar(compras.size() == 1 and int(compras[0].ok) + int(r.ok) == 1 and despacho.puntuacion.puntos == 0, "Compras concurrentes: se entrega y cobra un solo producto")
-	comprobar(int(red.bolsillos[1][0]) + int(red.cafes[cliente]) == 1 and int(red.bolsillos[cliente][0]) == 0, "Cada producto pertenece exclusivamente a su comprador")
+	if compras[0].ok:
+		bolsillo_previo[int(compras[0].indice)] += 1
+	comprobar(red.bolsillos[1] == bolsillo_previo and red.bolsillos[cliente] == bolsillo_cliente and red.cafes[cliente] == r.ok, "Cada producto pertenece exclusivamente a su comprador")
 	await _pedir("liberar", {"objetivo": "tienda"})
 	await _al_cliente("accion", {"tipo": "liberar", "datos": {"objetivo": "cafetera"}})
 	await _probar_colores_cafe()
@@ -347,7 +358,7 @@ func _run() -> void:
 	r = await _al_cliente("estado_cinematica")
 	comprobar(oficina.final_partida._relevo_finalizado and bool(r.finalizada), "La cinemática acaba en ambos equipos")
 	comprobar(not red.jugadores[1].visible and not red.jugadores[cliente].visible and bool(r.salieron), "Ambos jugadores salen por la puerta en las dos vistas")
-	comprobar(oficina.final_partida._reiniciar.text == "Reintentar 0/2" and str(r.reintentar) == "Reintentar 0/2", "Las dos libretas muestran 0/2 antes de votar")
+	comprobar(oficina.final_partida._boton_reintentar.text == "Reintentar 0/2" and str(r.reintentar) == "Reintentar 0/2", "Las dos libretas muestran 0/2 antes de votar")
 	await _al_cliente("preparar_reinicio")
 	MenuGlobal.omitir_tutorial_siguiente_partida = true
 	SesionLAN.votar_reintento()
@@ -428,7 +439,7 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 			SesionLAN._confirmar_tutorial.rpc_id(1, SesionLAN.ronda, &"otro_tutorial")
 		"preparar_reinicio": MenuGlobal.omitir_tutorial_siguiente_partida = true
 		"estado_reintento": resultado = {"votos": SesionLAN.votos_reintento.size()}
-		"estado_cinematica": resultado = {"finalizada": oficina.final_partida._relevo_finalizado, "salieron": not red.jugadores[1].visible and not red.jugadores[SesionLAN.id_local()].visible, "reintentar": oficina.final_partida._reiniciar.text}
+		"estado_cinematica": resultado = {"finalizada": oficina.final_partida._relevo_finalizado, "salieron": not red.jugadores[1].visible and not red.jugadores[SesionLAN.id_local()].visible, "reintentar": oficina.final_partida._boton_reintentar.text}
 		"votar_reintento": SesionLAN.votar_reintento()
 		"nueva_ronda":
 			red = SesionLAN.puente
@@ -703,6 +714,7 @@ func _probar_colores_cafe() -> void:
 	await _mover_host(red._objeto("cafetera").global_position + Vector3(0.5, 0, 0.6))
 	for id in [cliente, 1]:
 		for indice in [0, 1]:
+			oficina._duracion_partida += 60.0
 			despacho.perder_calma(20, &"prueba", id)
 			if id == cliente:
 				await _al_cliente("accion", {"tipo": "reservar", "datos": {"objetivo": "cafetera"}})
