@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://b2rtqesyk507r"
 path.s3tc="res://.godot/imported/Estacion_Seguridad_2.jpg-18e0b0f2fc57e1114131933a53f361cf.s3tc.ctex"
+path.etc2="res://.godot/imported/Estacion_Seguridad_2.jpg-18e0b0f2fc57e1114131933a53f361cf.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Mesas_estaciones/Estacion_Seguridad_2.jpg"
-dest_files=["res://.godot/imported/Estacion_Seguridad_2.jpg-18e0b0f2fc57e1114131933a53f361cf.s3tc.ctex"]
+dest_files=["res://.godot/imported/Estacion_Seguridad_2.jpg-18e0b0f2fc57e1114131933a53f361cf.s3tc.ctex", "res://.godot/imported/Estacion_Seguridad_2.jpg-18e0b0f2fc57e1114131933a53f361cf.etc2.ctex"]
 
 [params]
 

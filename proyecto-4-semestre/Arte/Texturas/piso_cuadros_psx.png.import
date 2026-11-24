@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dgykycnljxvd0"
 path.s3tc="res://.godot/imported/piso_cuadros_psx.png-bc82fc64eee7c37b239fc30471c113d2.s3tc.ctex"
+path.etc2="res://.godot/imported/piso_cuadros_psx.png-bc82fc64eee7c37b239fc30471c113d2.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://Arte/Texturas/piso_cuadros_psx.png"
-dest_files=["res://.godot/imported/piso_cuadros_psx.png-bc82fc64eee7c37b239fc30471c113d2.s3tc.ctex"]
+dest_files=["res://.godot/imported/piso_cuadros_psx.png-bc82fc64eee7c37b239fc30471c113d2.s3tc.ctex", "res://.godot/imported/piso_cuadros_psx.png-bc82fc64eee7c37b239fc30471c113d2.etc2.ctex"]
 
 [params]
 

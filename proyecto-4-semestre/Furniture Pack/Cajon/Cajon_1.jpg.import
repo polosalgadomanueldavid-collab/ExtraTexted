@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c2lxtbykwxrnc"
 path.s3tc="res://.godot/imported/Cajon_1.jpg-cb3cdf4e2a4f6ccf2ae9b2b73a18b1fc.s3tc.ctex"
+path.etc2="res://.godot/imported/Cajon_1.jpg-cb3cdf4e2a4f6ccf2ae9b2b73a18b1fc.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Cajon/Cajon_1.jpg"
-dest_files=["res://.godot/imported/Cajon_1.jpg-cb3cdf4e2a4f6ccf2ae9b2b73a18b1fc.s3tc.ctex"]
+dest_files=["res://.godot/imported/Cajon_1.jpg-cb3cdf4e2a4f6ccf2ae9b2b73a18b1fc.s3tc.ctex", "res://.godot/imported/Cajon_1.jpg-cb3cdf4e2a4f6ccf2ae9b2b73a18b1fc.etc2.ctex"]
 
 [params]
 

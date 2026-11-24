@@ -68,6 +68,8 @@ var _overlays_originales_aura: Array[Dictionary] = []
 var _material_particulas_aura: ShaderMaterial
 var _material_trazos_aura: ShaderMaterial
 var aura_persistente_activada: bool = false
+var duelo_kamehameha_activo := false
+var punto_choque_duelo := Vector3.ZERO
 var aura_transformacion_en_curso: bool = false
 var aura_transformacion_progreso: float = 0.0
 var _tiempo_transformacion_aura: float = 0.0
@@ -191,6 +193,21 @@ func iniciar(tipo: StringName, destino: Node3D = null, segundos: float = 0.0) ->
 	return true
 
 
+func iniciar_duelo_kamehameha(rival: Node3D) -> bool:
+	if not iniciar(&"kamehameha", rival, 14.0):
+		return false
+	duelo_kamehameha_activo = true
+	return true
+
+
+func actualizar_choque_duelo(punto: Vector3) -> void:
+	punto_choque_duelo = punto
+
+
+func mostrar_impacto_duelo(punto: Vector3) -> void:
+	_crear_impacto_azul(punto, 3.0, 4.0, 0.8, true)
+
+
 func alternar_aura_persistente() -> void:
 	if not is_instance_valid(_aura_persistente):
 		return
@@ -286,7 +303,7 @@ func _crear_aura_persistente(esqueleto: Skeleton3D) -> void:
 	_aura_persistente.position = Vector3(0.0, ALTURA_MODELO_POLICIA * 0.5, 0.0)
 	_aura_persistente.scale = Vector3.ONE * 0.05
 	_aura_persistente.visible = false
-	_aura_persistente.set("particles_amount", 180)
+	_aura_persistente.set("particles_amount", 90 if OS.has_feature("android") else 180)
 	_aura_persistente.set("lifetime", 1.35)
 	_aura_persistente.set("emission_shape", Vector3(0.55, 1.0, 0.55))
 	_aura_persistente.set("waviness", 0.52)
@@ -418,6 +435,7 @@ func establecer_sentado(activo: bool, inmediato: bool = false) -> void:
 
 
 func cancelar() -> void:
+	duelo_kamehameha_activo = false
 	if is_instance_valid(_explosion_final_activa):
 		_separar_humo_final(_explosion_final_activa)
 	if gesto == &"genkidama" and is_instance_valid(_genkidama_vfx):
@@ -557,7 +575,7 @@ func _process_modification() -> void:
 		_aplicar_reposo(_peso_reposo)
 	_llave.visible = gesto == &"reparar"
 	if gesto != &"":
-		_aplicar_gesto(tiempo / duracion)
+		_aplicar_gesto(minf(tiempo / 1.8 * 0.70, 0.70) if duelo_kamehameha_activo else tiempo / duracion)
 	if _peso_extintor > 0.0:
 		_aplicar_extintor(_peso_extintor)
 	if jugador.choque != null:
@@ -1293,8 +1311,8 @@ func _crear_explosion_final_amarilla(posicion_global: Vector3) -> void:
 	var malla_centro := SphereMesh.new()
 	malla_centro.radius = RADIO_GENKIDAMA
 	malla_centro.height = RADIO_GENKIDAMA * 2.0
-	malla_centro.radial_segments = 64
-	malla_centro.rings = 40
+	malla_centro.radial_segments = 24 if OS.has_feature("android") else 64
+	malla_centro.rings = 16 if OS.has_feature("android") else 40
 	var centro_dorado := MeshInstance3D.new()
 	centro_dorado.name = "CentroSolidoExplosion"
 	centro_dorado.mesh = malla_centro
@@ -1477,7 +1495,7 @@ func _actualizar_energia() -> void:
 		return
 	_energia.visible = true
 	var escala_ataques := _multiplicador_tamano_ataques()
-	var t := tiempo / duracion
+	var t := minf(tiempo / 1.8 * 0.70, 0.70) if duelo_kamehameha_activo else tiempo / duracion
 	var fuerza_aura := 0.0 if es_rasengan else smoothstep(0.02, 0.18, t) * (1.0 - smoothstep(0.84, 0.99, t))
 	_aura.visible = fuerza_aura > 0.01 and not es_explosion_final
 	_orbita_aura.visible = fuerza_aura > 0.01 and not es_explosion_final
@@ -1556,9 +1574,9 @@ func _actualizar_energia() -> void:
 	var carga := smoothstep(0.08, 0.20, t) * (1.0 - smoothstep(0.48, 0.60, t))
 	var avance := smoothstep(0.59, 0.90, t)
 	var desvanecer_rayo := 1.0 - smoothstep(0.93, 0.995, t)
-	var apertura_rayo := smoothstep(0.59, 0.90, t) * desvanecer_rayo
+	var apertura_rayo := smoothstep(1.1, 1.8, tiempo) if duelo_kamehameha_activo else smoothstep(0.59, 0.90, t) * desvanecer_rayo
 	var desvanecer_carga := 1.0 - smoothstep(0.52, 0.60, t)
-	_esfera_energia.visible = t > 0.08 and t < 0.60
+	_esfera_energia.visible = t > 0.08 and t < 0.60 and (not duelo_kamehameha_activo or tiempo < 1.8)
 	# La esfera sigue el punto medio real de las palmas mientras las manos se juntan para cargar.
 	var esqueleto := get_skeleton()
 	var palma_izquierda := esqueleto.get_bone_global_pose(_huesos["hand.L"]).origin
@@ -1572,6 +1590,8 @@ func _actualizar_energia() -> void:
 	_luz_aura.light_energy = 0.8 + fuerza_aura * (1.0 + carga * 1.2)
 	_rayo_vfx.visible = apertura_rayo > 0.001
 	var largo_rayo := LONGITUD_KAMEHAMEHA * apertura_rayo
+	if duelo_kamehameha_activo and apertura_rayo > 0.001:
+		largo_rayo = maxf(0.25, _rayo_vfx.to_local(punto_choque_duelo).y) * apertura_rayo
 	_orbe_inicio_rayo.visible = apertura_rayo > 0.001
 	_orbe_inicio_rayo.scale = Vector3.ONE * escala_ataques * (0.96 + 0.04 * sin(_reloj * 11.0))
 	_orbe_final_rayo.visible = apertura_rayo > 0.08
@@ -1581,7 +1601,7 @@ func _actualizar_energia() -> void:
 		tubo.visible = apertura_rayo > 0.001
 		tubo.scale = Vector3(escala_ataques, largo_rayo, escala_ataques)
 		tubo.position.y = largo_rayo * 0.5
-	if t >= 0.89 and not _impacto_disparado:
+	if not duelo_kamehameha_activo and t >= 0.89 and not _impacto_disparado:
 		_impacto_disparado = true
 		var punto_impacto := _energia.to_global(centro_manos + Vector3(0.0, 0.0, adelanto_orbe + LONGITUD_KAMEHAMEHA * avance))
 		_crear_impacto_azul(punto_impacto, 4.0, 5.0, 0.9, true)

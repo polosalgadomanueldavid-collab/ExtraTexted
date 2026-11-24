@@ -9,7 +9,7 @@
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/opciones.svg" id="7_opciones"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/inicio.svg" id="9_inicio"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/volver.svg" id="10_volver"]
-[ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="11_texto"]
+[ext_resource type="FontVariation" path="res://UI/Menus/fuente_lectura.tres" id="11_texto"]
 
 [ext_resource type="PackedScene" path="res://UI/Menus/PanelAyuda.tscn" id="19_ayuda"]
 [ext_resource type="Texture2D" path="res://UI/Menus/ArtePiloto/tutorial.svg" id="20_tutorial"]
@@ -18,12 +18,6 @@
 
 [ext_resource type="Theme" path="res://UI/Menus/tema_ajustes.tres" id="24_tema_ajustes"]
 [ext_resource type="Script" path="res://UI/Menus/panel_ajustes.gd" id="25_panel_ajustes"]
-
-[sub_resource type="FontVariation" id="Font_aviso"]
-base_font = ExtResource("11_texto")
-variation_opentype = {
-2003265652: 700.0
-}
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_filtro"]
 shader = ExtResource("2_shader")
@@ -168,7 +162,7 @@ horizontal_alignment = 1
 
 [node name="EtiquetaAudio" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 34
 text = "AUDIO"
 
@@ -178,7 +172,7 @@ theme_override_constants/separation = 20
 
 [node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaVolumenGeneral"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 30
 size_flags_horizontal = 3
 text = "General"
@@ -187,7 +181,7 @@ text = "General"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 30
 text = "100 %"
 horizontal_alignment = 2
@@ -208,7 +202,7 @@ theme_override_constants/separation = 20
 
 [node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaVolumenMusica"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 30
 size_flags_horizontal = 3
 text = "Música"
@@ -217,7 +211,7 @@ text = "Música"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 30
 text = "100 %"
 horizontal_alignment = 2
@@ -238,7 +232,7 @@ theme_override_constants/separation = 20
 
 [node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelOpciones/Contenido/FilaVolumenInteracciones"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 30
 size_flags_horizontal = 3
 text = "Efectos de sonido"
@@ -247,7 +241,7 @@ text = "Efectos de sonido"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 30
 text = "100 %"
 horizontal_alignment = 2
@@ -310,7 +304,7 @@ horizontal_alignment = 1
 
 [node name="EtiquetaFiltro" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 34
 text = "Filtro de daltonismo"
 
@@ -335,7 +329,7 @@ layout_mode = 2
 
 [node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido/FilaIntensidad"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 34
 size_flags_horizontal = 3
 text = "Intensidad"
@@ -344,7 +338,7 @@ text = "Intensidad"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 34
 text = "100 %"
 horizontal_alignment = 2
@@ -364,7 +358,7 @@ layout_mode = 2
 
 [node name="Etiqueta" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido/FilaBrillo"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 34
 size_flags_horizontal = 3
 text = "Brillo"
@@ -373,7 +367,7 @@ text = "Brillo"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 34
 text = "100 %"
 horizontal_alignment = 2
@@ -390,7 +384,7 @@ value = 100.0
 
 [node name="EtiquetaBalanceo" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelAccesibilidad/Contenido"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 34
 text = "Balanceo de cámara"
 
@@ -446,7 +440,7 @@ horizontal_alignment = 1
 
 [node name="Aviso" type="Label" parent="Interfaz/CapaModal/Margen/Scroll/Centro/PanelConfirmacion/Contenido"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("Font_aviso")
+theme_override_fonts/font = ExtResource("11_texto")
 theme_override_font_sizes/font_size = 30
 text = "Se perderá el progreso de esta sesión."
 horizontal_alignment = 1

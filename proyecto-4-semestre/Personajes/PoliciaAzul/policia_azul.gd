@@ -330,6 +330,9 @@ func _input(event: InputEvent) -> void:
 		control_incendio.soltar()
 	if event.is_action_pressed(EMOTE_MENU) and not (event is InputEventKey and event.echo):
 		get_viewport().set_input_as_handled()
+		if not _emotes_permitidos():
+			emote_rechazado.emit("No se pueden usar emotes durante un evento")
+			return
 		if nadando:
 			_rechazar_emote_nadando()
 		elif _emote_menu_active:
@@ -345,6 +348,10 @@ func _input(event: InputEvent) -> void:
 	if usando_extintor:
 		return
 	if input_locked or realizando_gesto():
+		return
+	if event.is_action_pressed(&"movil_soltar_papel"):
+		get_viewport().set_input_as_handled()
+		_soltar_papel_en_mano()
 		return
 	if nadando and (event.is_action_pressed(EMOTE_MENU) or event.is_action_pressed(KAMEHAMEHA) or event.is_action_pressed(GENKIDAMA) or event.is_action_pressed(RASENGAN)):
 		if not event.is_echo():
@@ -376,11 +383,17 @@ func _input(event: InputEvent) -> void:
 		objetivo.interactuar(self)
 	elif is_instance_valid(papel_en_mano):
 		get_viewport().set_input_as_handled()
-		var hoja := papel_en_mano
-		ejecutar_gesto(&"lanzar", func() -> void:
-			if is_instance_valid(hoja) and hoja.portador == self:
-				hoja.lanzar()
-		)
+		_soltar_papel_en_mano()
+
+
+func _soltar_papel_en_mano() -> void:
+	if not is_instance_valid(papel_en_mano):
+		return
+	var hoja := papel_en_mano
+	ejecutar_gesto(&"lanzar", func() -> void:
+		if is_instance_valid(hoja) and hoja.portador == self:
+			hoja.lanzar()
+	)
 
 
 func _notification(what: int) -> void:
@@ -483,6 +496,9 @@ func realizando_gesto() -> bool:
 
 
 func ejecutar_gesto(tipo: StringName, efecto: Callable = Callable(), objetivo: Node3D = null, segundos: float = 0.0) -> bool:
+	if tipo in [&"kamehameha", &"genkidama", &"rasengan", &"explosion_final"] and not _emotes_permitidos():
+		emote_rechazado.emit("No se pueden usar emotes durante un evento")
+		return false
 	if tipo in [&"kamehameha", &"genkidama", &"rasengan"] and _rechazar_emote_nadando():
 		return false
 	if usando_extintor:
@@ -646,6 +662,11 @@ func _rechazar_emote_nadando() -> bool:
 		return false
 	emote_rechazado.emit("No se pueden usar emotes en este momento")
 	return true
+
+
+func _emotes_permitidos() -> bool:
+	var oficina := get_tree().get_first_node_in_group(&"oficina_emotes")
+	return not is_instance_valid(oficina) or oficina.emotes_permitidos()
 
 
 func actualizar_animacion_relevo(delta: float, rapidez: float, cansado: bool) -> void:

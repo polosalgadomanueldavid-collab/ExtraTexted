@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cct31wa5pt65h"
 path.s3tc="res://.godot/imported/Estacion_Bienestar_2.jpg-b1aab0e330a4793bf22349601d259a6a.s3tc.ctex"
+path.etc2="res://.godot/imported/Estacion_Bienestar_2.jpg-b1aab0e330a4793bf22349601d259a6a.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Mesas_estaciones/Estacion_Bienestar_2.jpg"
-dest_files=["res://.godot/imported/Estacion_Bienestar_2.jpg-b1aab0e330a4793bf22349601d259a6a.s3tc.ctex"]
+dest_files=["res://.godot/imported/Estacion_Bienestar_2.jpg-b1aab0e330a4793bf22349601d259a6a.s3tc.ctex", "res://.godot/imported/Estacion_Bienestar_2.jpg-b1aab0e330a4793bf22349601d259a6a.etc2.ctex"]
 
 [params]
 

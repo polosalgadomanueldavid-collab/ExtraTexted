@@ -7,6 +7,8 @@ signal fallo(mensaje: String)
 
 const OFICINA := "res://Mundo/Oficina.tscn"
 const MENU := "res://UI/Menus/MainMenu.tscn"
+const TEMA_AJUSTES := preload("res://UI/Menus/tema_ajustes.tres")
+const FUENTE_TEXTO := preload("res://UI/Menus/fuente_lectura.tres")
 var activa := false
 var progreso := 0.0
 var fase := ""
@@ -46,12 +48,14 @@ func _ready() -> void:
 	var titulo := Label.new()
 	titulo.text = "EXTRATEXTED"
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	titulo.add_theme_font_override("font", preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf"))
+	titulo.add_theme_font_override("font", TEMA_AJUSTES.default_font)
 	titulo.add_theme_font_size_override("font_size", 48)
 	titulo.add_theme_color_override("font_color", Color("fff1d8"))
 	caja.add_child(titulo)
 	_texto = Label.new()
 	_texto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_texto.add_theme_font_override("font", FUENTE_TEXTO)
+	_texto.add_theme_font_size_override("font_size", 22)
 	_texto.add_theme_color_override("font_color", Color("83e0ed"))
 	caja.add_child(_texto)
 	_barra = ProgressBar.new()
@@ -66,10 +70,15 @@ func _ready() -> void:
 	var consejo := Label.new()
 	consejo.text = "Una hoja por policía. El saldo lo comparte el equipo."
 	consejo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	consejo.add_theme_font_override("font", FUENTE_TEXTO)
+	consejo.add_theme_font_size_override("font_size", 18)
 	consejo.add_theme_color_override("font_color", Color("fff1d8"))
 	caja.add_child(consejo)
 	_cancelar = Button.new()
 	_cancelar.text = "Volver al menú"
+	_cancelar.add_theme_font_override("font", TEMA_AJUSTES.get_font("font", "Button"))
+	_cancelar.add_theme_font_size_override("font_size", 24)
+	_cancelar.custom_minimum_size.y = 48
 	_cancelar.pressed.connect(cancelar)
 	caja.add_child(_cancelar)
 	hide()

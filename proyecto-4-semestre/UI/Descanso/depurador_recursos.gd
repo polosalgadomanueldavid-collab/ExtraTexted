@@ -1,5 +1,6 @@
 extends CanvasLayer
 ## Depurador temporal de recursos; solo se instancia en compilaciones de desarrollo.
+const FUENTE_TEXTO := preload("res://UI/Menus/fuente_lectura.tres")
 
 var oficina: Node3D
 var panel: PanelContainer
@@ -39,6 +40,7 @@ func configurar(gestor: Node3D) -> void:
 	titulo.add_theme_font_size_override("font_size", 20)
 	columna.add_child(titulo)
 	_resumen = Label.new()
+	_resumen.add_theme_font_override("font", FUENTE_TEXTO)
 	columna.add_child(_resumen)
 	cantidad_dano = _cantidad(columna, "Vida / calma que quieres quitar", 10, 100)
 	boton_dano = _boton(columna, "Quitar vida", quitar_vida)
@@ -57,6 +59,7 @@ func configurar(gestor: Node3D) -> void:
 func _cantidad(columna: VBoxContainer, texto: String, valor: int, maximo: int) -> SpinBox:
 	var etiqueta := Label.new()
 	etiqueta.text = texto
+	etiqueta.add_theme_font_override("font", FUENTE_TEXTO)
 	columna.add_child(etiqueta)
 	var numero := SpinBox.new()
 	numero.min_value = 1
@@ -65,6 +68,7 @@ func _cantidad(columna: VBoxContainer, texto: String, valor: int, maximo: int) -
 	numero.value = valor
 	numero.custom_minimum_size.y = 42
 	numero.get_line_edit().select_all_on_focus = true
+	numero.get_line_edit().add_theme_font_override("font", FUENTE_TEXTO)
 	columna.add_child(numero)
 	return numero
 

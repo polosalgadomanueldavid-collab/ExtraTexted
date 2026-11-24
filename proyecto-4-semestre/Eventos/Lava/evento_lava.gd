@@ -23,6 +23,7 @@ const MAGMA := preload("res://Eventos/Lava/magma.gdshader")
 const PatronMagma := preload("res://Eventos/Lava/patron_magma.gd")
 const PanelLava := preload("res://Eventos/Lava/panel_lava.gd")
 const Fuego := preload("res://Eventos/Incendio/fuego_3d.gd")
+const SONIDO_LAVA := preload("res://Audios/Eventos/lava_quemadura.wav")
 
 var activo := false
 var tiempo_restante := 0.0
@@ -50,11 +51,18 @@ var _intervalo_anterior := 10.0
 var _reloj_estaba_parado := false
 var _capa_anterior := false
 var _tiempo := 0.0
+var _sonido_quemadura: AudioStreamPlayer
+var _tiempo_sonido_quemadura := 0.0
 
 
 func configurar(oficina: Node3D, jugador: Player) -> void:
 	_oficina = oficina
 	_jugador = jugador
+	_sonido_quemadura = AudioStreamPlayer.new()
+	_sonido_quemadura.stream = SONIDO_LAVA
+	_sonido_quemadura.bus = "Interacciones"
+	_sonido_quemadura.volume_db = -9.0
+	add_child(_sonido_quemadura)
 	# Después del movimiento del personaje: comprobar el apoyo de este paso físico.
 	process_physics_priority = 100
 	panel = PanelLava.new()
@@ -75,6 +83,7 @@ func iniciar() -> bool:
 	tiempo_restante = DURACION
 	_tiempo = 0.0
 	_calor_pies = 0.0
+	_tiempo_sonido_quemadura = 0.0
 	_origen_calor = Vector2(_jugador.global_position.x, _jugador.global_position.z)
 	_perdida_acumulada = 0.0
 	_intervalo_anterior = _oficina.temporizador_bloqueos.wait_time
@@ -112,6 +121,13 @@ func _physics_process(delta: float) -> void:
 	_material.set_shader_parameter("reloj", _tiempo)
 	_actualizar_entrada()
 	var arde := tocando_suelo()
+	if arde:
+		_tiempo_sonido_quemadura -= paso
+		if _tiempo_sonido_quemadura <= 0.0:
+			_sonido_quemadura.play()
+			_tiempo_sonido_quemadura = 0.9
+	else:
+		_tiempo_sonido_quemadura = 0.0
 	_jugador.quemandose_pies = arde
 	_chispas_pies.global_position = _jugador.global_position + Vector3.UP * 0.06
 	_chispas_pies.emitting = arde
@@ -179,6 +195,7 @@ func detener() -> void:
 	if not activo:
 		return
 	activo = false
+	_sonido_quemadura.stop()
 	set_physics_process(false)
 	_jugador.lava_activa = false
 	_jugador.quemandose_pies = false

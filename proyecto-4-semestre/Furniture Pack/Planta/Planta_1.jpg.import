@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://ciacbl3xngu1c"
 path.s3tc="res://.godot/imported/Planta_1.jpg-19be0d5b8506b4378c0178fc5f2bab5a.s3tc.ctex"
+path.etc2="res://.godot/imported/Planta_1.jpg-19be0d5b8506b4378c0178fc5f2bab5a.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Planta/Planta_1.jpg"
-dest_files=["res://.godot/imported/Planta_1.jpg-19be0d5b8506b4378c0178fc5f2bab5a.s3tc.ctex"]
+dest_files=["res://.godot/imported/Planta_1.jpg-19be0d5b8506b4378c0178fc5f2bab5a.s3tc.ctex", "res://.godot/imported/Planta_1.jpg-19be0d5b8506b4378c0178fc5f2bab5a.etc2.ctex"]
 
 [params]
 

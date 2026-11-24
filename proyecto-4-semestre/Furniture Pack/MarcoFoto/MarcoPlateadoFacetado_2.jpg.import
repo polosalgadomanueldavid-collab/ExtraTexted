@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cc2suncpue3ph"
 path.s3tc="res://.godot/imported/MarcoPlateadoFacetado_2.jpg-172b1ffbf4c8d4ab09a5ff0e26f06e24.s3tc.ctex"
+path.etc2="res://.godot/imported/MarcoPlateadoFacetado_2.jpg-172b1ffbf4c8d4ab09a5ff0e26f06e24.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/MarcoFoto/MarcoPlateadoFacetado_2.jpg"
-dest_files=["res://.godot/imported/MarcoPlateadoFacetado_2.jpg-172b1ffbf4c8d4ab09a5ff0e26f06e24.s3tc.ctex"]
+dest_files=["res://.godot/imported/MarcoPlateadoFacetado_2.jpg-172b1ffbf4c8d4ab09a5ff0e26f06e24.s3tc.ctex", "res://.godot/imported/MarcoPlateadoFacetado_2.jpg-172b1ffbf4c8d4ab09a5ff0e26f06e24.etc2.ctex"]
 
 [params]
 

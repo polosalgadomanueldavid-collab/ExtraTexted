@@ -114,6 +114,8 @@ func _mostrar_frase() -> void:
 	hablante.text = _nombres[voz]
 	hablante.add_theme_color_override("font_color", COLORES_VOZ[voz])
 	var texto: String = linea[1]
+	if OS.has_feature("android"):
+		texto = texto.replace("Pulsa E", "Toca USAR").replace("pulsa E", "toca USAR").replace("con E", "con USAR").replace("A y D", "‹ y ›")
 	frase.text = texto.replace("{compañero}", _nombres[Voz.OFICIAL_2])
 	if voz == Voz.CONSEJO:
 		hablante.add_theme_font_override("font", FUENTE_CONSEJO)

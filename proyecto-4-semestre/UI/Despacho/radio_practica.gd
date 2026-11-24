@@ -3,7 +3,7 @@ extends Control
 signal omitir
 const ARTE := preload("res://UI/Despacho/pictogramas_tarea.gd")
 const TITULO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
-const TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
+const TEXTO := preload("res://UI/Menus/fuente_lectura.tres")
 const TINTA := Color("173b50")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
@@ -46,7 +46,7 @@ func _ready() -> void:
 	add_child(_cuerpo)
 	_salida = Button.new()
 	_salida.text = "F2 · OMITIR PRÁCTICA"
-	_salida.add_theme_font_override("font", TEXTO)
+	_salida.add_theme_font_override("font", TITULO)
 	_salida.add_theme_font_size_override("font_size", 13)
 	for estado in ["normal", "hover", "pressed", "focus"]:
 		var estilo := StyleBoxFlat.new()

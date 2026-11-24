@@ -1,0 +1,9 @@
+[gd_resource type="FontVariation" format=3 uid="uid://bvfvh2m65jv0c"]
+
+[ext_resource type="FontFile" uid="uid://bqaoj6gllgmyp" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="1_texto"]
+
+[resource]
+base_font = ExtResource("1_texto")
+variation_opentype = {
+2003265652: 700.0
+}

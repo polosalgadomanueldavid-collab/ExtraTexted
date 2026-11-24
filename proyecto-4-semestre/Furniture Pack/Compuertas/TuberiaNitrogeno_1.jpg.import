@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c6w1lchqhmqqa"
 path.s3tc="res://.godot/imported/TuberiaNitrogeno_1.jpg-2c76db19d689a5e490d8cc174117cfc2.s3tc.ctex"
+path.etc2="res://.godot/imported/TuberiaNitrogeno_1.jpg-2c76db19d689a5e490d8cc174117cfc2.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Compuertas/TuberiaNitrogeno_1.jpg"
-dest_files=["res://.godot/imported/TuberiaNitrogeno_1.jpg-2c76db19d689a5e490d8cc174117cfc2.s3tc.ctex"]
+dest_files=["res://.godot/imported/TuberiaNitrogeno_1.jpg-2c76db19d689a5e490d8cc174117cfc2.s3tc.ctex", "res://.godot/imported/TuberiaNitrogeno_1.jpg-2c76db19d689a5e490d8cc174117cfc2.etc2.ctex"]
 
 [params]
 

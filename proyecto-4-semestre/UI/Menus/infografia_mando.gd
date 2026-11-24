@@ -2,7 +2,7 @@ extends Control
 ## Diagrama escalable: las coordenadas de las llamadas corresponden a la foto.
 const FOTO := preload("res://UI/Menus/ArtePiloto/mando_recortado.png")
 const TITULAR := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
-const LECTURA := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
+const LECTURA := preload("res://UI/Menus/fuente_lectura.tres")
 const TINTA := Color("173b50")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
@@ -219,10 +219,7 @@ func _llamada(titulo: String, descripcion: String, lugar: int, punto: Vector2, i
 	fila.add_child(rotulo)
 	var texto := Label.new()
 	texto.text = descripcion
-	var lectura := FontVariation.new()
-	lectura.base_font = LECTURA
-	lectura.variation_opentype = {2003265652: 700.0}
-	texto.add_theme_font_override("font", lectura)
+	texto.add_theme_font_override("font", LECTURA)
 	texto.add_theme_font_size_override("font_size", 16)
 	texto.add_theme_color_override("font_color", CREMA)
 	columna.add_child(texto)

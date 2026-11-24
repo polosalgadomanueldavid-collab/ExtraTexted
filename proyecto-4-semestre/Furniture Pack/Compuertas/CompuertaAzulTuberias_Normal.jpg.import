@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://jcd1tdw4k08t"
 path.s3tc="res://.godot/imported/CompuertaAzulTuberias_Normal.jpg-f00a6c5d5a10314944391b54c4ef206e.s3tc.ctex"
+path.etc2="res://.godot/imported/CompuertaAzulTuberias_Normal.jpg-f00a6c5d5a10314944391b54c4ef206e.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Furniture Pack/Compuertas/CompuertaAzulTuberias_Normal.jpg"
-dest_files=["res://.godot/imported/CompuertaAzulTuberias_Normal.jpg-f00a6c5d5a10314944391b54c4ef206e.s3tc.ctex"]
+dest_files=["res://.godot/imported/CompuertaAzulTuberias_Normal.jpg-f00a6c5d5a10314944391b54c4ef206e.s3tc.ctex", "res://.godot/imported/CompuertaAzulTuberias_Normal.jpg-f00a6c5d5a10314944391b54c4ef206e.etc2.ctex"]
 
 [params]
 

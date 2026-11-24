@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dqnr1sufysckd"
 path.s3tc="res://.godot/imported/PapaTiempo_2.jpg-ce3b62ecd9a07d7420c673d6e9a68cc4.s3tc.ctex"
+path.etc2="res://.godot/imported/PapaTiempo_2.jpg-ce3b62ecd9a07d7420c673d6e9a68cc4.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://Objetos/ZonaDescanso/Productos/PapaTiempo_2.jpg"
-dest_files=["res://.godot/imported/PapaTiempo_2.jpg-ce3b62ecd9a07d7420c673d6e9a68cc4.s3tc.ctex"]
+dest_files=["res://.godot/imported/PapaTiempo_2.jpg-ce3b62ecd9a07d7420c673d6e9a68cc4.s3tc.ctex", "res://.godot/imported/PapaTiempo_2.jpg-ce3b62ecd9a07d7420c673d6e9a68cc4.etc2.ctex"]
 
 [params]
 
