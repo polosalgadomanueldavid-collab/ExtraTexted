@@ -10,6 +10,7 @@ const CoreografiaAvatar := preload("res://Personajes/PoliciaAzul/coreografia_ava
 const CapaAvatar := preload("res://Personajes/PoliciaAzul/capa_avatar.gd")
 const GESTOS_AVATAR := [&"control_agua", &"control_fuego", &"control_tierra", &"control_aire"]
 var capa_avatar: Node3D
+var marcas_avatar: Node3D
 
 const DURACIONES := {&"comer": 1.5, &"za_warudo": 2.4, &"control_agua": 3.6, &"control_fuego": 3.6, &"control_tierra": 3.6, &"control_aire": 3.6, &"recoger": 1.15, &"recibir": 0.75, &"interactuar": 0.7, &"reparar": 2.4, &"lanzar": 0.95, &"beber": 1.8, &"kamehameha": 3.6, &"genkidama": 5.0, &"rasengan": 3.8, &"explosion_final": 6.8}
 const CONTACTOS := {&"comer": 0.58, &"za_warudo": 0.45, &"control_agua": 0.72, &"control_fuego": 0.72, &"control_tierra": 0.72, &"control_aire": 0.72, &"recoger": 0.48, &"recibir": 0.38, &"interactuar": 0.48, &"reparar": 0.85, &"lanzar": 0.46, &"beber": 0.56, &"kamehameha": 0.55, &"genkidama": 0.72, &"rasengan": 0.5, &"explosion_final": 0.72}
@@ -163,6 +164,8 @@ func _actualizar_capa_avatar() -> void:
 	# Esta señal conserva la pose final del modificador, antes de restaurar los huesos.
 	if get_tree().paused:
 		return
+	if is_instance_valid(marcas_avatar):
+		marcas_avatar.aplicar(tiempo / duracion if gesto in GESTOS_AVATAR else -1.0)
 	capa_avatar.visible = gesto in GESTOS_AVATAR
 	if capa_avatar.visible:
 		capa_avatar.actualizar(tiempo)
@@ -171,6 +174,10 @@ func _actualizar_capa_avatar() -> void:
 func iniciar(tipo: StringName, destino: Node3D = null, segundos: float = 0.0) -> bool:
 	if gesto != &"" or not DURACIONES.has(tipo):
 		return false
+	if tipo in GESTOS_AVATAR and not is_instance_valid(marcas_avatar):
+		marcas_avatar = preload("res://Personajes/PoliciaAzul/marcas_avatar.gd").new()
+		marcas_avatar.rig = get_skeleton()
+		get_skeleton().add_child(marcas_avatar)
 	gesto = tipo
 	tiempo = 0.0
 	duracion = segundos if segundos > 0.0 else float(DURACIONES[tipo])
@@ -445,6 +452,8 @@ func cancelar() -> void:
 		_impacto_activo.queue_free()
 		_impacto_activo = null
 	gesto = &""
+	if is_instance_valid(marcas_avatar):
+		marcas_avatar.aplicar(-1.0)
 	objetivo = null
 	_llave.visible = false
 	if is_instance_valid(capa_avatar):
