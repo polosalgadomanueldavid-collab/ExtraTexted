@@ -4,9 +4,9 @@
 
 1. Usar la misma revisión del proyecto y Godot 4.7 en ambos computadores Windows. Para una entrega autónoma, instalar las plantillas de exportación **de esa misma versión** desde el administrador de plantillas de Godot y exportar Windows Desktop x86_64. Copiar el ejecutable y su archivo `.pck`, si se exporta por separado, a ambos equipos.
 2. Conectar ambos equipos a la misma red. El anfitrión necesita recibir UDP 7000. Si Windows muestra su aviso de firewall, permitir el juego en la red privada usada para la demostración. No hace falta abrir puertos del router para una LAN.
-3. Abrir el juego y elegir **Jugar → Crear partida LAN**, indicando alias. La sala muestra la IP local; usar la dirección de la conexión que comparte con el compañero.
-4. En el segundo equipo: **Jugar → Unirse por IP**, escribir la IP del anfitrión y el alias propio.
-5. Ambos marcan **Estoy listo**. El anfitrión pulsa **Iniciar turno**. Los dos deben cerrar la guía inicial antes de que avance el mundo.
+3. Abrir el juego y elegir **Jugar → Crear partida**, indicando el nombre. La sala muestra la IP local y permite copiarla; usar la dirección de la conexión que comparte con el compañero.
+4. En el segundo equipo: **Jugar → Unirse**, escribir la IP del anfitrión y el nombre propio, y pulsar **Conectar**. Volver conserva los datos; mientras se conecta se puede cancelar.
+5. Ambos marcan **Estoy listo**. El anfitrión pulsa **Empezar** cuando los dos estén listos. El invitado ve «Esperando al anfitrión». Los dos deben cerrar la guía inicial antes de que avance el mundo.
 
 Para jugar solo se conserva **Jugar → Individual** y la identificación de la clasificación existente.
 
@@ -44,7 +44,7 @@ Para ejecutar la partida de prueba manualmente, abrir dos terminales y lanzar un
 & $Godot --headless --path .\proyecto-4-semestre --script res://Pruebas/Multijugador/prueba_lan.gd -- --client
 ```
 
-`$Godot` debe contener la ruta del ejecutable. La prueba mueve personajes y resuelve minijuegos automáticamente; no es el modo de demostración para jugadores. Para revisar la sala con renderizado real, ejecutar `prueba_menu_lan.gd` sin `--headless`; guarda `lan_menu.png` y `lan_sala.png` en `.godot/`.
+`$Godot` debe contener la ruta del ejecutable. La prueba mueve personajes y resuelve minijuegos automáticamente; no es el modo de demostración para jugadores. Para revisar la sala con renderizado real, ejecutar `prueba_menu_lan.gd` sin `--headless`; guarda selección, formulario, error de IP y sala en `output/multijugador_implementado/`. Ejecutar dos instancias con `-- --sala-host` y `-- --sala-client` captura además la sala con ambos preparados y la vista del invitado. La prueba verifica clics, teclado, cancelación de conexión y escalado a 960×540, 1024×768 y 1920×1080.
 
 El protocolo de estas herramientas es `extratexted-lan-5`: actualizar ambos equipos antes de jugar. Incluye el cargador común, validación de ronda en el inicio y movimiento remoto, y los aportes por jugador del MVP. Los tutoriales iniciales y de eventos muestran `(0/2)` junto al botón; después de confirmar, la guía permanece visible con `(1/2)` y el aviso de espera. Al confirmar ambos se cierran las dos guías y continúa la partida. Para previsualizar la nueva llave compartida por el objeto y la animación, ejecutar `vista_herramientas.gd` sin `--headless`; guarda `.godot/vista_llave.png`.
 

@@ -6,7 +6,7 @@ signal navegacion_cambiada
 const TINTA := Color("173b50")
 const CREMA := Color("fff1d8")
 const CORAL := Color("ff785f")
-const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
+const FUENTE := preload("res://UI/Menus/fuente_lectura.tres")
 const TEMA_AJUSTES := preload("res://UI/Menus/tema_ajustes.tres")
 const CATEGORIAS := ["Movimiento", "Acciones", "Menús", "Objetos"]
 
@@ -351,10 +351,7 @@ func _texto(valor: String, tamano: int, titular: bool = false) -> Label:
 	if titular:
 		texto.add_theme_font_override("font", TEMA_AJUSTES.get_font("font", "Button"))
 	else:
-		var lectura := FontVariation.new()
-		lectura.base_font = FUENTE
-		lectura.variation_opentype = {2003265652: 700.0 if tamano >= 25 else 600.0}
-		texto.add_theme_font_override("font", lectura)
+		texto.add_theme_font_override("font", FUENTE)
 	texto.add_theme_font_size_override("font_size", tamano)
 	texto.add_theme_color_override("font_color", TINTA)
 	texto.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -96,7 +96,7 @@ func _crear_pestanas_tutorial() -> void:
 		boton.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		boton.toggle_mode = true
 		boton.button_group = grupo
-		boton.add_theme_font_override("font", fuente_enfasis)
+		boton.add_theme_font_override("font", TEMA_AJUSTES.get_font("font", "Button"))
 		boton.add_theme_font_size_override("font_size", 27)
 		for estado: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			boton.add_theme_color_override(estado, PETROLEO)
@@ -206,7 +206,7 @@ func _crear_encabezado_paso(columna: VBoxContainer, numero: int, texto: String) 
 	encabezado.add_theme_constant_override("separation", 12)
 	columna.add_child(encabezado)
 	encabezado.add_child(_crear_distintivo(str(numero), estilo_numero, Vector2(40, 40)))
-	var etiqueta := _crear_texto(texto, fuente_enfasis, 32, PETROLEO)
+	var etiqueta := _crear_texto(texto, TEMA_AJUSTES.default_font, 32, PETROLEO)
 	etiqueta.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	encabezado.add_child(etiqueta)
 
@@ -304,7 +304,7 @@ func _establecer_expediente(activo: bool) -> void:
 	%LineaEncabezado.visible = activo
 	%LineaPie.visible = activo
 	boton_cerrar.size_flags_horizontal = Control.SIZE_SHRINK_END if activo else Control.SIZE_SHRINK_CENTER
-	boton_cerrar.add_theme_font_override("font", fuente_enfasis if activo else TEMA_AJUSTES.get_font("font", "Button"))
+	boton_cerrar.add_theme_font_override("font", TEMA_AJUSTES.get_font("font", "Button"))
 	boton_cerrar.add_theme_font_size_override("font_size", 28 if activo else 42)
 	for estado: String in ["normal", "hover", "pressed", "focus"]:
 		var estilo: StyleBox = _estilos_cierre[estado] if activo else TEMA_AJUSTES.get_stylebox(estado, "Button" if estado == "focus" else "Volver")
@@ -318,7 +318,7 @@ func _crear_demostracion_circuitos() -> void:
 	var demostracion := DemostracionCircuitos.new()
 	demostracion.name = "DemostracionCircuitos"
 	_crear_encabezado_paso(columna, 3, "Repara el circuito")
-	var titulo_circuito := _crear_texto("", fuente_enfasis, 24, Color("9d4939"))
+	var titulo_circuito := _crear_texto("", TEMA_AJUSTES.default_font, 24, Color("9d4939"))
 	var instruccion := _crear_texto("", fuente_texto, 28, PETROLEO)
 	columna.add_child(titulo_circuito)
 	columna.add_child(instruccion)
@@ -402,5 +402,5 @@ func presentar_items() -> void:
 		textos.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		textos.add_theme_constant_override("separation", 8)
 		fila.add_child(textos)
-		textos.add_child(_crear_texto(ficha[0], fuente_enfasis, 28, CREMA))
+		textos.add_child(_crear_texto(ficha[0], TEMA_AJUSTES.default_font, 28, CREMA))
 		textos.add_child(_crear_texto(ficha[1], fuente_texto, 24, Color("e3e7e3")))

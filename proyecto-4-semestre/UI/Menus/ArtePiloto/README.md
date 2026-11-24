@@ -27,6 +27,14 @@ selector crema, selección coral y deslizadores con indicadores de foco y
 estado inactivo. Brillo, filtros, intensidad y guardado mantienen la lógica
 compartida entre la pantalla inicial y la pausa.
 
+Opciones es la referencia tipográfica de todos los menús: Luckiest Guy en
+títulos, botones y pestañas; Nunito en instrucciones, campos y valores.
+`UI/Menus/fuente_lectura.tres` comparte Nunito con peso 700, igual que los
+textos de Opciones. En `tema_ajustes.tres`, la variación `Lectura` de `Label`
+y los `LineEdit` usan ese recurso; los botones conservan la fuente de título
+con su línea base corregida. El acabado especial de los botones de inicio
+se mantiene en `boton_piloto.gd`.
+
 Controles usa un manual con las pestañas Movimiento, Acciones y Menús:
 cabecera petróleo, hoja crema, contador de página y teclas individuales con
 fondo petróleo y borde crema, como Evidencias y Verificación. Las combinaciones

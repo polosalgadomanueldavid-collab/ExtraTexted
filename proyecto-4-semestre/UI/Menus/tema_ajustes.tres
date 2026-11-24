@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://dxbvpb5n0ht2o" path="res://UI/Menus/ArtePiloto/control_slider_foco.svg" id="4_control_foco"]
 [ext_resource type="Texture2D" uid="uid://bnotskeygehkd" path="res://UI/Menus/ArtePiloto/control_slider_inactivo.svg" id="5_control_inactivo"]
 [ext_resource type="Texture2D" uid="uid://8y1x4q1v7b8w" path="res://UI/Menus/ArtePiloto/flecha_abajo.svg" id="6_flecha"]
+[ext_resource type="FontVariation" path="res://UI/Menus/fuente_lectura.tres" id="7_lectura"]
 
 [sub_resource type="FontVariation" id="Font_titular"]
 base_font = ExtResource("1_titular")
@@ -183,6 +184,9 @@ HSlider/styles/grabber_area = SubResource("Progreso")
 HSlider/styles/grabber_area_highlight = SubResource("Progreso")
 HSlider/styles/slider = SubResource("Pista")
 Label/colors/font_color = Color(0.09, 0.231, 0.314, 1)
+Lectura/base_type = &"Label"
+Lectura/fonts/font = ExtResource("7_lectura")
+LineEdit/fonts/font = ExtResource("7_lectura")
 OptionButton/colors/font_color = Color(0.09, 0.231, 0.314, 1)
 OptionButton/colors/font_focus_color = Color(0.09, 0.231, 0.314, 1)
 OptionButton/colors/font_hover_color = Color(0.09, 0.231, 0.314, 1)
