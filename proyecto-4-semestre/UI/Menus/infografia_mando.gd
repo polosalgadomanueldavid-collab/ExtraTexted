@@ -78,10 +78,10 @@ func _visual(indice: int, imagen: TextureRect) -> void:
 			var punto := Vector2(560, 100) + Vector2.from_angle(PI + i * PI / 4.0) * 83
 			_icono("res://UI/Menus/ArtePiloto/Emotes/%s.png" % nombre, Rect2(punto - Vector2.ONE * 24, Vector2.ONE * 48))
 	else:
-		_objeto(Vector2(170, 130), "MÁS VELOCIDAD", "LB · CHOCOLATE", "chocolate", "run", Vector2(0.275, 0.09))
-		_objeto(Vector2(950, 130), "SALTO ALTO", "RB · DONA", "dona", "jump", Vector2(0.725, 0.09))
-		_objeto(Vector2(170, 380), "DETENER TIEMPO", "LT · PAPA TIEMPO", "papa_tiempo", "reloj", Vector2(0.31, 0.055))
-		_objeto(Vector2(950, 380), "RESOLVER EVENTO", "RT · EL AVATAR", "avatar", "resolver", Vector2(0.69, 0.055))
+		_objeto(Vector2(170, 130), "MÁS VELOCIDAD", "LB · CHOCOLATE", "chocolate.png", "run", Vector2(0.275, 0.09))
+		_objeto(Vector2(950, 130), "SALTO ALTO", "RB · DONA", "dona.png", "jump", Vector2(0.725, 0.09))
+		_objeto(Vector2(170, 380), "DETENER TIEMPO", "LT · PAPA TIEMPO", "papa_tiempo.svg", "reloj", Vector2(0.31, 0.055))
+		_objeto(Vector2(950, 380), "RESOLVER EVENTO", "RT · EL AVATAR", "avatar_piedra.png", "resolver", Vector2(0.69, 0.055))
 		_accion(Vector2(560, 100), "BEBER CAFÉ", "A · CON TAZA", "idle", Vector2(0.729, 0.440))
 		_icono("res://UI/Descanso/Arte/cafe.png", Rect2(571, 94, 65, 65))
 		_rotulo("LT / RT · GATILLOS TRASEROS", Vector2(360, 495), 400, 17)
@@ -122,7 +122,7 @@ func _accion(centro: Vector2, texto: String, tecla: String, pose: String, punto:
 
 func _objeto(centro: Vector2, titulo: String, boton: String, icono: String, efecto: String, punto: Vector2) -> void:
 	_medallones.append(centro)
-	_icono("res://UI/Descanso/Arte/%s.png" % icono, Rect2(centro - Vector2(92, 48), Vector2(92, 92)))
+	_icono("res://UI/Descanso/Arte/%s" % icono, Rect2(centro - Vector2(92, 48), Vector2(92, 92)))
 	if efecto in ["run", "jump"]:
 		_icono("res://UI/Menus/ArtePiloto/Acciones/%s.png" % efecto, Rect2(centro - Vector2(8, 78), Vector2(140, 140)))
 	var simbolos := Simbolos.new()

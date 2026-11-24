@@ -15,6 +15,9 @@ const CARCASA := Color("708198")
 const OSCURO := Color("172330")
 const CODIGOS := ["A1", "A2", "B1", "B2"]
 const NOMBRES := ["CHOCOLATE", "DONA", "PAPA TIEMPO", "EL AVATAR"]
+# Existencias de exposición, desde la primera reserva hasta el fondo de cada carril.
+# No determinan el resultado ni la probabilidad de una compra.
+const RESERVAS := [[0, 1], [1, 0], [2, 3], [3, 2]]
 const PAPA_TIEMPO := preload("res://Objetos/ZonaDescanso/Productos/PapaTiempo.glb")
 const AVATAR_PIEDRA := preload("res://Objetos/ZonaDescanso/Productos/PiedraElemental.glb")
 const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
@@ -139,12 +142,12 @@ func _letrero(padre: Node3D, texto: String, posicion: Vector3, escala: float, co
 
 
 func _crear_maquina() -> void:
-	_caja(_modelo, Vector3(3.1, 0.2, 1.6), Vector3(0, 0.13, 0), CARCASA)
-	_caja(_modelo, Vector3(3.0, 4.1, 0.3), Vector3(0, 2.23, -0.6), CARCASA)
-	_caja(_modelo, Vector3(0.17, 4.05, 1.42), Vector3(-1.42, 2.23, 0), CARCASA)
-	_caja(_modelo, Vector3(0.72, 4.05, 1.42), Vector3(1.14, 2.23, 0), CARCASA)
-	_caja(_modelo, Vector3(3, 0.43, 1.5), Vector3(0, 4.13, 0), CARCASA)
-	_caja(_modelo, Vector3(2.08, 3.0, 0.05), Vector3(-0.32, 2.4, -0.4), OSCURO)
+	_caja(_modelo, Vector3(3.1, 0.2, 2.6), Vector3(0, 0.13, -0.5), CARCASA)
+	_caja(_modelo, Vector3(3.0, 4.1, 0.3), Vector3(0, 2.23, -1.6), CARCASA)
+	_caja(_modelo, Vector3(0.17, 4.05, 2.42), Vector3(-1.42, 2.23, -0.5), CARCASA)
+	_caja(_modelo, Vector3(0.72, 4.05, 2.42), Vector3(1.14, 2.23, -0.5), CARCASA)
+	_caja(_modelo, Vector3(3, 0.43, 2.5), Vector3(0, 4.13, -0.5), CARCASA)
+	_caja(_modelo, Vector3(2.08, 3.0, 0.05), Vector3(-0.32, 2.4, -1.4), OSCURO)
 	for x: float in [-1.3, 0.66]:
 		var luz_interior := _caja(_modelo, Vector3(0.035, 2.9, 0.05), Vector3(x, 2.4, 0.25), Color("dfe4e8"))
 		var mat := luz_interior.material_override as StandardMaterial3D
@@ -153,11 +156,21 @@ func _crear_maquina() -> void:
 		mat.emission_energy_multiplier = 0.5
 	for y: float in [1.91, 3.12]:
 		# El estante termina antes del canal frontal por donde cae el producto.
-		_caja(_modelo, Vector3(2.0, 0.08, 0.52), Vector3(-0.32, y, -0.09), METAL, 0.6)
+		_caja(_modelo, Vector3(2.0, 0.08, 1.52), Vector3(-0.32, y, -0.59), METAL, 0.6)
 	_caja(_modelo, Vector3(0.60, 2.0, 0.025), Vector3(1.14, 2.13, 0.724), OSCURO)
 	for i in 4:
 		var centro := _origen_producto(i)
-		_crear_espiral(centro + Vector3(0, -0.07, -0.45))
+		_crear_espiral(centro + Vector3(0, -0.07, -1.35))
+		var reservas := Node3D.new()
+		reservas.name = "Reservas%s" % CODIGOS[i]
+		_modelo.add_child(reservas)
+		for fondo: int in RESERVAS[i].size():
+			var reserva := _crear_producto(RESERVAS[i][fondo])
+			# Un leve escalonado lateral deja ver las siluetas desde la cámara frontal.
+			var lateral := (0.13 if i % 2 == 0 else -0.13) * (fondo + 1)
+			reserva.position = centro + Vector3(lateral, 0, -0.48 * (fondo + 1))
+			reserva.rotation.y = deg_to_rad(12 if i % 2 == 0 else -12)
+			reservas.add_child(reserva)
 		var producto := _crear_producto(i)
 		producto.position = centro
 		_modelo.add_child(producto)
@@ -192,10 +205,10 @@ func _crear_espiral(posicion: Vector3) -> void:
 	_modelo.add_child(espiral)
 	_espirales.append(espiral)
 	for j in 60:
-		var a := float(j) / 60.0 * TAU * 3.0
-		var b := float(j + 1) / 60.0 * TAU * 3.0
-		var inicio := Vector3(cos(a) * 0.15, sin(a) * 0.15, float(j) / 60.0 * 0.38)
-		var fin := Vector3(cos(b) * 0.15, sin(b) * 0.15, float(j + 1) / 60.0 * 0.38)
+		var a := float(j) / 60.0 * TAU * 5.0
+		var b := float(j + 1) / 60.0 * TAU * 5.0
+		var inicio := Vector3(cos(a) * 0.15, sin(a) * 0.15, float(j) / 60.0 * 1.28)
+		var fin := Vector3(cos(b) * 0.15, sin(b) * 0.15, float(j + 1) / 60.0 * 1.28)
 		var tramo := CylinderMesh.new()
 		tramo.top_radius = 0.009
 		tramo.bottom_radius = 0.009
