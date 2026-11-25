@@ -1013,7 +1013,7 @@ func _estado_mundo() -> Dictionary:
 	var fuegos: Array = []
 	for foco: Node in oficina.evento_incendio.focos:
 		fuegos.append(float(foco.apagado))
-	return {"bloqueos": oficina.grafo_piso.bloqueos_temporales.keys(), "bloqueos_iniciados": oficina.bloqueos_iniciados, "incendio": oficina.evento_incendio.activo, "fuegos": fuegos, "incendio_t": oficina.evento_incendio.tiempo, "inundacion": oficina.evento_inundacion.activo, "nivel": oficina.evento_inundacion.nivel, "agua_t": oficina.evento_inundacion.tiempo, "hielo": oficina.evento_hielo.activo, "hielo_t": oficina.evento_hielo.tiempo, "lava": oficina.evento_lava.activo, "lava_t": oficina.evento_lava.tiempo_restante, "sismo_t": oficina.evento_terremoto.tiempo, "papa_t": oficina.get_node("MaquinaExpendedora").poderes.restante}
+	return {"progresion_mesas": oficina.tiempo_progresion_mesas, "mesas_debug": oficina.mesas_extra_debug, "bloqueos": oficina.grafo_piso.bloqueos_temporales.keys(), "bloqueos_iniciados": oficina.bloqueos_iniciados, "incendio": oficina.evento_incendio.activo, "fuegos": fuegos, "incendio_t": oficina.evento_incendio.tiempo, "inundacion": oficina.evento_inundacion.activo, "nivel": oficina.evento_inundacion.nivel, "agua_t": oficina.evento_inundacion.tiempo, "hielo": oficina.evento_hielo.activo, "hielo_t": oficina.evento_hielo.tiempo, "lava": oficina.evento_lava.activo, "lava_t": oficina.evento_lava.tiempo_restante, "sismo_t": oficina.evento_terremoto.tiempo, "papa_t": oficina.get_node("MaquinaExpendedora").poderes.restante}
 
 func _aplicar_mundo(datos: Dictionary) -> void:
 	if despacho.tiempo_detenido:
@@ -1023,6 +1023,8 @@ func _aplicar_mundo(datos: Dictionary) -> void:
 			poderes.reanudar_tiempo()
 	if oficina.evento_terremoto.activo and not oficina.evento_terremoto.resolviendo_avatar:
 		oficina.evento_terremoto.tiempo = float(datos.sismo_t)
+	oficina.tiempo_progresion_mesas = float(datos.get("progresion_mesas", 0.0))
+	oficina.mesas_extra_debug = int(datos.get("mesas_debug", 0))
 	oficina.bloqueos_iniciados = bool(datos.bloqueos_iniciados)
 	var celdas: Array = datos.bloqueos
 	if celdas != _ultima_distribucion:

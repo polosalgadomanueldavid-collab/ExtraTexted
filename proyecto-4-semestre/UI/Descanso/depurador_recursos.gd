@@ -12,6 +12,9 @@ var boton_vida: Button
 var boton_puntos: Button
 var botones_items: Array[Button] = []
 var boton_todos: Button
+var cantidad_mesas: SpinBox
+var boton_mesas: Button
+var _resumen_mesas: Label
 var _maquina: Node
 var _resumen: Label
 var _fondo: ColorRect
@@ -40,10 +43,10 @@ func configurar(gestor: Node3D) -> void:
 	estilo.set_content_margin_all(22)
 	panel.add_theme_stylebox_override("panel", estilo)
 	var columna := VBoxContainer.new()
-	columna.add_theme_constant_override("separation", 16)
+	columna.add_theme_constant_override("separation", 10)
 	panel.add_child(columna)
 	var titulo := Label.new()
-	titulo.text = "DEPURADOR · VIDA, PUNTOS E ÍTEMS"
+	titulo.text = "DEPURADOR · RECURSOS Y MESAS"
 	titulo.add_theme_font_size_override("font_size", 20)
 	columna.add_child(titulo)
 	_resumen = Label.new()
@@ -73,6 +76,12 @@ func configurar(gestor: Node3D) -> void:
 		boton.add_theme_constant_override("icon_max_width", 32)
 		botones_items.append(boton)
 	boton_todos = _boton(columna, "Añadir todos los ítems", dar_todos)
+	cantidad_mesas = _cantidad(columna, "Mesas adicionales en los pasillos", 5, oficina.BLOQUEOS_SIMULTANEOS)
+	boton_mesas = _boton(columna, "Añadir mesas", agregar_mesas)
+	_resumen_mesas = Label.new()
+	_resumen_mesas.add_theme_font_override("font", FUENTE_TEXTO)
+	_resumen_mesas.add_theme_font_size_override("font_size", 14)
+	columna.add_child(_resumen_mesas)
 	var nota := Label.new()
 	nota.text = "Sin coste · Vida máxima: 100 · En LAN: solo el anfitrión"
 	nota.add_theme_font_override("font", FUENTE_TEXTO)
@@ -186,6 +195,25 @@ func dar_todos() -> void:
 		dar_item(i)
 
 
+func agregar_mesas() -> void:
+	if not _puede_aplicar():
+		return
+	cantidad_mesas.apply()
+	oficina.agregar_mesas_debug(int(cantidad_mesas.value))
+	_actualizar_mesas()
+
+
+func _process(_delta: float) -> void:
+	if visible and is_instance_valid(_resumen_mesas):
+		_actualizar_mesas()
+
+
+func _actualizar_mesas() -> void:
+	var objetivo: int = oficina.cantidad_mesas_objetivo()
+	_resumen_mesas.text = "Activas: %d · Objetivo: %d / %d\nEn incendio o terremoto se aplican al próximo reparto." % [oficina.bloqueos_visuales.size(), objetivo, oficina.BLOQUEOS_SIMULTANEOS]
+	boton_mesas.disabled = not _es_admin() or objetivo >= oficina.BLOQUEOS_SIMULTANEOS
+
+
 func _es_admin() -> bool:
 	return not SesionLAN.en_partida or SesionLAN.es_anfitrion()
 
@@ -195,6 +223,7 @@ func _puede_aplicar() -> bool:
 
 
 func _actualizar() -> void:
+	_actualizar_mesas()
 	_resumen.text = "Vida / calma: %d / 100     ·     Saldo: %d pts" % [oficina.sistema_despacho.calma_operativa, oficina.sistema_despacho.puntuacion.puntos]
 	var admin := _es_admin()
 	boton_dano.disabled = not admin

@@ -23,6 +23,11 @@ func _probar() -> void:
 	var pool: Array = _oficina.get("_bloqueos_pool")
 	_verificar(pool.size() == 30, "Los 30 cajones se preparan antes del primer bloqueo")
 	_verificar((_oficina.get("_bloqueos_disponibles") as Array).size() == 30, "El pool comienza inactivo")
+	_oficina.call("_cambiar_bloqueo_temporal")
+	_verificar((_oficina.get("bloqueos_visuales") as Dictionary).size() == 5, "La primera distribución solo usa cinco mesas")
+	_oficina.call("_limpiar_bloqueos_temporales")
+	# Probar también rutas, bordes y colisiones con la densidad máxima.
+	_oficina.set("tiempo_progresion_mesas", 625.0)
 	_jugador = _oficina.get("jugador") as CharacterBody3D
 	_grafo = _oficina.get("grafo_piso") as GrafoPiso
 	_verificar(_jugador.is_on_floor(), "El personaje se apoya en el suelo real de Oficina")
