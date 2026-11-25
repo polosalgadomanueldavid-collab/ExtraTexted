@@ -52,10 +52,12 @@ func _aplicar_material_a_mallas(nodo: Node) -> void:
 		_aplicar_material_a_mallas(hijo)
 
 
+func puede_ver_foto(jugador: Player) -> bool:
+	return foto != null and is_instance_valid(jugador) and jugador.is_on_floor() and absf(jugador.global_position.y - global_position.y) <= 0.24
+
+
 func interactuar(jugador: Player) -> void:
-	if foto == null or not is_instance_valid(jugador) or not jugador.is_on_floor():
-		return
-	if absf(jugador.global_position.y - global_position.y) > 0.24:
+	if not puede_ver_foto(jugador):
 		return
 	var visor := get_tree().get_first_node_in_group(&"visor_cuadros") as Control
 	if visor != null and visor.has_method("mostrar"):

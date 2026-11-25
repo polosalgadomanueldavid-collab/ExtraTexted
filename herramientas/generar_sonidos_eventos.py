@@ -1,4 +1,4 @@
-"""Efectos originales de terremoto y apagón, sin muestras de terceros.
+"""Efectos originales de las emergencias, sin muestras de terceros.
 
 Genera WAV estéreo PCM de 48 kHz. Los ambientes usan un fundido circular
 para poder repetirse sin chasquidos; los impactos tienen entrada/salida suave.
@@ -24,6 +24,15 @@ def golpe(t, inicio, duracion, frecuencia, ruido):
 
 
 def forma(tipo, t, ruido, grave):
+    if tipo == "hielo_aire":
+        rafaga = 0.66 + 0.18 * math.sin(math.tau * t / 4) + 0.12 * math.sin(math.tau * t / 3)
+        aire = grave * 2.2 + ruido * 0.035
+        silbido = math.sin(math.tau * 451 * t + 1.2 * math.sin(t * 1.5))
+        return rafaga * (aire + 0.018 * silbido)
+    if tipo == "lava_burbujeo":
+        pulso = (0.5 + 0.5 * math.sin(5.2 * t + 2.7 * math.sin(3.1 * t))) ** 6
+        burbuja = math.sin(math.tau * 77 * t + 5.5 * math.sin(6.8 * t))
+        return grave * (1.1 + pulso) + 0.10 * burbuja * pulso
     if tipo == "terremoto_retumbo":
         oleaje = 0.65 + 0.19 * math.sin(math.tau * 0.5 * t) + 0.13 * math.sin(math.tau * 0.83 * t)
         return oleaje * (grave * 4.8 + 0.18 * math.sin(math.tau * 41 * t)
@@ -94,5 +103,7 @@ if __name__ == "__main__":
         ("terremoto_cierre", 0.55, 0.65, False),
         ("apagon_corte", 1.2, 0.8, False),
         ("apagon_ambiente", 8.08, 0.5, True),
+        ("hielo_aire", 6.08, 0.6, True),
+        ("lava_burbujeo", 6.08, 0.65, True),
     ]):
         generar(*parametros, 7310 + i * 13)

@@ -4,7 +4,6 @@ extends RigidBody3D
 const TAMANO := Vector3(0.24, 0.012, 0.18)
 const IMPULSO_HORIZONTAL := 1.4
 const IMPULSO_VERTICAL := 0.5
-const RESALTADO := preload("res://MarcadoresEstaciones/resaltado_interaccion.gdshader")
 const MODELOS := preload("res://MarcadoresEstaciones/modelos_marcador.gd")
 
 var denuncia_id: String = ""
@@ -12,17 +11,16 @@ var portador: Player = null
 var red: Node
 var nivel_agua := -INF
 var _malla_hoja: MeshInstance3D
-var _contorno: ShaderMaterial
 var _material_hoja: StandardMaterial3D
 var _tiempo_resaltado: float = 0.0
 var _marcador_recoger: Node3D
 var _firma_expediente := ""
 var _piezas_expediente: Array[MeshInstance3D] = []
+var enfocado := false
 var mostrar_indicador: bool = true:
 	set(valor):
 		mostrar_indicador = valor
 		_actualizar_marcador()
-		_actualizar_resaltado()
 
 
 func _ready() -> void:
@@ -49,13 +47,8 @@ func _ready() -> void:
 	_material_hoja = StandardMaterial3D.new()
 	_material_hoja.albedo_color = Color("d7ac69")
 	_material_hoja.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_material_hoja.emission_enabled = true
-	_material_hoja.emission = Color("d7ac69")
 	_malla_hoja.material_override = _material_hoja
 	add_child(_malla_hoja)
-	_contorno = ShaderMaterial.new()
-	_contorno.shader = RESALTADO
-	_actualizar_resaltado()
 	var franja := MeshInstance3D.new()
 	var franja_malla := BoxMesh.new()
 	franja_malla.size = Vector3(0.17, 0.002, 0.018)
@@ -82,7 +75,6 @@ func _process(delta: float) -> void:
 	if portador != null:
 		return
 	_tiempo_resaltado += delta
-	_actualizar_resaltado()
 	_actualizar_marcador()
 
 
@@ -108,22 +100,12 @@ func actualizar_expediente(requeridas: Array[String], hechas: Array[String]) -> 
 func _actualizar_marcador() -> void:
 	if not is_instance_valid(_marcador_recoger):
 		return
-	_marcador_recoger.visible = portador == null and mostrar_indicador
+	_marcador_recoger.visible = portador == null and mostrar_indicador and not enfocado
 	if _marcador_recoger.visible:
 		_marcador_recoger.global_position = global_position + Vector3.UP * (0.34 + sin(_tiempo_resaltado * 3.0) * 0.015)
 		var camara := get_viewport().get_camera_3d()
 		if is_instance_valid(camara):
 			_marcador_recoger.global_basis = camara.global_basis.orthonormalized().scaled(Vector3.ONE * 0.55)
-
-
-func _actualizar_resaltado() -> void:
-	if not is_instance_valid(_malla_hoja):
-		return
-	var suelta := portador == null and mostrar_indicador
-	var pulso := 0.5 + 0.5 * sin(_tiempo_resaltado * 4.5)
-	_malla_hoja.material_overlay = _contorno if suelta else null
-	_contorno.set_shader_parameter("grosor", lerpf(0.007, 0.012, pulso) if suelta else 0.0)
-	_material_hoja.emission_energy_multiplier = 0.35 + pulso * 0.25 if suelta else 0.0
 
 
 func interactuar(jugador: Player) -> void:
@@ -147,7 +129,6 @@ func tomar(jugador: Player) -> void:
 	position = Vector3(0.0, 0.12, TAMANO.z * scale.z * 0.5 + 0.025)
 	rotation = Vector3.ZERO
 	jugador.papel_en_mano = self
-	_actualizar_resaltado()
 	_actualizar_marcador()
 
 
@@ -169,7 +150,6 @@ func lanzar() -> void:
 	collision_mask = 1
 	linear_velocity = direccion * IMPULSO_HORIZONTAL + Vector3.UP * IMPULSO_VERTICAL
 	angular_velocity = Vector3(0.2, 0.6, 0.4)
-	_actualizar_resaltado()
 	_actualizar_marcador()
 
 

@@ -113,27 +113,28 @@ func _objetivo_valido(quien: Player, objetivo: Node3D) -> bool:
 		return false
 	return _disponible() and quien == _jugador and not _jugador.input_locked and not _jugador.realizando_gesto() and _jugador.obtener_objetivo_interaccion() == objetivo
 
+func impedimento_cafe() -> String:
+	var espera: int = _gestor.espera_compra("cafe", _despacho.jugador_local_id)
+	if espera > 0:
+		return "Tu próximo café en %d s" % espera
+	if tiene_cafe():
+		return "Primero bebe el café que llevas con F."
+	if is_instance_valid(_jugador.papel_en_mano):
+		return "Deja el papel antes de pedir una taza de café."
+	if _gestor.evento_apagon.estado != 0:
+		return "Repara la luz para usar la cafetera."
+	if _despacho.calma_operativa >= _despacho.CALMA_MAXIMA:
+		return "Tu calma operativa ya está completa."
+	if _despacho.puntuacion.puntos < costo_cafe:
+		return "Necesitas %d puntos para pedir café." % costo_cafe
+	return ""
+
 func interactuar_cafetera(quien: Player) -> bool:
 	if _pago_red_pendiente or estado != Estado.LIBRE or not _objetivo_valido(quien, $RinconCafe/MuebleCafe):
 		return false
-	var espera: int = _gestor.espera_compra("cafe", _despacho.jugador_local_id)
-	if espera > 0:
-		mostrar_mensaje("Tu próximo café en %d s" % espera)
-		return false
-	if tiene_cafe():
-		mostrar_mensaje("Primero bebe el café que llevas con F.")
-		return false
-	if is_instance_valid(_jugador.papel_en_mano):
-		mostrar_mensaje("Deja el papel antes de pedir una taza de café.")
-		return false
-	if _gestor.evento_apagon.estado != 0:
-		mostrar_mensaje("Repara la luz para usar la cafetera.")
-		return false
-	if _despacho.calma_operativa >= _despacho.CALMA_MAXIMA:
-		mostrar_mensaje("Tu calma operativa ya está completa.")
-		return false
-	if _despacho.puntuacion.puntos < costo_cafe:
-		mostrar_mensaje("Necesitas %d puntos para pedir café." % costo_cafe)
+	var motivo := impedimento_cafe()
+	if not motivo.is_empty():
+		mostrar_mensaje(motivo)
 		return false
 	if SesionLAN.en_partida and not SesionLAN.puente.reservar_confirmada("cafetera"):
 		SesionLAN.puente.reservar_local("cafetera", func():
@@ -530,11 +531,11 @@ func _actualizar_aviso() -> void:
 	else:
 		var objetivo := _jugador.obtener_objetivo_interaccion()
 		if objetivo == $RinconCafe/MuebleCafe:
-			titulo = "[E] USAR CAFETERA  ·  %d PTS" % costo_cafe
+			titulo = "CAFETERA  ·  %d PTS" % costo_cafe
 			var espera: int = _gestor.espera_compra("cafe", _despacho.jugador_local_id)
 			detalle = "Tu próximo café en %d s" % espera if espera > 0 else "Prepara y recoge tu café"
 		elif objetivo == $SofaL/Cuerpo:
-			titulo = "[E] SENTARSE Y RELAJARSE"
+			titulo = "DESCANSO"
 			detalle = "+1 de calma cada 2 segundos"
 	if titulo.is_empty():
 		_aviso.hide()

@@ -62,6 +62,8 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	if interactuable and not fuera_de_pantalla:
+		return
 	var pantalla := get_viewport_rect().size
 	var factor := minf(pantalla.x / 1280.0, pantalla.y / 720.0)
 	var escala := factor * lerpf(1.0, 0.78, smoothstep(2.0, 9.0, distancia))
@@ -84,10 +86,6 @@ func _draw() -> void:
 	var ancho := DETALLE.get_string_size(metros, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 	draw_string_outline(DETALLE, Vector2(-ancho * 0.5, 117), metros, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, 5, TINTA)
 	_texto(metros, Vector2(0, 117), DETALLE, 18, CREMA)
-	if interactuable:
-		_caja(Rect2(-18, -78, 36, 37), TINTA, TINTA, 8)
-		_caja(Rect2(-18, -82, 36, 35), ORO, TINTA, 8)
-		_texto("E", Vector2(0, -56), FUENTE, 25, TINTA)
 	draw_set_transform(Vector2.ZERO)
 
 

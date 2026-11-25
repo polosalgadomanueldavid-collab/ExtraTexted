@@ -1,6 +1,8 @@
 extends Node
 ## Perfiles de iluminación sobre los mismos nodos/materiales. Solo se actualiza
 ## al entrar o cambiar calidad, sin luces nuevas ni trabajo por fotograma.
+signal perfil_aplicado
+
 const LUCES_ULTRA := {
 	"FocoFilaFrontal": [Color("ffc37c"), 3.5],
 	"FocoFilaFrontal3": [Color("ffe0b1"), 3.1],
@@ -130,6 +132,17 @@ func _aplicar_nivel(nivel: int) -> void:
 	_ambiente.glow_bloom = 0.015 if ultra else _base_ambiente.glow_bloom
 	_piso.set_shader_parameter("rugosidad", 0.6 if ultra else _base_piso.rugosidad)
 	_piso.set_shader_parameter("especular", 0.3 if ultra else _base_piso.especular)
+
+	perfil_aplicado.emit()
+
+
+func colores_de_focos() -> Array[Dictionary]:
+	var colores: Array[Dictionary] = []
+	for i in _luces.size():
+		var luz := _luces[i]
+		var color: Color = LUCES_ULTRA[String(luz.name)][0] if _ultra_aplicado else _base_luces[i].color
+		colores.append({"nodo": luz, "color": color})
+	return colores
 
 
 func _al_cambiar_apagon(_estado: int) -> void:

@@ -61,6 +61,11 @@ func _mover_cliente(posicion: Vector3) -> void:
 	await _esperar(0.15)
 
 func _run() -> void:
+	var escena_oficina: PackedScene
+	if OS.get_cmdline_user_args().has("--solo-oficina"):
+		get_window().mode = Window.MODE_WINDOWED
+		get_window().size = Vector2i(1280, 720)
+		escena_oficina = load("res://Mundo/Oficina.tscn")
 	_demorar_carga_prueba()
 	SesionLAN.aviso.connect(func(mensaje: String) -> void: print("[LAN AVISO] ", mensaje))
 	MenuGlobal._clasificacion = ClasificacionLocal.new("user://prueba_lan_%d.json" % OS.get_process_id())
@@ -87,6 +92,8 @@ func _run() -> void:
 		await _esperar(0.05)
 	red = SesionLAN.puente
 	oficina = red.oficina
+	if escena_oficina != null:
+		comprobar(oficina.scene_file_path == escena_oficina.resource_path, "El jugador entra en la oficina prevista")
 	oficina.evento_terremoto.preparacion_terminada.connect(func(correcta: bool) -> void: print("[LAN PREPARACION] ", correcta, " motivo=", oficina.evento_terremoto.rechazo_preparacion))
 	comprobar(oficina.oficina_preparada and oficina._bloqueos_pool.size() == 30 and not CargaEscenas.activa, "La barrera incluye preparación, pool completo y primer cuadro")
 	if not SesionLAN.es_anfitrion():
@@ -128,6 +135,9 @@ func _run() -> void:
 	await _esperar()
 	r = await _al_cliente("inspeccionar")
 	comprobar(int(r.get("hojas", 0)) == 2 and int(r.get("casos", 0)) == 2, "Dos hojas y casos replicados")
+	if OS.get_cmdline_user_args().has("--solo-oficina"):
+		await _probar_oficina_compartida(caso_host, caso_cliente)
+		return
 	if DisplayServer.get_name() != "headless":
 		await _esperar(4.0)
 		await _capturar("anfitrion")
@@ -510,12 +520,14 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 		"taza_remota":
 			var taza = red._tazas_remotas.get(1)
 			resultado = {"ok": true, "indice": taza.get_meta("indice_taza", -1) if is_instance_valid(taza) else -1}
+		"apuntar": resultado = await _apuntar_a_estacion(str(datos.estacion))
 		"inspeccionar":
 			var evento := ""
 			if oficina.evento_apagon.estado != 0: evento = "apagon"
 			for tipo in ["incendio", "inundacion", "lava", "hielo", "terremoto"]:
 				if oficina.get("evento_" + tipo).activo: evento = tipo
 			resultado = {"saldo": oficina.sistema_despacho.puntuacion.puntos, "casos": oficina.sistema_despacho.casos_en_proceso.size(), "hojas": red.papeles.size(), "evento": evento, "tiempo": oficina.sistema_despacho.tiempo_detenido, "activo_local": oficina.sistema_despacho.esta_activo(SesionLAN.id_local()), "final": oficina.sistema_despacho.terminada, "guia": MenuGlobal.panel_ayuda.visible}
+			resultado["pilas"] = _pilas_visibles()
 			resultado["aportes"] = oficina.sistema_despacho.aportes_jugadores
 			resultado["equipo_final"] = oficina.final_partida._datos.get("equipo", [])
 			var poderes: Node = oficina.get_node("MaquinaExpendedora").poderes
@@ -938,6 +950,62 @@ func _probar_llaves(resolver := true) -> void:
 	r = await _al_cliente("inspeccionar")
 	comprobar(int(r.llaves) == 0 and not red.reservas.has("estacion:reporte"), "Resolver el atasco limpia ambas llaves")
 	oficina.probabilidad_atasco_reporte = probabilidad
+
+func _pilas_visibles() -> int:
+	var cantidad := 0
+	for pila in oficina.get_node("PresionDespacho").pilas:
+		if pila.visible:
+			cantidad += 1
+	return cantidad
+
+
+func _apuntar_a_estacion(id: String) -> Dictionary:
+	var jugador: Player = oficina.jugador
+	var mesa: Node3D = red._buscar_estacion(id)
+	var inicio: Vector3 = oficina.grafo_piso.celda_a_posicion(GrafoPiso.DESTINOS[id])
+	# El traslado anterior al computador puede dejar al actor encima de un cajón.
+	# Aquí se consulta la estación desde la altura del piso jugable.
+	inicio.y = oficina.evento_hielo.PISO + .025
+	jugador.set_physics_process(false)
+	for dx: float in [0.0, .4, -.4]:
+		var destino := mesa.to_global(Vector3(dx, 0, 0))
+		destino.y = inicio.y
+		jugador.visual.rotation.y = atan2(destino.x - inicio.x, destino.z - inicio.z)
+		for i in 61:
+			jugador.global_position = inicio.lerp(destino, i / 60.0)
+			if jugador.obtener_objetivo_interaccion() == mesa:
+				break
+		if jugador.obtener_objetivo_interaccion() == mesa:
+			break
+	var camara: Camera3D = oficina.get_node("Gameplay/Camera3D")
+	camara.set_physics_process(false)
+	camara.global_position = jugador.global_position + camara.offset
+	await _esperar(.15)
+	var guia = oficina.guia_estacion
+	return {"ok": guia.objetivo == oficina.respuestas_mesas[id].modelo_original and guia.tarjeta.is_visible_in_tree(), "texto": guia.tecla.text}
+
+
+func _probar_oficina_compartida(caso_host: String, caso_cliente: String) -> void:
+	var estado := await _al_cliente("inspeccionar")
+	comprobar(_pilas_visibles() == 2 and int(estado.pilas) == 2, "Las dos oficinas muestran ambos expedientes en proceso")
+	var local := await _apuntar_a_estacion("bienestar")
+	var remoto := await _al_cliente("apuntar", {"estacion": "evidencias"})
+	comprobar(local.ok and local.texto.ends_with("Atender caso") and remoto.ok and remoto.texto.ends_with("Clasificar evidencias"), "Cada policía ve el contorno y el verbo de su propia estación")
+	oficina.sistema_despacho.resolver_denuncia(caso_host)
+	await _esperar(.5)
+	estado = await _al_cliente("inspeccionar")
+	comprobar(_pilas_visibles() == 1 and int(estado.pilas) == 1, "Resolver retira una pila en ambos equipos")
+	oficina.sistema_despacho.vencer_denuncia(caso_cliente)
+	await _esperar(.4)
+	estado = await _al_cliente("inspeccionar")
+	comprobar(_pilas_visibles() == 0 and int(estado.pilas) == 0, "El vencimiento deja las dos oficinas despejadas")
+	print("[OFICINA LAN] %d comprobaciones, %d fallos" % [comprobaciones, fallos])
+	await _al_cliente("terminar")
+	while SesionLAN.activa:
+		await _esperar(.1)
+	_terminando = true
+	await _finalizar_prueba(1 if fallos else 0)
+
 
 func _salir_limpio() -> void:
 	await _esperar(0.2)

@@ -81,6 +81,7 @@ var _colision_jugador: CollisionShape3D
 var _animacion_alfombra: Tween
 var _reposo_alfombra: Transform3D
 var _alfombra_caida := false
+var _polvo_alto := CPUParticles3D.new()
 var _piso: Node3D
 
 
@@ -89,6 +90,7 @@ func _ready() -> void:
 	if material != null:
 		_material_piso = material.duplicate() as ShaderMaterial
 		suelo.material = _material_piso
+	_preparar_polvo_alto()
 	sonidos = SonidosEventos.new()
 	add_child(sonidos)
 	_altura = suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y
@@ -96,6 +98,38 @@ func _ready() -> void:
 	add_child(_piso)
 	_piso.configurar(suelo)
 	set_physics_process(false)
+
+
+func _preparar_polvo_alto() -> void:
+	# Motas suspendidas en el aire, lejos de las franjas de impacto del suelo.
+	var mota := SphereMesh.new()
+	mota.radius = 0.016
+	mota.height = 0.024
+	mota.radial_segments = 4
+	mota.rings = 1
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mota.material = material
+	var rampa := Gradient.new()
+	rampa.offsets = PackedFloat32Array([0.0, 0.2, 0.7, 1.0])
+	rampa.colors = PackedColorArray([Color("c8b89d00"), Color("d4c8ad88"), Color("bfad9080"), Color("bfad9000")])
+	_polvo_alto.name = "PolvoDelTecho"
+	_polvo_alto.mesh = mota
+	_polvo_alto.color_ramp = rampa
+	_polvo_alto.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_polvo_alto.amount = 42
+	_polvo_alto.lifetime = 2.4
+	_polvo_alto.direction = Vector3.DOWN
+	_polvo_alto.gravity = Vector3(0.04, -0.14, 0)
+	_polvo_alto.initial_velocity_min = 0.12
+	_polvo_alto.initial_velocity_max = 0.24
+	_polvo_alto.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	_polvo_alto.emission_box_extents = Vector3(3.0, 0.15, 3.2)
+	_polvo_alto.position = Vector3(-1, 2.2, 3.6)
+	_polvo_alto.emitting = false
+	_polvo_alto.hide()
+	add_child(_polvo_alto)
 
 
 ## Devuelve aceptación de la solicitud. El resultado se entrega en preparacion_terminada.
@@ -301,6 +335,8 @@ func autorizar_plan(validar := true) -> bool:
 	_cerrando = false
 	_jugador_en_grieta = false
 	set_physics_process(true)
+	_polvo_alto.show()
+	_polvo_alto.restart()
 	sonidos.iniciar_terremoto()
 	iniciado.emit()
 	return true
@@ -514,6 +550,7 @@ func _physics_process(delta: float) -> void:
 		if not _cerrando and tiempo + 0.00001 >= DURACION - TIEMPO_CIERRE:
 			_cerrando = true
 			sonidos.cerrar_suelo()
+			_polvo_alto.emitting = false
 			for grieta in grietas:
 				grieta.animar_cierre()
 	# Detectar la entrada antes del rescate o del cierre del suelo.
@@ -612,6 +649,8 @@ func _cerrar() -> void:
 	_grafo.grietas.clear()
 	_grafo.construir_adyacencia()
 	set_physics_process(false)
+	_polvo_alto.emitting = false
+	_polvo_alto.hide()
 	sonidos.detener()
 	etapa = Etapa.INACTIVO
 	terminado.emit()
@@ -637,6 +676,7 @@ func resolver_con_avatar(origen: Variant = null) -> void:
 			_alfombra_avatar = alfombra.transform
 			alfombra.show()
 		temblor_actualizado.emit(DURACION, 0.0)
+		_polvo_alto.emitting = false
 		sonidos.cerrar_suelo()
 		_resolucion_avatar = ResolucionAvatar.crear(self, origen, &"tierra", _avanzar_avatar, resolver_con_avatar)
 		var polvo := PackedVector3Array()

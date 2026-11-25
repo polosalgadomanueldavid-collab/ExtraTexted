@@ -69,11 +69,6 @@ func _draw() -> void:
 	draw_circle(Vector2(25, -15), 8, CREMA, true, -1.0, true)
 	_texto("!", Vector2(15, -9), 17, TINTA, 20)
 	draw_set_transform(ancla, 0.0, Vector2.ONE * factor)
-	if interactuable:
-		var tecla := Rect2(-20, -127, 40, 36)
-		_caja(tecla.grow(3), CREMA, TINTA)
-		_caja(tecla, AMARILLO, TINTA)
-		_texto("X" if ControladorInterfaz.dispositivo_mando >= 0 else "E", Vector2(-20, -100), 28, TINTA, 40)
 	draw_set_transform(Vector2.ZERO)
 
 

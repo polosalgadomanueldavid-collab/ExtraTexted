@@ -56,7 +56,13 @@ var _sonido_quemadura: AudioStreamPlayer
 var _tiempo_sonido_quemadura := 0.0
 
 
+const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
+const AMBIENTE := preload("res://Audios/Eventos/lava_burbujeo.wav")
+var _ambiente: AudioStreamPlayer
+
+
 func configurar(oficina: Node3D, jugador: Player) -> void:
+	_ambiente = SonidosMesas.crear_reproductor(self, "Burbujeo", AMBIENTE, -60.0, true)
 	_oficina = oficina
 	_jugador = jugador
 	# Preparadas una sola vez: también protegen las estaciones con dona y sin lava.
@@ -83,6 +89,8 @@ func iniciar() -> bool:
 	if permiso_inicio.is_valid() and not permiso_inicio.call():
 		return false
 	activo = true
+	_ambiente.volume_linear = 0.0
+	_ambiente.play()
 	tiempo_restante = DURACION
 	_tiempo = 0.0
 	_calor_pies = 0.0
@@ -177,13 +185,15 @@ func en_charco(punto: Vector3) -> bool:
 
 func _actualizar_entrada() -> void:
 	var entrada := clampf(_tiempo / DURACION_ENTRADA, 0.0, 1.0)
+	var calor := entrada * smoothstep(0.0, 1.3, tiempo_restante)
+	_ambiente.volume_linear = db_to_linear(-21.0) * calor
 	_material.set_shader_parameter("presencia", entrada)
 	panel.modulate.a = smoothstep(0.0, 0.35, _tiempo)
 	for particulas in _chispas_suelo:
 		var punto := Vector2(particulas.global_position.x, particulas.global_position.z)
 		particulas.emitting = entrada > 0.35 + punto.distance_to(_origen_calor) / 24.0
 	for luz in _luces_calor:
-		luz.light_energy = smoothstep(0.1, 1.0, entrada) * (0.32 + 0.06 * sin(_tiempo * 2.1 + luz.position.z))
+		luz.light_energy = smoothstep(0.1, 1.0, calor) * (0.42 + 0.06 * sin(_tiempo * 2.1 + luz.position.z))
 
 
 func _actualizar_panel() -> void:
@@ -195,6 +205,7 @@ func detener() -> void:
 	if not activo:
 		return
 	activo = false
+	_ambiente.stop()
 	_sonido_quemadura.stop()
 	set_physics_process(false)
 	_jugador.lava_activa = false
@@ -404,6 +415,7 @@ func resolver_con_avatar(origen: Variant = null) -> void:
 	terminado.emit()
 
 func _avanzar_avatar(frente: Node3D) -> void:
+	_ambiente.volume_linear = db_to_linear(-21.0) * (1.0 - smoothstep(0.0, 1.8, frente.tiempo))
 	frente.aplicar_material(_material)
 	_material.set_shader_parameter("reloj", _tiempo + frente.tiempo)
 	for luz in _luces_calor:

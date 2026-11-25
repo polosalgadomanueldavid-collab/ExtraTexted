@@ -57,7 +57,10 @@ func _probar() -> void:
 	_verificar(oficina.anuncios.segunda_linea == "ES HIELO!" and hielo.aviso.visible, "El evento anuncia el hielo y muestra su HUD")
 	_verificar(not oficina._puede_iniciar_evento() and not oficina.evento_apagon.iniciar_apagon() and not oficina._iniciar_inundacion() and not oficina._iniciar_lava() and not oficina._iniciar_incendio(), "Hielo impide solapamientos con otros eventos")
 	var materiales: Array = hielo._recubiertos.duplicate()
-	var luces: Array = hielo._luces.duplicate()
+	var calidad := root.get_node("CalidadVisual")
+	var nivel_original: int = calidad.nivel
+	calidad.establecer(2 if nivel_original == 3 else 3, false)
+	var luces: Array = oficina.get_node("AspectoOficina").colores_de_focos()
 	_verificar(materiales.size() > 20 and luces.size() > 0, "Los muebles y el pool de cajones reciben escarcha")
 	await _cuadros(60)
 	await _capturar("01_inicio")
@@ -134,6 +137,7 @@ func _probar() -> void:
 	jugador.velocity = Vector3.ZERO
 	await _cuadros(8)
 	_verificar(jugador.obtener_objetivo_interaccion() == hielo, "La tubería se alcanza desde el acceso de descanso")
+	_verificar(oficina.guia_estacion.objetivo == hielo.tuberia.modelo and oficina.guia_estacion.tecla.text.ends_with(" · Reparar"), "El aviso de reparación selecciona solo el gabinete de nitrógeno")
 	_pulsar_e()
 	await _cuadros(3)
 	_verificar(hielo.reparando and hielo.panel.visible and jugador.input_locked, "E abre la reparación de nitrógeno")
@@ -190,7 +194,8 @@ func _probar() -> void:
 		restaurado = restaurado and dato.nodo.material_overlay == dato.material
 	for dato: Dictionary in luces:
 		restaurado = restaurado and dato.nodo.light_color.is_equal_approx(dato.color)
-	_verificar(restaurado and jugador.acceleration == aceleracion and jugador.braking == frenado and jugador.collision_mask == mascara, "Materiales, luces y propiedades físicas se restauran exactamente")
+	_verificar(restaurado and not hielo._ambiente.playing and jugador.acceleration == aceleracion and jugador.braking == frenado and jugador.collision_mask == mascara, "Materiales, luces y propiedades físicas se restauran exactamente")
+	calidad.establecer(nivel_original, false)
 	_verificar(oficina.temporizador_eventos.time_left > 35 and not is_instance_valid(hielo._visuales), "No quedan efectos transitorios y se programa otro evento")
 	await _capturar("06_restaurada")
 	_verificar(oficina._iniciar_hielo(), "Hielo puede comenzar otra vez sin restos del anterior")

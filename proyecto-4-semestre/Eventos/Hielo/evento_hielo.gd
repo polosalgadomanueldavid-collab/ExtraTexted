@@ -60,8 +60,15 @@ var _audio_personaje: AudioStreamPlayer
 var _congelado_anterior := false
 
 
+const SonidosMesas := preload("res://UI/Despacho/sonidos_mesas.gd")
+const AMBIENTE := preload("res://Audios/Eventos/hielo_aire.wav")
+var _ambiente: AudioStreamPlayer
+
+
 func configurar(oficina: Node3D, jugador: Player) -> void:
+	_ambiente = SonidosMesas.crear_reproductor(self, "AireFrio", AMBIENTE, -60.0, true)
 	_oficina = oficina
+	_oficina.get_node("AspectoOficina").perfil_aplicado.connect(_actualizar_focos)
 	_jugador = jugador
 	_audio_piso = AudioStreamPlayer.new()
 	_audio_piso.stream = SONIDO_PISO
@@ -105,6 +112,8 @@ func iniciar() -> bool:
 	if permiso_inicio.is_valid() and not permiso_inicio.call():
 		return false
 	activo = true
+	_ambiente.volume_linear = 0.0
+	_ambiente.play()
 	descongelando = false
 	tiempo = 0.0
 	_tiempo_deshielo = 0.0
@@ -115,8 +124,7 @@ func iniciar() -> bool:
 	panel.preparar(_oficina.generador_aleatorio.randi())
 	_crear_visuales()
 	_recubrir_mobiliario()
-	for luz: Node in _oficina.find_children("*", "Light3D", true, false):
-		_luces.append({"nodo": luz, "color": luz.light_color})
+	_actualizar_focos()
 	tuberia.romper()
 	set_physics_process(true)
 	set_process(true)
@@ -125,6 +133,11 @@ func iniciar() -> bool:
 	_jugador.reproducir_expresion(&"sorpresa")
 	iniciado.emit()
 	return true
+
+
+func _actualizar_focos() -> void:
+	if activo:
+		_luces = _oficina.get_node("AspectoOficina").colores_de_focos()
 
 
 func _physics_process(delta: float) -> void:
@@ -143,12 +156,13 @@ func _physics_process(delta: float) -> void:
 	if descongelando:
 		_tiempo_deshielo += delta
 		presencia = _presencia_al_reparar * (1.0 - clampf(_tiempo_deshielo / DESHIELO, 0.0, 1.0))
+	_ambiente.volume_linear = db_to_linear(-22.0) * presencia
 	_material.set_shader_parameter("presencia", presencia)
 	_escarcha.set_shader_parameter("presencia", presencia)
 	_material_nieve.set_shader_parameter("presencia", presencia)
 	for dato in _luces:
 		if is_instance_valid(dato.nodo):
-			dato.nodo.light_color = dato.color.lerp(Color("85afff"), presencia * 0.68)
+			dato.nodo.light_color = dato.color.lerp(Color("85afff"), presencia * 0.46)
 	var restante := CONGELACION - fase if _jugador.congelado else INTERVALO - fase
 	var duracion := CONGELACION if _jugador.congelado else INTERVALO
 	if not _jugador.congelado and tiempo >= INTERVALO:
@@ -163,7 +177,7 @@ func _process(_delta: float) -> void:
 	var disponible: bool = activo and not _oficina.partida_finalizada and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible and not _oficina.clasificador_evidencias.visible and not _oficina.escaner_verificacion.visible
 	aviso.visible = disponible and not descongelando
 	indicador.actualizar(get_viewport().get_camera_3d(), tuberia.global_position + Vector3.UP * 0.45,
-		_jugador.global_position, obtener_objetivo(_jugador) == self, disponible and not descongelando)
+		_jugador.global_position, _jugador.obtener_objetivo_interaccion() == self, disponible and not descongelando)
 
 
 func obtener_objetivo(jugador: Player) -> Node3D:
@@ -236,6 +250,7 @@ func detener() -> void:
 	if not activo:
 		return
 	activo = false
+	_ambiente.stop()
 	descongelando = false
 	set_physics_process(false)
 	set_process(false)
@@ -455,11 +470,12 @@ func resolver_con_avatar(origen: Variant = null) -> void:
 	terminado.emit()
 
 func _avanzar_avatar(frente: Node3D) -> void:
+	_ambiente.volume_linear = db_to_linear(-22.0) * (1.0 - smoothstep(0.0, 1.8, frente.tiempo))
 	for mat in [_material, _escarcha, _material_nieve]:
 		frente.aplicar_material(mat)
 	for dato in _luces:
 		if is_instance_valid(dato.nodo):
-			dato.nodo.light_color = dato.color.lerp(Color("85afff"), _presencia_al_reparar * .68 * (1.0 - frente.peso_en(dato.nodo.global_position)))
+			dato.nodo.light_color = dato.color.lerp(Color("85afff"), _presencia_al_reparar * .46 * (1.0 - frente.peso_en(dato.nodo.global_position)))
 
 func _cancelar_resolucion_avatar() -> void:
 	if is_instance_valid(_resolucion_avatar):

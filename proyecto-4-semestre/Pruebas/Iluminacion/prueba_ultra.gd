@@ -28,8 +28,10 @@ func _run() -> void:
 	var preferencias := FileAccess.get_file_as_bytes(_calidad.ARCHIVO) if FileAccess.file_exists(_calidad.ARCHIVO) else PackedByteArray()
 	_calidad.establecer(2, false)
 	root.get_node("MenuGlobal").omitir_tutorial_siguiente_partida = true
+	# El banco arranca directamente, sin la precarga habitual del menú.
+	var escena: PackedScene = load("res://Mundo/Oficina.tscn")
 	var carga := root.get_node("CargaEscenas")
-	carga.cargar("res://Mundo/Oficina.tscn")
+	carga.cargar(escena.resource_path)
 	var limite := Time.get_ticks_msec() + 65000
 	while carga.activa and Time.get_ticks_msec() < limite:
 		await process_frame
@@ -72,7 +74,8 @@ func _run() -> void:
 		_verificar(get_node_count() == nodos, "Cambiar calidad no crea nodos")
 		_verificar(_piso.get_instance_id() == id_piso and _camara.environment.get_instance_id() == id_ambiente, "Cambiar calidad reutiliza recursos")
 		for luz in _luces:
-			_verificar(not luz.shadow_enabled and luz.visible, "El perfil mantiene focos sin sombras y visibles")
+			var con_sombra: bool = nivel == 3 and luz.name in [&"FocoFilaFrontal3", &"FocoFilaTrasera", &"LuzEstacionPrivacidad", &"LuzEstacionReporte"]
+			_verificar(luz.visible and luz.shadow_enabled == con_sombra, "Visibilidad y sombra de %s en calidad %d" % [luz.name, nivel])
 	paused = false
 	_verificar(_calidad.ESCALAS[3] == _calidad.ESCALAS[2] and _calidad.PARTICULAS[3] == _calidad.PARTICULAS[2], "Ultra conserva píxeles y partículas de Alta")
 	# La máscara del terremoto y su material sobreviven al cambio de acabado.
@@ -126,7 +129,7 @@ func _recargar_ultra() -> void:
 	_oficina = current_scene
 	var camara := _oficina.get_node("Gameplay/Camera3D") as Camera3D
 	var piso := _oficina.get_node("Pared, suelo, techo/PisoTerremoto/Suelo").material as ShaderMaterial
-	_verificar(is_equal_approx(camara.environment.ambient_light_energy, 0.26), "Una oficina nueva aplica Ultra al entrar")
+	_verificar(is_equal_approx(camara.environment.ambient_light_energy, 0.20), "Una oficina nueva aplica Ultra al entrar")
 	_calidad.establecer(2, false)
 	_verificar(is_equal_approx(camara.environment.ambient_light_energy, 0.36) and is_equal_approx(piso.get_shader_parameter("rugosidad"), 0.74), "Reiniciar en Ultra no contamina los recursos del aspecto base")
 

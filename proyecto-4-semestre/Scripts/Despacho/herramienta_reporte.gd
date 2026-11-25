@@ -32,11 +32,12 @@ func _ready() -> void:
 	soporte.material_override = _material(CORAL)
 	add_child(soporte)
 	var llave := preload("res://Scripts/Despacho/modelo_llave.gd").new()
+	llave.name = "Llave"
 	llave.position = Vector3(-0.18, 0.16, 0)
 	llave.rotation = Vector3(0, 0, -PI / 2.0)
 	add_child(llave)
 	var texto := Label3D.new()
-	texto.text = "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
+	texto.text = "Llave"
 	texto.font = preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 	texto.font_size = 26
 	texto.pixel_size = 0.0045
@@ -47,6 +48,11 @@ func _ready() -> void:
 	_indicador = texto
 	_indicador.visible = mostrar_indicador
 	establecer_activa(false)
+
+
+func orientar_desde(posicion: Vector3) -> void:
+	if activa:
+		_indicador.visible = mostrar_indicador and global_position.distance_squared_to(posicion) > 1.8
 
 
 func establecer_activa(valor: bool) -> void:

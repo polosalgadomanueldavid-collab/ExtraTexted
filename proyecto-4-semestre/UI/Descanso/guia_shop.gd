@@ -145,8 +145,7 @@ func _draw() -> void:
 	estilo.shadow_color = Color(0, .04, .08, .3)
 	estilo.shadow_size = 4
 	draw_style_box(estilo, marcador)
-	var tecla := "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
-	var texto := "%s · ABRIR TIENDA" % tecla if interactuable else "SHOP · TIENDA"
+	var texto := "TIENDA"
 	draw_texture_rect(CARRITO, Rect2(marcador.position + Vector2(8, 10) * factor, Vector2(46, 46) * factor), false)
 	draw_string(TITULO, marcador.position + Vector2(64, 25) * factor, texto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(17 * factor)), TINTA)
 	draw_string(TEXTO, marcador.position + Vector2(64, 43) * factor, "Snacks y poderes", HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(14 * factor)), TINTA)

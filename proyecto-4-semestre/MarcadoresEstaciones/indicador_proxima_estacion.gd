@@ -19,6 +19,7 @@ var mostrar_modelo := true:
 	set(valor):
 		mostrar_modelo = valor
 		if is_instance_valid(_orientacion): _orientacion.visible = valor
+var contorno_en_simbolo := true
 var interactuable: bool = false
 var _orientacion: Node3D
 var _modelo: Node3D
@@ -127,7 +128,7 @@ func _actualizar_resaltado(delta: float) -> void:
 	_contorno.set_shader_parameter("grosor", _intensidad_interaccion * lerpf(0.012, 0.019, pulso))
 	for indice: int in range(_materiales_resaltados.size()):
 		_materiales_resaltados[indice].emission_energy_multiplier = lerpf(_emisiones_base[indice], 0.35 + pulso * 0.25, _intensidad_interaccion)
-		_piezas_resaltadas[indice].material_overlay = _contorno if _intensidad_interaccion > 0.001 else null
+		_piezas_resaltadas[indice].material_overlay = _contorno if contorno_en_simbolo and _intensidad_interaccion > 0.001 else null
 
 
 func _restablecer_resaltado() -> void:

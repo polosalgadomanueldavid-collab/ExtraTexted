@@ -279,7 +279,7 @@ func _process(delta: float) -> void:
 	if _mensaje_restante > 0.0:
 		detalle = _mensaje
 	elif jugador.obtener_objetivo_interaccion() == self:
-		titulo = "[E] MÁQUINA EXPENDEDORA"
+		titulo = "MÁQUINA EXPENDEDORA"
 		var espera: int = oficina.espera_compra("snack", despacho.jugador_local_id)
 		detalle = "Tu próxima compra en %d s" % espera if espera > 0 else "Producto al azar · %d puntos" % precio
 	if not detalle.is_empty() or titulo != "BOLSILLO":

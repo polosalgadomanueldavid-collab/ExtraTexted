@@ -73,6 +73,7 @@ func _crear_vista_3d() -> void:
 	_vista.add_child(luz)
 	_indicador_3d = INDICADOR_3D.new()
 	# El límite ocupa el viewport del icono, cuyo tamaño en pantalla es fijo.
+	_indicador_3d.contorno_en_simbolo = false
 	_indicador_3d.alto_maximo_pantalla = 1.0
 	_indicador_3d.configurar("luz", "Activar Luz")
 	_vista.add_child(_indicador_3d)

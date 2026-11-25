@@ -228,7 +228,7 @@ func _process(delta: float) -> void:
 	_volumen.position.y = PISO + altura * 0.5
 	_volumen.scale.y = maxf(0.001, altura)
 	indicador.actualizar(get_viewport().get_camera_3d(), tuberias.global_position + Vector3.UP * 0.5,
-		_jugador.global_position, obtener_objetivo(_jugador) == self,
+		_jugador.global_position, _jugador.obtener_objetivo_interaccion() == self,
 		not _oficina.partida_finalizada and not drenando and not reparando and not _oficina.computador.is_using and not _oficina.clasificacion_partida.visible)
 	_reloj_ondas -= delta
 	if _jugador.nadando and _jugador.visible:

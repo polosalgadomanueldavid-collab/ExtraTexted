@@ -46,6 +46,12 @@ func _ready() -> void:
 	add_child(rotulo)
 
 
+func permitir_soltar(disponible: bool) -> void:
+	if rotulo.visible != disponible:
+		rotulo.visible = disponible
+		queue_redraw()
+
+
 func ajustar_pantalla(tamano_pantalla: Vector2) -> void:
 	var factor := minf(tamano_pantalla.x / REFERENCIA.x, tamano_pantalla.y / REFERENCIA.y)
 	scale = Vector2.ONE * factor
@@ -53,7 +59,7 @@ func ajustar_pantalla(tamano_pantalla: Vector2) -> void:
 
 
 func _process(_delta: float) -> void:
-	rotulo.text = "X - soltar" if ControladorInterfaz.dispositivo_mando >= 0 else "E - soltar"
+	rotulo.text = "Soltar" if OS.has_feature("mobile") else ("X - soltar" if ControladorInterfaz.dispositivo_mando >= 0 else "E - soltar")
 
 
 func _draw() -> void:
@@ -64,5 +70,7 @@ func _draw() -> void:
 	draw_circle(Vector2(70, 60), 37, Color("eddec5"), true, -1.0, true)
 	draw_arc(Vector2(70, 58), 42, PI * 1.10, PI * 1.72, 48, Color("fff9ee"), 2.5, true)
 	EXPEDIENTE.resultado(self, "evidencias", Vector2(70, 58), 81, true, false)
+	if not rotulo.visible:
+		return
 	draw_style_box(_sombra_leyenda, Rect2(5, 119, 130, 34))
 	draw_style_box(_fondo_leyenda, Rect2(5, 115, 130, 34))

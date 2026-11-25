@@ -68,6 +68,7 @@ func _run() -> void:
 	otro.id = "VISUAL-B"
 	sistema.recibir_denuncia(otro)
 	sistema.iniciar_denuncia_prioritaria()
+	_verificar_pilas()
 	await _cuadros(3)
 	var requisitos = oficina.panel_despacho.tarjetas[otro.id].find_child("RequisitosVisuales", true, false)
 	_verificar(requisitos != null and requisitos.estaciones == otro.obtener_estaciones_requeridas(), "La cola muestra los símbolos propios de cada denuncia")
@@ -125,6 +126,7 @@ func _run() -> void:
 	_verificar(oficina.panel_despacho.efecto_tarea.modo_expediente, "La confirmación muestra el resultado que viaja al expediente")
 	await _cuadros(95)
 	sistema.iniciar_denuncia_prioritaria()
+	_verificar_pilas()
 	await _cuadros(3)
 	_validar(otro)
 	_verificar(not oficina.respuestas_mesas.privacidad.completada and not oficina.respuestas_mesas.privacidad.pendiente, "El nuevo caso no hereda los sellos del anterior")
@@ -137,6 +139,7 @@ func _run() -> void:
 	await _cuadros(3)
 	_validar(otro)
 	sistema.vencer_denuncia(otro.id)
+	_verificar_pilas()
 	await _cuadros(3)
 	for respuesta in oficina.respuestas_mesas.values():
 		_verificar(not respuesta.pendiente and not respuesta.completada, "Vencer limpia la señal del caso " + respuesta.estacion_id)
@@ -153,6 +156,14 @@ func _run() -> void:
 	await _cuadros(3)
 	print("[ORIENTACION CONTEXTUAL] %d comprobaciones, %d errores" % [pruebas, errores])
 	quit(1 if errores else 0)
+
+func _verificar_pilas() -> void:
+	var visibles := 0
+	for pila in oficina.get_node("PresionDespacho").pilas:
+		if pila.visible:
+			visibles += 1
+	_verificar(visibles == sistema.obtener_denuncias_ordenadas().size(), "Las pilas representan también los casos en proceso y se retiran al cerrar o vencer")
+
 
 func _probar_tecla_real() -> void:
 	# El flujo anterior aísla el estado visual; este usa el ShapeCast, los gestos y minijuegos.
@@ -196,7 +207,11 @@ func _probar_tecla_real() -> void:
 		if not encontrada: continue
 		oficina.get_node("Gameplay/Camera3D").global_position = jugador.global_position + oficina.get_node("Gameplay/Camera3D").offset
 		await _cuadros(2)
-		_verificar(oficina.guia_estacion.visible and oficina.guia_estacion.tecla.text in ["E","X"], "Solo la tecla acompaña a la herramienta: "+id)
+		_verificar(oficina.guia_estacion.tarjeta.is_visible_in_tree() and oficina.guia_estacion.tecla.text.ends_with(" · " + oficina._accion_estacion(id)) and oficina.guia_estacion.objetivo == oficina.respuestas_mesas[id].modelo_original, "El aviso identifica la acción sobre su modelo: "+id)
+		_verificar(not oficina.indicador_papel.rotulo.visible, "E no anuncia soltar mientras apunta a una estación")
+		if id == "reporte":
+			await _captura("accion_estacion")
+			await _probar_expediente_junto_a_estacion(jugador)
 		_tecla(KEY_E)
 		await _cuadros(75)
 		if id == "privacidad":
@@ -230,6 +245,27 @@ func _probar_tecla_real() -> void:
 	_verificar(caso.estado == Denuncia.Estado.RESUELTA, "Las cinco herramientas resuelven mediante E en orden libre")
 	await _cuadros(65)
 	_verificar(not oficina.panel_despacho.denuncia_activa_detalle.visible, "La carpeta se retira después de recibir la última pieza")
+
+func _probar_expediente_junto_a_estacion(jugador) -> void:
+	var hoja = jugador.papel_en_mano
+	hoja.lanzar()
+	hoja.freeze = true
+	hoja.global_position = jugador.global_position + Vector3.UP * .25 + jugador.visual.global_basis.z.normalized() * .25
+	var llave = oficina.herramienta_reporte
+	var pose: Transform3D = llave.global_transform
+	llave.global_position = hoja.global_position
+	llave.establecer_activa(true)
+	await _cuadros(3)
+	var guia = oficina.guia_estacion
+	_verificar(jugador.obtener_objetivo_interaccion() == hoja and guia.objetivo == hoja.get_node("HojaVisual") and guia.tarjeta.is_visible_in_tree() and guia.tecla.text.ends_with("Recoger expediente"), "Con hoja, llave y estación juntas, solo la hoja anuncia la recogida")
+	await _captura("accion_expediente")
+	_tecla(KEY_E)
+	await _cuadros(68)
+	_verificar(jugador.papel_en_mano == hoja, "E recoge el expediente anunciado")
+	llave.establecer_activa(false)
+	llave.global_transform = pose
+	await _cuadros(3)
+
 
 func _tecla(codigo: Key) -> void:
 	var evento := InputEventKey.new()

@@ -115,6 +115,7 @@ var herramientas_reporte: Array[HerramientaReporte] = []
 var _aviso_reporte_atasco: Label3D
 var _reporte_atascado_id: String = ""
 var _reporte_herramienta_recogida: bool = false
+var _papel_enfocado: PapelDenuncia
 var papel_actual: PapelDenuncia = null
 var partida_finalizada: bool = false
 var final_partida: FinalPartida
@@ -199,6 +200,10 @@ func _ready() -> void:
 
 	sistema_despacho = SistemaDespacho.new()
 	add_child(sistema_despacho)
+	var presion := preload("res://Mundo/presion_despacho.gd").new()
+	presion.name = "PresionDespacho"
+	add_child(presion)
+	presion.configurar(self, sistema_despacho)
 	musica_partida.configurar(sistema_despacho)
 	musica_cordura_baja.configurar(sistema_despacho, true)
 	_nombre_partida = MenuGlobal.nombre_partida
@@ -449,20 +454,115 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(indicador):
 			var disponible := indicador.visible and objetivo is Estacion and (objetivo as Estacion).estacion_id == estacion_id
 			indicador.establecer_interactuable(disponible)
+			# La acción cercana deja libre la zona que ocupaba el símbolo de ruta.
+			var mesa := indicador.global_position - Vector3.UP * ALTURA_INDICADOR_ESTACION
+			var cerca := is_instance_valid(objetivo) and jugador.global_position.distance_squared_to(mesa) < 1.6
+			indicador.mostrar_modelo = not (disponible or cerca)
 	_actualizar_respuestas_mesas(objetivo)
-	if is_instance_valid(guia_estacion):
-		var marcador_interaccion: IndicadorProximaEstacion = null
-		var caso_interaccion := sistema_despacho.obtener_denuncia_activa()
-		if objetivo is Estacion and caso_interaccion != null and is_instance_valid(jugador.papel_en_mano) and jugador.papel_en_mano.denuncia_id == caso_interaccion.id:
-			marcador_interaccion = indicadores_estaciones.get((objetivo as Estacion).estacion_id) as IndicadorProximaEstacion
-		guia_estacion.establecer_objetivo(marcador_interaccion)
-		guia_estacion.actualizar(panel_despacho.contenido, computador.is_using or clasificador_evidencias.visible or escaner_verificacion.visible or evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO)
+	_actualizar_guia_interaccion(objetivo)
+	var hoja := objetivo as PapelDenuncia
+	if is_instance_valid(_papel_enfocado) and hoja != _papel_enfocado:
+		_papel_enfocado.enfocado = false
+	_papel_enfocado = hoja
+	if is_instance_valid(hoja):
+		hoja.enfocado = guia_estacion.objetivo != null
+	for llave in herramientas_reporte:
+		llave.orientar_desde(jugador.global_position)
+	var puede_actuar := not jugador.input_locked and not jugador.realizando_gesto() and not jugador.radio_abierta and not ruleta_emotes.visible and not jugador.usando_extintor and not clasificacion_partida.visible
+	indicador_papel.permitir_soltar(puede_actuar and (objetivo == null or OS.has_feature("mobile")))
 	_actualizar_indicador_papel()
 	_actualizar_aviso_apagon()
 	_actualizar_indicador_denuncia_pc(objetivo)
 	if not _denuncia_en_descriptado.is_empty() and is_instance_valid(_mesa_seguridad):
 		var avance := 1.0 if _seguridad_lista else 1.0 - temporizador_seguridad.time_left / DURACION_DESENCRIPTADO
 		progreso_seguridad.actualizar(avance, get_viewport().get_camera_3d(), _mesa_seguridad.global_position + Vector3.UP * .72)
+
+
+func _actualizar_guia_interaccion(objetivo: Node3D) -> void:
+	var modelo: Node3D
+	var verbo := ""
+	var altura := 0.35
+	var mantener := false
+	var ocupado := computador.is_using or clasificacion_partida.visible or ruleta_emotes.visible or jugador.radio_abierta or clasificador_evidencias.visible or escaner_verificacion.visible
+	if ocupado or not is_instance_valid(objetivo):
+		guia_estacion.establecer_objetivo(null)
+		return
+	if objetivo is TacoLuz and objetivo.apagon_activo and evento_apagon.estado == EventoApagonScript.Estado.APAGADO:
+		modelo = objetivo.get_node("Modelo")
+		verbo = "Reparar circuito"
+	elif evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO:
+		modelo = null
+	elif objetivo is PapelDenuncia and objetivo.portador == null and not jugador._taza_en_mano:
+		modelo = objetivo.get_node("HojaVisual")
+		verbo = "Recoger expediente"
+	elif objetivo is HerramientaReporte and objetivo.activa and not _reporte_herramienta_recogida:
+		modelo = objetivo.get_node("Llave")
+		verbo = "Recoger herramienta"
+	elif objetivo == evento_hielo or objetivo == evento_inundacion:
+		var fuga := evento_hielo.tuberia if objetivo == evento_hielo else evento_inundacion.tuberias
+		modelo = fuga.modelo
+		verbo = "Reparar"
+	elif objetivo is EventoIncendio.Extintor and not jugador._taza_en_mano:
+		modelo = objetivo.deposito
+		verbo = "Recoger extintor"
+	elif objetivo is EventoIncendio.Foco and evento_incendio.equipado and not jugador._taza_en_mano:
+		modelo = objetivo.mesa
+		if respuestas_mesas.has(objetivo.estacion_id):
+			modelo = respuestas_mesas[objetivo.estacion_id].modelo_original
+		verbo = "Apagar"
+		mantener = true
+	elif objetivo is Estacion:
+		var id: String = objetivo.estacion_id
+		var indicador: IndicadorProximaEstacion = indicadores_estaciones.get(id)
+		if is_instance_valid(indicador) and indicador.interactuable and is_instance_valid(jugador.papel_en_mano) and jugador.papel_en_mano.denuncia_id == sistema_despacho.denuncia_activa_id:
+			modelo = respuestas_mesas[id].modelo_original if respuestas_mesas.has(id) else indicador
+			altura = 0.66
+			verbo = _accion_estacion(id)
+			if verbo.is_empty():
+				modelo = null
+	elif objetivo == computador or objetivo is SillaComputador:
+		if sistema_despacho.casos_en_proceso.size() < sistema_despacho.max_casos_en_proceso and not indicador_denuncia_pc.pendientes.is_empty() and not is_instance_valid(papel_actual) and not jugador._taza_en_mano and not evento_incendio.arde_estacion("computador"):
+			modelo = computador.get_node("Cube_011")
+			verbo = "Imprimir expediente"
+	elif objetivo == get_node_or_null("MaquinaExpendedora"):
+		if not sistema_despacho.tiempo_detenido and (not SesionLAN.en_partida or espera_compra("snack", sistema_despacho.jugador_local_id) == 0):
+			modelo = objetivo.get_node("Modelo")
+			verbo = "Abrir tienda"
+	elif objetivo == $ZonaDescanso/SofaL/Cuerpo and not evento_inundacion.activo:
+		modelo = objetivo.get_parent()
+		verbo = "Sentarse"
+	elif objetivo == $ZonaDescanso/RinconCafe/MuebleCafe and not evento_inundacion.activo:
+		if $ZonaDescanso.impedimento_cafe().is_empty():
+			modelo = objetivo.get_node("../Cafetera")
+			verbo = "Usar cafetera"
+	elif objetivo.has_method("puede_ver_foto") and objetivo.puede_ver_foto(jugador):
+		modelo = objetivo.get_node("Visual")
+		verbo = "Ver fotografía"
+	guia_estacion.establecer_objetivo(modelo, verbo, altura, mantener)
+	if modelo != null:
+		guia_estacion.actualizar(panel_despacho.contenido)
+
+
+func _accion_estacion(id: String) -> String:
+	if is_instance_valid(red):
+		var reserva: Dictionary = red.reservas.get("estacion:" + id, {})
+		if not reserva.is_empty() and reserva.caso != sistema_despacho.denuncia_activa_id:
+			return ""
+		if id in ["evidencias", "verificacion"] and not reserva.is_empty() and int(reserva.jugador) != jugador.id_red:
+			return ""
+	match id:
+		"evidencias": return "Clasificar evidencias"
+		"verificacion": return "Escanear documento"
+		"bienestar": return "Atender caso"
+		"reporte":
+			if not _reporte_atascado_id.is_empty():
+				return "Reparar" if _reporte_herramienta_recogida else ""
+			return "Imprimir reporte"
+		"privacidad":
+			if not _denuncia_en_descriptado.is_empty():
+				return "Recoger archivo" if _seguridad_lista else ""
+			return "Desencriptar archivo"
+	return ""
 
 
 func _input(evento: InputEvent) -> void:
@@ -604,7 +704,7 @@ func _al_cambiar_estado_apagon(nuevo_estado: EventoApagonScript.Estado) -> void:
 	if is_instance_valid(papel_actual):
 		papel_actual.mostrar_indicador = mostrar
 	if not mostrar:
-		guia_estacion.hide()
+		guia_estacion.establecer_objetivo(null)
 		indicador_denuncia_pc.hide()
 	if nuevo_estado == EventoApagonScript.Estado.REPARANDO:
 		clasificacion_partida.hide()
@@ -1132,7 +1232,7 @@ func _al_terminar_partida() -> void:
 	if partida_finalizada:
 		return
 	partida_finalizada = true
-	guia_estacion.hide()
+	guia_estacion.establecer_objetivo(null)
 	_actualizar_respuestas_mesas()
 	# El relevo sucede en la misma emergencia; sus efectos siguen activos.
 	evento_incendio.soltar()
@@ -1430,6 +1530,7 @@ func _crear_indicadores_estaciones() -> void:
 			continue
 
 		var indicador := INDICADOR_PROXIMA_ESTACION_SCRIPT.new() as IndicadorProximaEstacion
+		indicador.contorno_en_simbolo = false
 		indicador.configurar(estacion.estacion_id, estacion.nombre_visible)
 		indicador.establecer_activo(false)
 		add_child(indicador)

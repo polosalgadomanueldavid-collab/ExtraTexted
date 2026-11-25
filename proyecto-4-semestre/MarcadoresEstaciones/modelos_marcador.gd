@@ -70,22 +70,6 @@ static func crear_mano_recoger() -> Node3D:
 	var banda := _pieza("ManoBandaCoral", _rectangulo_redondeado(Vector2(0.19, 0.028), 0.012), 0.022, CORAL, 0.005)
 	banda.position = Vector3(-0.005, -0.205, 0.080)
 	mano.add_child(banda)
-	var tecla := _pieza("TeclaRecoger", _rectangulo_redondeado(Vector2(0.28, 0.29), 0.055), 0.11, PETROLEO, 0.018)
-	tecla.position = Vector3(0.27, -0.025, 0.0)
-	marcador.add_child(tecla)
-	var frente := _pieza("TeclaFrente", _rectangulo_redondeado(Vector2(0.235, 0.245), 0.045), 0.040, CREMA, 0.010)
-	frente.position = Vector3(0.27, -0.015, 0.060)
-	marcador.add_child(frente)
-	var letra := Label3D.new()
-	letra.name = "LetraE"
-	letra.text = "E"
-	letra.font_size = 64
-	letra.pixel_size = 0.0028
-	letra.outline_size = 0
-	letra.modulate = PETROLEO
-	letra.no_depth_test = false
-	letra.position = Vector3(0.27, -0.015, 0.09)
-	marcador.add_child(letra)
 	return marcador
 
 
