@@ -9,6 +9,7 @@ var despacho: SistemaDespacho
 var jugadores: Dictionary = {}
 var papeles: Dictionary = {}
 var reservas: Dictionary = {}
+var proximos_snacks := {}
 var bolsillos: Dictionary = {}
 var cafes: Dictionary = {}
 var tazas_cafe: Dictionary = {}
@@ -391,6 +392,10 @@ func _reservar_objeto(id: int, clave: String) -> Dictionary:
 	if not actual.is_empty() and int(actual.jugador) != id:
 		return _error("El compañero lo está usando.")
 	reservas[clave] = {"jugador": id, "inicio": _reloj}
+	if clave == "tienda":
+		if not proximos_snacks.has(id):
+			proximos_snacks[id] = oficina.get_node("MaquinaExpendedora").sortear_producto()
+		reservas[clave].premio = proximos_snacks[id]
 	return {"ok": true}
 
 func _objeto_disponible(clave: String) -> bool:
@@ -412,6 +417,8 @@ func _comprar(id: int, producto: String, indice: int) -> Dictionary:
 	var reserva: Dictionary = reservas.get(clave, {})
 	if reserva.is_empty() or int(reserva.jugador) != id or not _cerca(jugadores[id], _objeto(clave), 2.5) or despacho.tiempo_detenido:
 		return _error("La compra ya no está disponible.")
+	if producto not in ["snack", "cafe"] or oficina.espera_compra(producto, id) > 0:
+		return _error("Espera antes de volver a comprar.")
 	var precio: int
 	if producto == "cafe":
 		if cafes.get(id, false) or is_instance_valid(jugadores[id].papel_en_mano) or despacho.obtener_cordura(id) >= 100 or oficina.evento_apagon.estado != 0:
@@ -420,26 +427,27 @@ func _comprar(id: int, producto: String, indice: int) -> Dictionary:
 			return _error("Taza no válida.")
 		precio = oficina.get_node("ZonaDescanso").costo_cafe
 	else:
-		if indice < 0 or indice > 3 or bolsillos[id][indice] != 0:
-			return _error("Ya llevas el producto.")
-		precio = oficina.get_node("MaquinaExpendedora").precios[indice]
+		indice = int(reserva.premio)
+		precio = oficina.get_node("MaquinaExpendedora").precio
 	if not despacho.puntuacion.gastar_puntos(precio):
 		return _error("Saldo compartido insuficiente.")
+	oficina.registrar_compra(producto, id)
 	if producto == "cafe":
 		cafes[id] = true
 		tazas_cafe[id] = maxi(0, indice)
 		return {"ok": true, "taza": tazas_cafe[id]}
-	else:
-		bolsillos[id][indice] = 1
-	return {"ok": true}
+	bolsillos[id][indice] += 1
+	proximos_snacks[id] = oficina.get_node("MaquinaExpendedora").sortear_producto()
+	reserva.premio = proximos_snacks[id]
+	return {"ok": true, "indice": indice}
 
 func _consumir(id: int, indice: int, evento: int) -> Dictionary:
-	if indice < 0 or indice > 3 or bolsillos[id][indice] != 1 or despacho.tiempo_detenido:
+	if indice < 0 or indice > 3 or bolsillos[id][indice] <= 0 or despacho.tiempo_detenido:
 		return _error("El objeto no está disponible; conservas tu carga.")
 	var maquina: Node = oficina.get_node("MaquinaExpendedora")
 	if indice == 3 and (evento != _evento_id or _evento_resuelto_id == _evento_id or maquina.poderes.evento_actual() == null or (oficina.evento_incendio.activo and oficina.evento_incendio._todas_apagadas())):
 		return _error("El evento ya terminó; conservas el Avatar.")
-	bolsillos[id][indice] = 0
+	bolsillos[id][indice] -= 1
 	if indice == 2:
 		_activacion_tiempo += 1
 		SesionLAN.difundir("tiempo", {"jugador": id, "activacion": _activacion_tiempo})
@@ -581,7 +589,7 @@ func publicar() -> void:
 		var papel: PapelDenuncia = papeles[caso]
 		if is_instance_valid(papel):
 			hojas[caso] = {"portador": papel.portador.id_red if is_instance_valid(papel.portador) else 0, "transform": papel.global_transform, "velocidad": papel.linear_velocity}
-	var estado_actual := {"revision": _revision, "jugadores": despacho.jugadores, "casos": casos, "tiempos": despacho.tiempos_restantes, "activos": despacho.casos_en_proceso, "participantes": despacho.participantes, "portadores": despacho.ultimos_portadores, "asignados": despacho.casos_por_jugador, "saldo": despacho.puntuacion.puntos, "ganados": despacho.puntuacion.puntos_ganados, "terminada": despacho.terminada, "causa": str(despacho.causa_agotamiento), "hojas": hojas, "reservas": reservas, "bolsillos": bolsillos, "cafes": cafes, "tazas_cafe": tazas_cafe, "resueltos": {}, "vencidos": {}, "duracion": oficina._duracion_partida, "mundo": _estado_mundo()}
+	var estado_actual := {"revision": _revision, "jugadores": despacho.jugadores, "casos": casos, "tiempos": despacho.tiempos_restantes, "activos": despacho.casos_en_proceso, "participantes": despacho.participantes, "portadores": despacho.ultimos_portadores, "asignados": despacho.casos_por_jugador, "saldo": despacho.puntuacion.puntos, "ganados": despacho.puntuacion.puntos_ganados, "terminada": despacho.terminada, "causa": str(despacho.causa_agotamiento), "hojas": hojas, "reservas": reservas, "bolsillos": bolsillos, "proximas_compras": oficina.proximas_compras, "cafes": cafes, "tazas_cafe": tazas_cafe, "resueltos": {}, "vencidos": {}, "duracion": oficina._duracion_partida, "mundo": _estado_mundo()}
 	estado_actual["aportes"] = despacho.aportes_jugadores
 	_enviar_estado(estado_actual)
 
@@ -601,6 +609,7 @@ func aplicar(datos: Dictionary) -> void:
 	despacho.casos_por_jugador = datos.asignados.duplicate()
 	reservas = datos.reservas.duplicate(true)
 	bolsillos = datos.bolsillos.duplicate(true)
+	oficina.proximas_compras = datos.proximas_compras.duplicate(true)
 	cafes = datos.cafes.duplicate()
 	tazas_cafe = datos.get("tazas_cafe", {}).duplicate()
 	var saldo_anterior := despacho.puntuacion.puntos

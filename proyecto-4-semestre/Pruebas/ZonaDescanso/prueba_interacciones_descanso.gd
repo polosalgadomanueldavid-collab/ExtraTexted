@@ -54,6 +54,7 @@ func _probar() -> void:
 
 
 func _cargar() -> void:
+	root.get_node("MenuGlobal").omitir_tutorial_siguiente_partida = true
 	_oficina = (load(OFICINA) as PackedScene).instantiate() as Node3D
 	root.add_child(_oficina)
 	current_scene = _oficina
@@ -406,6 +407,7 @@ func _colocar(postura: Dictionary) -> void:
 
 
 func _pedir_cafe() -> void:
+	_oficina._duracion_partida += _oficina.espera_compra("cafe", _despacho.jugador_local_id)
 	await _tecla(KEY_E)
 	if _zona.panel_cafetera.visible:
 		_zona.panel_cafetera.boton_servir.pressed.emit()

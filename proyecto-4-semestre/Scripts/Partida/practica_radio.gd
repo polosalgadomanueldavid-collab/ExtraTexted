@@ -23,7 +23,7 @@ func iniciar(mundo: Node3D) -> void:
 	if not is_inside_tree():
 		return
 	maquina = oficina.get_node("MaquinaExpendedora")
-	_precio = maxi(1, maquina.precios[0])
+	_precio = maxi(1, maquina.precio)
 	for estacion in oficina.find_children("*", "Estacion", true, false):
 		if estacion.estacion_id == "evidencias":
 			_mesa_evidencias = estacion
@@ -110,7 +110,7 @@ func _actualizar_mensaje(pista := false) -> void:
 		"Bienvenido, agente. Ve al computador del fondo y pulsa %s para recoger tu primer expediente." % tecla,
 		"Lleva la hoja a Evidencias. Compara la referencia de la izquierda y archiva el carnet. Puedes reintentar.",
 		"Buen trabajo. Ganaste %d puntos de saldo. Vamos a probar la tienda." % _precio,
-		"Busca el cartel SHOP. Abre la máquina con %s, compra el chocolate y recoge el producto de la bandeja." % tecla,
+		"Busca el cartel SHOP. Abre la máquina con %s, pulsa AZAR y recoge tu chocolate de práctica." % tecla,
 		"Ya lo llevas contigo. Sal de la tienda y pulsa %s para usarlo. También puedes pulsar USAR en la máquina." % usar,
 		"Cambio y fuera, agente. Ya sabes recoger, resolver y comprar. Ahora empieza el turno."
 	]

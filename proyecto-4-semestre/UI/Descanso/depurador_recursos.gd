@@ -184,8 +184,8 @@ func dar_item(indice: int) -> void:
 		var id: int = oficina.sistema_despacho.jugador_local_id
 		if not is_instance_valid(puente) or not puente.bolsillos.has(id):
 			return
-		puente.bolsillos[id][indice] = 1
-	_maquina.inventario[indice] = 1
+		puente.bolsillos[id][indice] = maxi(1, puente.bolsillos[id][indice])
+	_maquina.inventario[indice] = maxi(1, _maquina.inventario[indice])
 	_maquina._actualizar_tienda()
 	_actualizar()
 

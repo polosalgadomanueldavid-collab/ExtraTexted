@@ -16,6 +16,8 @@ const MAX_DENUNCIAS_PENDIENTES: int = 5
 const DURACION_BLOQUEO_SEGUNDOS: float = 10.0
 const ESPERA_MINIMA_EVENTOS: float = 40.0
 const ESPERA_MAXIMA_EVENTOS: float = 65.0
+const ESPERA_INDIVIDUAL := {"snack": 40.0, "cafe": 30.0}
+const ESPERA_DUO := {"snack": 70.0, "cafe": 60.0}
 const BLOQUEOS_SIMULTANEOS: int = 30
 const MESAS_INICIALES: int = 10
 const MESAS_BASE_CADENCIA: int = 5
@@ -117,6 +119,8 @@ var papel_actual: PapelDenuncia = null
 var partida_finalizada: bool = false
 var final_partida: FinalPartida
 var cinematica_relevo: CinematicaRelevo
+# Vencimientos en segundos de turno, separados por servicio y participante.
+var proximas_compras := {"snack": {}, "cafe": {}}
 var _duracion_partida: float = 0.0
 var _resueltas: Array[Dictionary] = []
 var _vencidas: Array[Dictionary] = []
@@ -139,6 +143,14 @@ var guia_shop: Control
 
 signal preparacion_terminada
 var oficina_preparada := false
+
+
+func espera_compra(producto: String, id: int) -> int:
+	return ceili(maxf(0.0, float(proximas_compras[producto].get(id, 0.0)) - _duracion_partida))
+
+func registrar_compra(producto: String, id: int) -> void:
+	var tiempos := ESPERA_DUO if SesionLAN.en_partida else ESPERA_INDIVIDUAL
+	proximas_compras[producto][id] = _duracion_partida + float(tiempos[producto])
 
 
 func iniciar_practica() -> bool:

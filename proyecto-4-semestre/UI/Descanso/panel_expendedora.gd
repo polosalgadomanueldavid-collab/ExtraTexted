@@ -1,7 +1,7 @@
 extends Control
 ## Máquina 3D aislada sobre la oficina. La lógica de compra vive en el controlador.
 
-signal producto_solicitado(indice: int)
+signal producto_solicitado
 signal recoger_solicitado
 signal usar_solicitado(indice: int)
 signal cerrar_solicitado
@@ -14,6 +14,7 @@ const METAL := Color("8795a7")
 const CARCASA := Color("708198")
 const OSCURO := Color("172330")
 const CODIGOS := ["A1", "A2", "B1", "B2"]
+const RAREZAS := ["Común", "Común", "Raro", "Mítico"]
 const NOMBRES := ["CHOCOLATE", "DONA", "PAPA TIEMPO", "EL AVATAR"]
 # Existencias de exposición, desde la primera reserva hasta el fondo de cada carril.
 # No determinan el resultado ni la probabilidad de una compra.
@@ -24,13 +25,13 @@ const FUENTE := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
 
 var vista: SubViewport
 var camara: Camera3D
-var botones: Array[Button] = []
+var boton_sortear: Button
+var pesos: PackedFloat32Array
 var boton_recoger: Button
 var boton_retirar: Button
 var boton_usar: Button
 var _modelo: Node3D
 var _productos: Array[Node3D] = []
-var _pulsadores: Array[MeshInstance3D] = []
 var _etiquetas: Array[Label3D] = []
 var _espirales: Array[Node3D] = []
 var _pantalla: Label3D
@@ -86,13 +87,7 @@ func _ready() -> void:
 		luz.light_color = Color("fffaf2") if i == 0 else Color("e0e8f2")
 		luz.shadow_enabled = i == 0
 	_crear_maquina()
-	for i in 4:
-		var boton := _boton("Producto%s" % CODIGOS[i], "%s: %s" % [CODIGOS[i], NOMBRES[i]], producto_solicitado.emit.bind(i))
-		boton.mouse_entered.connect(_resaltar.bind(i, true))
-		boton.mouse_exited.connect(_resaltar.bind(i, false))
-		boton.focus_entered.connect(_resaltar.bind(i, true))
-		boton.focus_exited.connect(_resaltar.bind(i, false))
-		botones.append(boton)
+	boton_sortear = _boton("Sortear", "Comprar un producto al azar", producto_solicitado.emit)
 	boton_recoger = _boton("RecogerProducto", "Recoger el producto de la bandeja", recoger_solicitado.emit)
 	boton_retirar = _boton("RetirarProducto", "Retirar el producto desde la pantalla", recoger_solicitado.emit)
 	boton_usar = _boton("UsarProducto", "Usar el objeto que ya compraste", func(): usar_solicitado.emit(_indice_usar))
@@ -177,11 +172,11 @@ func _crear_maquina() -> void:
 		_productos.append(producto)
 		var y := 3.06 if i < 2 else 1.85
 		_caja(_modelo, Vector3(0.94, 0.19, 0.03), Vector3(centro.x, y, 0.25), CREMA)
-		_etiquetas.append(_letrero(_modelo, CODIGOS[i], Vector3(centro.x, y, 0.272), 0.00185))
+		var probabilidad := "%s · %d %%" % [RAREZAS[i], int(pesos[i])]
+		_etiquetas.append(_letrero(_modelo, probabilidad, Vector3(centro.x, y, 0.272), 0.00165))
 		_letrero(_modelo, NOMBRES[i], Vector3(centro.x, y - 0.21, 0.26), 0.0014, CREMA)
-		var boton_y := 2.85 - i * 0.48
-		_pulsadores.append(_caja(_modelo, Vector3(0.5, 0.34, 0.09), Vector3(1.14, boton_y, 0.76), Color("d5d6d8")))
-		_letrero(_modelo, CODIGOS[i], Vector3(1.14, boton_y, 0.815), 0.0027)
+	_caja(_modelo, Vector3(0.5, 0.34, 0.09), Vector3(1.14, 2.55, 0.76), DORADO)
+	_letrero(_modelo, "AZAR", Vector3(1.14, 2.55, 0.815), 0.0024)
 	for x: float in [-1.38, 0.74]:
 		_caja(_modelo, Vector3(0.065, 2.65, 0.1), Vector3(x, 2.575, 0.77), METAL, 0.7)
 	for y: float in [1.25, 3.9]:
@@ -195,7 +190,7 @@ func _crear_maquina() -> void:
 	_caja(_modelo, Vector3(0.57, 0.7, 0.08), Vector3(1.14, 3.42, 0.76), OSCURO)
 	_caja(_modelo, Vector3(0.49, 0.6, 0.01), Vector3(1.14, 3.42, 0.808), Color("c7ced0"))
 	_saldo = _letrero(_modelo, "0 PTS", Vector3(1.14, 3.57, 0.82), 0.0016)
-	_pantalla = _letrero(_modelo, "ELIGE", Vector3(1.14, 3.29, 0.82), 0.0016)
+	_pantalla = _letrero(_modelo, "AZAR", Vector3(1.14, 3.29, 0.82), 0.0016)
 	_caja(_modelo, Vector3(0.35, 0.04, 0.02), Vector3(1.14, 0.95, 0.722), OSCURO)
 
 
@@ -277,25 +272,11 @@ func _boton(nombre: String, descripcion: String, accion: Callable) -> Button:
 
 
 func _al_mostrar_para_mando() -> void:
-	if visible and ControladorInterfaz.dispositivo_mando >= 0 and not botones.is_empty():
-		for boton: Button in botones:
-			if not boton.disabled:
-				boton.grab_focus()
-				return
-		if boton_usar.visible:
+	if visible and ControladorInterfaz.dispositivo_mando >= 0:
+		if not boton_sortear.disabled:
+			boton_sortear.grab_focus()
+		elif boton_usar.visible:
 			boton_usar.grab_focus()
-
-
-func _resaltar(indice: int, activo: bool) -> void:
-	var mat := _pulsadores[indice].material_override as StandardMaterial3D
-	mat.emission_enabled = activo and not botones[indice].disabled
-	mat.emission = Color("ffd187")
-	mat.emission_energy_multiplier = 0.72
-	if activo and _indice < 0:
-		_pantalla.text = "%s\nA · ELEGIR" % NOMBRES[indice]
-	elif _indice < 0 and _indice_usar < 0:
-		_pantalla.text = "ELIGE"
-
 
 func abrir() -> void:
 	_raton_anterior = Input.mouse_mode
@@ -317,15 +298,17 @@ func cerrar() -> void:
 			foco.release_focus()
 
 
-func actualizar(saldo: int, precios: Array[int], inventario: Array[int], ocupado: bool) -> void:
+func actualizar(saldo: int, precio: int, inventario: Array[int], ocupado: bool, espera: int) -> void:
 	_saldo.text = "%d\nPTS" % saldo
 	_saldo.pixel_size = minf(0.0016, 0.44 / maxf(1.0, _saldo.font.get_string_size(str(saldo), HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x))
-	for i in 4:
-		_etiquetas[i].text = "%s · %s" % [CODIGOS[i], "COMPRADO" if inventario[i] > 0 else "%d PTS" % precios[i]]
-		_etiquetas[i].pixel_size = minf(0.00185, 0.86 / maxf(1.0, _etiquetas[i].font.get_string_size(_etiquetas[i].text, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x))
-		botones[i].disabled = ocupado or inventario[i] > 0
-		if botones[i].disabled:
-			_resaltar(i, false)
+	boton_sortear.disabled = ocupado or espera > 0
+	if not ocupado:
+		if espera > 0:
+			_pantalla.text = "%d s" % espera
+		elif saldo < precio:
+			_pantalla.text = "SIN\nSALDO"
+		else:
+			_pantalla.text = "%d PTS" % precio
 	if _indice_usar < 0 or inventario[_indice_usar] <= 0:
 		_indice_usar = -1
 		for i in 4:
@@ -351,7 +334,6 @@ func actualizar_caida(avance: float) -> void:
 	var objeto := _productos[_indice]
 	var inicio := _origen_producto(_indice)
 	_espirales[_indice].rotation.z = minf(1.0, avance / 0.27) * TAU
-	_pulsadores[_indice].position.z = 0.76 - sin(minf(avance * 5.0, 1.0) * PI) * 0.045
 	if avance < 0.27:
 		objeto.position = inicio + Vector3(0, 0, avance / 0.27 * 0.44)
 	else:
@@ -395,12 +377,11 @@ func _cancelar_visual() -> void:
 	boton_recoger.hide()
 	boton_retirar.hide()
 	boton_usar.hide()
-	_pantalla.text = "ELIGE"
+	_pantalla.text = "AZAR"
 	(_bandeja.material_override as StandardMaterial3D).emission_enabled = false
 	for i in 4:
 		_productos[i].position = _origen_producto(i)
 		_productos[i].rotation = Vector3.ZERO
-		_pulsadores[i].position.z = 0.76
 		_espirales[i].rotation.z = 0.0
 
 
@@ -416,11 +397,10 @@ func _ajustar() -> void:
 		return
 	camara.position = Vector3(0, 2.75, maxf(8.9, 1.9 / (tan(deg_to_rad(16.0)) * size.x / size.y)))
 	camara.look_at(Vector3(0, 2.22, 0))
-	for i in botones.size():
-		_colocar_boton(botones[i], Vector3(1.14, 2.85 - i * 0.48, 0.82), Vector2(0.52, 0.35))
+	_colocar_boton(boton_sortear, Vector3(1.14, 2.55, 0.82), Vector2(0.52, 0.35))
 	_colocar_boton(boton_recoger, Vector3(-0.32, 0.85, 0.79), Vector2(1.9, 0.65))
 	_colocar_boton(boton_retirar, Vector3(1.14, 3.29, 0.82), Vector2(0.49, 0.25))
-	_colocar_boton(boton_usar, Vector3(1.14, 3.29, 0.82), Vector2(0.49, 0.25))
+	_colocar_boton(boton_usar, Vector3(1.14, 1.90, 0.82), Vector2(0.49, 0.25))
 
 
 func _colocar_boton(boton: Button, centro: Vector3, medidas: Vector2) -> void:
@@ -450,10 +430,10 @@ func _input(evento: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		if evento.pressed and not evento.echo:
 			cerrar_solicitado.emit()
-	elif tecla >= KEY_1 and tecla <= KEY_4:
+	elif tecla == KEY_1:
 		get_viewport().set_input_as_handled()
 		if evento.pressed and not evento.echo:
-			producto_solicitado.emit(tecla - KEY_1)
+			producto_solicitado.emit()
 
 
 func _unhandled_input(_evento: InputEvent) -> void:

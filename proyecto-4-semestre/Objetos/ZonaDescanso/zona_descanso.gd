@@ -114,7 +114,11 @@ func _objetivo_valido(quien: Player, objetivo: Node3D) -> bool:
 	return _disponible() and quien == _jugador and not _jugador.input_locked and not _jugador.realizando_gesto() and _jugador.obtener_objetivo_interaccion() == objetivo
 
 func interactuar_cafetera(quien: Player) -> bool:
-	if estado != Estado.LIBRE or not _objetivo_valido(quien, $RinconCafe/MuebleCafe):
+	if _pago_red_pendiente or estado != Estado.LIBRE or not _objetivo_valido(quien, $RinconCafe/MuebleCafe):
+		return false
+	var espera: int = _gestor.espera_compra("cafe", _despacho.jugador_local_id)
+	if espera > 0:
+		mostrar_mensaje("Tu próximo café en %d s" % espera)
 		return false
 	if tiene_cafe():
 		mostrar_mensaje("Primero bebe el café que llevas con F.")
@@ -192,6 +196,7 @@ func recoger_cafe() -> bool:
 		cerrar_cafetera()
 		mostrar_mensaje("No tienes puntos suficientes para este café.")
 		return false
+	_gestor.registrar_compra("cafe", _despacho.jugador_local_id)
 	_recibir_cafe_visual()
 	return true
 
@@ -526,7 +531,8 @@ func _actualizar_aviso() -> void:
 		var objetivo := _jugador.obtener_objetivo_interaccion()
 		if objetivo == $RinconCafe/MuebleCafe:
 			titulo = "[E] USAR CAFETERA  ·  %d PTS" % costo_cafe
-			detalle = "Prepara y recoge tu café"
+			var espera: int = _gestor.espera_compra("cafe", _despacho.jugador_local_id)
+			detalle = "Tu próximo café en %d s" % espera if espera > 0 else "Prepara y recoge tu café"
 		elif objetivo == $SofaL/Cuerpo:
 			titulo = "[E] SENTARSE Y RELAJARSE"
 			detalle = "+1 de calma cada 2 segundos"

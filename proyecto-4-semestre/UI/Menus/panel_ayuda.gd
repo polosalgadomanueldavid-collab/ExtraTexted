@@ -375,7 +375,7 @@ func presentar_items() -> void:
 		["PAPA TIEMPO  ·  V", "Detiene el mundo y los plazos de los casos durante 12 segundos. Puedes seguir moviéndote y trabajando.", preload("res://UI/Descanso/Arte/papa_tiempo.svg")],
 		["EL AVATAR  ·  N", "Resuelve un evento activo con los cuatro elementos. Sin evento, conserva la carga.", preload("res://UI/Descanso/Arte/avatar_piedra.png")],
 		["CAFÉ  ·  F", "Se prepara en la cafetera. Recoge la taza y bebe para recuperar hasta 15 de calma, de pie o sentado.", preload("res://UI/Descanso/Arte/cafe.png")],
-		["COMPRAR Y USAR", "Pulsa E frente a la máquina, elige un producto y espera su caída. Recógelo con RETIRA o clic en el objeto. Sal para usarlo; puedes llevar uno de cada tipo.", null],
+		["COMPRAR Y USAR", "Pulsa E frente a la máquina, pulsa AZAR y espera la caída del premio. Recógelo con RETIRA o haciendo clic en él. Los premios repetidos se guardan en tu bolsillo.", null],
 	]
 	for ficha: Array in fichas:
 		var tarjeta := PanelContainer.new()
