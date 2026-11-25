@@ -14,8 +14,10 @@ signal terminado
 const DURACION := 60.0
 const DURACION_ENTRADA := 3.0
 const INTERVALO_BLOQUEOS := 4.0
-const PERDIDA_POR_SEGUNDO := 0.7
-const EXTRA_CHARCO := 0.45
+const PERDIDA_POR_SEGUNDO := 2.0
+const EXTRA_CHARCO := 0.5
+## Un punto cada 0,4 s en charcos, con margen de entrega de red.
+const INTERVALO_MINIMO_DANO_RED := 0.9 / (PERDIDA_POR_SEGUNDO + EXTRA_CHARCO)
 const CANTIDAD_CHARCOS := 6
 const PISO := 0.372
 const CAPA_ANTITREPAR := Player.CAPA_MUEBLES_NO_TREPABLES

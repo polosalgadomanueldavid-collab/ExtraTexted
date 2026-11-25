@@ -460,7 +460,7 @@ func _cordura(id: int, datos: Dictionary) -> Dictionary:
 	var causa := str(datos.get("causa", ""))
 	if cantidad < 0 and causa == "lava" and oficina.evento_lava.activo and not oficina.evento_lava.resolviendo_avatar and jugadores[id].global_position.y < 0.5:
 		var clave := "lava:%d" % id
-		if _reloj - float(_esperas.get(clave, -10.0)) >= 0.65:
+		if _reloj - float(_esperas.get(clave, -10.0)) >= oficina.evento_lava.INTERVALO_MINIMO_DANO_RED:
 			_esperas[clave] = _reloj
 			despacho.perder_calma(mini(2, -cantidad), &"lava", id)
 			return {"ok": true}

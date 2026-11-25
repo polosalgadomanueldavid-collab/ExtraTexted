@@ -29,9 +29,9 @@ La herramienta `Editor/hornear_sofa_l.gd` genera las dos mallas recortadas del s
 
 La escena incluye un cartel físico de pared sobre la máquina: **SHOP / SNACKS Y PODERES**, con fondo verde claro, letras verde oscuro y un carrito de compras. Es señalización estática, sin colisión ni luces adicionales; los avisos de interacción conservan los controles del teclado y del mando.
 
-`UI/Descanso/guia_shop.gd` señala una compra disponible al cruzar el precio real de un producto no poseído. Conserva únicamente la confirmación **¡HECHO!** del juego y los puntos del HUD: no añade un sello central ni otro mensaje de radio. Espera a que termine ¡HECHO! antes de mostrar seis segundos de señalización de tienda.
+`UI/Descanso/guia_shop.gd` señala una compra disponible al alcanzar el precio único del sorteo (`maquina.precio`), aunque ya se tengan cargas de los productos. Conserva únicamente la confirmación **¡HECHO!** del juego y los puntos del HUD: no añade un sello central ni otro mensaje de radio. Espera a que termine ¡HECHO! antes de mostrar seis segundos de señalización de tienda.
 
-El marcador muestra **SHOP · TIENDA**, **Snacks y poderes**, un carrito sobre fondo verde claro y el nombre y precio del producto. Cuando es el objetivo real de interacción cambia a **E · ABRIR TIENDA** (X en mando). Fuera del encuadre queda anclado al borde útil; abrir la máquina lo retira inmediatamente. Solo aparece una vez por turno, no se repite al ignorarlo y se aplaza durante tareas, pausa y emergencias. La práctica utiliza sus propios objetivos descriptivos.
+El marcador muestra **SHOP · TIENDA**, **Snacks y poderes**, un carrito sobre fondo verde claro y **Sorteo · [precio] pts**, sin anticipar el producto aleatorio. Cuando es el objetivo real de interacción cambia a **E · ABRIR TIENDA** (X en mando). Fuera del encuadre queda anclado al borde útil; abrir la máquina lo retira inmediatamente. Solo aparece una vez por turno, no se repite al ignorarlo y se aplaza durante tareas, pausa y emergencias. La práctica utiliza sus propios objetivos descriptivos.
 
 `Pruebas/ZonaDescanso/prueba_guia_shop.gd` con `--headless --fixed-fps 60 --script` comprueba umbrales, exclusión con ¡HECHO!, precios reales, compra, pausa y repetición. Con renderizado, añadir `-- --capturas` guarda las fases en `.godot/guia_shop_qa`.
 
