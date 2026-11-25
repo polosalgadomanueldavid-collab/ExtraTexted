@@ -29,7 +29,7 @@ La herramienta `Editor/hornear_sofa_l.gd` genera las dos mallas recortadas del s
 
 La escena incluye un cartel físico de pared sobre la máquina: **SHOP / SNACKS Y PODERES**, con fondo verde claro, letras verde oscuro y un carrito de compras. Es señalización estática, sin colisión ni luces adicionales; los avisos de interacción conservan los controles del teclado y del mando.
 
-`UI/Descanso/guia_shop.gd` señala una compra disponible al cruzar el precio del sorteo. Conserva únicamente la confirmación **¡HECHO!** del juego y los puntos del HUD: no añade un sello central ni otro mensaje de radio. Espera a que termine ¡HECHO! antes de mostrar seis segundos de señalización de tienda.
+`UI/Descanso/guia_shop.gd` señala una compra disponible al cruzar el precio real de un producto no poseído. Conserva únicamente la confirmación **¡HECHO!** del juego y los puntos del HUD: no añade un sello central ni otro mensaje de radio. Espera a que termine ¡HECHO! antes de mostrar seis segundos de señalización de tienda.
 
 El marcador muestra **SHOP · TIENDA**, **Snacks y poderes**, un carrito sobre fondo verde claro y el nombre y precio del producto. Cuando es el objetivo real de interacción cambia a **E · ABRIR TIENDA** (X en mando). Fuera del encuadre queda anclado al borde útil; abrir la máquina lo retira inmediatamente. Solo aparece una vez por turno, no se repite al ignorarlo y se aplaza durante tareas, pausa y emergencias. La práctica utiliza sus propios objetivos descriptivos.
 
@@ -45,16 +45,16 @@ La fila se coloca junto a la hoja cuando está en la mano; sin hoja utiliza el m
 
 Los cinco iconos son PNG transparentes prerenderizados desde los modelos del proyecto, sin viewports 3D permanentes. Se regeneran con `res://Objetos/ZonaDescanso/Editor/hornear_iconos_bolsillo.gd` (sin `--headless`). `res://Pruebas/ZonaDescanso/prueba_indicador_bolsillo.gd` verifica el HUD con compras y consumo de café reales; `-- --capturas` guarda las vistas en `.godot/bolsillo_qa`.
 
-**E** frente a la máquina abre la tienda. El botón **AZAR** o la tecla **1** sortea un producto por 50 puntos al recogerlo; **E/Esc** cierra. El mundo continúa mientras compras. Los premios repetidos se acumulan. Tras recoger un premio, la espera personal es de 40 s en individual y 70 s en dúo. El café tiene una espera independiente de 30 s en individual y 60 s en dúo.
+**E** frente a la máquina abre la tienda. Clic o **1–4** compran; **E/Esc** cierra. El mundo continúa mientras compras. Guarda una unidad de cada producto y actívala fuera de la tienda:
 
-| Objeto | Usar | Probabilidad | Efecto |
+| Objeto | Usar | Precio inicial | Efecto |
 | --- | --- | --- | --- |
-| Chocolate | Z | 45 % | Velocidad de caminar/correr ×1,65 durante 25 s. |
-| Dona | X | 45 % | Silueta ancha y salto de 1,65 m durante 10 s; permite subir a los cajones temporales. Las mesas y los muebles fijos siguen bloqueados, también en lava. |
-| Papa tiempo | V | 9 % | Pose ZA WARUDO, burbuja expansiva gris, sonidos de parada/reanudación y tic-tac; congela el mundo 12 s. |
-| El Avatar | N | 1 % | Un uso para resolver el evento activo con una animación elemental. Sin evento conserva la carga. |
+| Chocolate | Z | 50 | Velocidad de caminar/correr ×1,65 durante 25 s. |
+| Dona | X | 75 | Silueta ancha y salto de 1,65 m durante 10 s; permite subir a los cajones temporales. Las mesas y los muebles fijos siguen bloqueados, también en lava. |
+| Papa tiempo | V | 150 | Pose ZA WARUDO, burbuja expansiva gris, sonidos de parada/reanudación y tic-tac; congela el mundo 12 s. |
+| El Avatar | N | 250 | Un uso para resolver el evento activo con una animación elemental. Sin evento conserva la carga. |
 
-El precio se ajusta en `maquina_expendedora.gd` desde el inspector. Comprar descuenta saldo, sin alterar el puntaje ganado de clasificación. Los objetos se consumen al contacto del gesto; cancelar antes conserva el objeto. No se acumulan duraciones, y el bolsillo se conserva al reaparecer. El final de la partida lo vacía.
+Los precios se ajustan en `maquina_expendedora.gd` desde el inspector. Comprar descuenta saldo, sin alterar el puntaje ganado de clasificación. Los objetos se consumen al contacto del gesto; cancelar antes conserva el objeto. No se acumulan duraciones, y el bolsillo se conserva al reaparecer. El final de la partida lo vacía.
 
 Agua control resuelve inundación y lava; fuego control, incendio y apagón; tierra control, terremoto; aire control, la fuga de nitrógeno del evento hielo (la fuga de gas existente). Cada evento expone `resolver_con_avatar()`, que restaura también navegación, mobiliario, colisiones, luces y estados del jugador. Las poses son procedurales sobre el esqueleto, con cintas de agua/aire, llamas y rocas originales.
 

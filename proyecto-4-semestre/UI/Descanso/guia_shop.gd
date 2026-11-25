@@ -14,6 +14,7 @@ var restante := 0.0
 var _demora := 0.0
 var _saldo := 0
 var _saldo_antes := 0
+var _indice := -1
 var _casos: Dictionary = {}
 var marcador := Rect2()
 var en_borde := false
@@ -45,11 +46,19 @@ func _al_cambiar_menu() -> void:
 func _al_saldo(total: int) -> void:
 	_saldo_antes = _saldo
 	_saldo = total
-	if (pendiente or restante > 0) and not _compra_disponible():
+	if (pendiente or restante > 0) and _producto_disponible() < 0:
 		_cancelar()
 
-func _compra_disponible() -> bool:
-	return is_instance_valid(maquina) and _saldo >= maquina.precio
+func _producto_disponible() -> int:
+	if not is_instance_valid(maquina):
+		return -1
+	var elegido := -1
+	for i in maquina.precios.size():
+		if maquina.precios[i] <= 0 or maquina.inventario[i] > 0 or _saldo < maquina.precios[i]:
+			continue
+		if elegido < 0 or maquina.precios[i] < maquina.precios[elegido]:
+			elegido = i
+	return elegido
 
 func _al_resolver(caso: Denuncia) -> void:
 	if caso == null or caso.es_practica or oficina.en_practica() or ofrecida or pendiente or _casos.has(caso.id):
@@ -57,7 +66,8 @@ func _al_resolver(caso: Denuncia) -> void:
 	_casos[caso.id] = true
 	if _saldo <= _saldo_antes:
 		return
-	if not _compra_disponible() or _saldo_antes >= maquina.precio:
+	_indice = _producto_disponible()
+	if _indice < 0 or _saldo_antes >= maquina.precios[_indice]:
 		return
 	# La recompensa y la tarea terminan antes de que entre el mensaje de radio.
 	pendiente = true
@@ -94,7 +104,8 @@ func _process(delta: float) -> void:
 			return
 		_demora -= delta
 		if _demora <= 0.0:
-			if not _compra_disponible():
+			_indice = _producto_disponible()
+			if _indice < 0:
 				_cancelar()
 				return
 			pendiente = false

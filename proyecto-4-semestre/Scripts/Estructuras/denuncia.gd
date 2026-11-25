@@ -21,7 +21,7 @@ enum MotivoPerdida { TIEMPO, TERREMOTO }
 @export var hora_reporte: int = 0
 
 @export_group("Partida")
-@export var tiempo_limite_segundos: float = 120.0
+@export var tiempo_limite_segundos: float = 140.0
 @export var penalidad_calma: int = 4
 ## Cero calcula la recompensa por nivel de riesgo; un valor positivo la personaliza.
 @export_range(0, 10000, 1, "or_greater") var puntaje_recompensa: int = 0

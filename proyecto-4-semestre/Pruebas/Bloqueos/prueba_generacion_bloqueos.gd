@@ -22,9 +22,8 @@ func _probar() -> void:
 	await _fisicas(60)
 	var pool: Array = _oficina.get("_bloqueos_pool")
 	_verificar(pool.size() == 30, "Los 30 cajones se preparan antes del primer bloqueo")
-	_verificar((_oficina.get("_bloqueos_disponibles") as Array).size() == 30, "El pool comienza inactivo")
-	_oficina.call("_cambiar_bloqueo_temporal")
-	_verificar((_oficina.get("bloqueos_visuales") as Dictionary).size() == 5, "La primera distribución solo usa cinco mesas")
+	_verificar((_oficina.get("_bloqueos_disponibles") as Array).size() == 20, "Diez mesas están activas y veinte quedan en reserva")
+	_verificar((_oficina.get("bloqueos_visuales") as Dictionary).size() == 10, "La oficina entra con diez mesas ya colocadas")
 	_oficina.call("_limpiar_bloqueos_temporales")
 	# Probar también rutas, bordes y colisiones con la densidad máxima.
 	_oficina.set("tiempo_progresion_mesas", 625.0)
