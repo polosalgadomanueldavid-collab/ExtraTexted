@@ -4,13 +4,14 @@
 [ext_resource type="Script" path="res://Objetos/ZonaDescanso/maquina_expendedora.gd" id="5_control"]
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf" id="6_titulo"]
 [ext_resource type="FontFile" path="res://UI/Menus/ArtePiloto/Nunito.ttf" id="7_detalle"]
+[ext_resource type="Texture2D" path="res://UI/Descanso/Arte/carrito.svg" id="8_carrito"]
 
 
 [sub_resource type="BoxShape3D" id="CajaMaquina"]
 size = Vector3(1.05, 1.9, 0.84)
 
 [sub_resource type="StandardMaterial3D" id="MaterialMarcoShop"]
-albedo_color = Color(0.76, 0.59, 0.32, 1)
+albedo_color = Color(0.14, 0.34, 0.24, 1)
 roughness = 0.8
 
 [sub_resource type="BoxMesh" id="MarcoShop"]
@@ -18,7 +19,8 @@ material = SubResource("MaterialMarcoShop")
 size = Vector3(1.72, 0.66, 0.065)
 
 [sub_resource type="StandardMaterial3D" id="MaterialShop"]
-albedo_color = Color(0.055, 0.14, 0.18, 1)
+shading_mode = 0
+albedo_color = Color(0.725, 0.96, 0.55, 1)
 roughness = 0.9
 
 [sub_resource type="BoxMesh" id="PlacaShop"]
@@ -52,9 +54,9 @@ mesh = SubResource("PlacaShop")
 cast_shadow = 0
 
 [node name="Titulo" type="Label3D" parent="LetreroShop"]
-position = Vector3(0, 0.065, 0.058)
+position = Vector3(0.22, 0.065, 0.058)
 pixel_size = 0.006
-modulate = Color(1, 0.945, 0.83, 1)
+modulate = Color(0.14, 0.34, 0.24, 1)
 outline_size = 0
 font = ExtResource("6_titulo")
 font_size = 64
@@ -63,8 +65,13 @@ text = "SHOP"
 [node name="Detalle" type="Label3D" parent="LetreroShop"]
 position = Vector3(0, -0.19, 0.058)
 pixel_size = 0.003
-modulate = Color(0.62, 0.83, 0.83, 1)
+modulate = Color(0.14, 0.34, 0.24, 1)
 outline_size = 0
 font = ExtResource("7_detalle")
 font_size = 40
 text = "SNACKS Y PODERES"
+
+[node name="Carrito" type="Sprite3D" parent="LetreroShop"]
+position = Vector3(-0.54, 0.08, 0.06)
+pixel_size = 0.0037
+texture = ExtResource("8_carrito")

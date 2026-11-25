@@ -2,9 +2,9 @@ extends Control
 ## Una invitación local por turno; solo observa el saldo y las compras reales.
 const TITULO := preload("res://UI/Menus/ArtePiloto/LuckiestGuy-Regular.ttf")
 const TEXTO := preload("res://UI/Menus/ArtePiloto/Nunito.ttf")
-const CREMA := Color("fff1d8")
 const TINTA := Color("173b50")
-const CORAL := Color("ff785f")
+const VERDE := Color("b9f58c")
+const CARRITO := preload("res://UI/Descanso/Arte/carrito.svg")
 const DURACION := 6.0
 var oficina
 var maquina
@@ -137,7 +137,7 @@ func _draw() -> void:
 		return
 	var factor := minf(size.x / 1280.0, size.y / 720.0)
 	var estilo := StyleBoxFlat.new()
-	estilo.bg_color = CREMA
+	estilo.bg_color = VERDE
 	estilo.border_color = TINTA
 	estilo.set_border_width_all(2)
 	estilo.set_corner_radius_all(8)
@@ -146,13 +146,14 @@ func _draw() -> void:
 	draw_style_box(estilo, marcador)
 	var tecla := "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
 	var texto := "%s · ABRIR TIENDA" % tecla if interactuable else "SHOP · TIENDA"
-	draw_string(TITULO, marcador.position + Vector2(16, 25) * factor, texto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(17 * factor)), TINTA)
-	draw_string(TEXTO, marcador.position + Vector2(16, 43) * factor, "Snacks y poderes", HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(14 * factor)), TINTA)
-	var producto: String = "Al azar · %d pts" % maquina.precio
-	draw_string(TEXTO, marcador.position + Vector2(16, 59) * factor, producto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(10, roundi(12 * factor)), TINTA)
+	draw_texture_rect(CARRITO, Rect2(marcador.position + Vector2(8, 10) * factor, Vector2(46, 46) * factor), false)
+	draw_string(TITULO, marcador.position + Vector2(64, 25) * factor, texto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(17 * factor)), TINTA)
+	draw_string(TEXTO, marcador.position + Vector2(64, 43) * factor, "Snacks y poderes", HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(14 * factor)), TINTA)
+	var producto: String = "%s · %d pts" % [maquina.NOMBRES[maxi(0, _indice)], maquina.precios[maxi(0, _indice)]]
+	draw_string(TEXTO, marcador.position + Vector2(64, 59) * factor, producto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(10, roundi(12 * factor)), TINTA)
 	var direccion := _direccion if en_borde else Vector2.DOWN
 	var tangente := Vector2(-direccion.y, direccion.x)
 	var mitad := marcador.size * .5
 	var distancia := 1.0 / maxf(.001, maxf(absf(direccion.x) / mitad.x, absf(direccion.y) / mitad.y))
 	var origen := marcador.get_center() + direccion * (distancia - factor)
-	draw_colored_polygon(PackedVector2Array([origen + direccion * 9 * factor, origen + tangente * 6 * factor, origen - tangente * 6 * factor]), CORAL)
+	draw_colored_polygon(PackedVector2Array([origen + direccion * 9 * factor, origen + tangente * 6 * factor, origen - tangente * 6 * factor]), VERDE)

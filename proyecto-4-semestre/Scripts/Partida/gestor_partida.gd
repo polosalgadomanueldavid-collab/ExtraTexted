@@ -8,8 +8,8 @@ extends Node3D
 @onready var musica_partida: MusicaPartida = $MusicaPartida
 @onready var musica_cordura_baja: MusicaPartida = $MusicaCorduraBaja
 
-const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 12.0
-const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 20.0
+const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 15.0
+const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 23.0
 const MAX_DENUNCIAS_PENDIENTES: int = 5
 const DURACION_BLOQUEO_SEGUNDOS: float = 10.0
 const ESPERA_MINIMA_EVENTOS: float = 40.0
@@ -17,6 +17,8 @@ const ESPERA_MAXIMA_EVENTOS: float = 65.0
 const ESPERA_INDIVIDUAL := {"snack": 40.0, "cafe": 30.0}
 const ESPERA_DUO := {"snack": 70.0, "cafe": 60.0}
 const BLOQUEOS_SIMULTANEOS: int = 30
+const MESAS_INICIALES: int = 5
+const SEGUNDOS_POR_MESA: float = 25.0
 const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
 	"res://Eventos/Bloqueos/BloqueoTemporal.tscn"
 )
@@ -80,6 +82,8 @@ var _denuncia_orientada_id: String = ""
 var _celda_ruta := Vector2i(-1, -1)
 var temporizador_bloqueos: Timer
 var bloqueos_iniciados: bool = false
+var tiempo_progresion_mesas: float = 0.0
+var mesas_extra_debug: int = 0
 var bloqueos_visuales: Dictionary = {}
 var _bloqueos_pool: Array[StaticBody3D] = []
 var _bloqueos_disponibles: Array[StaticBody3D] = []
@@ -189,6 +193,7 @@ func _ready() -> void:
 	generador_aleatorio.randomize()
 
 	sistema_despacho = SistemaDespacho.new()
+	sistema_despacho.ritmo_eventos = _ritmo_denuncias_por_eventos
 	add_child(sistema_despacho)
 	musica_partida.configurar(sistema_despacho)
 	musica_cordura_baja.configurar(sistema_despacho, true)
@@ -423,6 +428,8 @@ func _process(_delta: float) -> void:
 			anuncios.mostrar_inicio()
 	if not sistema_despacho.tiempo_detenido and not en_practica():
 		_duracion_partida += _delta
+		if sistema_despacho.autoridad and bloqueos_iniciados and _puede_iniciar_evento():
+			tiempo_progresion_mesas += _delta
 	# Reorientar al cambiar de celda, sin buscar rutas en cada cuadro.
 	if not _estaciones_pendientes.is_empty() and grafo_piso.posicion_a_celda(jugador.global_position) != _celda_ruta:
 		_calcular_ruta_a_proxima_estacion()
@@ -669,6 +676,9 @@ func _recibir_denuncia_aleatoria() -> void:
 		contador_denuncias += 1
 		nueva_denuncia.id = "%s-%03d" % [plantilla.id, contador_denuncias]
 		nueva_denuncia.hora_reporte = Time.get_ticks_msec()
+		# Margen por la cola y los desvíos del laberinto, sin alterar la cadencia.
+		nueva_denuncia.tiempo_limite_segundos += minf(60.0, sistema_despacho.obtener_denuncias_ordenadas().size() * 15.0)
+		nueva_denuncia.tiempo_limite_segundos += (cantidad_mesas_objetivo() - MESAS_INICIALES) * 1.5
 
 		var denuncia_recibida: bool = sistema_despacho.recibir_denuncia(nueva_denuncia)
 
@@ -791,6 +801,27 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 	papel.angular_velocity = Vector3.ZERO
 	papel.global_position = computador.global_position + Vector3.UP * 0.7
 	papel.freeze = false
+
+
+func _ritmo_denuncias_por_eventos() -> float:
+	# Reparar luz o apagar estaciones impide tramitar con normalidad.
+	if evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (is_instance_valid(evento_incendio) and evento_incendio.activo):
+		return 0.25
+	if evento_terremoto.activo or evento_terremoto.preparando or (is_instance_valid(evento_inundacion) and evento_inundacion.activo) or (is_instance_valid(evento_lava) and evento_lava.activo) or (is_instance_valid(evento_hielo) and evento_hielo.activo):
+		return 0.5
+	return 1.0
+
+
+func cantidad_mesas_objetivo() -> int:
+	return clampi(MESAS_INICIALES + floori(tiempo_progresion_mesas / SEGUNDOS_POR_MESA) + mesas_extra_debug, MESAS_INICIALES, BLOQUEOS_SIMULTANEOS)
+
+
+func agregar_mesas_debug(cantidad: int) -> void:
+	if not OS.is_debug_build() or not sistema_despacho.autoridad or partida_finalizada or cantidad <= 0:
+		return
+	mesas_extra_debug += mini(cantidad, BLOQUEOS_SIMULTANEOS - cantidad_mesas_objetivo())
+	# Incendio y terremoto conservan su trazado; aplicarlo al siguiente reparto.
+	_cambiar_bloqueo_temporal()
 
 
 func _puede_iniciar_evento(omitir_preparacion := false) -> bool:
@@ -1543,7 +1574,8 @@ func _cambiar_bloqueo_temporal() -> void:
 			rutas_protegidas[destino] = ensayo.get_id_path(celda_jugador, destino)
 
 	var bloqueos_colocados: int = 0
-	while not candidatos.is_empty() and bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
+	var objetivo_mesas := cantidad_mesas_objetivo()
+	while not candidatos.is_empty() and bloqueos_colocados < objetivo_mesas:
 		var indice: int = generador_aleatorio.randi_range(
 			0,
 			candidatos.size() - 1
@@ -1567,10 +1599,10 @@ func _cambiar_bloqueo_temporal() -> void:
 	depurador_grafo.actualizar_mapa()
 	_calcular_ruta_a_proxima_estacion()
 
-	if bloqueos_colocados < BLOQUEOS_SIMULTANEOS:
+	if bloqueos_colocados < objetivo_mesas:
 		print(
 			"Solo se colocaron %d de %d bloqueos sin cerrar la ruta."
-			% [bloqueos_colocados, BLOQUEOS_SIMULTANEOS]
+			% [bloqueos_colocados, objetivo_mesas]
 		)
 	else:
 		print("Bloqueos temporales activos: ", bloqueos_colocados)

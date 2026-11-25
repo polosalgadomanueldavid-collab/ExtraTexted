@@ -37,6 +37,8 @@ var calma_operativa: int:
 var causa_agotamiento: StringName = &""
 var terminada: bool = false
 var tiempo_detenido := false
+## El gestor aporta el ritmo de las emergencias; Papa Tiempo sigue siendo pausa total.
+var ritmo_eventos: Callable
 var en_practica := false
 var denuncia_activa_id: String:
 	get:
@@ -166,12 +168,15 @@ func actualizar_tiempos(delta: float) -> void:
 	if terminada or tiempo_detenido or en_practica:
 		return
 	var ids: Array = tiempos_restantes.keys()
+	var ritmo := clampf(float(ritmo_eventos.call()), 0.0, 1.0) if ritmo_eventos.is_valid() else 1.0
 
 	for valor_id: Variant in ids:
 		if terminada:
 			break
 		var id: String = str(valor_id)
-		tiempos_restantes[id] = float(tiempos_restantes[id]) - delta
+		var denuncia := arbol.buscar_por_id(id)
+		var ritmo_cola := 0.5 if denuncia != null and denuncia.estado == Denuncia.Estado.PENDIENTE else 1.0
+		tiempos_restantes[id] = float(tiempos_restantes[id]) - delta * ritmo * ritmo_cola
 
 		if tiempos_restantes[id] <= 0.0:
 			vencer_denuncia(id)

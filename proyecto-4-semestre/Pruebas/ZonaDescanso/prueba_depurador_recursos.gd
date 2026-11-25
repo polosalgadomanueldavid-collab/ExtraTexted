@@ -15,6 +15,12 @@ func _probar() -> void:
 	await _tecla(KEY_F3)
 	await _tecla(KEY_F4)
 	_verificar(panel.visible and _jugador.input_locked, "F3 y F4 abren el panel y bloquean el personaje")
+	panel.cantidad_mesas.get_line_edit().text = "7"
+	panel.boton_mesas.pressed.emit()
+	_verificar(_oficina.cantidad_mesas_objetivo() == 12 and _oficina.bloqueos_visuales.size() == 12, "Añadir mesas aplica la cantidad escrita")
+	panel.cantidad_mesas.get_line_edit().text = "30"
+	panel.boton_mesas.pressed.emit()
+	_verificar(_oficina.cantidad_mesas_objetivo() == 30 and panel.boton_mesas.disabled, "El depurador limita las mesas al máximo original")
 	var ganados := _despacho.puntuacion.puntos_ganados
 	panel.cantidad_puntos.get_line_edit().text = "12345"
 	panel.boton_puntos.pressed.emit()
