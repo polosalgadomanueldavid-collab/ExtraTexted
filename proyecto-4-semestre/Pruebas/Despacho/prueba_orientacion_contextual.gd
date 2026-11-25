@@ -162,6 +162,11 @@ func _probar_tecla_real() -> void:
 	caso.protocolo_estaciones.assign(["evidencias", "verificacion", "privacidad", "bienestar", "reporte"])
 	sistema.recibir_denuncia(caso)
 	var jugador = oficina.jugador
+	# La recepción anterior vuelve a arrancar estos relojes. Aislar las mesas:
+	# un cajón aleatorio bajo el PC eleva al jugador y falsea todos los alcances.
+	oficina.temporizador_bloqueos.stop()
+	oficina.temporizador_eventos.stop()
+	oficina._limpiar_bloqueos_temporales()
 	jugador.global_position = oficina.computador.global_position + Vector3(0,.1,1.2)
 	jugador.velocity = Vector3.ZERO
 	jugador.set_physics_process(true)

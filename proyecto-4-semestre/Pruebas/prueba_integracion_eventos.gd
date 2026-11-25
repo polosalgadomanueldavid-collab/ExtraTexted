@@ -60,6 +60,8 @@ func _probar() -> void:
 	for evento: StringName in [&"incendio", &"terremoto", &"inundacion", &"hielo", &"lava"]:
 		if evento != &"incendio":
 			oficina.call("_iniciar_" + evento)
+			if evento == &"terremoto":
+				await _esperar_terremoto()
 		var guia: Dictionary = menu.panel_ayuda.GuiasEventos.GUIAS[evento]
 		var panel: Control = menu.panel_ayuda
 		_verificar(paused and panel.tutorial_evento.is_visible_in_tree() and panel.titulo.text == guia.titulo, "Se abre la guía de " + evento)
@@ -76,6 +78,8 @@ func _probar() -> void:
 		_probar_consulta(menu, guia.nombre)
 		_terminar(evento)
 		oficina.call("_iniciar_" + evento)
+		if evento == &"terremoto":
+			await _esperar_terremoto()
 		_verificar(oficina.evento_para_consultar() == evento and not paused and not menu.capa.visible, "La repetición de %s conserva el anuncio sin abrir la guía" % evento)
 		_terminar(evento)
 		await _fisicas(4)
@@ -101,9 +105,17 @@ func _probar_consulta(menu: Node, nombre: String) -> void:
 	menu.reanudar_juego()
 
 
+func _esperar_terremoto() -> void:
+	var limite := Time.get_ticks_msec() + 20000
+	while oficina.evento_terremoto.preparando and Time.get_ticks_msec() < limite:
+		await process_frame
+	_verificar(oficina.evento_terremoto.activo, "La preparación del terremoto termina antes de consultar la guía")
+
+
 func _terminar(evento: StringName) -> void:
 	if evento == &"terremoto":
-		oficina.evento_terremoto._abrir_suelo()
+		if oficina.evento_terremoto.activo:
+			oficina.evento_terremoto._abrir_suelo()
 		oficina.evento_terremoto._cerrar()
 	elif evento == &"incendio":
 		for foco in oficina.evento_incendio.focos:

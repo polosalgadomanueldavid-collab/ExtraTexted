@@ -124,7 +124,7 @@ func _probar() -> void:
 	# Reutilizar cajones en el agua conserva el grafo y produce salpicaduras reales.
 	oficina._cambiar_bloqueo_temporal()
 	await _cuadros(38)
-	_verificar(evento._efectos.get_child_count() >= 30, "Los nuevos cajones salpican al caer al agua")
+	_verificar(not oficina.bloqueos_visuales.is_empty() and evento._efectos.get_child_count() >= oficina.bloqueos_visuales.size(), "Los nuevos cajones salpican al caer al agua")
 	var origen: Vector2i = oficina.grafo_piso.celda_de_acceso(jugador.global_position)
 	var destino: Vector2i = oficina.grafo_piso.celda_de_acceso(evento.acceso.global_position)
 	_verificar(not oficina.grafo_piso.calcular_ruta(origen, destino).is_empty(), "Los bloqueos mantienen el acceso a las tuberías")

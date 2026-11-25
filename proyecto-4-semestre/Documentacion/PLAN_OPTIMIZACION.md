@@ -1,5 +1,21 @@
 # Plan de optimización y auditoría de cargas
 
+## Revisión de errores del 24 de noviembre de 2026
+
+Verificación local con Godot **4.7.stable.official.5b4e0cb0f**, Windows y ejecución headless. Esta revisión no sustituye las mediciones gráficas históricas que aparecen debajo.
+
+- Retiradas las impresiones de diagnóstico de la partida, las estaciones, el grafo y el cargador. Se conservan los errores y advertencias del depurador, así como los resultados de herramientas y pruebas.
+- Corregidas la comprobación del método de interacción de estaciones, la acción de soltar papel ausente fuera del modo móvil y las notificaciones de cordura sin cambios.
+- El terremoto reserva espacio para los derrumbes antes de agotar el suelo disponible, conserva los mínimos de grietas y escombros y admite los accesos de las dos herramientas LAN en sus posiciones normales. La prueba de barrera ya no reubica las herramientas para conseguir un plan válido.
+- Las grietas ahora perforan la losa física. El personaje conserva su colisión al saltar; se retira la caída forzada que interrumpía el salto. La rotura también tolera cajones retirados durante el relevo.
+- Actualizadas las pruebas que suponían preparación síncrona, cantidades fijas de cajones o valores de cordura anteriores. El cierre compartido detiene el audio y concede tiempo real al mezclador incluso con `--fixed-fps`.
+
+La carga de los **270 scripts** termina sin errores. Pasan las comprobaciones de las **28 pruebas de regresión** de menús, despacho, eventos, personaje, descanso y partida. Se repiten las pruebas de terremoto tras ajustar la posición alternativa LAN. La suite LAN completa pasa **161 comprobaciones del anfitrión**, más cliente, sala y rechazo de conexiones; la barrera específica del terremoto pasa **27 comprobaciones** con las herramientas en su posición real. Se actualiza también la comprobación de accesorios de los personajes al acabado actual. Los registros están en `.godot/qa_general` y `.godot/qa_lan` (locales, no versionados). Estas cifras describen validación funcional headless, no una aceptación visual ni de rendimiento en dos equipos físicos.
+
+**Aviso pendiente del cargador del motor:** `aislar_carga_threaded.gd -- --threaded` reproduce instancias `RefCounted` con contador cero al salir, sin instanciar la oficina; la misma prueba con `-- --sincrona` no deja ese aviso. Esperar al mezclador soluciona los errores de audio, pero no estas instancias. Se mantiene la carga asíncrona para evitar bloquear la interfaz. La reproducción está aislada; no se considera corregido este aviso ni se oculta la salida del motor.
+
+## Registro previo
+
 Actualización: 16 de noviembre de 2026, base `e57e652`. Estado: implementación parcial, ramas integradas y verificación adicional en Iris Xe. El diagnóstico original se conserva debajo como referencia histórica; sus descripciones de carga directa y barra al 90 % ya no describen el código actual. Detalles y limitaciones: [continuación del día 16](VERIFICACION_OPTIMIZACION_2026-11-16.md).
 
 ## Estado comprobado tras integrar las ramas

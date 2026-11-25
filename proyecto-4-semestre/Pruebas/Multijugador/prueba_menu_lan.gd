@@ -80,6 +80,7 @@ func _probar() -> void:
 	print("[MENU LAN] Navegación, IP inválida, cancelación, datos conservados, sala, listo, escalado y nueva sesión: OK")
 	root.get_node("MenuGlobal").musica_menu.stop()
 	await create_timer(0.3).timeout
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit()
 
 func _probar_sala_real(menu: Control, sesion: Node) -> void:
@@ -129,6 +130,7 @@ func _probar_sala_real(menu: Control, sesion: Node) -> void:
 	root.get_node("MenuGlobal").musica_menu.stop()
 	await create_timer(0.3).timeout
 	print("[SALA VISUAL LAN] Dos fichas, ambos listos, inicio solo del anfitrión y salida: OK")
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit()
 
 

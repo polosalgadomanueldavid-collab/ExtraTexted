@@ -212,6 +212,8 @@ func recuperar_calma(cantidad: int, jugador_id: int = 0) -> int:
 	if terminada or cantidad <= 0 or not esta_activo(jugador_id):
 		return 0
 	var recuperada := mini(cantidad, CALMA_MAXIMA - obtener_cordura(jugador_id))
+	if recuperada == 0:
+		return 0
 	_cambiar_cordura(jugador_id, recuperada)
 	return recuperada
 

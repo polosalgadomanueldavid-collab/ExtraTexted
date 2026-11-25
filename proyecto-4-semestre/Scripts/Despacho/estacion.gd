@@ -6,14 +6,13 @@ extends StaticBody3D
 
 
 func interactuar(jugador: Player) -> void:
-	print("[Estación] Interacción recibida en '", estacion_id, "' (", nombre_visible, ").")
 	var gestor: Node = get_tree().get_first_node_in_group("gestor_partida")
 
 	if gestor == null:
 		push_warning("No se encontró el gestor de partida.")
 		return
 
-	if not gestor.has_method("interactuar_estacion"):
+	if not gestor.has_method("interactuar_estacion_con_papel"):
 		push_warning("El gestor no puede procesar estaciones.")
 		return
 

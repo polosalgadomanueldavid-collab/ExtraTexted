@@ -15,12 +15,14 @@ func _probar() -> void:
 	var sala := Node3D.new()
 	root.add_child(sala)
 	current_scene = sala
+	var combinador := CSGCombiner3D.new()
+	combinador.use_collision = true
+	sala.add_child(combinador)
 	suelo = CSGBox3D.new()
 	suelo.size = Vector3(8, 1, 8)
 	suelo.position.y = -0.5
 	suelo.material = StandardMaterial3D.new()
-	suelo.use_collision = true
-	sala.add_child(suelo)
+	combinador.add_child(suelo)
 	jugador = load("res://Personajes/PoliciaAzul/Policia.tscn").instantiate()
 	jugador.position = Vector3(2, 0.02, 2)
 	sala.add_child(jugador)
@@ -49,7 +51,7 @@ func _probar() -> void:
 			grieta.cerrar()
 			await _fisicas(4)
 			golpe = _pisar(sobre_bisel)
-			if golpe.is_empty() or golpe.collider != suelo or absf(golpe.position.y) > 0.003:
+			if golpe.is_empty() or golpe.collider != combinador or absf(golpe.position.y) > 0.003:
 				errores += 1
 				push_error("Al recomponerse el piso vuelve a tener una superficie plana")
 	sala.queue_free()

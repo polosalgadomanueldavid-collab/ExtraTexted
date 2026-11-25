@@ -529,7 +529,6 @@ func _ajustar_calma_para_prueba(cambio: int) -> void:
 			sistema_despacho.perder_calma(perdida, &"prueba_musica")
 	else:
 		sistema_despacho.recuperar_calma(cambio)
-	print("[PRUEBA MÚSICA] Cordura: %d / 100" % sistema_despacho.calma_operativa)
 
 
 func _crear_aviso_apagon() -> void:
@@ -698,15 +697,6 @@ func _recibir_denuncia_aleatoria() -> void:
 			_cambiar_bloqueo_temporal()
 			temporizador_bloqueos.start()
 			_programar_evento_aleatorio()
-			
-		print(
-			"Nueva denuncia: ",
-			nueva_denuncia.id,
-			" | Nivel ",
-			nueva_denuncia.nivel_riesgo,
-			" | ",
-			nueva_denuncia.titulo
-		)
 
 	_programar_siguiente_denuncia()
 
@@ -741,18 +731,7 @@ func _programar_siguiente_denuncia() -> void:
 	temporizador_denuncias.start(espera)
 
 func _on_computador_despacho_abierto() -> void:
-	var denuncia: Denuncia = sistema_despacho.iniciar_denuncia_prioritaria()
-
-	if denuncia == null:
-		print("No hay denuncias pendientes para atender.")
-		return
-
-	print(
-		"Denuncia aceptada en despacho: ",
-		denuncia.id,
-		" - ",
-		denuncia.titulo
-	)
+	sistema_despacho.iniciar_denuncia_prioritaria()
 
 
 func _entregar_papel(portador: Player) -> void:
@@ -1392,15 +1371,10 @@ func _aplicar_estacion(estacion_id: String) -> void:
 	if is_instance_valid(red):
 		SesionLAN.solicitar("completar", {"estacion": estacion_id, "caso": sistema_despacho.denuncia_activa_id})
 		return
-	print("[Despacho] Se solicitó usar la estación: ", estacion_id)
 	var fue_correcta: bool = sistema_despacho.interactuar_estacion(estacion_id)
 
-	if fue_correcta:
-		if estacion_id == "bienestar":
-			sonidos_mesas.bienestar.play()
-		print("Estación correcta: ", estacion_id)
-	else:
-		print("Estación incorrecta o no hay denuncia activa: ", estacion_id)
+	if fue_correcta and estacion_id == "bienestar":
+		sonidos_mesas.bienestar.play()
 
 
 func _completar_descriptado() -> void:
@@ -1466,8 +1440,6 @@ func _crear_indicadores_estaciones() -> void:
 			estacion.add_child(respuesta)
 			respuesta.configurar(estacion.estacion_id)
 			respuestas_mesas[estacion.estacion_id] = respuesta
-
-	print("[Orientación] Indicadores creados: ", indicadores_estaciones.size())
 
 
 func _actualizar_respuestas_mesas(objetivo: Node3D = null) -> void:
@@ -1621,14 +1593,6 @@ func _cambiar_bloqueo_temporal() -> void:
 	depurador_grafo.actualizar_mapa()
 	_calcular_ruta_a_proxima_estacion()
 
-	if bloqueos_colocados < objetivo_mesas:
-		print(
-			"Solo se colocaron %d de %d bloqueos sin cerrar la ruta."
-			% [bloqueos_colocados, objetivo_mesas]
-		)
-	else:
-		print("Bloqueos temporales activos: ", bloqueos_colocados)
-
 
 func _conserva_accesos(
 	ensayo: AStarGrid2D,
@@ -1690,13 +1654,6 @@ func _depurar_ruta(
 				% celda
 			)
 			return
-
-	print(
-		"[GRAFO] Ruta válida | Origen: %s | Destino: %s | "
-		% [origen, destino]
-		+ "Pasos: %d | Bloqueos activos: %d"
-		% [ruta.size() - 1, grafo_piso.bloqueos_temporales.size()]
-	)
 
 func _mostrar_bloqueo_temporal(celda: Vector2i) -> void:
 	var bloqueo_visual: StaticBody3D

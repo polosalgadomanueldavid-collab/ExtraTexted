@@ -69,7 +69,7 @@ func _probar_calma() -> void:
 	for valor: int in [0, -1]:
 		despacho.calma_operativa = valor
 		cantidad_senales = calmas.size()
-		_verificar(despacho.recuperar_calma(15) == 0 and despacho.calma_operativa == valor, "Recuperar calma no revive una partida con calma %d" % valor)
+		_verificar(despacho.recuperar_calma(15) == 0 and despacho.calma_operativa == 0, "Recuperar calma no revive una partida con calma %d" % valor)
 		_verificar(calmas.size() == cantidad_senales, "Una partida terminada no anuncia una recuperación")
 	despacho.free()
 

@@ -10,6 +10,7 @@ const ZONA_DERRUMBES_SUPERIOR := Rect2(-4.05, 0.40, 6.15, 6.50)
 const ANCHOS: Array[float] = [1.33, 0.79, 0.73, 0.69, 0.73, 0.69, 0.73, 0.69, 0.73, 0.69, 0.69]
 const LARGOS: Array[float] = [2.18, 1.70, 1.42, 1.15, 1.05, 1.00, 1.25, 1.15, 1.10, 1.00, 0.95]
 const MINIMO_GRIETAS := 10
+const GRIETAS_OFICINA_INICIALES := 3
 const MINIMO_ESCOMBROS := 14
 const MAXIMO_ESCOMBROS := 23
 const MINIMO_ESCOMBROS_SUPERIORES := 14
@@ -84,7 +85,7 @@ func planificar() -> Dictionary:
 		for i in range(cantidad):
 			# Reservar los derrumbes junto a las primeras grietas, antes de que
 			# las restantes consuman todo el suelo firme de la oficina.
-			if i == 6:
+			if i == GRIETAS_OFICINA_INICIALES:
 				var cupo := MAXIMO_ESCOMBROS_SUPERIORES if intento < 3 else (16 if intento < 6 else MINIMO_ESCOMBROS_SUPERIORES)
 				espacios_escombros = await _elegir_espacios_escombros(origen, protegidos, ensayo, cupo, true)
 				if espacios_escombros.size() < MINIMO_ESCOMBROS:
@@ -98,10 +99,12 @@ func planificar() -> Dictionary:
 				break
 		if _trazado.size() >= MINIMO_GRIETAS and espacios_escombros.size() >= MINIMO_ESCOMBROS:
 			var inferiores := await _elegir_espacios_escombros(origen, protegidos, ensayo, 0, false)
-			if not inferiores.is_empty():
-				espacios_escombros.append_array(inferiores)
-				plan_valido = true
-				break
+			if presupuesto.cancelado: return {}
+			# Descanso admite hasta tres derrumbes, pero no es obligatorio ocuparlo.
+			# Los mínimos y los montones anchos se garantizan en la zona superior.
+			espacios_escombros.append_array(inferiores)
+			plan_valido = true
+			break
 	if not plan_valido:
 		_limpiar()
 		return {}
@@ -126,7 +129,8 @@ func _elegir_gigante(origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarG
 		var largo := _azar.randf_range(3.85, 4.3)
 		var ancho := _azar.randf_range(2.05, 2.4)
 		if intento >= 24:
-			centro = Vector2(-0.25, 8.18 if intento % 2 == 0 else 10.45)
+			# Conservar también los accesos de las dos herramientas en partidas LAN.
+			centro = Vector2(-1.25, 8.18 if intento % 2 == 0 else 10.45)
 			angulo = PI * 0.5
 			largo = _azar.randf_range(3.70, 3.85)
 			ancho = _azar.randf_range(2.0, 2.1)
@@ -230,7 +234,7 @@ func _elegir_espacios_escombros(origen: Vector2i, destinos: Array[Vector2i], ens
 							puntuacion = minf(puntuacion, bordes[a].length() + bordes[b].length())
 				candidatas.append(espacio)
 				# Primero saturar oficina; descanso no puede consumir el cupo.
-				var preferencia_ancho := (-2.0 if arriba else 5.0) if tamano != Vector2i.ONE else 0.0
+				var preferencia_ancho := (2.0 if arriba else 5.0) if tamano != Vector2i.ONE else 0.0
 				var paso := _paso_abierto(espacio.position, ensayo) if arriba else 0.0
 				puntuaciones[espacio] = puntuacion - (40.0 if arriba else 0.0) - preferencia_ancho - paso * 1.3 + (3.0 if sobre_cajon else 0.0)
 	candidatas.sort_custom(func(a: Rect2i, b: Rect2i) -> bool: return puntuaciones[a] < puntuaciones[b])
@@ -325,13 +329,13 @@ func _elegir_espacios_escombros(origen: Vector2i, destinos: Array[Vector2i], ens
 		elegidas.insert(i + 1, Rect2i(celdas[1], Vector2i.ONE))
 		superiores += 1
 		anchos -= 1
-	if (solo_superior and (superiores < MINIMO_ESCOMBROS_SUPERIORES or pasos_cerrados < MINIMO_PASOS_CERRADOS)) or (not solo_superior and anchos < 2):
+	if solo_superior and (superiores < MINIMO_ESCOMBROS_SUPERIORES or pasos_cerrados < MINIMO_PASOS_CERRADOS or anchos < 2):
 		elegidas.clear()
 	return elegidas
 
 
 func _elegir_grieta(indice: int, origen: Vector2i, destinos: Array[Vector2i], ensayo: AStarGrid2D, escala_general: float = 1.0) -> bool:
-	var zona := ZONA_MESAS if indice < 6 else ZONA_SISMO
+	var zona := ZONA_MESAS if indice < GRIETAS_OFICINA_INICIALES else ZONA_SISMO
 	var mesas := _bloqueos.keys()
 	var libres: Array[Vector2i] = []
 	for celda: Vector2i in _grafo.adyacencia:

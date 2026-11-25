@@ -50,6 +50,7 @@ func _run() -> void:
 	current_scene.queue_free()
 	for i in 8: await process_frame
 	print("[INICIO PRACTICA] %d comprobaciones, %d errores" % [pruebas, fallos])
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(fallos)
 
 func _verificar(condicion: bool, mensaje: String) -> void:
