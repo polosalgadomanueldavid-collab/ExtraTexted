@@ -84,11 +84,11 @@ func _run() -> void:
 	# Nueva oficina: productos propios y precios personalizados.
 	await _oficina()
 	_verificar(not guia.ofrecida, "Un turno nuevo permite otra invitación")
-	maquina.inventario[0] = 1
+	maquina.inventario.assign([1, 1, 1, 1])
 	maquina.precio = 63
 	_premiar("SHOP-PRECIO", 70)
 	await _cuadros(100)
-	_verificar(guia.visible and maquina.precio == 63, "Ofrece el sorteo con el precio configurado")
+	_verificar(guia.visible and maquina.precio == 63 and guia._compra_disponible(), "Ofrece el sorteo al precio único configurado aunque ya haya cargas de todos los productos")
 	await _cuadros(370)
 	_verificar(guia.ofrecida and not guia.visible and guia.restante == 0, "El aviso desaparece solo después de seis segundos visibles")
 	_premiar("SHOP-OTRO", 100)

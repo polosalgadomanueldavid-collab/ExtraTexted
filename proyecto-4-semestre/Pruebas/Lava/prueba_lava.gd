@@ -53,8 +53,10 @@ func _probar() -> void:
 	_verificar(oficina.sistema_despacho.calma_operativa == calma and not jugador.quemandose_pies and is_equal_approx(lava._material.get_shader_parameter("presencia"), 0.5), "La entrada revela el magma gradualmente y da tiempo para reaccionar sin daño")
 	lava._physics_process(1.5)
 	_verificar(oficina.sistema_despacho.calma_operativa == calma and is_equal_approx(lava._material.get_shader_parameter("presencia"), 1.0), "La propagación dura tres segundos antes de comenzar el daño")
-	lava._physics_process(2.0)
-	_verificar(oficina.sistema_despacho.calma_operativa == calma - 1 and jugador.quemandose_pies, "Dos segundos sobre magma quitan cordura y activan los pies quemados")
+	lava._physics_process(0.5)
+	_verificar(oficina.sistema_despacho.calma_operativa == calma - 1, "Medio segundo sobre magma quita un punto de cordura")
+	lava._physics_process(1.5)
+	_verificar(oficina.sistema_despacho.calma_operativa == calma - 4 and jugador.quemandose_pies, "Dos segundos sobre magma quitan cuatro puntos de cordura y activan los pies quemados")
 	await _fisicas(20)
 	_verificar(jugador.gestos._peso_quemadura > 0.9, "La pose de pies quemados se mezcla sobre el esqueleto")
 	var diferencia_pies := 0.0
@@ -71,7 +73,8 @@ func _probar() -> void:
 	calma = oficina.sistema_despacho.calma_operativa
 	lava._perdida_acumulada = 0.0
 	lava._physics_process(2.0)
-	_verificar(oficina.sistema_despacho.calma_operativa == calma - 2, "El charco quita más cordura que el piso en el mismo tiempo")
+	_verificar(oficina.sistema_despacho.calma_operativa == calma - 5, "Dos segundos en un charco quitan cinco puntos de cordura")
+	_probar_dano_red()
 	var forma: Dictionary = lava._patron.formas[0]
 	_verificar(forma.placas.size() == 3 and forma.islas.size() == 3, "El núcleo funde tres placas del piso y conserva tres islas de costra")
 	var dano_ramal := false
@@ -196,6 +199,10 @@ func _probar() -> void:
 	# Medir el minuto completo y el reciclaje automático, sin adelantar el reloj.
 	oficina.temporizador_bloqueos.start(10.0)
 	_verificar(oficina._iniciar_lava(), "El evento puede repetirse limpiamente")
+	# Aislar la duración del evento: el nuevo daño sí puede agotar cien puntos
+	# antes del minuto. Mantener al actor suspendido mientras se mide el reloj.
+	jugador.set_physics_process(false)
+	jugador.global_position = Vector3(-1.5, 2.5, 3.2)
 	var cambios: Array[int] = [0]
 	var contar := func() -> void: cambios[0] += 1
 	oficina.temporizador_bloqueos.timeout.connect(contar)
@@ -215,6 +222,11 @@ func _probar() -> void:
 	await _fisicas(20)
 	_verificar(not lava.activo and not oficina.temporizador_bloqueos.is_stopped() and oficina.temporizador_bloqueos.wait_time == 10.0, "A los sesenta segundos termina y vuelve a cambiar bloqueos cada diez segundos")
 	oficina.temporizador_bloqueos.timeout.disconnect(contar)
+	oficina._limpiar_bloqueos_temporales()
+	jugador.global_position = Vector3(-1.5, 0.38, 3.2)
+	jugador.velocity = Vector3.ZERO
+	jugador.set_physics_process(true)
+	await _fisicas(10)
 	# Final por calor: una señal, sin denuncias vencidas falsas ni recuperación posterior.
 	_verificar(oficina._iniciar_lava(), "Un tercer inicio funciona después del minuto completo")
 	lava._physics_process(3.0)
@@ -228,6 +240,30 @@ func _probar() -> void:
 	await process_frame
 	print("[LAVA] %d errores" % errores)
 	quit(1 if errores else 0)
+
+
+func _probar_dano_red() -> void:
+	# Simular los avisos de un invitado: el límite de frecuencia del anfitrión
+	# debe aceptar el nuevo ritmo sin descontar calma al compañero.
+	var puente = load("res://Scripts/Red/partida_lan.gd").new()
+	var despacho := SistemaDespacho.new()
+	despacho.configurar_jugadores([1, 2], 1)
+	puente.oficina = oficina
+	puente.despacho = despacho
+	puente.jugadores = {2: jugador}
+	for ritmo: float in [2.0, 2.5]:
+		puente._esperas.clear()
+		puente._reloj = 0.0
+		var antes := despacho.obtener_cordura(2)
+		for i in 6:
+			puente._reloj += 1.0 / ritmo
+			var resultado: Dictionary = puente._cordura(2, {"cantidad": -1, "causa": "lava"})
+			_verificar(resultado.get("ok", false), "LAN acepta cada punto de daño a %.1f puntos por segundo" % ritmo)
+			var repetido: Dictionary = puente._cordura(2, {"cantidad": -1, "causa": "lava"})
+			_verificar(not repetido.get("ok", false), "LAN rechaza repetir el daño sin tiempo de contacto adicional")
+		_verificar(despacho.obtener_cordura(2) == antes - 6 and despacho.obtener_cordura(1) == 100, "LAN aplica el daño completo únicamente al jugador expuesto")
+	puente.free()
+	despacho.free()
 
 
 func _fisicas(cantidad: int) -> void:

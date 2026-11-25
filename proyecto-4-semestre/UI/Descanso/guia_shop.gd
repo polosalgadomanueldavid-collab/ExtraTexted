@@ -14,7 +14,6 @@ var restante := 0.0
 var _demora := 0.0
 var _saldo := 0
 var _saldo_antes := 0
-var _indice := -1
 var _casos: Dictionary = {}
 var marcador := Rect2()
 var en_borde := false
@@ -46,19 +45,12 @@ func _al_cambiar_menu() -> void:
 func _al_saldo(total: int) -> void:
 	_saldo_antes = _saldo
 	_saldo = total
-	if (pendiente or restante > 0) and _producto_disponible() < 0:
+	if (pendiente or restante > 0) and not _compra_disponible():
 		_cancelar()
 
-func _producto_disponible() -> int:
-	if not is_instance_valid(maquina):
-		return -1
-	var elegido := -1
-	for i in maquina.precios.size():
-		if maquina.precios[i] <= 0 or maquina.inventario[i] > 0 or _saldo < maquina.precios[i]:
-			continue
-		if elegido < 0 or maquina.precios[i] < maquina.precios[elegido]:
-			elegido = i
-	return elegido
+func _compra_disponible() -> bool:
+	# La máquina sortea un producto por un precio único y permite acumular cargas.
+	return is_instance_valid(maquina) and maquina.precio > 0 and _saldo >= maquina.precio
 
 func _al_resolver(caso: Denuncia) -> void:
 	if caso == null or caso.es_practica or oficina.en_practica() or ofrecida or pendiente or _casos.has(caso.id):
@@ -66,8 +58,7 @@ func _al_resolver(caso: Denuncia) -> void:
 	_casos[caso.id] = true
 	if _saldo <= _saldo_antes:
 		return
-	_indice = _producto_disponible()
-	if _indice < 0 or _saldo_antes >= maquina.precios[_indice]:
+	if not _compra_disponible() or _saldo_antes >= maquina.precio:
 		return
 	# La recompensa y la tarea terminan antes de que entre el mensaje de radio.
 	pendiente = true
@@ -104,8 +95,7 @@ func _process(delta: float) -> void:
 			return
 		_demora -= delta
 		if _demora <= 0.0:
-			_indice = _producto_disponible()
-			if _indice < 0:
+			if not _compra_disponible():
 				_cancelar()
 				return
 			pendiente = false
@@ -144,7 +134,7 @@ func _actualizar_marcador() -> void:
 	marcador = Rect2(destino - Vector2(120, 34) * factor, Vector2(240, 68) * factor)
 
 func _draw() -> void:
-	if restante <= 0:
+	if restante <= 0 or not is_instance_valid(maquina):
 		return
 	var factor := minf(size.x / 1280.0, size.y / 720.0)
 	var estilo := StyleBoxFlat.new()
@@ -160,7 +150,7 @@ func _draw() -> void:
 	draw_texture_rect(CARRITO, Rect2(marcador.position + Vector2(8, 10) * factor, Vector2(46, 46) * factor), false)
 	draw_string(TITULO, marcador.position + Vector2(64, 25) * factor, texto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(17 * factor)), TINTA)
 	draw_string(TEXTO, marcador.position + Vector2(64, 43) * factor, "Snacks y poderes", HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(11, roundi(14 * factor)), TINTA)
-	var producto: String = "%s · %d pts" % [maquina.NOMBRES[maxi(0, _indice)], maquina.precios[maxi(0, _indice)]]
+	var producto: String = "Sorteo · %d pts" % maquina.precio
 	draw_string(TEXTO, marcador.position + Vector2(64, 59) * factor, producto, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(10, roundi(12 * factor)), TINTA)
 	var direccion := _direccion if en_borde else Vector2.DOWN
 	var tangente := Vector2(-direccion.y, direccion.x)
