@@ -16,7 +16,6 @@ var _tiempo_resaltado: float = 0.0
 var _marcador_recoger: Node3D
 var _firma_expediente := ""
 var _piezas_expediente: Array[MeshInstance3D] = []
-var enfocado := false
 var mostrar_indicador: bool = true:
 	set(valor):
 		mostrar_indicador = valor
@@ -100,7 +99,7 @@ func actualizar_expediente(requeridas: Array[String], hechas: Array[String]) -> 
 func _actualizar_marcador() -> void:
 	if not is_instance_valid(_marcador_recoger):
 		return
-	_marcador_recoger.visible = portador == null and mostrar_indicador and not enfocado
+	_marcador_recoger.visible = portador == null and mostrar_indicador
 	if _marcador_recoger.visible:
 		_marcador_recoger.global_position = global_position + Vector3.UP * (0.34 + sin(_tiempo_resaltado * 3.0) * 0.015)
 		var camara := get_viewport().get_camera_3d()

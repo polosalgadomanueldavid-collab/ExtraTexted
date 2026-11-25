@@ -115,7 +115,6 @@ var herramientas_reporte: Array[HerramientaReporte] = []
 var _aviso_reporte_atasco: Label3D
 var _reporte_atascado_id: String = ""
 var _reporte_herramienta_recogida: bool = false
-var _papel_enfocado: PapelDenuncia
 var papel_actual: PapelDenuncia = null
 var partida_finalizada: bool = false
 var final_partida: FinalPartida
@@ -460,12 +459,6 @@ func _process(_delta: float) -> void:
 			indicador.mostrar_modelo = not (disponible or cerca)
 	_actualizar_respuestas_mesas(objetivo)
 	_actualizar_guia_interaccion(objetivo)
-	var hoja := objetivo as PapelDenuncia
-	if is_instance_valid(_papel_enfocado) and hoja != _papel_enfocado:
-		_papel_enfocado.enfocado = false
-	_papel_enfocado = hoja
-	if is_instance_valid(hoja):
-		hoja.enfocado = guia_estacion.objetivo != null
 	for llave in herramientas_reporte:
 		llave.orientar_desde(jugador.global_position)
 	var puede_actuar := not jugador.input_locked and not jugador.realizando_gesto() and not jugador.radio_abierta and not ruleta_emotes.visible and not jugador.usando_extintor and not clasificacion_partida.visible
@@ -492,9 +485,6 @@ func _actualizar_guia_interaccion(objetivo: Node3D) -> void:
 		verbo = "Reparar circuito"
 	elif evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO:
 		modelo = null
-	elif objetivo is PapelDenuncia and objetivo.portador == null and not jugador._taza_en_mano:
-		modelo = objetivo.get_node("HojaVisual")
-		verbo = "Recoger expediente"
 	elif objetivo is HerramientaReporte and objetivo.activa and not _reporte_herramienta_recogida:
 		modelo = objetivo.get_node("Llave")
 		verbo = "Recoger herramienta"

@@ -228,7 +228,7 @@ func _probar_orden_libre_con_tecla() -> void:
 		_verificar(not _oficina.indicador_papel.visible, "Soltar la hoja oculta el medallón")
 		var aviso := _oficina.get("_aviso_apagon") as Label
 		_verificar(aviso.get_global_rect().end.y > get_viewport().get_visible_rect().size.y * 0.95, "Sin papel, el aviso de luz regresa al borde inferior")
-		_verificar(_oficina.guia_estacion.objetivo == hoja.get_node("HojaVisual") and _oficina.guia_estacion.tecla.text.ends_with("Recoger expediente"), "El expediente seleccionado tiene el único contorno y el verbo correcto")
+		_verificar(marcador.is_visible_in_tree() and _oficina.guia_estacion.objetivo == null and not _oficina.guia_estacion.tarjeta.is_visible_in_tree(), "El expediente al alcance conserva la manito sin mensaje de texto")
 		await _capturar("06_hoja_suelta")
 		_pulsar_interaccion()
 		await _esperar_gesto()

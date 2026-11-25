@@ -257,7 +257,7 @@ func _probar_expediente_junto_a_estacion(jugador) -> void:
 	llave.establecer_activa(true)
 	await _cuadros(3)
 	var guia = oficina.guia_estacion
-	_verificar(jugador.obtener_objetivo_interaccion() == hoja and guia.objetivo == hoja.get_node("HojaVisual") and guia.tarjeta.is_visible_in_tree() and guia.tecla.text.ends_with("Recoger expediente"), "Con hoja, llave y estación juntas, solo la hoja anuncia la recogida")
+	_verificar(jugador.obtener_objetivo_interaccion() == hoja and guia.objetivo == null and not guia.tarjeta.is_visible_in_tree() and hoja.get_node("MarcadorRecoger").is_visible_in_tree(), "Con hoja, llave y estación juntas, la manito indica la recogida sin texto")
 	await _captura("accion_expediente")
 	_tecla(KEY_E)
 	await _cuadros(68)
