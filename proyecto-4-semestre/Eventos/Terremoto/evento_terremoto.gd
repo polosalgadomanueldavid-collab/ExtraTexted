@@ -342,9 +342,11 @@ func _abrir_suelo() -> void:
 	_actualizar_mascara_huecos()
 	_hundir_alfombra()
 	for celda in _celdas_caidas:
-		var bloqueo := _bloqueos[celda] as StaticBody3D
-		bloqueo.call("caer_en_grieta", _celdas_caidas[celda].centro)
-		caidos.append(bloqueo)
+		# El relevo puede retirar los cajones después del aviso y antes de la rotura.
+		var bloqueo := _bloqueos.get(celda) as StaticBody3D
+		if is_instance_valid(bloqueo):
+			bloqueo.call("caer_en_grieta", _celdas_caidas[celda].centro)
+			caidos.append(bloqueo)
 		_bloqueos.erase(celda)
 		_grafo.bloqueos_temporales.erase(celda)
 	_celdas_caidas.clear()
@@ -528,15 +530,8 @@ func _physics_process(delta: float) -> void:
 		# El director reserva las grietas/derrumbes para los dos actores.
 		_actualizar_escombros(delta)
 		return
-	var punto_jugador := Vector2(_jugador.global_position.x, _jugador.global_position.z)
-	var dentro_de_hueco := false
-	for grieta in grietas:
-		if grieta.contiene_hueco(punto_jugador):
-			dentro_de_hueco = true
-			break
-	if dentro_de_hueco and _colision_jugador != null and not _colision_jugador.disabled:
-		_colision_jugador.set_deferred("disabled", true)
-		_jugador.velocity.y = minf(_jugador.velocity.y, -2.0)
+	# La abertura física permite caer y saltar sin desactivar el cuerpo.
+	# Forzar una caída al proyectarse sobre el hueco también cortaba los saltos.
 	_actualizar_escombros(delta)
 	if _jugador.global_position.y < _altura - 1.45:
 		_devolver_a_tierra()

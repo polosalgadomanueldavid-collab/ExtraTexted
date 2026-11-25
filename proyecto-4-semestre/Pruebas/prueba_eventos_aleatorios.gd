@@ -62,6 +62,9 @@ func _probar() -> void:
 	await _fisicas(2390)
 	_verificar(not terremoto.activo, "El terremoto espera cuarenta segundos desde la restauración")
 	await _fisicas(20)
+	var limite_preparacion := Time.get_ticks_msec() + 20000
+	while terremoto.preparando and Time.get_ticks_msec() < limite_preparacion:
+		await process_frame
 	_verificar(terremoto.activo and reloj.is_stopped(), "El mismo reloj también inicia el terremoto aleatorio")
 	_verificar(terremoto.sonidos.retumbo.playing and terremoto.sonidos.crujidos.playing, "El terremoto inicia retumbo y crujidos")
 	_verificar(not apagon.iniciar_apagon(), "El apagón rechaza el inicio directo durante un terremoto")

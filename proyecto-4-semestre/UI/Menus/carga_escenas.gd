@@ -186,7 +186,6 @@ func _completar_transicion(generacion: int) -> void:
 	_saliendo = false
 	mediciones[_fase + "_ms"] = (Time.get_ticks_usec() - _inicio_fase) / 1000.0
 	mediciones["total_ms"] = (Time.get_ticks_usec() - _inicio) / 1000.0
-	print("[CARGA] ", _ruta, " ", JSON.stringify(mediciones))
 	activa = false
 	_escena_preparandose = null
 	hide()

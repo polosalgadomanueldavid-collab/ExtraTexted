@@ -17,6 +17,7 @@ func probar() -> void:
 			continue
 		await _probar_escenario(escenario)
 	print("[RELEVO EVENTOS] %d fallos" % fallos)
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(0 if fallos == 0 else 1)
 
 
@@ -57,6 +58,9 @@ func _probar_escenario(escenario: String) -> void:
 			_verificar(oficina.evento_apagon.panel.visible, "El final ocurre reparando un circuito")
 		"caida_terremoto", "aviso_terremoto":
 			oficina._iniciar_terremoto()
+			var limite_preparacion := Time.get_ticks_msec() + 20000
+			while oficina.evento_terremoto.preparando and Time.get_ticks_msec() < limite_preparacion:
+				await process_frame
 			_verificar(oficina.evento_terremoto.activo, "Se prepara el terremoto real")
 			if oficina.evento_terremoto.activo and escenario == "caida_terremoto":
 				oficina.evento_terremoto._abrir_suelo()

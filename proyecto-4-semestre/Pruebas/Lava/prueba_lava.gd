@@ -239,6 +239,7 @@ func _probar() -> void:
 	oficina.queue_free()
 	await process_frame
 	print("[LAVA] %d errores" % errores)
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(1 if errores else 0)
 
 

@@ -217,7 +217,7 @@ func _probar() -> void:
 	_verificar(not evento.bloqueos_fijos and not oficina.temporizador_bloqueos.is_stopped() and not oficina.temporizador_bloqueos.paused, "Terminar el incendio reactiva el reloj de bloqueos")
 	for cajon: StaticBody3D in iniciales.values():
 		_verificar(not cajon.es_ceniza and not cajon._cenizas.visible and cajon.diseño_cajon.visible and cajon._capas_originales.is_empty(), "Las cenizas y el hollín desaparecen al recuperar el cajón normal")
-	_verificar(oficina.bloqueos_visuales.size() == 30 and oficina._bloqueos_pool.size() == 30, "Se repone una distribución de treinta cajones reutilizados")
+	_verificar(oficina.bloqueos_visuales.size() == oficina.cantidad_mesas_objetivo() and oficina._bloqueos_pool.size() == oficina.BLOQUEOS_SIMULTANEOS, "Se reponen los cajones del nivel actual y se conserva la reserva reutilizable")
 	var distribucion_restaurada: Array = oficina.bloqueos_visuales.keys()
 	await _fisicas(610)
 	_verificar(distribucion_restaurada != oficina.bloqueos_visuales.keys(), "Los bloqueos vuelven a cambiar automáticamente diez segundos después")
@@ -225,7 +225,7 @@ func _probar() -> void:
 		var rutas: Dictionary = oficina.grafo_piso.celdas_alcanzables(oficina.grafo_piso.celda_de_acceso(jugador.global_position))
 		_verificar(rutas.has(oficina.grafo_piso.posicion_a_celda(foco.acceso.global_position)), "La nueva distribución conserva acceso a " + str(foco.mesa.name))
 	_verificar(oficina._iniciar_incendio(), "Puede iniciarse otro incendio con los cajones restaurados")
-	_verificar(evento.panel.progreso == 0.0 and evento._fuegos_cajones.size() == 30, "El nuevo incendio vuelve a prender los treinta cajones")
+	_verificar(evento.panel.progreso == 0.0 and evento._fuegos_cajones.size() == oficina.bloqueos_visuales.size(), "El nuevo incendio vuelve a prender todos los cajones activos")
 	_verificar(evento.tiempo == 0.0 and evento._perdida_acumulada == 0.0, "Cada incendio empieza con su gracia y sin daño pendiente")
 	_verificar(evento.indicador_extintor.visible, "Un incendio posterior vuelve a mostrar la ubicación del extintor")
 	_verificar(evento.extintor.deposito.transform == Transform3D.IDENTITY, "El extintor regresa al punto de recogida en el siguiente incendio")
@@ -268,6 +268,7 @@ func _probar() -> void:
 	# Igual que el conductor LAN, deja al mezclador liberar el MP3 del menú.
 	menu.musica_menu.stop()
 	await create_timer(0.3).timeout
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(1 if errores else 0)
 
 

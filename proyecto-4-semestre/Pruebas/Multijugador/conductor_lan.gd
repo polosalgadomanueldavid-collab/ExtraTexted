@@ -255,8 +255,15 @@ func _run() -> void:
 		var inicio: bool = red.iniciar_evento(tipo)
 		comprobar(inicio, "Iniciar evento compartido " + tipo)
 		if tipo == "terremoto":
-			while oficina.evento_terremoto.preparando:
+			var limite := Time.get_ticks_msec() + 20000
+			while oficina.evento_terremoto.preparando and Time.get_ticks_msec() < limite:
 				await _esperar(0.05)
+			comprobar(oficina.evento_terremoto.activo, "La distribución normal LAN permite iniciar el terremoto")
+			if not oficina.evento_terremoto.activo:
+				await _al_cliente("terminar")
+				_terminando = true
+				await _finalizar_prueba(1)
+				return
 		await _esperar(0.6)
 		r = await _al_cliente("inspeccionar")
 		comprobar(str(r.evento) == tipo, "Cliente recibe " + tipo)
@@ -300,7 +307,8 @@ func _run() -> void:
 			comprobar(r.charcos == oficina.evento_lava.charcos, "El anfitrión publica los charcos exactos de lava")
 		if tipo == "terremoto":
 			r = await _al_cliente("trazado")
-			comprobar(r.formas == oficina.evento_terremoto.exportar_trazado_red().formas, "Ambos equipos usan exactamente las mismas grietas")
+			var formas: Array = oficina.evento_terremoto.exportar_trazado_red().get("formas", [])
+			comprobar(not formas.is_empty() and r.get("formas", []) == formas, "Ambos equipos usan exactamente las mismas grietas")
 		if tipo not in ["apagon", "inundacion", "hielo"]:
 			red.bolsillos[1][3] = 1
 			r = await _pedir("consumir", {"indice": 3, "evento": red._evento_id})
@@ -479,7 +487,6 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 				await _esperar(0.1)
 				if foco.apagado >= 1.0: break
 			resultado = {"ok": foco.apagado >= 1.0}
-		"ubicar_herramientas_sismo": _ubicar_herramientas_sismo()
 		"retener_sismo":
 			oficina.evento_terremoto.preparacion_terminada.disconnect(red._preparacion_sismo_terminada)
 		"liberar_sismo":
@@ -525,20 +532,6 @@ func _respuesta(resultado: Dictionary) -> void:
 	if multiplayer.get_remote_sender_id() == cliente:
 		respuesta_cliente.emit(resultado)
 
-func _ubicar_herramientas_sismo() -> void:
-	# Fixture de la barrera: la disposición original de los accesos de reporte
-	# rechaza las ocho semillas. Reubicar herramienta y acceso juntos, conservando
-	# todas las validaciones; el juego normal mantiene su distribución original.
-	for i in range(oficina.herramientas_reporte.size()):
-		var herramienta: Node3D = oficina.herramientas_reporte[i]
-		var anterior := herramienta.global_position
-		var destino := Vector3(0.8 + i * 0.65, anterior.y, 7.8)
-		for acceso: Node3D in get_tree().get_nodes_in_group("accesos_navegacion"):
-			if acceso.get_parent() == oficina and acceso.global_position.distance_to(anterior) < 0.01:
-				acceso.global_position = destino
-		herramienta.global_position = destino
-
-
 func _preparar_sismo_de_prueba() -> bool:
 	for semilla: int in [8762, 14, 927, 951, 1307, 2026, 13, 114]:
 		oficina.temporizador_eventos.stop()
@@ -557,8 +550,6 @@ func _preparar_sismo_de_prueba() -> bool:
 func _probar_barrera_terremoto() -> void:
 	oficina.tutoriales_vistos[&"terremoto"] = true
 	await _al_cliente("tutoriales")
-	_ubicar_herramientas_sismo()
-	await _al_cliente("ubicar_herramientas_sismo")
 	oficina.temporizador_eventos.stop()
 	oficina.temporizador_denuncias.stop()
 	oficina.temporizador_bloqueos.stop()
@@ -711,7 +702,11 @@ func _personajes_correctos() -> bool:
 			return false
 		var chaqueta := esqueleto.get_node("Chaqueta") as MeshInstance3D
 		colores.append((chaqueta.get_active_material(0) as StandardMaterial3D).albedo_color)
-		if esqueleto.has_node("AdornoGorra") != (id != 1):
+		if modelo.variante != (0 if id == 1 else 1):
+			return false
+		if esqueleto.has_node("AcabadoUniforme/Radio") != (id != 1):
+			return false
+		if esqueleto.has_node("AcabadoUniforme/NudoPanuelo") != (id != 1):
 			return false
 	return not colores[0].is_equal_approx(colores[1]) and oficina.get_node("Gameplay/Camera3D").objetivo == oficina.jugador and oficina.evento_apagon.jugador == oficina.jugador
 

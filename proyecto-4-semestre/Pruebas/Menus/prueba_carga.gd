@@ -145,4 +145,5 @@ func _terminar() -> void:
 	print("Resultado: %d fallo(s)" % _fallos)
 	root.get_node("MenuGlobal").musica_menu.stop()
 	await create_timer(0.3).timeout
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(0 if _fallos == 0 else 1)

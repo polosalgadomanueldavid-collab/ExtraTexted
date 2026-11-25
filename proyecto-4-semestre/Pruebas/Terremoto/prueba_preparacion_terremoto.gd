@@ -125,6 +125,7 @@ func _probar() -> void:
 	oficina.queue_free()
 	for i in range(5): await process_frame
 	print("[PREPARACION TERREMOTO] %d errores" % errores)
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(1 if errores else 0)
 
 

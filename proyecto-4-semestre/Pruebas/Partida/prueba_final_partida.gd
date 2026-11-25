@@ -160,8 +160,9 @@ func probar() -> void:
 		await physics_frame
 	await create_timer(0.3, true, false, true).timeout
 	nueva_oficina._volver_al_menu_despues_del_final()
-	await _esperar_condicion(func() -> bool: return is_instance_valid(current_scene) and current_scene.scene_file_path == "res://UI/Menus/MainMenu.tscn" and not root.get_node("CargaEscenas").activa, 150)
-	_verificar(is_instance_valid(current_scene) and current_scene.scene_file_path == "res://UI/Menus/MainMenu.tscn", "El cuaderno permite volver al menú")
+	var menu_listo := await _esperar_condicion(func() -> bool: return is_instance_valid(current_scene) and current_scene.scene_file_path == "res://UI/Menus/MainMenu.tscn" and not root.get_node("CargaEscenas").activa, 150)
+	_verificar(menu_listo, "El cuaderno permite volver al menú")
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(1 if fallos > 0 else 0)
 
 
@@ -184,7 +185,9 @@ func _cabe_en_el_umbral(puerta: Node3D, jugador: CharacterBody3D, lateral: float
 
 
 func _esperar_condicion(condicion: Callable, intentos: int = 450) -> bool:
-	for intento: int in range(intentos):
+	# La carga de recursos usa tiempo real, incluso con --fixed-fps acelerado.
+	var limite := Time.get_ticks_msec() + intentos * 100
+	while Time.get_ticks_msec() < limite:
 		if condicion.call():
 			return true
 		await create_timer(0.1, true, false, true).timeout

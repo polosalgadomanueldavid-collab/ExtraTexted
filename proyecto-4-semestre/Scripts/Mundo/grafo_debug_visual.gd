@@ -67,7 +67,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		if visible_debug:
 			_reconstruir()
 			_crear_marcador_jugador()
-		print("[GRAFO DEBUG] Capa visual ", "visible" if visible_debug else "oculta", " (F3).")
 		get_viewport().set_input_as_handled()
 
 
@@ -103,8 +102,6 @@ func _reconstruir() -> void:
 			if grafo.bloqueos_fijos.has(celda) and not _hay_mesa_fisica(celda):
 				_agregar_etiqueta(celda, "SIN MESA\n%s" % celda)
 
-	print("[GRAFO DEBUG] Leyenda: verde=libre, azul=zona segura, cian=ruta, amarillo=destino, rojo=bloqueo fijo/de mesa, naranja=bloqueo temporal, rosa=bloqueo lógico sin mesa, blanco=jugador.")
-
 
 func _color_de_celda(celda: Vector2i, ruta_como_diccionario: Dictionary) -> Color:
 	if grafo.escombros.has(celda):
@@ -134,8 +131,6 @@ func _sincronizar_mesas_con_grafo() -> void:
 				celdas_de_mesas.append(celda)
 
 	grafo.establecer_bloqueos_de_mesas(celdas_de_mesas)
-	if visible_debug:
-		print("[GRAFO DEBUG] Mesas sincronizadas como bloqueos: ", celdas_de_mesas.size())
 
 
 func _hay_mesa_fisica(celda: Vector2i) -> bool:

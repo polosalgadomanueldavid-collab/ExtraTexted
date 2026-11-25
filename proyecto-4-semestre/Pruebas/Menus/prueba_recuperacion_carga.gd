@@ -94,4 +94,5 @@ func _run() -> void:
 	menu.musica_menu.stop()
 	await create_timer(0.3).timeout
 	print("[RECUPERACION RESULTADO] %d comprobaciones, %d errores" % [comprobaciones, fallos])
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(0 if fallos == 0 else 1)

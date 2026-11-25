@@ -112,8 +112,10 @@ func abrir(suelo: CSGBox3D) -> void:
 		_corte.free()
 		return
 	combinador.add_child(_corte)
+	# CSGPolygon3D extruye hacia -Z: con este giro el volumen crece hacia arriba.
+	# Empezar bajo la losa conserva el contorno X/Z y atraviesa todo el piso.
 	_corte.global_transform = Transform3D(Basis(Vector3.RIGHT, PI / 2.0),
-		Vector3(0, global_position.y + 0.01, 0))
+		Vector3(0, global_position.y + 0.01 - _corte.depth, 0))
 	_piedra = StandardMaterial3D.new()
 	_piedra.vertex_color_use_as_albedo = true
 	_piedra.cull_mode = BaseMaterial3D.CULL_DISABLED

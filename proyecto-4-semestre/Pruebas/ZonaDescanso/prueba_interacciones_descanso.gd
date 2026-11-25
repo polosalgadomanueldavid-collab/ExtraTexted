@@ -464,6 +464,7 @@ func _finalizar() -> void:
 	while Time.get_ticks_msec() < limite:
 		await process_frame
 	print("[INTERACCIONES DESCANSO] %d comprobaciones, %d errores." % [_comprobaciones, _errores.size()])
+	await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
 	quit(0 if _errores.is_empty() else 1)
 
 
