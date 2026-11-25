@@ -12,6 +12,7 @@ Para jugar solo se conserva **Jugar → Individual** y la identificación de la 
 
 ## Demostración jugable
 
+- Abrir la **radio con R** (B en mando), marcar una estación y pedir ayuda desde el otro equipo. Señalar una hoja suelta cercana y anunciar una reparación durante una emergencia. Ambos deben ver los marcadores y oír el aviso; el mundo continúa avanzando.
 - El anfitrión lleva el policía azul y el invitado el segundo policía, de uniforme verde petróleo y gorra marfil. Los retratos de la sala y los personajes de la partida deben coincidir en ambos equipos, también después de reintentar.
 - Mostrar ambos alias y corduras. Cada jugador toma una denuncia en el computador con **E**. Deben aparecer dos hojas de casos distintos.
 - Completar Evidencias y Verificación con sus controles habituales. Una estación ocupada debe rechazar el otro caso. Seguridad permite dejar el archivo desencriptándose y volver a recogerlo.
@@ -46,7 +47,7 @@ Para ejecutar la partida de prueba manualmente, abrir dos terminales y lanzar un
 
 `$Godot` debe contener la ruta del ejecutable. La prueba mueve personajes y resuelve minijuegos automáticamente; no es el modo de demostración para jugadores. Para revisar la sala con renderizado real, ejecutar `prueba_menu_lan.gd` sin `--headless`; guarda selección, formulario, error de IP y sala en `output/multijugador_implementado/`. Ejecutar dos instancias con `-- --sala-host` y `-- --sala-client` captura además la sala con ambos preparados y la vista del invitado. La prueba verifica clics, teclado, cancelación de conexión y escalado a 960×540, 1024×768 y 1920×1080.
 
-El protocolo de estas herramientas es `extratexted-lan-6`: actualizar ambos equipos antes de jugar. Incluye el cargador común, validación de ronda en el inicio y movimiento remoto, y los aportes por jugador del MVP. Los tutoriales iniciales y de eventos muestran `(0/2)` junto al botón; después de confirmar, la guía permanece visible con `(1/2)` y el aviso de espera. Al confirmar ambos se cierran las dos guías y continúa la partida. Para previsualizar la nueva llave compartida por el objeto y la animación, ejecutar `vista_herramientas.gd` sin `--headless`; guarda `.godot/vista_llave.png`.
+El protocolo de estas herramientas es `extratexted-lan-7`: actualizar ambos equipos antes de jugar. Incluye el cargador común, validación de ronda en el inicio y movimiento remoto, y los aportes por jugador del MVP. Los tutoriales iniciales y de eventos muestran `(0/2)` junto al botón; después de confirmar, la guía permanece visible con `(1/2)` y el aviso de espera. Al confirmar ambos se cierran las dos guías y continúa la partida. Para previsualizar la nueva llave compartida por el objeto y la animación, ejecutar `vista_herramientas.gd` sin `--headless`; guarda `.godot/vista_llave.png`.
 
 Al finalizar, la primera apertura de la libreta muestra los líderes en misiones
 resueltas y tareas completadas. Cada participante de una misión compartida recibe

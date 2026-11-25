@@ -83,6 +83,8 @@ func _run() -> void:
 		SesionLAN.establecer_listo(true)
 	while not SesionLAN.en_partida:
 		await _esperar(0.1)
+	while CargaEscenas.activa:
+		await _esperar(0.05)
 	red = SesionLAN.puente
 	oficina = red.oficina
 	oficina.evento_terremoto.preparacion_terminada.connect(func(correcta: bool) -> void: print("[LAN PREPARACION] ", correcta, " motivo=", oficina.evento_terremoto.rechazo_preparacion))
@@ -93,6 +95,9 @@ func _run() -> void:
 	comprobar(get_tree().paused and MenuGlobal.panel_ayuda.visible, "El tutorial inicial abre sin bloquear la carga")
 	await _probar_confirmaciones_tutorial(true)
 	comprobar(red.jugadores.size() == 2 and not get_tree().paused, "Dos jugadores y barrera de carga completada")
+	if OS.get_cmdline_user_args().has("--solo-senales"):
+		await _probar_senales()
+		return
 	if OS.get_cmdline_user_args().has("--solo-terremoto"):
 		await _probar_barrera_terremoto()
 		return
@@ -437,6 +442,12 @@ func _demorar_carga_prueba() -> void:
 func _orden(orden: String, datos: Dictionary = {}) -> void:
 	var resultado := {"ok": true}
 	match orden:
+		"radio": resultado = {"marcas": red.senales.marcas.duplicate(true), "abierta": red.senales._panel.visible, "disponible": red.senales.disponible()}
+		"abrir_radio": red.senales.alternar()
+		"radio_vieja":
+			var anterior: Dictionary = red.senales.marcas.duplicate(true)
+			SesionLAN._evento(SesionLAN.ronda - 1, "senal", {"numero": 99999, "jugador": 1, "tipo": "ayuda", "posicion": Vector3.ZERO, "texto": "VIEJA"})
+			resultado = {"ok": anterior == red.senales.marcas}
 		"desconectar_en_carga": _desconectar_en_carga()
 		"movimiento_antiguo":
 			red._remotos.erase(1)
@@ -559,6 +570,7 @@ func _probar_barrera_terremoto() -> void:
 	oficina.generador_aleatorio.seed = 1414
 	oficina._cambiar_bloqueo_temporal()
 	oficina.temporizador_bloqueos.stop()
+	await _probar_distribuciones_reales()
 	var posicion: Vector3 = oficina.jugador.global_position
 	await _al_cliente("retener_sismo")
 	comprobar(await _preparar_sismo_de_prueba(), "Se acepta la preparación LAN sin iniciar el reloj")
@@ -615,6 +627,154 @@ func _probar_barrera_terremoto() -> void:
 	print("[LAN TERREMOTO] %d comprobaciones, %d fallos" % [comprobaciones, fallos])
 	await _al_cliente("terminar")
 	while SesionLAN.activa: await _esperar(0.1)
+	_terminando = true
+	await _finalizar_prueba(1 if fallos else 0)
+
+
+func _probar_distribuciones_reales() -> void:
+	var evento = oficina.evento_terremoto
+	var herramientas: Array[Vector3] = []
+	var accesos: Array[Vector3] = []
+	for herramienta in oficina.herramientas_reporte: herramientas.append(herramienta.global_position)
+	for acceso in get_tree().get_nodes_in_group("accesos_navegacion"): accesos.append(acceso.global_position)
+	for semilla: int in [8762, 14, 927, 951, 1307, 2026, 13, 114]:
+		oficina.generador_aleatorio.seed = semilla
+		oficina._cambiar_bloqueo_temporal()
+		oficina.temporizador_bloqueos.stop()
+		evento._azar.seed = semilla
+		var aceptado: bool = evento.iniciar(oficina.grafo_piso, oficina.jugador, oficina.bloqueos_visuales, Rect2(), true)
+		if aceptado: aceptado = await evento.preparacion_terminada
+		comprobar(aceptado, "La distribución LAN real admite la semilla %d" % semilla)
+		if aceptado:
+			comprobar(evento.validar_plan_actual() and evento._trazado.size() >= 10 and evento.escombros.size() >= 14, "El plan conserva mínimos, jugadores y todos los accesos reales")
+			evento.cancelar_preparacion()
+		await _esperar(.05)
+	for i in herramientas.size(): comprobar(herramientas[i] == oficina.herramientas_reporte[i].global_position, "La prueba no reubica herramientas")
+	var indice := 0
+	for acceso in get_tree().get_nodes_in_group("accesos_navegacion"):
+		comprobar(accesos[indice] == acceso.global_position, "La prueba conserva el acceso real")
+		indice += 1
+
+
+func _probar_senales() -> void:
+	for reloj in [oficina.temporizador_denuncias, oficina.temporizador_eventos, oficina.temporizador_bloqueos]: reloj.stop()
+	var r := await _pedir("senal", {"tipo": "estacion", "objetivo": "evidencias", "posicion": Vector3(999, 999, 999)})
+	await _esperar(.2)
+	var cliente_radio := await _al_cliente("radio")
+	comprobar(r.ok and cliente_radio.marcas.has(1) and red.senales.marcas.has(1), "Una estación del anfitrión se marca en ambos equipos")
+	comprobar(cliente_radio.marcas[1].posicion == red._buscar_estacion("evidencias").global_position, "La autoridad ignora posiciones enviadas por el cliente")
+	r = await _pedir("senal", {"tipo": "ayuda"})
+	comprobar(not r.ok, "La radio limita la frecuencia por jugador")
+	r = await _al_cliente("accion", {"tipo": "senal", "datos": {"tipo": "ayuda"}})
+	await _esperar(.2)
+	comprobar(r.ok and red.senales.marcas.has(cliente) and red.senales.marcas[cliente].texto == "NECESITO AYUDA", "El compañero puede pedir ayuda sin esperar el enfriamiento del anfitrión")
+	await _esperar(2.1)
+	r = await _pedir("senal", {"tipo": "estacion", "objetivo": "../../Mundo"})
+	comprobar(not r.ok, "La radio rechaza estaciones desconocidas")
+	r = await _pedir("senal", {"tipo": "hoja"})
+	comprobar(not r.ok, "No se señala una hoja inexistente")
+	r = await _pedir("senal", {"tipo": "reparar"})
+	comprobar(not r.ok, "Sin emergencia no se anuncia una reparación ficticia")
+	r = await _pedir("senal", {"tipo": "desconocida"})
+	comprobar(not r.ok, "Se rechazan opciones ajenas a la radio")
+	var caso := Denuncia.new()
+	caso.id = "RADIO-HOJA"
+	caso.protocolo_estaciones.assign(["evidencias"])
+	caso.tiempo_limite_segundos = 300
+	red.despacho.recibir_denuncia(caso)
+	red.despacho.iniciar_denuncia_prioritaria()
+	var papel = red._crear_papel(caso.id)
+	papel.freeze = true
+	papel.global_position = oficina.jugador.global_position + Vector3(.2, .05, 0)
+	red.despacho.establecer_portador(caso.id, 0)
+	red.publicar()
+	r = await _pedir("senal", {"tipo": "hoja"})
+	await _esperar(.2)
+	cliente_radio = await _al_cliente("radio")
+	comprobar(r.ok and cliente_radio.marcas[1].caso == caso.id, "La hoja cercana conserva su ID en ambos equipos")
+	var vieja := await _al_cliente("radio_vieja")
+	comprobar(vieja.ok, "Una señal de otra ronda no aparece en pantalla")
+	var raton_previo := Input.mouse_mode
+	var tecla_radio := InputEventKey.new()
+	tecla_radio.physical_keycode = KEY_R
+	tecla_radio.keycode = KEY_R
+	tecla_radio.pressed = true
+	Input.parse_input_event(tecla_radio)
+	await _esperar(.1)
+	tecla_radio.pressed = false
+	Input.parse_input_event(tecla_radio)
+	comprobar(red.senales._panel.visible and oficina.jugador.radio_abierta and not get_tree().paused, "La radio abre sin pausar la partida compartida")
+	var escape := InputEventKey.new()
+	escape.physical_keycode = KEY_ESCAPE
+	escape.keycode = KEY_ESCAPE
+	escape.pressed = true
+	Input.parse_input_event(escape)
+	await _esperar(.1)
+	escape.pressed = false
+	Input.parse_input_event(escape)
+	comprobar(not red.senales._panel.visible and not oficina.jugador.radio_abierta and not get_tree().paused and Input.mouse_mode == raton_previo, "Escape cierra la radio, devuelve el cursor y no abre la pausa")
+	var mando_anterior: int = ControladorInterfaz.dispositivo_mando
+	ControladorInterfaz.dispositivo_mando = 0
+	var boton_radio := InputEventJoypadButton.new()
+	boton_radio.device = 0
+	boton_radio.button_index = JOY_BUTTON_B
+	boton_radio.pressed = true
+	Input.parse_input_event(boton_radio)
+	await _esperar(.1)
+	comprobar(red.senales._panel.visible and not get_tree().paused, "La entrada B del mando abre la radio en LAN")
+	boton_radio.pressed = false
+	Input.parse_input_event(boton_radio)
+	await _esperar(.05)
+	boton_radio = boton_radio.duplicate()
+	boton_radio.pressed = true
+	Input.parse_input_event(boton_radio)
+	await _esperar(.1)
+	boton_radio.pressed = false
+	Input.parse_input_event(boton_radio)
+	ControladorInterfaz.dispositivo_mando = mando_anterior
+	comprobar(not red.senales._panel.visible and not get_tree().paused, "B cierra la radio sin abrir otro panel")
+	red.senales.alternar()
+	Input.action_press(oficina.jugador.JUMP)
+	red.senales.enviar("ayuda")
+	await _esperar(.1)
+	comprobar(oficina.jugador.is_on_floor() and oficina.jugador.velocity.y <= 0.0, "Confirmar la radio con la entrada de salto no hace saltar al personaje")
+	Input.action_release(oficina.jugador.JUMP)
+	red.senales.alternar()
+	MenuGlobal.abrir_pausa()
+	await _esperar(.2)
+	comprobar(not red.senales._panel.visible and not oficina.jugador.radio_abierta, "La pausa cierra la radio y libera el movimiento local")
+	var restante: float = red.senales.marcas[1].restante
+	await _esperar(.4)
+	comprobar(is_equal_approx(restante, red.senales.marcas[1].restante), "Las señales conservan su tiempo durante la pausa")
+	r = await _pedir("senal", {"tipo": "ayuda"})
+	comprobar(not r.ok, "El servidor rechaza señales durante la pausa")
+	MenuGlobal.reanudar_juego()
+	await _esperar(2.2)
+	oficina.tutoriales_vistos[&"apagon"] = true
+	await _al_cliente("tutoriales")
+	comprobar(red.iniciar_evento("apagon"), "Se inicia una emergencia para probar la radio")
+	await _esperar(.3)
+	r = await _pedir("senal", {"tipo": "reparar"})
+	await _esperar(.2)
+	cliente_radio = await _al_cliente("radio")
+	comprobar(r.ok and cliente_radio.marcas[1].objetivo == "apagon", "Se puede anunciar la reparación durante un evento")
+	SesionLAN.difundir("reparado", {"objetivo": "apagon"})
+	await _esperar(6.2)
+	comprobar(red.senales.marcas.is_empty(), "Las marcas caducan y no se acumulan en pantalla")
+	if OS.get_cmdline_user_args().has("--capturas"):
+		r = await _pedir("senal", {"tipo": "ayuda"})
+		await _esperar(.2)
+		await _capturar("radio")
+		red.senales.alternar()
+		await _esperar(.2)
+		await _capturar("radio_menu")
+		red.senales.cerrar()
+	red.despacho.perder_calma(100, &"prueba", 1)
+	r = await _pedir("senal", {"tipo": "ayuda"})
+	comprobar(not r.ok, "Un jugador eliminado no puede emitir señales")
+	print("[LAN RADIO] %d comprobaciones, %d fallos" % [comprobaciones, fallos])
+	await _al_cliente("terminar")
+	while SesionLAN.activa: await _esperar(.1)
 	_terminando = true
 	await _finalizar_prueba(1 if fallos else 0)
 

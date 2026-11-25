@@ -1,5 +1,7 @@
 # Multijugador LAN de ExtraTexted: dos jugadores
 
+Para la verificación más reciente del terremoto, la radio y las pruebas LAN, consultar [CIERRE_TERREMOTO_Y_RADIO_2026-11-24.md](CIERRE_TERREMOTO_Y_RADIO_2026-11-24.md). Los resultados históricos de esta página se conservan como referencia.
+
 Actualizado: 15 de noviembre de 2026. Sustituye el plan preliminar del 7 de noviembre.
 
 Para la arquitectura y las reglas vigentes, consulta [DOCUMENTACION_MULTIJUGADOR.md](DOCUMENTACION_MULTIJUGADOR.md). Las comprobaciones más recientes están en [VERIFICACION_OPTIMIZACION_2026-11-16.md](VERIFICACION_OPTIMIZACION_2026-11-16.md).

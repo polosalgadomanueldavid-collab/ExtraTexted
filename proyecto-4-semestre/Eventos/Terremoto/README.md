@@ -1,5 +1,7 @@
 # Terremoto
 
+La oficina usa ahora un piso y tapas de restauración preparados antes del aviso, sin reconstruir CSG durante el evento. Las ocho distribuciones LAN originales y las pruebas físicas se verificaron de nuevo; consultar [la revisión de cierre y sus mediciones](../../Documentacion/CIERRE_TERREMOTO_Y_RADIO_2026-11-24.md), que actualiza los fallos históricos documentados.
+
 El evento dura **24 segundos**: ocho de aviso, ocho de rotura y ocho de recuperación. Al romperse el suelo aparecen **entre diez y doce grietas**, incluida una gigante de unos **4 × 2,3 metros en descanso**, que hay que rodear. Su contorno dorado se dibuja durante el aviso y puede abrirse debajo del jugador si permanece allí; descanso también tiembla y deja de ser refugio durante el terremoto. Las estrechas se pueden saltar con **Espacio**.
 
 La alfombra central permanece en su sitio durante el aviso y cae hacia la grieta gigante al romperse el suelo, con el mismo vuelco de los bloqueos. Se oculta tras hundirse y recupera su posición, giro y escala al terminar o interrumpirse el evento; la animación respeta la pausa.

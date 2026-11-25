@@ -282,7 +282,7 @@ func _crear_acciones(pagina: VBoxContainer) -> void:
 	pagina.add_child(_fila("Apagar incendios", ["Mantener", "E"], "Con el extintor recogido"))
 	pagina.add_child(_fila("Cambiar cámara", ["C", "o", "1", "2", "3"], "Actual, frontal o desde arriba"))
 	pagina.add_child(_fila("Ver clasificación", ["Mantener", "Tab"]))
-	pagina.add_child(_fila("Ruleta de emotes", ["G"], "Elegir con clic · cerrar con G o Esc"))
+	pagina.add_child(_fila("Gestos / Radio LAN", ["G", "/", "R"], "G: ruleta de emotes · R: señales al compañero"))
 
 
 func _crear_menus(pagina: VBoxContainer) -> void:

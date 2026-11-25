@@ -4,7 +4,7 @@ Esta página describe la implementación actual del cooperativo para **dos jugad
 
 ## Sesión y ciclo de vida
 
-El juego usa **Godot 4.7**, ENet y el puerto **UDP 7000**. El anfitrión juega y es la autoridad; el segundo jugador se une por la IP del anfitrión. `SesionLAN`, cargado como autoload, mantiene participantes, alias, estado de la sala, ronda, pausas y transporte. La versión de protocolo actual es `extratexted-lan-6`; una versión distinta o una tercera conexión se rechaza.
+El juego usa **Godot 4.7**, ENet y el puerto **UDP 7000**. El anfitrión juega y es la autoridad; el segundo jugador se une por la IP del anfitrión. `SesionLAN`, cargado como autoload, mantiene participantes, alias, estado de la sala, ronda, pausas y transporte. La versión de protocolo actual es `extratexted-lan-7`; una versión distinta o una tercera conexión se rechaza.
 
 ```text
 Jugar → Crear partida LAN / Unirse por IP
@@ -53,6 +53,8 @@ En incendio hay dos extintores y en el atasco de impresora dos llaves, con porta
 La cordura cero elimina al personaje hasta la siguiente ronda: libera sus interacciones y su hoja queda recuperable. El personaje deja de bloquear el paso y su cámara observa al compañero. El anfitrión sigue sirviendo la sesión aunque esté eliminado. La partida termina cuando **ambos** están eliminados. Al cerrar la ronda, cada equipo guarda su alias y puntaje ganado en su clasificación local; el resumen de aportes muestra misiones y tareas de ambos.
 
 ## Código y verificación
+
+La radio cooperativa se abre con **R** o **B** en mando durante la partida LAN. Permite marcar estaciones, pedir ayuda, señalar una hoja cercana o anunciar una reparación, con marcador y sonido en ambos equipos. No pausa el mundo; los avisos duran seis segundos y el anfitrión limita su frecuencia a uno cada dos segundos por jugador. La [verificación del 24 de noviembre](CIERRE_TERREMOTO_Y_RADIO_2026-11-24.md) incluye la radio, las ocho distribuciones reales del terremoto y el piso preparado para evitar reconstrucciones CSG durante la partida.
 
 | Archivo | Responsabilidad |
 | --- | --- |

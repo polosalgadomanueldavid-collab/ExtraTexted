@@ -23,6 +23,7 @@ Las rutas `res://` empiezan en `proyecto-4-semestre`. Al mover un recurso, actua
 
 ## Documentación técnica
 
+- [Terremoto, rendimiento de restauración y radio cooperativa: verificación del 24 de noviembre](proyecto-4-semestre/Documentacion/CIERRE_TERREMOTO_Y_RADIO_2026-11-24.md)
 - [Multijugador LAN: arquitectura y reglas](proyecto-4-semestre/Documentacion/DOCUMENTACION_MULTIJUGADOR.md)
 - [Grafo de navegación y bloqueos](proyecto-4-semestre/Documentacion/DOCUMENTACION_GRAFOS.md)
 - [Guía de demostración LAN](proyecto-4-semestre/Documentacion/DEMOSTRACION_LAN.md)
