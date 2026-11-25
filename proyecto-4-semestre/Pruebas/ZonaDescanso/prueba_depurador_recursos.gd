@@ -17,7 +17,7 @@ func _probar() -> void:
 	_verificar(panel.visible and _jugador.input_locked, "F3 y F4 abren el panel y bloquean el personaje")
 	panel.cantidad_mesas.get_line_edit().text = "7"
 	panel.boton_mesas.pressed.emit()
-	_verificar(_oficina.cantidad_mesas_objetivo() == 12 and _oficina.bloqueos_visuales.size() == 12, "Añadir mesas aplica la cantidad escrita")
+	_verificar(_oficina.cantidad_mesas_objetivo() == 17 and _oficina.bloqueos_visuales.size() == 17, "Añadir mesas aplica la cantidad escrita")
 	panel.cantidad_mesas.get_line_edit().text = "30"
 	panel.boton_mesas.pressed.emit()
 	_verificar(_oficina.cantidad_mesas_objetivo() == 30 and panel.boton_mesas.disabled, "El depurador limita las mesas al máximo original")

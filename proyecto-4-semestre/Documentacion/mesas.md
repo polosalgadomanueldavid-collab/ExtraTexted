@@ -8,7 +8,7 @@ mesa 17 izq: mesa de bienestar
 ## Progresión de mesas y plazos
 
 Las estaciones del perímetro conservan su posición. Las mesas/cajones de los pasillos
-comienzan en **5**, suman **1 cada 25 segundos** de turno sin emergencias y llegan
+comienzan en **10 ya colocadas al entrar**, suman **1 cada 15 segundos** de turno sin emergencias y llegan
 como máximo a **30**. La cantidad se aplica en el siguiente reparto procedural.
 Práctica, pausa, Papa Tiempo y emergencias no avanzan esta progresión. Se conservan
 las protecciones de rutas, jugadores y hojas: si no caben todas, se coloca la cantidad segura.
@@ -18,14 +18,45 @@ cantidad activa y objetivo. Durante incendio o terremoto el aumento queda pendie
 para el próximo reparto. En LAN solo el anfitrión aplica cambios; los clientes reciben
 su distribución y progresión.
 
-Las llegadas pasan de 12–20 a **15–23 s**, solo tres segundos adicionales.
-Plazos base: uso excesivo 120 s; enlace sospechoso y phishing 150 s; suplantación
-(cuatro estaciones) 180 s; acoso 140 s; amenaza creíble 130 s. Al llegar se añaden
-15 s por caso existente (hasta 60 s) y 1,5 s por mesa adicional a las cinco iniciales.
-Mientras esperan asignación, los relojes avanzan al 50 %. Apagón e incendio multiplican
-el ritmo por 0,25; terremoto, inundación, lava e hielo, por 0,5. Cola y emergencia
-combinan sus factores. Al finalizar el evento se recupera el ritmo normal sin rellenar
-plazos ni modificar la cadencia. Papa Tiempo y práctica conservan la pausa total.
+La cantidad de mesas realmente colocadas determina la cadencia de nuevas misiones.
+Cada mesa por encima de cinco (la referencia del balance) añade **0,6 s** a los extremos del
+intervalo de llegada. Se aplica al programar la próxima denuncia, sin reiniciar
+continuamente la espera que ya estaba en curso. En individual se han restado
+**7 segundos** a ambos extremos de cada intervalo; en dúo se han restado **8 segundos**.
+
+| Mesas activas | Llegadas individual | Llegadas dúo | Niveles nuevos |
+| --- | --- | --- | --- |
+| 10 (inicio) | 11–19 s | 7–15 s | 1–5 |
+| 15 | 14–22 s | 10–18 s | 1–5 |
+| 24 | 19,4–27,4 s | 15,4–23,4 s | 1–5 |
+| 25 | 20–28 s | 16–24 s | 3–5 |
+| 30 | 23–31 s | 19–27 s | 3–5 |
+
+A partir de **25 mesas**, el sorteo solo admite denuncias de **nivel 3 o superior**.
+Los casos que ya estaban en la cola se conservan. La regla también cuenta mesas
+agregadas desde el debugger; un aumento pendiente durante un evento se cuenta al
+colocarse realmente. Si el catálogo no contiene niveles admisibles, se espera al
+siguiente intento sin generar un caso de nivel inferior.
+
+El plazo de resolución individual sigue siendo el original más **30 segundos**;
+en dúo es el original más **15 segundos**. Pueden tramitar dos casos a la vez,
+pero siguen compartiendo estaciones.
+
+| Denuncia | Individual | Dúo |
+| --- | --- | --- |
+| Uso excesivo | 140 s | 125 s |
+| Enlace sospechoso / phishing | 120 s | 105 s |
+| Suplantación | 100 s | 85 s |
+| Acoso | 85 s | 70 s |
+| Amenaza creíble | 70 s | 55 s |
+
+El anfitrión aplica el balance al crear cada denuncia y replica el plazo real.
+Si un policía queda eliminado, las siguientes denuncias y la siguiente programación
+de llegadas usan el balance individual; los relojes existentes no se reinician.
+No se añade tiempo de resolución por cola ni por mesas. La progresión de mesas y los eventos
+mantienen las mismas reglas en ambos modos.
+Los relojes avanzan a velocidad normal también en espera y durante los eventos.
+Papa Tiempo y práctica conservan la pausa total.
 
 Pruebas: `Pruebas/Partida/prueba_balance_progresion.gd`,
 `Pruebas/Bloqueos/prueba_generacion_bloqueos.gd` y

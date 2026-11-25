@@ -8,15 +8,20 @@ extends Node3D
 @onready var musica_partida: MusicaPartida = $MusicaPartida
 @onready var musica_cordura_baja: MusicaPartida = $MusicaCorduraBaja
 
-const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 15.0
-const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 23.0
+const TIEMPO_MINIMO_ENTRE_DENUNCIAS: float = 8.0
+const TIEMPO_MAXIMO_ENTRE_DENUNCIAS: float = 16.0
+const BALANCE_INDIVIDUAL := {"llegada_min": TIEMPO_MINIMO_ENTRE_DENUNCIAS, "llegada_max": TIEMPO_MAXIMO_ENTRE_DENUNCIAS, "reduccion_plazo": 0.0}
+const BALANCE_DUO := {"llegada_min": 4.0, "llegada_max": 12.0, "reduccion_plazo": 15.0}
 const MAX_DENUNCIAS_PENDIENTES: int = 5
 const DURACION_BLOQUEO_SEGUNDOS: float = 10.0
 const ESPERA_MINIMA_EVENTOS: float = 40.0
 const ESPERA_MAXIMA_EVENTOS: float = 65.0
 const BLOQUEOS_SIMULTANEOS: int = 30
-const MESAS_INICIALES: int = 5
-const SEGUNDOS_POR_MESA: float = 25.0
+const MESAS_INICIALES: int = 10
+const MESAS_BASE_CADENCIA: int = 5
+const SEGUNDOS_POR_MESA: float = 15.0
+const DEMORA_DENUNCIA_POR_MESA: float = 0.6
+const UMBRAL_MESAS_RIESGO_ALTO: int = 24
 const BLOQUEO_TEMPORAL_ESCENA: PackedScene = preload(
 	"res://Eventos/Bloqueos/BloqueoTemporal.tscn"
 )
@@ -181,7 +186,6 @@ func _ready() -> void:
 	generador_aleatorio.randomize()
 
 	sistema_despacho = SistemaDespacho.new()
-	sistema_despacho.ritmo_eventos = _ritmo_denuncias_por_eventos
 	add_child(sistema_despacho)
 	musica_partida.configurar(sistema_despacho)
 	musica_cordura_baja.configurar(sistema_despacho, true)
@@ -356,6 +360,9 @@ func _ready() -> void:
 		red.name = "PartidaLAN"
 		add_child(red)
 		red.configurar(self)
+	# La primera distribución queda lista antes de presentar la oficina.
+	# En LAN solo la autoridad coloca; los invitados reciben sus mismas celdas.
+	_cambiar_bloqueo_temporal()
 	guia_shop = preload("res://UI/Descanso/guia_shop.gd").new()
 	$CanvasLayer.add_child(guia_shop)
 	guia_shop.configurar(self)
@@ -654,8 +661,12 @@ func _recibir_denuncia_aleatoria() -> void:
 		return
 	_asegurar_temporizador_denuncias()
 	if sistema_despacho.obtener_denuncias_ordenadas().size() < MAX_DENUNCIAS_PENDIENTES:
-		var plantilla: Denuncia = catalogo_denuncias[
-			generador_aleatorio.randi_range(0, catalogo_denuncias.size() - 1)
+		var disponibles := _catalogo_denuncias_para_mesas()
+		if disponibles.is_empty():
+			_programar_siguiente_denuncia()
+			return
+		var plantilla: Denuncia = disponibles[
+			generador_aleatorio.randi_range(0, disponibles.size() - 1)
 		]
 
 		# Copia independiente: evita modificar el recurso base .tres.
@@ -664,9 +675,9 @@ func _recibir_denuncia_aleatoria() -> void:
 		contador_denuncias += 1
 		nueva_denuncia.id = "%s-%03d" % [plantilla.id, contador_denuncias]
 		nueva_denuncia.hora_reporte = Time.get_ticks_msec()
-		# Margen por la cola y los desvíos del laberinto, sin alterar la cadencia.
-		nueva_denuncia.tiempo_limite_segundos += minf(60.0, sistema_despacho.obtener_denuncias_ordenadas().size() * 15.0)
-		nueva_denuncia.tiempo_limite_segundos += (cantidad_mesas_objetivo() - MESAS_INICIALES) * 1.5
+		# El catálogo conserva original +30 s. Dos policías activos usan +15 s;
+		# el anfitrión publica el plazo resultante, sin modificar los recursos.
+		nueva_denuncia.tiempo_limite_segundos = maxf(1.0, plantilla.tiempo_limite_segundos - float(_balance_denuncias().reduccion_plazo))
 
 		var denuncia_recibida: bool = sistema_despacho.recibir_denuncia(nueva_denuncia)
 
@@ -688,11 +699,31 @@ func _recibir_denuncia_aleatoria() -> void:
 	_programar_siguiente_denuncia()
 
 
+func _balance_denuncias() -> Dictionary:
+	var balance: Dictionary = (BALANCE_DUO if sistema_despacho.hay_duo_activo() else BALANCE_INDIVIDUAL).duplicate()
+	# Cuenta la distribución real: un objetivo pendiente o sin espacio no
+	# debe reducir las llegadas ni activar antes el filtro de nivel.
+	var mesas := clampi(bloqueos_visuales.size(), MESAS_INICIALES, BLOQUEOS_SIMULTANEOS)
+	var demora := (mesas - MESAS_BASE_CADENCIA) * DEMORA_DENUNCIA_POR_MESA
+	balance.llegada_min += demora
+	balance.llegada_max += demora
+	return balance
+
+
+func _catalogo_denuncias_para_mesas() -> Array[Denuncia]:
+	var disponibles: Array[Denuncia] = []
+	for plantilla: Denuncia in catalogo_denuncias:
+		if bloqueos_visuales.size() <= UMBRAL_MESAS_RIESGO_ALTO or plantilla.nivel_riesgo >= 3:
+			disponibles.append(plantilla)
+	return disponibles
+
+
 func _programar_siguiente_denuncia() -> void:
 	_asegurar_temporizador_denuncias()
+	var balance := _balance_denuncias()
 	var espera: float = generador_aleatorio.randf_range(
-		TIEMPO_MINIMO_ENTRE_DENUNCIAS,
-		TIEMPO_MAXIMO_ENTRE_DENUNCIAS
+		float(balance.llegada_min),
+		float(balance.llegada_max)
 	)
 
 	temporizador_denuncias.start(espera)
@@ -789,15 +820,6 @@ func recuperar_papel_perdido(papel: PapelDenuncia) -> void:
 	papel.angular_velocity = Vector3.ZERO
 	papel.global_position = computador.global_position + Vector3.UP * 0.7
 	papel.freeze = false
-
-
-func _ritmo_denuncias_por_eventos() -> float:
-	# Reparar luz o apagar estaciones impide tramitar con normalidad.
-	if evento_apagon.estado != EventoApagonScript.Estado.RESTAURADO or (is_instance_valid(evento_incendio) and evento_incendio.activo):
-		return 0.25
-	if evento_terremoto.activo or evento_terremoto.preparando or (is_instance_valid(evento_inundacion) and evento_inundacion.activo) or (is_instance_valid(evento_lava) and evento_lava.activo) or (is_instance_valid(evento_hielo) and evento_hielo.activo):
-		return 0.5
-	return 1.0
 
 
 func cantidad_mesas_objetivo() -> int:

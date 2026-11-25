@@ -94,7 +94,7 @@ func _probar() -> void:
 	_verificar(menu_global.get("nombre_partida") == "María José", "El nombre llega a la partida")
 	_verificar(current_scene.en_practica() and not paused, "La carga conserva la práctica inicial interactiva")
 	await _capturar("04_partida")
-	_verificar((current_scene.get("_bloqueos_disponibles") as Array).size() == 30, "Los 30 cajones ya están preparados al entrar en la oficina")
+	_verificar((current_scene.get("_bloqueos_disponibles") as Array).size() == 20 and (current_scene.get("bloqueos_visuales") as Dictionary).size() == 10, "Al entrar hay diez mesas activas y veinte cajones en reserva")
 	print("[AUDITORIA CARGA] ", JSON.stringify({"render": DisplayServer.get_name(), "confirmacion_a_oficina_ms": (Time.get_ticks_usec() - _confirmacion) / 1000.0, "barra_maxima": _barra_maxima, "intervalos_maximos_ms": _pausas_maximas}))
 	_terminar()
 
