@@ -7,7 +7,7 @@ signal tutorial_actualizado
 signal reintento_actualizado
 
 const PUERTO := 7000
-const VERSION := "extratexted-lan-6"
+const VERSION := "extratexted-lan-7"
 const OFICINA := "res://Mundo/Oficina.tscn"
 var activa := false
 var en_partida := false

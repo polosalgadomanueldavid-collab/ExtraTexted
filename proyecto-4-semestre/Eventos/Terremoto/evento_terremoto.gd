@@ -27,9 +27,6 @@ const SonidosEventos := preload("res://Eventos/sonidos_eventos.gd")
 const SEGUNDOS_POR_ETAPA := 8.0
 const DURACION := 3.0 * SEGUNDOS_POR_ETAPA
 const TIEMPO_CIERRE := 0.60
-const ANCHO_PISO := 7.0
-const LARGO_PISO := 12.5
-const RESOLUCION_MASCARA := 32
 const ANCHOS: Array[float] = Planificador.ANCHOS
 const LARGOS: Array[float] = Planificador.LARGOS
 
@@ -84,6 +81,7 @@ var _colision_jugador: CollisionShape3D
 var _animacion_alfombra: Tween
 var _reposo_alfombra: Transform3D
 var _alfombra_caida := false
+var _piso: Node3D
 
 
 func _ready() -> void:
@@ -94,6 +92,9 @@ func _ready() -> void:
 	sonidos = SonidosEventos.new()
 	add_child(sonidos)
 	_altura = suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y
+	_piso = preload("res://Eventos/Terremoto/piso_preparado.gd").new()
+	add_child(_piso)
+	_piso.configurar(suelo)
 	set_physics_process(false)
 
 
@@ -276,6 +277,9 @@ func _montar_plan() -> void:
 		grieta.cargar_forma(forma)
 		_trazado.append(grieta)
 		add_child(grieta)
+		grieta.preparar_reconstruccion(suelo)
+	await _piso.preparar(_trazado, _presupuesto)
+	if _presupuesto.cancelado: return
 	grieta_gigante = _trazado[int(_plan.gigante)]
 	for celda: Vector2i in _plan.caidas:
 		_celdas_caidas[celda] = _trazado[int(_plan.caidas[celda])]
@@ -310,6 +314,7 @@ func cancelar_preparacion() -> void:
 
 
 func _limpiar_preparacion_visual() -> void:
+	_piso.limpiar()
 	_limpiar_trazado()
 	for escombro in escombros:
 		escombro.hide()
@@ -338,8 +343,8 @@ func _abrir_suelo() -> void:
 	_grafo.grietas.assign(_celdas_rotas)
 	_celdas_rotas.clear()
 	for grieta in grietas:
-		grieta.abrir(suelo)
-	_actualizar_mascara_huecos()
+		grieta.abrir(suelo, false)
+	_piso.abrir()
 	_hundir_alfombra()
 	for celda in _celdas_caidas:
 		# El relevo puede retirar los cajones después del aviso y antes de la rotura.
@@ -594,6 +599,7 @@ func _cerrar() -> void:
 		_devolver_a_tierra()
 	for grieta in grietas:
 		grieta.cerrar()
+	_piso.cerrar()
 	grietas.clear()
 	_plan.clear()
 	_restaurar_alfombra()
@@ -609,31 +615,6 @@ func _cerrar() -> void:
 	sonidos.detener()
 	etapa = Etapa.INACTIVO
 	terminado.emit()
-
-
-func _actualizar_mascara_huecos() -> void:
-	if _material_piso == null:
-		return
-	var ancho := int(ANCHO_PISO * RESOLUCION_MASCARA)
-	var alto := int(LARGO_PISO * RESOLUCION_MASCARA)
-	var imagen := Image.create(ancho, alto, false, Image.FORMAT_R8)
-	imagen.fill(Color.WHITE)
-	var origen := Vector2(GrafoPiso.ORIGEN_X, GrafoPiso.ORIGEN_Z)
-	for grieta in grietas:
-		if grieta.sellada_avatar:
-			continue
-		var inicio_x := clampi(int(floor((grieta.limites.position.x - origen.x) * RESOLUCION_MASCARA)), 0, ancho - 1)
-		var fin_x := clampi(int(ceil((grieta.limites.end.x - origen.x) * RESOLUCION_MASCARA)), 0, ancho - 1)
-		var inicio_y := clampi(int(floor((grieta.limites.position.y - origen.y) * RESOLUCION_MASCARA)), 0, alto - 1)
-		var fin_y := clampi(int(ceil((grieta.limites.end.y - origen.y) * RESOLUCION_MASCARA)), 0, alto - 1)
-		for y in range(inicio_y, fin_y + 1):
-			for x in range(inicio_x, fin_x + 1):
-				var punto := origen + Vector2((float(x) + 0.5) / RESOLUCION_MASCARA,
-					(float(y) + 0.5) / RESOLUCION_MASCARA)
-				if Geometry2D.is_point_in_polygon(punto, grieta.contorno_hueco):
-					imagen.set_pixel(x, y, Color.BLACK)
-	_material_piso.set_shader_parameter("mascara_huecos", ImageTexture.create_from_image(imagen))
-	_material_piso.set_shader_parameter("usar_mascara_huecos", true)
 
 
 ## Un origen inicia la transición del objeto; sin origen, limpieza inmediata de reinicio/red.
@@ -669,13 +650,9 @@ func resolver_con_avatar(origen: Variant = null) -> void:
 	_cerrar()
 
 func _avanzar_avatar(frente: Node3D) -> void:
-	var selladas := false
 	for grieta in grietas:
 		var peso: float = frente.peso_en(Vector3(grieta.centro.x, _altura, grieta.centro.y))
-		if grieta.reconstruir_avatar(peso):
-			selladas = true
-	if selladas:
-		_actualizar_mascara_huecos()
+		grieta.reconstruir_avatar(peso)
 	for dato in _restos_avatar:
 		if is_instance_valid(dato.nodo):
 			var peso: float = frente.peso_en(dato.nodo.global_position)

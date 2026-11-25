@@ -1,5 +1,7 @@
 # Preparación incremental del terremoto
 
+Estado posterior: la [revisión de cierre](CIERRE_TERREMOTO_Y_RADIO_2026-11-24.md) verifica de nuevo los fallos físicos y las ocho distribuciones LAN con sus accesos reales, y sustituye los booleanos durante la partida por un piso preparado. Las limitaciones descritas abajo corresponden a esta revisión anterior.
+
 Implementa la primera prioridad de `VERIFICACION_RENDIMIENTO_2026-11-23.md`. La apertura CSG, sus contornos, paredes, losas y colisiones no se modifican.
 
 ## Flujo

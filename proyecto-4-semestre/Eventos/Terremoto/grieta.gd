@@ -19,6 +19,47 @@ var _margen_entre_bordes: Array[PackedVector2Array] = []
 var _losas: Array[MeshInstance3D] = []
 var _origenes: Array[Vector3] = []
 var _piedra: StandardMaterial3D
+var _tapa: StaticBody3D
+var _tapa_visual: MeshInstance3D
+
+
+## Se prepara con el plan, nunca durante el contacto resolutivo del Avatar.
+## La tapa usa exactamente el contorno del corte y el material del piso.
+func preparar_reconstruccion(suelo: CSGBox3D) -> void:
+	if is_instance_valid(_tapa): return
+	var exterior := _contorno_exterior()
+	var indices := Geometry2D.triangulate_polygon(exterior)
+	var caras := PackedVector3Array()
+	var datos := SurfaceTool.new()
+	datos.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(0, indices.size(), 3):
+		var a := _punto(exterior[indices[i]], 0.0)
+		var b := _punto(exterior[indices[i + 1]], 0.0)
+		var c := _punto(exterior[indices[i + 2]], 0.0)
+		if (b - a).cross(c - a).y > 0.0:
+			var cambio := b
+			b = c
+			c = cambio
+		for punto: Vector3 in [a, b, c]:
+			datos.set_normal(Vector3.UP)
+			datos.add_vertex(punto)
+			caras.append(punto)
+	_tapa = StaticBody3D.new()
+	_tapa.name = "PisoRestaurado"
+	_tapa.collision_layer = 0
+	_tapa.collision_mask = 0
+	var forma := ConcavePolygonShape3D.new()
+	forma.set_faces(caras)
+	var colision := CollisionShape3D.new()
+	colision.shape = forma
+	_tapa.add_child(colision)
+	_tapa_visual = MeshInstance3D.new()
+	_tapa_visual.mesh = datos.commit()
+	_tapa_visual.material_override = suelo.material
+	_tapa_visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_tapa_visual.hide()
+	_tapa.add_child(_tapa_visual)
+	add_child(_tapa)
 
 
 func trazar(origen: Vector2, largo: float, ancho: float, angulo: float, azar: RandomNumberGenerator) -> void:
@@ -94,32 +135,15 @@ func invade_borde(poligono: PackedVector2Array, caja: Rect2) -> bool:
 	return false
 
 
-func abrir(suelo: CSGBox3D) -> void:
+func abrir(suelo: CSGBox3D, corte_csg := true) -> void:
 	global_position.y = suelo.to_global(Vector3.UP * suelo.size.y * 0.5).y + 0.003
-	_corte = CSGPolygon3D.new()
-	_corte.operation = CSGShape3D.OPERATION_SUBTRACTION
-	var subsuelo := StandardMaterial3D.new()
-	subsuelo.albedo_color = Color("322933")
-	_corte.material = subsuelo
-	var exterior := _contorno_exterior()
-	contorno_hueco = exterior
-	_corte.polygon = exterior
-	_corte.depth = 2.0
-	# El piso y sus cortes son operandos del mismo CSGCombiner.
-	var combinador := suelo.get_parent() as CSGCombiner3D
-	if combinador == null:
-		push_error("El piso del terremoto debe estar dentro de un CSGCombiner3D.")
-		_corte.free()
-		return
-	combinador.add_child(_corte)
-	# CSGPolygon3D extruye hacia -Z: con este giro el volumen crece hacia arriba.
-	# Empezar bajo la losa conserva el contorno X/Z y atraviesa todo el piso.
-	_corte.global_transform = Transform3D(Basis(Vector3.RIGHT, PI / 2.0),
-		Vector3(0, global_position.y + 0.01 - _corte.depth, 0))
+	preparar_reconstruccion(suelo)
+	contorno_hueco = _contorno_exterior()
+	if corte_csg: _abrir_corte_csg(suelo)
 	_piedra = StandardMaterial3D.new()
 	_piedra.vertex_color_use_as_albedo = true
 	_piedra.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_modelar_paredes(exterior)
+	_modelar_paredes(contorno_hueco)
 	if saltable:
 		add_to_group(&"bordes_grietas_saltables")
 	var superficie := Color("32343c")
@@ -134,6 +158,28 @@ func abrir(suelo: CSGBox3D) -> void:
 			efecto.position = _punto(_izquierda[i] if i % 2 else _derecha[i], 0.03)
 			for emisor: CPUParticles3D in efecto.get_children():
 				create_tween().tween_callback(emisor.restart).set_delay(i * 0.041)
+
+
+## Compatibilidad con la prueba aislada de bordes; la oficina usa piso preparado.
+func _abrir_corte_csg(suelo: CSGBox3D) -> void:
+	_corte = CSGPolygon3D.new()
+	_corte.operation = CSGShape3D.OPERATION_SUBTRACTION
+	var subsuelo := StandardMaterial3D.new()
+	subsuelo.albedo_color = Color("322933")
+	_corte.material = subsuelo
+	_corte.polygon = contorno_hueco
+	_corte.depth = 2.0
+	# El piso y sus cortes son operandos del mismo CSGCombiner.
+	var combinador := suelo.get_parent() as CSGCombiner3D
+	if combinador == null:
+		push_error("El piso del terremoto debe estar dentro de un CSGCombiner3D.")
+		_corte.free()
+		return
+	combinador.add_child(_corte)
+	# CSGPolygon3D extruye hacia -Z: con este giro el volumen crece hacia arriba.
+	# Empezar bajo la losa conserva el contorno X/Z y atraviesa todo el piso.
+	_corte.global_transform = Transform3D(Basis(Vector3.RIGHT, PI / 2.0),
+		Vector3(0, global_position.y + 0.01 - _corte.depth, 0))
 
 
 func _contorno_exterior() -> PackedVector2Array:
@@ -297,14 +343,14 @@ func reconstruir_avatar(peso: float) -> bool:
 	for i in _losas.size():
 		_losas[i].show()
 		_losas[i].transform = _poses_avatar[i].interpolate_with(Transform3D(Basis.IDENTITY, _origenes[i]), smoothstep(0.0, .82, peso))
-	# El piso recupera su colisión antes de retirar la última capa de piedra.
-	_piedra.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_piedra.albedo_color.a = 1.0 - smoothstep(.82, 1.0, peso)
+	# Conservar el material opaco evita compilar otra variante al restaurar.
+	# La tapa queda a ras del piso; las losas se retiran detrás del frente.
+	if peso >= .82:
+		for losa in _losas: losa.hide()
 	if peso < .82 or sellada_avatar:
 		return false
 	sellada_avatar = true
-	if is_instance_valid(_corte):
-		_corte.get_parent().remove_child(_corte)
-		_corte.queue_free()
-		_corte = null
+	_tapa_visual.show()
+	_tapa.collision_layer = 1
+	# Sellar una grieta no reconstruye la superficie de las otras bocas.
 	return true

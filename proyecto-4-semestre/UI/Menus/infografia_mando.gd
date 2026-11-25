@@ -52,7 +52,7 @@ func mostrar(indice: int) -> void:
 	_llamada("PALANCA DERECHA", "Desplaza las listas largas.\nEn la ruleta, apunta al gesto.", 3, Vector2(0.610, 0.562))
 	_llamada("VIEW · CLASIFICACIÓN", "Mantén para ver los puntos\ny el aporte del equipo.", 4, Vector2(0.446, 0.344))
 	_llamada("A · CONFIRMAR", "Activa la opción o el gesto.\nTienda: comprar, recoger y usar.", 5, Vector2(0.729, 0.440))
-	_llamada("B · VOLVER", "Cierra paneles y la ruleta.\nCuaderno: aleja o elige Menú.", 6, Vector2(0.790, 0.344))
+	_llamada("B · VOLVER / RADIO", "En LAN abre la radio del equipo.\nEn paneles, vuelve o cierra.", 6, Vector2(0.790, 0.344))
 	_llamada("START · PAUSA", "Abre la pausa durante la partida.\nVuelve desde los paneles.", 7, Vector2(0.570, 0.344))
 	_rotulo("R3 · CAMBIAR CÁMARA", Vector2(40, 474), 500, 22)
 	_rotulo("X · MANTENER PARA USAR EL EXTINTOR", Vector2(570, 474), 530, 22)

@@ -502,6 +502,8 @@ func _pedir_volver_al_menu() -> void:
 
 
 func _guardar_entrada() -> void:
+	for radio in get_tree().get_nodes_in_group("radio_cooperativa"):
+		radio.cerrar()
 	_foco_anterior = get_viewport().gui_get_focus_owner()
 	if is_instance_valid(_foco_anterior):
 		_foco_anterior.release_focus()

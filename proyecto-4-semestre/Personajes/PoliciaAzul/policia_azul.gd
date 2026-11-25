@@ -53,6 +53,8 @@ var _spawn_transform: Transform3D
 var _spawn_visual_rotation: Vector3
 var _wave_remaining: float = 0.0
 var _emote_menu_active: bool = false
+var radio_abierta := false
+var esperar_soltar_salto_radio := false
 var _animation_names: Dictionary = {}
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 var papel_en_mano: PapelDenuncia = null
@@ -169,13 +171,15 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 
 	var input_direction := Vector2.ZERO
-	if not congelado and not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active:
+	if not congelado and not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active and not radio_abierta:
 		input_direction = Input.get_vector(LEFT, RIGHT, FORWARD, BACK)
 	var direction := _camera_relative_direction(input_direction)
 	var moving := direction.length_squared() > 0.001
-	var running := not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active and Input.is_action_pressed(RUN)
+	var running := not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active and not radio_abierta and Input.is_action_pressed(RUN)
 
-	if not congelado and not nadando and not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active and Input.is_action_just_pressed(JUMP) and is_on_floor():
+	if esperar_soltar_salto_radio and not Input.is_action_pressed(JUMP):
+		esperar_soltar_salto_radio = false
+	if not congelado and not nadando and not input_locked and not realizando_gesto() and not usando_extintor and not _emote_menu_active and not radio_abierta and not esperar_soltar_salto_radio and Input.is_action_just_pressed(JUMP) and is_on_floor():
 		_wave_remaining = 0.0
 		velocity.y = jump_velocity
 		if lava_activa or dona_restante > 0.0:
@@ -324,6 +328,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.is_action_released(interaction_action) and is_instance_valid(control_incendio):
 		control_incendio.soltar()
+	if radio_abierta:
+		return
 	if event.is_action_pressed(EMOTE_MENU) and not (event is InputEventKey and event.echo):
 		get_viewport().set_input_as_handled()
 		if not _emotes_permitidos():
@@ -468,6 +474,8 @@ func _buscar_papel_cercano() -> PapelDenuncia:
 
 
 func reset_to_spawn() -> void:
+	radio_abierta = false
+	esperar_soltar_salto_radio = false
 	choque.reiniciar()
 	chocolate_restante = 0.0
 	dona_restante = 0.0
@@ -542,7 +550,7 @@ func play_idle_variant(tipo: StringName) -> bool:
 func _update_idle_variants(delta: float) -> void:
 	if not is_instance_valid(gestos):
 		return
-	var disponible := not congelado and not nadando and not quemandose_pies and current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not usando_extintor
+	var disponible := not congelado and not nadando and not quemandose_pies and current_animation == &"idle" and is_on_floor() and not input_locked and not _descanso_sentado and not _taza_en_mano and not realizando_gesto() and not _emote_menu_active and not radio_abierta and not usando_extintor
 	if not disponible:
 		if _reposo_disponible:
 			_cancelar_reposo()

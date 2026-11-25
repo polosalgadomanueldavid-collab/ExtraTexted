@@ -55,6 +55,13 @@ var _contexto_previo: Array = []
 var _duelo := {}
 var _duelo_ultimo_pulso := {}
 var _duelo_aviso: Label
+var senales: Control
+var _numero_senal := 0
+
+const ESTACIONES_RADIO := {
+	"computador": "Computador", "evidencias": "Evidencias", "verificacion": "Verificación",
+	"privacidad": "Seguridad", "reporte": "Reporte", "bienestar": "Bienestar"
+}
 
 func configurar(mundo: Node3D) -> void:
 	oficina = mundo
@@ -106,6 +113,9 @@ func configurar(mundo: Node3D) -> void:
 		oficina.temporizador_bloqueos.stop()
 		oficina.temporizador_eventos.stop()
 	_actualizar_hud()
+	senales = preload("res://UI/Despacho/senales_cooperativas.gd").new()
+	senales.red = self
+	oficina.get_node("CanvasLayer").add_child(senales)
 
 func comenzar() -> void:
 	_listo = true
@@ -254,6 +264,8 @@ func procesar(id: int, tipo: String, datos: Dictionary) -> Dictionary:
 		return _error("No puedes actuar durante la pausa o fuera del turno.")
 	var j: Player = jugadores[id]
 	match tipo:
+		"senal":
+			return _solicitar_senal(id, datos)
 		"duelo_kamehameha":
 			return _solicitar_duelo(id)
 		"duelo_pulso":
@@ -476,6 +488,71 @@ func _cordura(id: int, datos: Dictionary) -> Dictionary:
 
 func _buscar_estacion(id: String) -> Node3D:
 	return _estaciones.get(id)
+
+
+## La autoridad elige posiciones y textos: los clientes solo piden una opción.
+func _solicitar_senal(id: int, datos: Dictionary) -> Dictionary:
+	var clave := "radio:%d" % id
+	if _reloj - float(_esperas.get(clave, -2.0)) < 2.0:
+		return _error("Espera un momento antes de volver a usar la radio.")
+	var tipo := str(datos.get("tipo", ""))
+	var objetivo := str(datos.get("objetivo", ""))
+	var posicion: Vector3 = jugadores[id].global_position
+	var texto := ""
+	var caso_id := ""
+	match tipo:
+		"estacion":
+			if not ESTACIONES_RADIO.has(objetivo): return _error("Elige una estación de la radio.")
+			var estacion: Node3D = oficina.computador if objetivo == "computador" else _buscar_estacion(objetivo)
+			if not is_instance_valid(estacion): return _error("La estación no está disponible.")
+			posicion = estacion.global_position
+			texto = "IR A " + str(ESTACIONES_RADIO[objetivo]).to_upper()
+		"ayuda":
+			texto = "NECESITO AYUDA"
+		"hoja":
+			var cercana: PapelDenuncia
+			var distancia := 2.5
+			for papel: PapelDenuncia in papeles.values():
+				if not is_instance_valid(papel) or papel.portador != null: continue
+				var d := posicion.distance_to(papel.global_position)
+				if d <= distancia:
+					cercana = papel
+					distancia = d
+			if cercana == null: return _error("Acércate a una hoja suelta para señalarla.")
+			posicion = cercana.global_position
+			caso_id = cercana.denuncia_id
+			texto = "RECOGE ESTA HOJA"
+		"reparar":
+			if oficina.evento_apagon.estado != 0:
+				objetivo = "apagon"
+			elif oficina.evento_inundacion.activo and not oficina.evento_inundacion.drenando:
+				objetivo = "inundacion"
+			elif oficina.evento_hielo.activo and not oficina.evento_hielo.descongelando:
+				objetivo = "hielo"
+			elif oficina.evento_incendio.activo:
+				objetivo = "incendio"
+			else:
+				return _error("Ahora no hay una emergencia que reparar.")
+			var reparacion: Node3D
+			if objetivo == "incendio":
+				var distancia := INF
+				for foco in oficina.evento_incendio.focos:
+					var d: float = posicion.distance_squared_to(foco.global_position)
+					if foco.apagado < 1.0 and d < distancia:
+						reparacion = foco
+						distancia = d
+			else:
+				reparacion = _objeto(objetivo)
+			if not is_instance_valid(reparacion): return _error("La reparación ya no está disponible.")
+			posicion = reparacion.global_position
+			texto = "VOY A APAGAR EL FUEGO" if objetivo == "incendio" else "VOY A REPARAR"
+		_:
+			return _error("Señal de radio desconocida.")
+	_esperas[clave] = _reloj
+	_numero_senal += 1
+	SesionLAN.difundir("senal", {"numero": _numero_senal, "jugador": id, "tipo": tipo,
+		"objetivo": objetivo, "posicion": posicion, "texto": texto, "caso": caso_id})
+	return {"ok": true, "numero": _numero_senal}
 
 func _objeto(clave: String) -> Node3D:
 	match clave:
@@ -879,6 +956,8 @@ func _arrancar_evento(datos: Dictionary) -> bool:
 
 func aplicar_evento(tipo: String, datos: Dictionary) -> void:
 	match tipo:
+		"senal":
+			if is_instance_valid(senales): senales.recibir(datos)
 		"sismo_plan":
 			if SesionLAN.es_anfitrion() or int(datos.id) <= _evento_id or int(datos.plan_id) <= _sismo_secuencia: return
 			_sismo_secuencia = int(datos.plan_id)
