@@ -56,6 +56,11 @@ var _confirmacion_tutorial_enviada := false
 var _audio_foco: AudioStreamPlayer
 var _audio_confirmar: AudioStreamPlayer
 var _ultimo_foco_sonado := 0
+var _panel_graficos: PanelContainer
+var _boton_graficos: Button
+var _opciones_graficas: Array[Control] = []
+var _musica_menu_visible := false
+var _fundido_musica_menu: Tween
 
 
 func practica_vista() -> bool:
@@ -208,6 +213,20 @@ func cerrar_opciones() -> void:
 	else:
 		capa.hide()
 		_restaurar_entrada()
+
+func abrir_graficos() -> void:
+	if not panel_opciones.is_visible_in_tree():
+		return
+	panel_opciones.hide()
+	_panel_graficos.show()
+	_opciones_graficas[0].grab_focus()
+
+func cerrar_graficos() -> void:
+	if not _panel_graficos.visible:
+		return
+	_panel_graficos.hide()
+	panel_opciones.show()
+	_boton_graficos.grab_focus()
 
 
 func abrir_accesibilidad() -> void:
@@ -473,6 +492,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_cerrar_clasificacion()
 	elif panel_accesibilidad.visible:
 		cerrar_accesibilidad()
+	elif is_instance_valid(_panel_graficos) and _panel_graficos.visible:
+		cerrar_graficos()
 	elif panel_opciones.visible:
 		cerrar_opciones()
 	elif panel_confirmacion.visible:
@@ -488,6 +509,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _mostrar_pausa() -> void:
 	panel_opciones.hide()
+	if is_instance_valid(_panel_graficos):
+		_panel_graficos.hide()
 	panel_confirmacion.hide()
 	panel_pausa.show()
 	_confinar_foco([reanudar, %OpcionesPausa, %TutorialPausa, %MenuPrincipal])
@@ -524,6 +547,8 @@ func _al_cambiar_escena() -> void:
 	capa.hide()
 	panel_pausa.hide()
 	panel_opciones.hide()
+	if is_instance_valid(_panel_graficos):
+		_panel_graficos.hide()
 	panel_accesibilidad.hide()
 	panel_confirmacion.hide()
 	panel_ayuda.hide()
@@ -592,15 +617,29 @@ func _actualizar_musica_menu() -> void:
 		var musica_partida := get_tree().current_scene.get_node("MusicaPartida") as AudioStreamPlayer
 		# El tutorial congela casos y movimiento, pero la pista de la partida continúa.
 		musica_partida.process_mode = Node.PROCESS_MODE_ALWAYS if tutorial_automatico else Node.PROCESS_MODE_INHERIT
-	if escena_menu or pausa_visible:
+	var mostrar_menu := escena_menu or pausa_visible
+	if mostrar_menu == _musica_menu_visible:
+		return
+	_musica_menu_visible = mostrar_menu
+	if is_instance_valid(_fundido_musica_menu) and _fundido_musica_menu.is_running():
+		_fundido_musica_menu.kill()
+	if mostrar_menu:
 		if not musica_menu.playing:
 			var pista := musica_menu.stream as AudioStreamMP3
 			if pista != null:
 				pista.loop = true
+			musica_menu.volume_db = -18.0
 			musica_menu.play()
 		musica_menu.stream_paused = false
+		_fundido_musica_menu = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		_fundido_musica_menu.tween_property(musica_menu, "volume_db", -4.0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	elif musica_menu.playing:
-		musica_menu.stream_paused = true
+		_fundido_musica_menu = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		_fundido_musica_menu.tween_property(musica_menu, "volume_db", -55.0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		_fundido_musica_menu.finished.connect(func() -> void:
+			if not _musica_menu_visible:
+				musica_menu.stream_paused = true
+		)
 
 
 func _cambiar_intensidad(valor: float) -> void:
@@ -679,21 +718,62 @@ func _establecer_pausa(valor: bool) -> void:
 
 
 func _crear_selector_calidad() -> void:
+	_panel_graficos = preload("res://UI/Menus/panel_ajustes.gd").new()
+	_panel_graficos.name = "PanelGraficos"
+	_panel_graficos.set("portapapeles", true)
+	_panel_graficos.visible = false
+	_panel_graficos.custom_minimum_size.x = 920
+	_panel_graficos.theme = panel_opciones.theme
+	panel_opciones.get_parent().add_child(_panel_graficos)
+	var contenido := VBoxContainer.new()
+	contenido.add_theme_constant_override("separation", 12)
+	_panel_graficos.add_child(contenido)
+	var titulo := Label.new()
+	titulo.text = "GRÁFICOS"
+	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	titulo.add_theme_font_size_override("font_size", 56)
+	contenido.add_child(titulo)
+	_agregar_opcion_grafica(contenido, "CALIDAD", CalidadVisual.NOMBRES, CalidadVisual.nivel, "Define el perfil de iluminación y el detalle general.", "nivel")
+	_agregar_opcion_grafica(contenido, "V-SYNC", ["Desactivado", "Activado"], int(CalidadVisual.vsync), "Sincroniza los cuadros con la pantalla para evitar cortes de imagen.", "vsync")
+	_agregar_opcion_grafica(contenido, "ESCALA 3D", ["75 %", "100 %", "115 %"], CalidadVisual.escala_3d, "Cambia la nitidez del mundo 3D. La interfaz conserva su resolución.", "escala_3d")
+	_agregar_opcion_grafica(contenido, "PARTÍCULAS", ["Reducidas", "Normales", "Detalladas"], CalidadVisual.detalle_particulas, "Ajusta los próximos efectos. Los que ya están activos terminan sin reiniciarse.", "particulas")
+	_agregar_opcion_grafica(contenido, "SOMBRAS · ULTRA", ["Tenues", "Medias", "Marcadas"], CalidadVisual.sombras_ultra, "Ajusta el contraste de las sombras proyectadas. Solo funciona en Ultra.", "sombras_ultra")
+	_agregar_opcion_grafica(contenido, "LÍMITE DE FPS", ["Sin límite", "60", "120"], CalidadVisual.limite_fps, "Limita los cuadros por segundo y el consumo de recursos.", "limite_fps")
+	_agregar_opcion_grafica(contenido, "SUAVIZADO DE BORDES", ["Desactivado", "FXAA · ligero", "MSAA 4× · nítido"], CalidadVisual.suavizado_bordes, "Reduce los bordes dentados del mundo 3D. MSAA consume más recursos.", "suavizado_bordes")
+	var volver := Button.new()
+	volver.text = "VOLVER A OPCIONES"
+	volver.pressed.connect(cerrar_graficos)
+	contenido.add_child(volver)
+	_opciones_graficas.append(volver)
+	_confinar_foco(_opciones_graficas)
+	_boton_graficos = Button.new()
+	_boton_graficos.text = "GRÁFICOS"
+	_boton_graficos.pressed.connect(abrir_graficos)
+	var botones := panel_opciones.get_node("Contenido/Botones")
+	botones.add_child(_boton_graficos)
+	botones.move_child(_boton_graficos, 0)
+	_confinar_foco([control_volumen_general, control_volumen_musica, control_volumen_interacciones, _boton_graficos, %AccesibilidadOpciones, %ControlesOpciones, %VolverOpciones])
+
+func _agregar_opcion_grafica(contenido: VBoxContainer, nombre: String, valores: Array, seleccionado: int, descripcion: String, clave: String) -> void:
 	var fila := HBoxContainer.new()
+	contenido.add_child(fila)
 	var etiqueta := Label.new()
-	etiqueta.text = "CALIDAD VISUAL"
+	etiqueta.text = nombre
 	etiqueta.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fila.add_child(etiqueta)
 	var selector := OptionButton.new()
-	selector.name = "CalidadVisual"
-	for texto in CalidadVisual.NOMBRES:
-		selector.add_item(texto)
-	selector.select(CalidadVisual.nivel)
-	selector.item_selected.connect(CalidadVisual.establecer)
-	CalidadVisual.nivel_cambiado.connect(selector.select)
-	selector.tooltip_text = "Ultra: iluminación cálida y azul inspirada en el menú, a la misma resolución que Alta. La interfaz conserva su nitidez."
+	for valor in valores:
+		selector.add_item(str(valor))
+	selector.select(seleccionado)
+	if clave == "nivel":
+		selector.item_selected.connect(CalidadVisual.establecer)
+	else:
+		selector.item_selected.connect(func(indice: int) -> void: CalidadVisual.configurar_graficos(clave, indice))
 	fila.add_child(selector)
-	var contenido := panel_opciones.get_node("Contenido")
-	contenido.add_child(fila)
-	contenido.move_child(fila, contenido.get_child_count() - 2)
-	_confinar_foco([control_volumen_general, control_volumen_musica, control_volumen_interacciones, selector, %AccesibilidadOpciones, %ControlesOpciones, %VolverOpciones])
+	_opciones_graficas.append(selector)
+	var ayuda := Label.new()
+	ayuda.text = descripcion
+	ayuda.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ayuda.add_theme_font_size_override("font_size", 17)
+	ayuda.add_theme_color_override("font_color", Color("315568"))
+	contenido.add_child(ayuda)

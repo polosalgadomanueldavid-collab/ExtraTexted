@@ -49,7 +49,7 @@ func _ready() -> void:
 	for nombre: String in LUCES_ULTRA:
 		var luz := oficina.get_node("Pared, suelo, techo/" + nombre) as Light3D
 		_luces.append(luz)
-		_base_luces.append({"color": luz.light_color, "energia": luz.light_energy, "sombra": luz.shadow_enabled, "sesgo": luz.shadow_bias, "sesgo_normal": luz.shadow_normal_bias, "atenuacion": (luz as SpotLight3D).spot_attenuation, "angulo": (luz as SpotLight3D).spot_angle, "borde": (luz as SpotLight3D).spot_angle_attenuation, "transform": luz.transform})
+		_base_luces.append({"color": luz.light_color, "energia": luz.light_energy, "sombra": luz.shadow_enabled, "opacidad_sombra": luz.shadow_opacity, "sesgo": luz.shadow_bias, "sesgo_normal": luz.shadow_normal_bias, "atenuacion": (luz as SpotLight3D).spot_attenuation, "angulo": (luz as SpotLight3D).spot_angle, "borde": (luz as SpotLight3D).spot_angle_attenuation, "transform": luz.transform})
 	# Terremoto ya creó una copia local en su _ready. Conservar esa instancia
 	# permite cambiar el acabado sin perder su máscara de grietas.
 	_piso = oficina.get_node("Pared, suelo, techo/PisoTerremoto/Suelo").material as ShaderMaterial
@@ -70,6 +70,7 @@ func _ready() -> void:
 		_rebotes_pared.append(rebote)
 	_apagon.estado_cambiado.connect(_al_cambiar_apagon)
 	CalidadVisual.nivel_cambiado.connect(_aplicar_nivel)
+	CalidadVisual.graficos_cambiados.connect(_actualizar_sombras)
 	_aplicar_nivel(CalidadVisual.nivel)
 
 
@@ -96,6 +97,7 @@ func _aplicar_nivel(nivel: int) -> void:
 		# Cuatro focos principales proyectan sombras; el resto ilumina sin
 		# multiplicar los mapas de sombras de toda la oficina.
 		luz.shadow_enabled = (String(luz.name) in FOCOS_CON_SOMBRA) if ultra else bool(_base_luces[i].sombra)
+		luz.shadow_opacity = [0.3, 0.7, 1.0][CalidadVisual.sombras_ultra] if ultra else _base_luces[i].opacidad_sombra
 		# Un sesgo demasiado pequeño causaba las rayas diagonales de la captura.
 		luz.shadow_bias = 0.12 if ultra else _base_luces[i].sesgo
 		luz.shadow_normal_bias = 1.2 if ultra else _base_luces[i].sesgo_normal
@@ -149,6 +151,13 @@ func _al_cambiar_apagon(_estado: int) -> void:
 	for rebote in _rebotes_pared:
 		rebote.visible = _apagon.estado == _apagon.Estado.RESTAURADO and _ultra_aplicado
 	_aplicar_nivel(CalidadVisual.nivel)
+
+func _actualizar_sombras() -> void:
+	if not _ultra_aplicado:
+		return
+	for luz in _luces:
+		luz.shadow_enabled = String(luz.name) in FOCOS_CON_SOMBRA
+		luz.shadow_opacity = [0.3, 0.7, 1.0][CalidadVisual.sombras_ultra]
 
 
 func _exit_tree() -> void:
