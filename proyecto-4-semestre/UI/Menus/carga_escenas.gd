@@ -76,7 +76,7 @@ func cargar(ruta: String) -> void:
 	mediciones = {}
 	_inicio = Time.get_ticks_usec()
 	_inicio_fase = _inicio
-	_limite = Time.get_ticks_msec() + 60000
+	_limite = Time.get_ticks_msec() + 120000
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_presentar(ruta)

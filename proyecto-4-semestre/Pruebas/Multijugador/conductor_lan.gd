@@ -102,6 +102,9 @@ func _run() -> void:
 	comprobar(get_tree().paused and MenuGlobal.panel_ayuda.visible, "El tutorial inicial abre sin bloquear la carga")
 	await _probar_confirmaciones_tutorial(true)
 	comprobar(red.jugadores.size() == 2 and not get_tree().paused, "Dos jugadores y barrera de carga completada")
+	if OS.get_cmdline_user_args().has("--solo-duelo"):
+		await _probar_duelo_y_cordura()
+		return
 	if OS.get_cmdline_user_args().has("--solo-senales"):
 		await _probar_senales()
 		return
@@ -527,6 +530,8 @@ func _orden(orden: String, datos: Dictionary = {}) -> void:
 			for tipo in ["incendio", "inundacion", "lava", "hielo", "terremoto"]:
 				if oficina.get("evento_" + tipo).activo: evento = tipo
 			resultado = {"saldo": oficina.sistema_despacho.puntuacion.puntos, "casos": oficina.sistema_despacho.casos_en_proceso.size(), "hojas": red.papeles.size(), "evento": evento, "tiempo": oficina.sistema_despacho.tiempo_detenido, "activo_local": oficina.sistema_despacho.esta_activo(SesionLAN.id_local()), "final": oficina.sistema_despacho.terminada, "guia": MenuGlobal.panel_ayuda.visible}
+			resultado["hud_cordura"] = [oficina.panel_despacho.calma_jugadores.filas[1].calma, oficina.panel_despacho.calma_jugadores.filas[2].calma]
+			resultado["duelo"] = str(red._duelo.get("fase", ""))
 			resultado["pilas"] = _pilas_visibles()
 			resultado["aportes"] = oficina.sistema_despacho.aportes_jugadores
 			resultado["equipo_final"] = oficina.final_partida._datos.get("equipo", [])
@@ -666,6 +671,48 @@ func _probar_distribuciones_reales() -> void:
 	for acceso in get_tree().get_nodes_in_group("accesos_navegacion"):
 		comprobar(accesos[indice] == acceso.global_position, "La prueba conserva el acceso real")
 		indice += 1
+
+
+func _probar_duelo_y_cordura() -> void:
+	var despacho: SistemaDespacho = oficina.sistema_despacho
+	comprobar(oficina.emotes_permitidos(), "La oficina habilita emotes fuera de eventos")
+	despacho.perder_calma(25, &"prueba", cliente)
+	red.publicar()
+	await _esperar(0.4)
+	var filas: Dictionary = oficina.panel_despacho.calma_jugadores.filas
+	comprobar(filas[1].calma == 100 and filas[2].calma == 75, "El anfitrión ve la cordura separada en ambas filas")
+	var remoto := await _al_cliente("inspeccionar")
+	comprobar(remoto.hud_cordura == [100, 75], "El invitado ve la cordura separada en ambas filas")
+	despacho.recuperar_calma(25, cliente)
+	despacho.perder_calma(20, &"prueba", 1)
+	red.publicar()
+	await _esperar(0.4)
+	comprobar(filas[1].calma == 80 and filas[2].calma == 100, "El anfitrión ve su propia pérdida sin alterar al compañero")
+	remoto = await _al_cliente("inspeccionar")
+	comprobar(remoto.hud_cordura == [80, 100], "El invitado con 100 ve la cordura real del anfitrión")
+	var respuesta_duelo := await _pedir("duelo_kamehameha")
+	comprobar(respuesta_duelo.get("ok", false) and red._duelo.get("fase") == "espera", "El primer jugador invita al duelo")
+	respuesta_duelo = await _al_cliente("accion", {"tipo": "duelo_kamehameha"})
+	comprobar(respuesta_duelo.get("ok", false) and red._duelo.get("fase") == "choque", "El segundo jugador inicia el choque")
+	await _esperar(0.3)
+	remoto = await _al_cliente("inspeccionar")
+	comprobar(remoto.duelo == "choque", "El choque aparece también en el invitado")
+	red._terminar_duelo(0)
+	await _esperar(0.2)
+	comprobar(red._duelo.is_empty(), "El duelo se cierra sin dejar estado pendiente")
+	oficina.tutoriales_vistos[&"apagon"] = true
+	await _al_cliente("tutoriales")
+	comprobar(red.iniciar_evento("apagon"), "Se inicia el apagón para bloquear los emotes")
+	await _esperar(0.3)
+	comprobar(not oficina.emotes_permitidos(), "Los emotes quedan deshabilitados durante un evento")
+	respuesta_duelo = await _pedir("duelo_kamehameha")
+	comprobar(not respuesta_duelo.get("ok", true), "El duelo se rechaza durante un evento")
+	print("[LAN DUELO] %d comprobaciones, %d fallos" % [comprobaciones, fallos])
+	await _al_cliente("terminar")
+	while SesionLAN.activa:
+		await _esperar(0.1)
+	_terminando = true
+	await _finalizar_prueba(1 if fallos else 0)
 
 
 func _probar_senales() -> void:

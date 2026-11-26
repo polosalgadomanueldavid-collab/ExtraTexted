@@ -501,6 +501,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif capa.visible and panel_pausa.visible:
 		reanudar_juego()
 	elif es_escena_de_juego():
+		# B pertenece a la radio cooperativa; Start conserva la pausa.
+		if event is InputEventJoypadButton and event.button_index == JOY_BUTTON_B:
+			return
 		abrir_pausa()
 	else:
 		return

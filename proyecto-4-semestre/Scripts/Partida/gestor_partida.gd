@@ -183,6 +183,7 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	add_to_group("gestor_partida")
+	add_to_group(&"oficina_emotes")
 	anuncios = AnuncioPartida.new()
 	$CanvasLayer.add_child(anuncios)
 	indicador_denuncia_pc = IndicadorDenunciaPC.new()
@@ -924,6 +925,10 @@ func agregar_mesas_debug(cantidad: int) -> void:
 	mesas_extra_debug += mini(cantidad, BLOQUEOS_SIMULTANEOS - cantidad_mesas_objetivo())
 	# Incendio y terremoto conservan su trazado; aplicarlo al siguiente reparto.
 	_cambiar_bloqueo_temporal()
+
+
+func emotes_permitidos() -> bool:
+	return oficina_preparada and not get_tree().paused and _puede_iniciar_evento()
 
 
 func _puede_iniciar_evento(omitir_preparacion := false) -> bool:

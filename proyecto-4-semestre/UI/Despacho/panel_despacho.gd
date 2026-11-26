@@ -215,7 +215,8 @@ func _formatear_puntos(valor: int) -> String:
 
 
 func actualizar_calma(nueva_calma: int) -> void:
-	calma_jugadores.actualizar_jugador(1, nueva_calma)
+	var fila_local := 2 if SesionLAN.activa and not SesionLAN.es_anfitrion() else 1
+	calma_jugadores.actualizar_jugador(fila_local, nueva_calma)
 
 
 func actualizar_denuncias(denuncias: Array[Denuncia]) -> void:

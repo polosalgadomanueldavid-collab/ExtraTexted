@@ -7,7 +7,7 @@ signal tutorial_actualizado
 signal reintento_actualizado
 
 const PUERTO := 7000
-const VERSION := "extratexted-lan-7"
+const VERSION := "extratexted-lan-9"
 const OFICINA := "res://Mundo/Oficina.tscn"
 var activa := false
 var en_partida := false
@@ -27,6 +27,9 @@ var _respuestas: Dictionary = {}
 var _ultima_solicitud: Dictionary = {}
 var _limite_conexion := 0.0
 var _limite_carga := 0.0
+var _limite_inicio := 0.0
+var _siguiente_inicio := 0.0
+var _inicio_pendiente := false
 var ronda := 0
 var _cerrando := false
 
@@ -176,7 +179,9 @@ func _cargar(nueva_ronda: int) -> void:
 	puente = null
 	en_partida = false
 	cargando = true
-	_limite_carga = Time.get_ticks_msec() / 1000.0 + 60.0
+	_limite_carga = Time.get_ticks_msec() / 1000.0 + 120.0
+	_limite_inicio = 0.0
+	_inicio_pendiente = false
 	_cargados.clear()
 	_pausas.clear()
 	votos_reintento.clear()
@@ -217,11 +222,19 @@ func _marcar_cargado(id: int) -> void:
 		return
 	_cargados[id] = true
 	if _cargados.size() == 2 and is_instance_valid(puente):
+		_inicio_pendiente = true
+		_limite_inicio = Time.get_ticks_msec() / 1000.0 + 60.0
+		_siguiente_inicio = Time.get_ticks_msec() / 1000.0 + 2.0
 		_comenzar.rpc(ronda)
 
 @rpc("authority", "call_local", "reliable")
 func _comenzar(ronda_servidor: int) -> void:
-	if not activa or not cargando or ronda_servidor != ronda or not is_instance_valid(puente):
+	if not activa or ronda_servidor != ronda:
+		return
+	if en_partida and not es_anfitrion():
+		_confirmar_inicio.rpc_id(1, ronda)
+		return
+	if not cargando or not is_instance_valid(puente):
 		return
 	cargando = false
 	_limite_carga = 0.0
@@ -230,6 +243,14 @@ func _comenzar(ronda_servidor: int) -> void:
 	CargaEscenas.finalizar_espera()
 	puente.comenzar()
 	MenuGlobal._abrir_tutorial_inicial.call_deferred()
+	if not es_anfitrion():
+		_confirmar_inicio.rpc_id(1, ronda)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _confirmar_inicio(ronda_cliente: int) -> void:
+	if es_anfitrion() and en_partida and ronda_cliente == ronda and participantes.has(multiplayer.get_remote_sender_id()):
+		_inicio_pendiente = false
+		_limite_inicio = 0.0
 
 func pedir_pausa(valor: bool) -> void:
 	if not activa:
@@ -408,6 +429,8 @@ func cerrar(motivo: String = "") -> void:
 	puente = null
 	_limite_conexion = 0.0
 	_limite_carga = 0.0
+	_limite_inicio = 0.0
+	_inicio_pendiente = false
 	participantes.clear()
 	_pausas.clear()
 	votos_reintento.clear()
@@ -440,6 +463,16 @@ func _notificar(texto: String) -> void:
 	aviso.emit(texto)
 
 func _process(_delta: float) -> void:
+	if _inicio_pendiente and es_anfitrion():
+		var ahora := Time.get_ticks_msec() / 1000.0
+		if ahora >= _limite_inicio:
+			cerrar("El compañero no confirmó el inicio de la partida.")
+			return
+		if ahora >= _siguiente_inicio:
+			_siguiente_inicio = ahora + 2.0
+			for id in participantes:
+				if id != 1:
+					_comenzar.rpc_id(id, ronda)
 	if _limite_conexion > 0.0:
 		if Time.get_ticks_msec() / 1000.0 >= _limite_conexion:
 			cerrar("La conexión agotó el tiempo de espera.")

@@ -6,12 +6,15 @@ func _initialize() -> void:
 	_probar.call_deferred()
 
 func _probar() -> void:
+	print("[SALA INICIO] prueba creada ", OS.get_cmdline_user_args())
 	root.mode = Window.MODE_WINDOWED
 	root.size = Vector2i(1280, 720)
 	var menu: Control = load("res://UI/Menus/MainMenu.tscn").instantiate()
+	print("[SALA INICIO] menú instanciado")
 	root.add_child(menu)
 	current_scene = menu
 	await create_timer(1.2).timeout
+	print("[SALA INICIO] menú visible")
 	menu.play_button.pressed.emit()
 	await process_frame
 	var sesion: Node = root.get_node("SesionLAN")
@@ -84,6 +87,7 @@ func _probar() -> void:
 	quit()
 
 func _probar_sala_real(menu: Control, sesion: Node) -> void:
+	print("[SALA INICIO] sala real ", OS.get_cmdline_user_args())
 	var anfitrion := "--sala-host" in OS.get_cmdline_user_args()
 	var sala: CanvasLayer = menu.panel_lan
 	sala.alias_jugador.text = "Andrés" if anfitrion else "Luna"
@@ -101,6 +105,7 @@ func _probar_sala_real(menu: Control, sesion: Node) -> void:
 		push_error("La sala visual no pudo conectar ambos equipos")
 		quit(1)
 		return
+	print("[SALA INICIO] conectados")
 	assert(sala._sala.visible and not sala._conexion.visible)
 	assert(sala._tarjetas[0].nombre.text == "Andrés" and sala._tarjetas[1].nombre.text == "Luna")
 	assert(sala._tarjetas[0].retrato.texture.resource_path == "res://UI/Despacho/retrato_policia.png")
@@ -123,6 +128,38 @@ func _probar_sala_real(menu: Control, sesion: Node) -> void:
 		assert(not sala.iniciar.disabled)
 	await _capturar("04_sala_lista" if anfitrion else "06_sala_invitado")
 	await _comprobar_tamanos(sala, "host" if anfitrion else "client")
+	if "--sala-iniciar" in OS.get_cmdline_user_args():
+		var inicio := Time.get_ticks_msec()
+		if anfitrion:
+			print("[SALA INICIO] pulsando Empezar")
+			sala.iniciar.pressed.emit()
+		print("[SALA INICIO] esperando barrera")
+		while not sesion.en_partida and Time.get_ticks_msec() - inicio < 90000:
+			await process_frame
+		if not sesion.en_partida:
+			var carga: Node = root.get_node("CargaEscenas")
+			push_error("La sala no entró a partida: anfitrion=%s, cargando=%s, ronda=%s, fase=%s, activa=%s, preparados=%s, escena=%s" % [anfitrion, sesion.cargando, sesion.ronda, carga._fase, carga.activa, sesion._cargados, current_scene.name if current_scene else "ninguna"])
+			quit(1)
+			return
+		while root.get_node("CargaEscenas").activa and Time.get_ticks_msec() - inicio < 90000:
+			await process_frame
+		assert(not root.get_node("CargaEscenas").activa, "La pantalla de carga desaparece en ambos equipos")
+		print("[SALA INICIO] ", "anfitrion" if anfitrion else "cliente", " ms=", Time.get_ticks_msec() - inicio, " fases=", root.get_node("CargaEscenas").mediciones)
+		var menu_global: Node = root.get_node("MenuGlobal")
+		var limite_tutorial := Time.get_ticks_msec() + 20000
+		while (not menu_global.panel_ayuda.visible or sesion.tutorial_actual != &"inicio") and Time.get_ticks_msec() < limite_tutorial:
+			await process_frame
+		assert(menu_global.panel_ayuda.visible and sesion.tutorial_actual == &"inicio", "Ambos ven el tutorial de entrada")
+		print("[SALA INICIO] tutorial visible, botón=", menu_global.panel_ayuda.boton_cerrar.text)
+		menu_global.panel_ayuda.boton_cerrar.pressed.emit()
+		while menu_global.panel_ayuda.visible and Time.get_ticks_msec() < limite_tutorial:
+			await process_frame
+		assert(not menu_global.panel_ayuda.visible, "Ambos pueden empezar el turno después del tutorial")
+		print("[SALA INICIO] tutorial cerrado, partida activa")
+		await create_timer(2.0).timeout
+		await preload("res://Pruebas/cierre_pruebas.gd").cerrar(self)
+		quit()
+		return
 	await create_timer(1.0 if anfitrion else 1.5).timeout
 	sala.cerrar()
 	await create_timer(0.3).timeout
