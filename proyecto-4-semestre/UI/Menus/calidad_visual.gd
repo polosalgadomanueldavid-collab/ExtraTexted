@@ -125,7 +125,8 @@ func _aplicar(nodo: Node, nuevo := false) -> void:
 			nodo.set_meta("proporcion_original", nodo.amount_ratio)
 		nodo.amount_ratio = minf(1.0, float(nodo.get_meta("proporcion_original")) * PARTICULAS[nivel] * [0.6, 1.0, 1.25][detalle_particulas])
 		if RenderingServer.get_current_rendering_method() == "gl_compatibility":
-			nodo.trail_enabled = false
+			if nodo.trail_enabled:
+				nodo.trail_enabled = false
 			if nodo.process_material is ParticleProcessMaterial and nodo.process_material.sub_emitter_mode != ParticleProcessMaterial.SUB_EMITTER_DISABLED:
 				nodo.process_material = nodo.process_material.duplicate()
 				nodo.process_material.sub_emitter_mode = ParticleProcessMaterial.SUB_EMITTER_DISABLED

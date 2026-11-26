@@ -17,6 +17,32 @@ corner_radius_top_right = 7
 corner_radius_bottom_left = 7
 corner_radius_bottom_right = 7
 
+[sub_resource type="StyleBoxFlat" id="Accion"]
+content_margin_left = 10.0
+content_margin_right = 10.0
+bg_color = Color(0.09, 0.231, 0.314, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 3
+border_color = Color(1, 0.945, 0.847, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_left = 7
+corner_radius_bottom_right = 7
+
+[sub_resource type="StyleBoxFlat" id="Mando"]
+bg_color = Color(0.10, 0.42, 0.70, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 3
+border_color = Color(1, 0.945, 0.847, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+
 [node name="GuiaEstacion" type="Control"]
 visible = false
 layout_mode = 3
@@ -28,13 +54,18 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_guia")
 
-[node name="Tecla" type="PanelContainer" parent="."]
-custom_minimum_size = Vector2(30, 32)
+[node name="Aviso" type="HBoxContainer" parent="."]
 layout_mode = 0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("Tecla")
 
-[node name="Letra" type="Label" parent="Tecla"]
+[node name="Tecla" type="PanelContainer" parent="Aviso"]
+custom_minimum_size = Vector2(38, 36)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Tecla")
+metadata/estilo_mando = SubResource("Mando")
+
+[node name="Letra" type="Label" parent="Aviso/Tecla"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_fonts/font = ExtResource("2_fuente")
@@ -42,4 +73,17 @@ theme_override_colors/font_color = Color(0.09, 0.231, 0.314, 1)
 theme_override_font_sizes/font_size = 17
 text = "E"
 horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="AccionMarco" type="PanelContainer" parent="Aviso"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Accion")
+
+[node name="Accion" type="Label" parent="Aviso/AccionMarco"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/font = ExtResource("2_fuente")
+theme_override_colors/font_color = Color(1, 0.945, 0.847, 1)
+theme_override_font_sizes/font_size = 17
 vertical_alignment = 1

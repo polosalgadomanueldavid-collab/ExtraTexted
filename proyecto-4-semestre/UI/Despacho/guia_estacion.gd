@@ -1,8 +1,12 @@
 extends Control
 ## Una silueta local y una acción, ambas sobre el mismo objetivo de E.
 const CONTORNO := preload("res://UI/Despacho/contorno_objetivo.gdshader")
-@onready var tarjeta: PanelContainer = $Tecla
-@onready var tecla: Label = $Tecla/Letra
+@onready var tarjeta: HBoxContainer = $Aviso
+@onready var marco_tecla: PanelContainer = $Aviso/Tecla
+@onready var tecla: Label = $Aviso/Tecla/Letra
+@onready var texto_accion: Label = $Aviso/AccionMarco/Accion
+var _estilo_teclado: StyleBox
+var _mostrando_mando := false
 var objetivo: Node3D
 var _accion := ""
 var _altura := 0.0
@@ -14,6 +18,7 @@ var _siluetas: Array[MeshInstance3D] = []
 
 func _ready() -> void:
 	_material.shader = CONTORNO
+	_estilo_teclado = marco_tecla.get_theme_stylebox("panel")
 
 
 func establecer_objetivo(modelo: Node3D, accion := "", altura := 0.0, mantener := false) -> void:
@@ -70,9 +75,13 @@ func actualizar(barra_despacho: Control) -> void:
 	var boton := "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
 	if OS.has_feature("mobile") and ControladorInterfaz.dispositivo_mando < 0:
 		boton = "Usar"
-	if _mantener:
-		boton = "Mantener " + boton
-	tecla.text = "%s · %s" % [boton, _accion]
+	var mando := ControladorInterfaz.dispositivo_mando >= 0
+	if mando != _mostrando_mando:
+		_mostrando_mando = mando
+		marco_tecla.add_theme_stylebox_override("panel", marco_tecla.get_meta("estilo_mando") if mando else _estilo_teclado)
+		tecla.add_theme_color_override("font_color", Color.WHITE if mando else Color(0.09, 0.231, 0.314))
+	tecla.text = boton.to_upper()
+	texto_accion.text = ("Mantener · " if _mantener else "") + _accion
 	var factor := clampf(minf(size.x / 1280.0, size.y / 720.0), .65, 1.1)
 	tarjeta.scale = Vector2.ONE * factor
 	tarjeta.size = tarjeta.get_combined_minimum_size()
