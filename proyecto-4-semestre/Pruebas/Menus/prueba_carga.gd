@@ -60,6 +60,9 @@ func _probar() -> void:
 	_verificar(panel.get_node("%Formulario").is_visible_in_tree(), "El formulario permite ingresar el nombre")
 	_verificar(not menu.fila_carga.visible, "Escribir el nombre no muestra otra carga")
 	await _capturar("02_nombre")
+	await process_frame
+	await process_frame
+	_verificar(root.get_node("CargaEscenas")._precargas.has(ESCENA_JUEGO), "La oficina permanece precargada mientras se escribe el nombre")
 	_verificar(_leer_turno(menu).values().all(func(voz): return voz == "Consejo"), "Antes de confirmar el nombre sólo aparecen consejos")
 	menu.confirmar_discusion("Álex", "Lina")
 	var pareja := _leer_turno(menu)
@@ -70,6 +73,8 @@ func _probar() -> void:
 	menu.get_node("%PlayButton").pressed.emit()
 	menu.panel_lan.individual.pressed.emit()
 	_verificar(menu.hablante.text == "Consejo", "Reabrir la carga descarta los alias anteriores")
+	if "--medir-precarga" in OS.get_cmdline_user_args():
+		await create_timer(8.0).timeout
 	var nombre := panel.get_node("%NombreJugador") as LineEdit
 	nombre.text = "María José"
 	_fase = "entrada_individual"

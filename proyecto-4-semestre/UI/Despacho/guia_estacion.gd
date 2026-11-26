@@ -83,6 +83,12 @@ func actualizar(barra_despacho: Control) -> void:
 	if not pantalla.has_point(ancla):
 		tarjeta.hide()
 		return
+	if _accion == "Abrir tienda":
+		var sobre_maquina := Rect2(Vector2(ancla.x - dimensiones.x * .5, ancla.y - dimensiones.y - 12.0 * factor), dimensiones)
+		if pantalla.encloses(sobre_maquina):
+			tarjeta.position = sobre_maquina.position
+			tarjeta.show()
+			return
 	for x: float in [ancla.x + lado, ancla.x - lado - dimensiones.x]:
 		var rect := Rect2(Vector2(x, ancla.y - dimensiones.y * .5), dimensiones)
 		if pantalla.encloses(rect) and not (barra_despacho.is_visible_in_tree() and barra_despacho.get_global_rect().intersects(rect)):

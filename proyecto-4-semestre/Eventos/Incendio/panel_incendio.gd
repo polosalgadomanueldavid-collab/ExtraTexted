@@ -77,7 +77,8 @@ func _dibujar_arco_mesa(factor: float) -> void:
 	var ancho_pista := DETALLE.get_string_size(pista, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano_pista).x
 	var izquierda := -(ancho_pista + 30.0) * 0.5
 	_caja(Rect2(izquierda, 47, 22, 22), Color(TINTA, 0.7), Color(CREMA, 0.45), 5, 1)
-	draw_string(FUENTE, Vector2(izquierda + 6, 63), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, CREMA)
+	var tecla := "X" if ControladorInterfaz.dispositivo_mando >= 0 else "E"
+	draw_string(FUENTE, Vector2(izquierda + 6, 63), tecla, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, CREMA)
 	draw_string_outline(DETALLE, Vector2(izquierda + 30, 63), pista, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano_pista, 3, TINTA)
 	draw_string(DETALLE, Vector2(izquierda + 30, 63), pista, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano_pista, Color(CREMA, 0.87))
 

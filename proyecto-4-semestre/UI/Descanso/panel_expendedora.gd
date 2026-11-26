@@ -362,7 +362,7 @@ func listo() -> void:
 func recogido(indice: int, atajo: String) -> void:
 	_cancelar_visual()
 	_indice_usar = indice
-	_pantalla.text = "%s\nUSAR: %s / A" % [CODIGOS[indice], atajo]
+	_pantalla.text = "%s\nUSAR: A" % CODIGOS[indice] if ControladorInterfaz.dispositivo_mando >= 0 else "%s\nUSAR: %s / CLIC" % [CODIGOS[indice], atajo]
 	boton_usar.text = "USAR %s" % NOMBRES[indice]
 	boton_usar.show()
 	boton_usar.grab_focus()

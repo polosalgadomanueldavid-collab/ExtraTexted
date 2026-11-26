@@ -513,10 +513,10 @@ func _actualizar_aviso() -> void:
 	var progreso := -1.0
 	if estado == Estado.PREPARANDO:
 		titulo = "PREPARANDO CAFÉ"
-		detalle = "%d puntos al recibir la taza  ·  Esc cancelar" % costo_cafe
+		detalle = "%d puntos al recibir la taza  ·  %s cancelar" % [costo_cafe, "B" if ControladorInterfaz.dispositivo_mando >= 0 else "Esc"]
 		progreso = _tiempo_preparacion / segundos_preparacion
 	elif _jugador.esta_sentado():
-		titulo = "DESCANSANDO  ·  [E] LEVANTARSE"
+		titulo = "DESCANSANDO  ·  [%s] LEVANTARSE" % ("B" if ControladorInterfaz.dispositivo_mando >= 0 else "E")
 		detalle = "+1 calma cada 2 s  ·  los casos siguen corriendo"
 		if _mensaje_restante > 0.0 and not tiene_cafe():
 			detalle = _mensaje

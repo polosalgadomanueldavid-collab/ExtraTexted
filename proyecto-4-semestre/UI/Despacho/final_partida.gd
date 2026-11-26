@@ -42,6 +42,7 @@ var _saltar: Button
 var _cuaderno: Control
 var _contenido_libro: Control
 var _ayuda_libro: Label
+var _marco_ayuda_libro: PanelContainer
 var _paginas: Array[Dictionary] = []
 var _pestanas: Array[Button] = []
 var _anterior: Button
@@ -222,14 +223,19 @@ func _construir_interfaz() -> void:
 	_boton_menu.pressed.connect(func() -> void: menu_solicitado.emit())
 	_contenido_libro.add_child(_boton_menu)
 	_cuaderno.hide()
-	_ayuda_libro = _etiqueta("Palanca izq.: seleccionar · Cruceta ← →: páginas · Palanca der.: scroll · A: activar · X: zoom · B: menú / alejar", 16, CREMA, FUENTE_TEXTO)
+	_marco_ayuda_libro = PanelContainer.new()
+	_marco_ayuda_libro.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_marco_ayuda_libro.add_theme_stylebox_override("panel", _estilo(Color("173b50e8"), Color("e7b342"), 12))
+	add_child(_marco_ayuda_libro)
+	_ayuda_libro = _etiqueta("", 16, CREMA, FUENTE_TEXTO)
 	_ayuda_libro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ayuda_libro.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_ayuda_libro.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ayuda_libro.add_theme_color_override("font_shadow_color", Color("172c36"))
 	_ayuda_libro.add_theme_constant_override("shadow_offset_x", 1)
 	_ayuda_libro.add_theme_constant_override("shadow_offset_y", 1)
-	_ayuda_libro.hide()
-	add_child(_ayuda_libro)
+	_marco_ayuda_libro.add_child(_ayuda_libro)
+	_marco_ayuda_libro.hide()
 	_alerta = _crear_sonido(SONIDO_ALERTA, -7.0)
 	_sonido_pagina = _crear_sonido(SONIDO_PAGINA, -5.0)
 	_musica_derrota = _crear_sonido(MELODIA_DERROTA, -18.0)
@@ -280,9 +286,9 @@ func _ajustar() -> void:
 	_detalle.add_theme_font_size_override("font_size", 25 if size.x < 540.0 else 30)
 	_tarjeta.size = Vector2(minf(480.0, maxf(1.0, size.x - margen * 2.0)), 0.0)
 	_tarjeta.position = Vector2((size.x - _tarjeta.size.x) * 0.5, maxf(margen, size.y - _tarjeta.size.y - margen))
-	if is_instance_valid(_ayuda_libro):
-		_ayuda_libro.position = Vector2(16, size.y - 35)
-		_ayuda_libro.size = Vector2(maxf(1, size.x - 32), 28)
+	if is_instance_valid(_marco_ayuda_libro):
+		_marco_ayuda_libro.position = Vector2(16, size.y - 78)
+		_marco_ayuda_libro.size = Vector2(maxf(1, size.x - 32), 70)
 		_ayuda_libro.add_theme_font_size_override("font_size", 12 if size.x < 1000 else 16)
 
 
@@ -299,7 +305,8 @@ func _abrir_cuaderno() -> void:
 	_pagina_actual = 0
 	_poblar_paginas()
 	_sonido_pagina.play()
-	_ayuda_libro.show()
+	_ayuda_libro.text = "PALANCA IZQUIERDA: mover selección     ·     A: pulsar botón     ·     CRUCETA ← →: cambiar página\nPALANCA DERECHA: desplazar texto     ·     X: acercar / alejar     ·     B: volver al menú o salir del zoom" if ControladorInterfaz.dispositivo_mando >= 0 else "FLECHAS / TAB: mover selección     ·     ENTER: pulsar botón     ·     ← →: cambiar página\nRUEDA DEL RATÓN: desplazar texto     ·     Z: acercar / alejar     ·     ESC: volver al menú o salir del zoom"
+	_marco_ayuda_libro.show()
 	_cuaderno.abrir()
 	await _cuaderno.apertura_terminada
 	(_boton_menu if _boton_reintentar.disabled else _boton_reintentar).grab_focus()

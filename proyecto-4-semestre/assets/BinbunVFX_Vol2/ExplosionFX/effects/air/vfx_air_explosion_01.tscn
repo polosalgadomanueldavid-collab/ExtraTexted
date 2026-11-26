@@ -711,7 +711,6 @@ emitting = false
 amount = 24
 one_shot = true
 explosiveness = 1.0
-trail_enabled = true
 process_material = SubResource("ParticleProcessMaterial_rwmal")
 draw_pass_1 = SubResource("TubeTrailMesh_3kx6f")
 
@@ -719,7 +718,6 @@ draw_pass_1 = SubResource("TubeTrailMesh_3kx6f")
 material_override = SubResource("ShaderMaterial_ot4sq")
 emitting = false
 amount = 4
-sub_emitter = NodePath("../BitsTrail")
 lifetime = 2.0
 one_shot = true
 explosiveness = 1.0

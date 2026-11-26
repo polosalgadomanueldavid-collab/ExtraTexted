@@ -62,6 +62,7 @@ const EventoHielo := preload("res://Eventos/Hielo/evento_hielo.gd")
 const AnuncioPartida := preload("res://UI/Despacho/anuncio_partida.gd")
 const IndicadorDenunciaPC := preload("res://UI/Computador/indicador_denuncia_pc.gd")
 const RuletaEmotesScript := preload("res://UI/Menus/ruleta_emotes.gd")
+const ControlesTactilesScript := preload("res://UI/Menus/controles_tactiles.gd")
 
 
 var sistema_despacho: SistemaDespacho
@@ -190,6 +191,13 @@ func _ready() -> void:
 	ruleta_emotes.name = "RuletaEmotes"
 	ruleta_emotes.z_index = 100
 	$CanvasLayer.add_child(ruleta_emotes)
+	if OS.has_feature("android"):
+		var controles_tactiles := ControlesTactilesScript.new()
+		controles_tactiles.name = "ControlesTactiles"
+		controles_tactiles.jugador = jugador
+		controles_tactiles.oficina = self
+		controles_tactiles.z_index = 110
+		$CanvasLayer.add_child(controles_tactiles)
 	jugador.emote_menu_requested.connect(_abrir_ruleta_emotes)
 	jugador.emote_menu_finished.connect(_cerrar_ruleta_emotes)
 	ruleta_emotes.emote_seleccionado.connect(_seleccionar_emote_ruleta)
@@ -517,6 +525,7 @@ func _actualizar_guia_interaccion(objetivo: Node3D) -> void:
 	elif objetivo == get_node_or_null("MaquinaExpendedora"):
 		if not sistema_despacho.tiempo_detenido and (not SesionLAN.en_partida or espera_compra("snack", sistema_despacho.jugador_local_id) == 0):
 			modelo = objetivo.get_node("Modelo")
+			altura = 2.2
 			verbo = "Abrir tienda"
 	elif objetivo == $ZonaDescanso/SofaL/Cuerpo and not evento_inundacion.activo:
 		modelo = objetivo.get_parent()
@@ -557,6 +566,8 @@ func _accion_estacion(id: String) -> String:
 
 func _input(evento: InputEvent) -> void:
 	if partida_finalizada:
+		return
+	if en_practica() and evento is InputEventJoypadButton and evento.button_index == JOY_BUTTON_BACK:
 		return
 	if is_instance_valid(depurador_recursos) and depurador_recursos.visible:
 		return
@@ -990,7 +1001,7 @@ func _iniciar_hielo() -> bool:
 
 func _al_iniciar_hielo() -> void:
 	_al_iniciar_evento()
-	_anunciar_inicio_evento(&"hielo", "¡EL PISO", "ES HIELO!", "Sella la fuga de nitrógeno en descanso · E")
+	_anunciar_inicio_evento(&"hielo", "¡EL PISO", "ES HIELO!", "Sella la fuga de nitrógeno en descanso · X" if ControladorInterfaz.dispositivo_mando >= 0 else "Sella la fuga de nitrógeno en descanso · E")
 	panel_despacho._mostrar_mensaje("¡Hielo! Te deslizas y te congelas cada 4 s, conservando la inercia. Las tareas siguen disponibles. Aprieta las tuercas del nitrógeno en descanso.", Color("a6d3ff"))
 
 
@@ -1010,7 +1021,7 @@ func _iniciar_lava() -> bool:
 
 func _al_iniciar_lava() -> void:
 	_al_iniciar_evento()
-	_anunciar_inicio_evento(&"lava", "¡EL PISO", "ES LAVA!", "ESPACIO · Sube a los bloqueos temporales")
+	_anunciar_inicio_evento(&"lava", "¡EL PISO", "ES LAVA!", "A · Sube a los bloqueos temporales" if ControladorInterfaz.dispositivo_mando >= 0 else "ESPACIO · Sube a los bloqueos temporales")
 	panel_despacho._mostrar_mensaje("¡Lava durante 60 s! Salta más alto. Los bloqueos cambian cada 4 s; las mesas laterales no se pueden trepar.", Color("ffb34f"))
 
 
@@ -1030,7 +1041,7 @@ func _iniciar_inundacion() -> bool:
 
 func _al_iniciar_inundacion() -> void:
 	_al_iniciar_evento()
-	_anunciar_inicio_evento(&"inundacion", "REPARA LA", "TUBERÍA", "Busca la válvula en descanso · Pulsa E")
+	_anunciar_inicio_evento(&"inundacion", "REPARA LA", "TUBERÍA", "Busca la válvula en descanso · Pulsa X" if ControladorInterfaz.dispositivo_mando >= 0 else "Busca la válvula en descanso · Pulsa E")
 	panel_despacho._mostrar_mensaje("¡Cierra la fuga! Repara la tubería en descanso.", Color("76d7e7"))
 
 
@@ -1060,7 +1071,7 @@ func _al_iniciar_incendio() -> void:
 	if temporizador_seguridad.paused:
 		sonidos_mesas.cancelar_seguridad()
 		progreso_seguridad.hide()
-	_anunciar_inicio_evento(&"incendio", "¡INCENDIO!", "", "Busca el extintor · Mantén E para apagar")
+	_anunciar_inicio_evento(&"incendio", "¡INCENDIO!", "", "Busca el extintor · Mantén X para apagar" if ControladorInterfaz.dispositivo_mando >= 0 else "Busca el extintor · Mantén E para apagar")
 	panel_despacho._mostrar_mensaje("¡La oficina arde! Apaga las estaciones y las mesas del perímetro.", PanelDespacho.CORAL)
 	_actualizar_indicadores_estaciones()
 
@@ -1407,7 +1418,7 @@ func recoger_herramienta_reporte(portador: Player, indice := 0) -> void:
 		return
 	_reporte_herramienta_recogida = true
 	herramienta_reporte.establecer_activa(false)
-	panel_despacho._mostrar_mensaje("Herramienta recogida. Vuelve a la mesa de reportes y pulsa E.", Color("86efac"))
+	panel_despacho._mostrar_mensaje("Herramienta recogida. Vuelve a la mesa de reportes y pulsa X." if ControladorInterfaz.dispositivo_mando >= 0 else "Herramienta recogida. Vuelve a la mesa de reportes y pulsa E.", Color("86efac"))
 
 
 func _limpiar_atasco_reporte() -> void:
@@ -1474,7 +1485,7 @@ func _completar_descriptado() -> void:
 		_seguridad_lista = true
 		sonidos_mesas.terminar_seguridad()
 		progreso_seguridad.listo_para_recoger = true
-		panel_despacho._mostrar_mensaje("Archivo listo. Vuelve a seguridad y pulsa E para recogerlo.", Color("86efac"))
+		panel_despacho._mostrar_mensaje("Archivo listo. Vuelve a seguridad y pulsa X para recogerlo." if ControladorInterfaz.dispositivo_mando >= 0 else "Archivo listo. Vuelve a seguridad y pulsa E para recogerlo.", Color("86efac"))
 	else:
 		_cancelar_descriptado()
 

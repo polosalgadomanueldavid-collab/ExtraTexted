@@ -737,9 +737,9 @@ func _crear_selector_calidad() -> void:
 	_agregar_opcion_grafica(contenido, "V-SYNC", ["Desactivado", "Activado"], int(CalidadVisual.vsync), "Sincroniza los cuadros con la pantalla para evitar cortes de imagen.", "vsync")
 	_agregar_opcion_grafica(contenido, "ESCALA 3D", ["75 %", "100 %", "115 %"], CalidadVisual.escala_3d, "Cambia la nitidez del mundo 3D. La interfaz conserva su resolución.", "escala_3d")
 	_agregar_opcion_grafica(contenido, "PARTÍCULAS", ["Reducidas", "Normales", "Detalladas"], CalidadVisual.detalle_particulas, "Ajusta los próximos efectos. Los que ya están activos terminan sin reiniciarse.", "particulas")
-	_agregar_opcion_grafica(contenido, "SOMBRAS · ULTRA", ["Tenues", "Medias", "Marcadas"], CalidadVisual.sombras_ultra, "Ajusta el contraste de las sombras proyectadas. Solo funciona en Ultra.", "sombras_ultra")
+	_agregar_opcion_grafica(contenido, "SOMBRAS · ULTRA", ["Tenues", "Medias", "Marcadas"], CalidadVisual.sombras_ultra, "Cambia cuántos focos proyectan sombra y su intensidad. Solo funciona en Ultra.", "sombras_ultra")
 	_agregar_opcion_grafica(contenido, "LÍMITE DE FPS", ["Sin límite", "60", "120"], CalidadVisual.limite_fps, "Limita los cuadros por segundo y el consumo de recursos.", "limite_fps")
-	_agregar_opcion_grafica(contenido, "SUAVIZADO DE BORDES", ["Desactivado", "FXAA · ligero", "MSAA 4× · nítido"], CalidadVisual.suavizado_bordes, "Reduce los bordes dentados del mundo 3D. MSAA consume más recursos.", "suavizado_bordes")
+	_agregar_opcion_grafica(contenido, "SUAVIZADO DE BORDES", ["Desactivado", "MSAA 2× · ligero", "MSAA 4× · nítido"], CalidadVisual.suavizado_bordes, "Suaviza los bordes del mundo 3D. La opción nítida aumenta además su resolución en PC.", "suavizado_bordes")
 	var volver := Button.new()
 	volver.text = "VOLVER A OPCIONES"
 	volver.pressed.connect(cerrar_graficos)

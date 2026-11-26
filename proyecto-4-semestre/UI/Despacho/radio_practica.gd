@@ -97,12 +97,12 @@ func _process(delta: float) -> void:
 	_cuerpo.size = Vector2(ancho - 112, 60) * _factor
 	_cuerpo.add_theme_font_size_override("font_size", maxi(12, roundi(17 * _factor)))
 	_salida.scale = Vector2.ONE * _factor
-	_salida.size = Vector2(185, 26)
-	_salida.position = (_caja.end - Vector2(199, 34)) * _factor
-	_salida.text = "VISTA · OMITIR" if ControladorInterfaz.dispositivo_mando >= 0 else "F2 · OMITIR PRÁCTICA"
+	_salida.size = Vector2(220, 26)
+	_salida.position = (_caja.end - Vector2(234, 34)) * _factor
+	_salida.text = "VISTA / SELECT · OMITIR" if ControladorInterfaz.dispositivo_mando >= 0 else "F2 · OMITIR PRÁCTICA"
 	queue_redraw()
 
-func _unhandled_input(evento: InputEvent) -> void:
+func _input(evento: InputEvent) -> void:
 	if not visible or compacta or _paso == 5:
 		return
 	var tecla: bool = evento is InputEventKey and evento.pressed and not evento.echo and evento.physical_keycode == KEY_F2

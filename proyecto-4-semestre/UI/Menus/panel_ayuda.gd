@@ -66,6 +66,7 @@ var _estilos_cierre: Dictionary = {}
 
 func _ready() -> void:
 	leyenda.navegacion_cambiada.connect(func(): navegacion_cambiada.emit())
+	ControladorInterfaz.mando_cambiado.connect(_actualizar_textos_mando)
 	_crear_pasos(tutorial, PASOS)
 	_crear_pasos(tutorial_apagon, PASOS_APAGON)
 	_crear_demostracion_circuitos()
@@ -222,6 +223,7 @@ func controles_foco() -> Array[Control]:
 
 
 func presentar(es_leyenda: bool, es_inicio: bool) -> void:
+	_actualizar_textos_mando(ControladorInterfaz.dispositivo_mando)
 	_restablecer_confirmaciones()
 	_establecer_expediente(not es_leyenda)
 	_actualizar_pestanas(&"general", not es_leyenda and not es_inicio)
@@ -234,7 +236,7 @@ func presentar(es_leyenda: bool, es_inicio: bool) -> void:
 	tutorial_apagon.hide()
 	tutorial_evento.hide()
 	boton_cerrar.text = "EMPEZAR TURNO" if es_inicio else "VOLVER"
-	pista.text = "E · Interactuar, recoger o lanzar la hoja"
+	pista.text = "X · Interactuar, recoger o soltar la hoja" if ControladorInterfaz.dispositivo_mando >= 0 else "E · Interactuar, recoger o lanzar la hoja"
 	boton_cerrar.custom_minimum_size = Vector2(350, 80) if es_leyenda else Vector2(340, 76)
 	if es_leyenda:
 		seccion.text = "MANUAL DEL AGENTE"
@@ -343,12 +345,25 @@ func _crear_distintivo(texto: String, estilo: StyleBox, minimo: Vector2) -> Pane
 
 func _crear_texto(texto: String, fuente: Font, tamano: int, color: Color) -> Label:
 	var etiqueta := Label.new()
-	etiqueta.text = texto
+	etiqueta.set_meta("texto_teclado", texto)
+	etiqueta.text = _texto_dispositivo(texto)
 	etiqueta.add_theme_font_override("font", fuente)
 	etiqueta.add_theme_font_size_override("font_size", tamano)
 	etiqueta.add_theme_color_override("font_color", color)
 	etiqueta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return etiqueta
+
+
+func _actualizar_textos_mando(_dispositivo: int) -> void:
+	for etiqueta: Label in find_children("*", "Label", true, false):
+		if etiqueta.has_meta("texto_teclado"):
+			etiqueta.text = _texto_dispositivo(str(etiqueta.get_meta("texto_teclado")))
+
+
+func _texto_dispositivo(texto: String) -> String:
+	if ControladorInterfaz.dispositivo_mando < 0:
+		return texto
+	return texto.replace("con las flechas y pulsa E", "con la cruceta y pulsa A").replace("pulsa E", "pulsa X").replace("Pulsa E", "Pulsa X").replace("mantén E", "mantén X").replace("Espacio", "A").replace("teclas de movimiento", "palanca izquierda").replace("las flechas", "la cruceta").replace("con clic", "con A").replace("Haz clic", "Pulsa A").replace("haciendo clic", "pulsando A").replace("CHOCOLATE  ·  Z", "CHOCOLATE  ·  LB").replace("DONA  ·  X", "DONA  ·  RB").replace("PAPA TIEMPO  ·  V", "PAPA TIEMPO  ·  LT").replace("EL AVATAR  ·  N", "EL AVATAR  ·  RT").replace("CAFÉ  ·  F", "CAFÉ  ·  A")
 
 
 func presentar_items() -> void:

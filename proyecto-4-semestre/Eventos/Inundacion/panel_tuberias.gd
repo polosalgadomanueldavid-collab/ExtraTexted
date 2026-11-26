@@ -221,6 +221,13 @@ func _draw() -> void:
 	draw_circle(Vector2(746, 146), 5.5, Color("a1b5aa"), true, -1, true)
 	if red.resuelta:
 		_texto("Flujo conectado", Vector2(378, 502), 20, AGUA)
+	elif ControladorInterfaz.dispositivo_mando >= 0:
+		_tecla("CRUCETA", Vector2(254, 481), 90)
+		_texto("ELEGIR", Vector2(354, 500), 18)
+		_tecla("A", Vector2(446, 481), 25)
+		_texto("GIRAR", Vector2(483, 500), 18)
+		_tecla("B", Vector2(555, 481), 25)
+		_texto("SALIR", Vector2(592, 500), 18)
 	else:
 		_tecla("↑↓←→", Vector2(281, 481), 65)
 		_texto("Elegir", Vector2(354, 500), 18)

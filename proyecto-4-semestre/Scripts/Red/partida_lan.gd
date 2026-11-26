@@ -1277,12 +1277,17 @@ func _ocultar_duelo() -> void:
 
 func _mostrar_pulsos_duelo() -> void:
 	if _duelo.get("fase", "") == "choque":
-		_mostrar_duelo("¡CHOQUE! Pulsa ESPACIO o A rápidamente")
+		if ControladorInterfaz.dispositivo_mando >= 0:
+			_mostrar_duelo("¡CHOQUE! Pulsa A rápidamente")
+		elif OS.has_feature("android"):
+			_mostrar_duelo("¡CHOQUE! Toca ¡PULSA! rápidamente")
+		else:
+			_mostrar_duelo("¡CHOQUE! Pulsa ESPACIO rápidamente")
 
 func _input(event: InputEvent) -> void:
 	if _duelo.get("fase", "") != "choque" or get_tree().paused:
 		return
-	if (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE) or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_A) or (event is InputEventAction and event.pressed and event.action == &"policia_prueba_saltar"):
+	if (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE) or (event is InputEventJoypadButton and event.pressed and event.device == ControladorInterfaz.dispositivo_mando and event.button_index == JOY_BUTTON_A) or (event is InputEventAction and event.pressed and event.action == &"policia_prueba_saltar"):
 		SesionLAN.solicitar("duelo_pulso", {})
 		get_viewport().set_input_as_handled()
 

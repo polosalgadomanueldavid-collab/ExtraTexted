@@ -14,6 +14,7 @@ const LUCES_ULTRA := {
 	"LuzEstacionReporte": [Color("ffe0b1"), 2.7],
 }
 const FOCOS_CON_SOMBRA := ["FocoFilaFrontal3", "FocoFilaTrasera", "LuzEstacionPrivacidad", "LuzEstacionReporte"]
+const FOCOS_SOMBRA_EXTRA := ["FocoFilaFrontal", "LuzEstacionEvidencias"]
 const FOCOS_EN_BOMBILLO := {
 	"FocoFilaFrontal": ["LamparaVerificacion", Vector3(-2.2, 0.7, 3.87)],
 	"FocoFilaFrontal3": ["LamparaComputador", Vector3(-0.95, 0.7, 1.4)],
@@ -96,8 +97,8 @@ func _aplicar_nivel(nivel: int) -> void:
 		luz.light_energy = perfil[1] if ultra else _base_luces[i].energia
 		# Cuatro focos principales proyectan sombras; el resto ilumina sin
 		# multiplicar los mapas de sombras de toda la oficina.
-		luz.shadow_enabled = (String(luz.name) in FOCOS_CON_SOMBRA) if ultra else bool(_base_luces[i].sombra)
-		luz.shadow_opacity = [0.3, 0.7, 1.0][CalidadVisual.sombras_ultra] if ultra else _base_luces[i].opacidad_sombra
+		luz.shadow_enabled = _proyecta_sombra(String(luz.name)) if ultra else bool(_base_luces[i].sombra)
+		luz.shadow_opacity = [0.55, 0.78, 1.0][CalidadVisual.sombras_ultra] if ultra else _base_luces[i].opacidad_sombra
 		# Un sesgo demasiado pequeño causaba las rayas diagonales de la captura.
 		luz.shadow_bias = 0.12 if ultra else _base_luces[i].sesgo
 		luz.shadow_normal_bias = 1.2 if ultra else _base_luces[i].sesgo_normal
@@ -117,7 +118,7 @@ func _aplicar_nivel(nivel: int) -> void:
 	# cambio en Opciones modifica valores, sin compilar variantes de efectos.
 	# Luz indirecta suave: revela ladrillos y rótulos sin aplanar las sombras.
 	_ambiente.ambient_light_color = Color("8f9092") if ultra else _base_ambiente.ambient_light_color
-	_ambiente.ambient_light_energy = 0.20 if ultra else _base_ambiente.ambient_light_energy
+	_ambiente.ambient_light_energy = [0.24, 0.20, 0.16][CalidadVisual.sombras_ultra] if ultra else _base_ambiente.ambient_light_energy
 	_ambiente.tonemap_exposure = 0.96 if ultra else _base_ambiente.tonemap_exposure
 	_ambiente.adjustment_contrast = 1.12 if ultra else _base_ambiente.adjustment_contrast
 	_ambiente.adjustment_saturation = 1.04 if ultra else _base_ambiente.adjustment_saturation
@@ -156,8 +157,15 @@ func _actualizar_sombras() -> void:
 	if not _ultra_aplicado:
 		return
 	for luz in _luces:
-		luz.shadow_enabled = String(luz.name) in FOCOS_CON_SOMBRA
-		luz.shadow_opacity = [0.3, 0.7, 1.0][CalidadVisual.sombras_ultra]
+		luz.shadow_enabled = _proyecta_sombra(String(luz.name))
+		luz.shadow_opacity = [0.55, 0.78, 1.0][CalidadVisual.sombras_ultra]
+	_ambiente.ambient_light_energy = [0.24, 0.20, 0.16][CalidadVisual.sombras_ultra]
+
+
+func _proyecta_sombra(nombre: String) -> bool:
+	if CalidadVisual.sombras_ultra == 0:
+		return nombre in ["FocoFilaFrontal3", "FocoFilaTrasera"]
+	return nombre in FOCOS_CON_SOMBRA or (CalidadVisual.sombras_ultra == 2 and nombre in FOCOS_SOMBRA_EXTRA)
 
 
 func _exit_tree() -> void:

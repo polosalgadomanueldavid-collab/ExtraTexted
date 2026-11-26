@@ -115,6 +115,9 @@ func _process(_delta: float) -> void:
 				_error("El recurso no es una escena.")
 				return
 			_instancia = recurso.instantiate()
+			if _ruta == OFICINA and not _instancia.has_method("preparar_lote_de_cajones"):
+				_error("No se pudo cargar el código de la oficina.")
+				return
 			_cambiar_fase("pool", "Preparando los cajones…", 65)
 		"pool":
 			if _instancia.has_method("preparar_lote_de_cajones"):
@@ -198,7 +201,7 @@ func _completar_transicion(generacion: int) -> void:
 func _actualizar(texto: String, valor: float) -> void:
 	progreso = maxf(progreso, valor)
 	fase = texto
-	_texto.text = ("Abriendo menú…" if _ruta == MENU else ("Esperando al compañero…" if _fase == "compañero" else "Preparando turno…"))
+	_texto.text = texto
 	_barra.value = progreso
 	_barra.indeterminate = _fase == "compañero"
 	fase_cambiada.emit(fase, progreso)
@@ -232,8 +235,10 @@ func _invalidar() -> void:
 func _liberar_precargas_descartadas() -> void:
 	# ResourceLoader no cancela solicitudes: recogerlas SOLO al terminar evita
 	# bloquear el hilo principal o retener recursos de una carga abandonada.
+	var escena_actual := get_tree().current_scene
+	var esperando_nombre: bool = not activa and is_instance_valid(escena_actual) and escena_actual.scene_file_path == MENU and escena_actual._dialogo_activo
 	for ruta: String in _precargas.keys():
-		if activa and ruta == _ruta:
+		if (activa and ruta == _ruta) or (esperando_nombre and ruta == OFICINA):
 			continue
 		var estado := ResourceLoader.load_threaded_get_status(ruta)
 		if estado == ResourceLoader.THREAD_LOAD_LOADED:

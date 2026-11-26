@@ -63,11 +63,13 @@ func configurar_graficos(clave: String, valor: int) -> void:
 
 func _aplicar_pantalla() -> void:
 	var factor: float = [0.75, 1.0, 1.15][escala_3d]
-	get_tree().root.scaling_3d_scale = minf(1.3, ESCALAS[nivel] * factor)
+	var factor_suavizado := 1.12 if suavizado_bordes == 2 and not OS.has_feature("mobile") else 1.0
+	get_tree().root.scaling_3d_scale = minf(1.3, ESCALAS[nivel] * factor * factor_suavizado)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = [0, 60, 120][limite_fps]
-	get_tree().root.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if suavizado_bordes == 1 else Viewport.SCREEN_SPACE_AA_DISABLED
-	get_tree().root.msaa_3d = Viewport.MSAA_4X if suavizado_bordes == 2 else Viewport.MSAA_DISABLED
+	var compatible := RenderingServer.get_current_rendering_method() == "gl_compatibility"
+	get_tree().root.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if not compatible and suavizado_bordes > 0 else Viewport.SCREEN_SPACE_AA_DISABLED
+	get_tree().root.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][suavizado_bordes] if compatible else (Viewport.MSAA_4X if suavizado_bordes == 2 else Viewport.MSAA_DISABLED)
 
 func _guardar() -> void:
 	var config := ConfigFile.new()

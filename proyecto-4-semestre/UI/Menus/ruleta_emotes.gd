@@ -25,6 +25,7 @@ var _dispositivo_mando := -1
 var _indice_enfocado := -1
 var _lienzo: Control
 var _rotulo_centro: Label
+var _texto_pie: Label
 var _botones: Array[Button] = []
 
 var _selecciones: Array[Dictionary] = [
@@ -53,6 +54,7 @@ func abrir(aura_activa: bool = false, dispositivo_mando: int = -1) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_aura_activada = aura_activa
 	_dispositivo_mando = dispositivo_mando
+	_actualizar_pie()
 	_indice_enfocado = -1
 	_actualizar_estado_aura()
 	visible = true
@@ -234,7 +236,8 @@ func _crear_pie() -> void:
 	_centrar(panel, Vector2(0.0, 350.0), Vector2(540.0, 50.0))
 
 	var texto := Label.new()
-	texto.text = "TOCA UN GESTO PARA ELEGIR  •  TOCA AFUERA PARA CERRAR" if OS.has_feature("android") else "PALANCA DERECHA + A PARA ELEGIR  •  B CIERRA  •  G / ESC"
+	_texto_pie = texto
+	_actualizar_pie()
 	texto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	texto.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	texto.add_theme_color_override("font_color", PETROLEO_OSCURO)
@@ -242,6 +245,12 @@ func _crear_pie() -> void:
 	texto.add_theme_font_size_override("font_size", 16)
 	texto.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(texto)
+
+
+func _actualizar_pie() -> void:
+	if _texto_pie == null:
+		return
+	_texto_pie.text = "PALANCA DERECHA + A: ELEGIR  •  B: CERRAR" if _dispositivo_mando >= 0 else "TOCA UN GESTO PARA ELEGIR  •  TOCA AFUERA PARA CERRAR" if OS.has_feature("android") else "CLIC: ELEGIR  •  G / ESC: CERRAR"
 
 
 func _ajustar_presentacion() -> void:

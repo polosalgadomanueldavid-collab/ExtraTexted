@@ -10,6 +10,8 @@ const VOLUMEN_ENTRADA_DB := -22.0
 const VOLUMEN_SILENCIO_DB := -60.0
 const DURACION_CRUCE := 1.8
 const DURACION_CAMBIO := 0.7
+const DURACION_CAMBIO_CORDURA := 1.25
+const VOLUMEN_ENTRADA_CORDURA_DB := -13.0
 
 var _musica_calma_baja := false
 var _en_rango := false
@@ -59,13 +61,14 @@ func _al_actualizar_calma(nueva_calma: int) -> void:
 		else:
 			_indice_pista_actual = randi_range(0, 1)
 			_iniciar_en(_activo, _indice_pista_actual)
-			_fundir(_activo, VOLUMEN_NORMAL_DB, DURACION_CAMBIO)
+			_activo.volume_db = VOLUMEN_ENTRADA_CORDURA_DB
+			_fundir(_activo, VOLUMEN_NORMAL_DB, DURACION_CAMBIO_CORDURA)
 		set_process(true)
 	else:
 		set_process(false)
 		for reproductor in [self, _alterno]:
 			if reproductor.playing:
-				_fundir(reproductor, VOLUMEN_SILENCIO_DB, DURACION_CAMBIO, true)
+				_fundir(reproductor, VOLUMEN_SILENCIO_DB, DURACION_CAMBIO_CORDURA, true)
 
 
 func _process(_delta: float) -> void:

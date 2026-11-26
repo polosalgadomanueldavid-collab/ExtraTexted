@@ -42,7 +42,7 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	var red: Node = oficina.get("red") if is_instance_valid(oficina) else null
 	var en_duelo: bool = is_instance_valid(red) and (red.get("_duelo") as Dictionary).get("fase", "") == "choque"
-	var disponible: bool = is_instance_valid(jugador) and not get_tree().paused and not MenuGlobal.capa.visible and not oficina.ruleta_emotes.visible
+	var disponible: bool = is_instance_valid(jugador) and ControladorInterfaz.dispositivo_mando < 0 and not get_tree().paused and not MenuGlobal.capa.visible and not oficina.ruleta_emotes.visible
 	var modo_panel: bool = disponible and jugador.input_locked and not en_duelo
 	var puede_soltar: bool = disponible and not modo_panel and not en_duelo and not jugador.realizando_gesto() and is_instance_valid(jugador.papel_en_mano)
 	if disponible != _habilitado or en_duelo != _duelo or modo_panel != _modo_panel or puede_soltar != _puede_soltar:

@@ -280,12 +280,20 @@ func _dibujar_pie() -> void:
 		_texto("Fuga sellada", Vector2(212, 518), 19, VERDE)
 	elif _error > 0:
 		_texto("Sigue el orden", Vector2(212, 518), 18, Color("ffbc91"))
-	_tecla("↑↓←→", Vector2(426, 497), 65)
-	_texto("Elegir", Vector2(499, 516), 18)
-	_tecla("E", Vector2(568, 497), 25)
-	_texto("/", Vector2(600, 516), 18)
-	_tecla("Clic", Vector2(616, 497), 43)
-	_texto("Apretar", Vector2(668, 516), 18)
+	if ControladorInterfaz.dispositivo_mando >= 0:
+		_tecla("CRUCETA", Vector2(412, 497), 90)
+		_texto("Elegir", Vector2(510, 516), 18)
+		_tecla("A", Vector2(579, 497), 25)
+		_texto("Apretar", Vector2(615, 516), 18)
+		_tecla("B", Vector2(700, 497), 25)
+		_texto("Salir", Vector2(734, 516), 18)
+	else:
+		_tecla("↑↓←→", Vector2(426, 497), 65)
+		_texto("Elegir", Vector2(499, 516), 18)
+		_tecla("E", Vector2(568, 497), 25)
+		_texto("/", Vector2(600, 516), 18)
+		_tecla("Clic", Vector2(616, 497), 43)
+		_texto("Apretar", Vector2(668, 516), 18)
 
 
 func _draw() -> void:

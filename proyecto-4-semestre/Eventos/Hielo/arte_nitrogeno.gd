@@ -226,6 +226,15 @@ func _resultado(panel: Control) -> void:
 
 
 func _controles() -> void:
+	if ControladorInterfaz.dispositivo_mando >= 0:
+		_tecla("CRUCETA", Vector2(54, 588), 95)
+		_texto("Elegir tuerca", Vector2(159, 608), 17, TINTA)
+		_tecla("A", Vector2(340, 588), 31)
+		_texto("Apretar", Vector2(381, 608), 17, TINTA)
+		_tecla("B", Vector2(542, 588), 31)
+		_texto("Salir", Vector2(583, 608), 17, TINTA)
+		_texto("Puedes salir y continuar después. Los casos siguen en marcha.", Vector2(35, 636), 15, Color("536878"))
+		return
 	_tecla("CLIC", Vector2(35, 588), 53)
 	_texto("Apretar", Vector2(98, 608), 17, TINTA)
 	_tecla("WASD / FLECHAS", Vector2(233, 588), 142)

@@ -112,7 +112,7 @@ func _construir_opciones() -> void:
 		_boton("Necesito ayuda", enviar.bind("ayuda", ""))
 		_boton("Recoge esta hoja", enviar.bind("hoja", ""))
 		_boton("Voy a reparar", enviar.bind("reparar", ""))
-		_boton("Cerrar · R / Esc / B", cerrar)
+		_boton("Cerrar · B" if ControladorInterfaz.dispositivo_mando >= 0 else "Cerrar · R / Esc", cerrar)
 	for i in _botones.size():
 		_botones[i].focus_neighbor_top = _botones[posmod(i - 1, _botones.size())].get_path()
 		_botones[i].focus_neighbor_bottom = _botones[(i + 1) % _botones.size()].get_path()
